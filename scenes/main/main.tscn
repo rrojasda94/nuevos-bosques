@@ -1,0 +1,17 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/main.gd" id="1_main"]
+[ext_resource type="Script" path="res://scripts/core/tick_timer.gd" id="2_tick"]
+
+[node name="Main" type="Node2D"]
+script = ExtResource("1_main")
+
+[node name="TickTimer" type="Node" parent="."]
+script = ExtResource("2_tick")
+
+[node name="Label" type="Label" parent="."]
+offset_right = 320.0
+offset_bottom = 180.0
+text = "NUEVOS BOSQUES"
+horizontal_alignment = 1
+vertical_alignment = 1

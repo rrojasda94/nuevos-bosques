@@ -1,0 +1,13 @@
+{
+  "$comment": "Esquema de referencia para BuildingData. Estructura: city-systems-dev. Valores: game-designer.",
+  "id": "sawmill",
+  "name": "Aserradero",
+  "size": [2, 2],
+  "cost": { "wood": 10, "stone": 5 },
+  "build_ticks": 30,
+  "workers": 2,
+  "produces": { "wood": 1 },
+  "consumes": {},
+  "requires": ["campfire"],
+  "sprite": "res://assets/sprites/city/city_sawmill_idle.png"
+}
