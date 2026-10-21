@@ -23,6 +23,7 @@
 ## Estructura de carpetas
 ```
 scenes/      Escenas .tscn por dominio (main, world, city, rpg, ui)
+data/world/  Mapa mundial y regiones (ADR 0003)
 scripts/     GDScript por dominio; autoload/ para singletons
 assets/      sprites, tilesets, palettes, audio, fonts
 data/        Datos de juego (edificios, ítems, npcs, quests)
@@ -37,7 +38,8 @@ docs/        GDD, arte, decisiones (ADR)
 - Un script por escena; lógica compartida en `scripts/core/`.
 - Comunicación entre sistemas por señales vía `EventBus`, nunca referencias directas cruzadas.
 - Estado global solo en `GameState`; guardado solo por `SaveManager`.
-- Tiempo de simulación de ciudad por ticks (`EventBus.tick`), no por `_process`.
+- Simulación por días (`EventBus.day_ended`), nunca por `_process` ni tiempo real.
+- Toda aleatoriedad por `GameState.rng` (determinismo de chunks y simulación).
 
 ## Alternativas descartadas
 - **Unity**: licencias cambiantes, overkill para 2D pixel.

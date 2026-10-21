@@ -1,10 +1,11 @@
-# Nuevos Bosques — Router de agentes
+# Nardaram: Los Nuevos Bosques — Router de agentes
 
 Este archivo NO contiene reglas de implementación. Solo sirve para decidir qué agente desplegar.
 Cada agente vive en `.claude/agents/<nombre>.md` y es la única fuente de verdad de su área.
 
 ## Proyecto en una línea
-RPG + gestión de ciudad, indie, pixel art 8-bit, PC (Windows/Linux/macOS), publicación en Steam.
+RPG por turnos (menú) + gestión de ciudad por días, supervivencia, top-down, pixel art 8-bit, solo español. PC (Windows/Linux/macOS), publicación en Steam.
+Mundo: mapa mundial diseñado a mano; cada partida ocurre en un chunk procedural generado con seed (ADR 0003).
 Motor: Godot 4.x (GDScript). Ver `docs/STACK.md`.
 
 ## Tabla de enrutamiento
@@ -15,7 +16,8 @@ Motor: Godot 4.x (GDScript). Ver `docs/STACK.md`.
 | Historia, lore, personajes, diálogos, misiones (texto), tono | `narrative-writer` |
 | Arquitectura Godot, escenas, autoloads, guardado, input, rendimiento, estructura de carpetas | `engine-architect` |
 | Personajes jugables, stats, combate, inventario, equipo, progresión, quests (lógica) | `rpg-systems-dev` |
-| Edificios, recursos, producción, ciudadanos, simulación por ticks, colocación en grid | `city-systems-dev` |
+| Edificios, recursos, producción, ciudadanos, simulación por días, colocación en grid | `city-systems-dev` |
+| Generación procedural de chunks, seeds, biomas, mapa mundial (datos), ruido, colocación de recursos y enemigos | `world-gen-dev` |
 | Sprites, tilesets, paleta, animaciones, specs de arte, Aseprite | `pixel-artist` |
 | HUD, menús, paneles, tema de UI, fuentes, accesibilidad | `ui-ux-dev` |
 | Música chiptune, SFX, integración de audio | `audio-designer` |
@@ -32,4 +34,5 @@ Motor: Godot 4.x (GDScript). Ver `docs/STACK.md`.
 ## Lectura mínima antes de cualquier tarea
 - `docs/STACK.md` — stack y convenciones.
 - `docs/design/GDD.md` — visión del juego.
+- `docs/decisions/0002-*.md` y `0003-*.md` — decisiones fundacionales y modelo de mundo.
 - El `.md` del agente correspondiente.

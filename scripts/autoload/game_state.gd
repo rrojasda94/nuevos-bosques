@@ -5,7 +5,11 @@ const SAVE_VERSION: int = 1
 
 var rng := RandomNumberGenerator.new()
 var seed_value: int = 0
-var ticks: int = 0
+var day: int = 1
+## Región del mapa mundial donde ocurre la partida (ADR 0003).
+var region_id: StringName = &""
+## Chunk generado: { "size": [w, h], "tiles": [...], "spawns": [...] }. Se regenera con seed+region si falta.
+var chunk: Dictionary = {}
 
 ## Recursos de la ciudad: { "wood": 10, "stone": 5, ... }
 var resources: Dictionary = {}
@@ -21,10 +25,12 @@ var inventory: Dictionary = {}
 var quests: Dictionary = {}
 
 
-func new_game(new_seed: int = 0) -> void:
+func new_game(new_seed: int = 0, new_region: StringName = &"claro_inicial") -> void:
 	seed_value = new_seed if new_seed != 0 else int(Time.get_unix_time_from_system())
 	rng.seed = seed_value
-	ticks = 0
+	day = 1
+	region_id = new_region
+	chunk = {}
 	resources = { "wood": 20, "stone": 10, "food": 15, "gold": 0 }
 	buildings = []
 	citizens = []
@@ -37,7 +43,9 @@ func to_dict() -> Dictionary:
 	return {
 		"save_version": SAVE_VERSION,
 		"seed": seed_value,
-		"ticks": ticks,
+		"day": day,
+		"region_id": String(region_id),
+		"chunk": chunk,
 		"rng_state": rng.state,
 		"resources": resources,
 		"buildings": buildings,
@@ -50,7 +58,9 @@ func to_dict() -> Dictionary:
 
 func from_dict(data: Dictionary) -> void:
 	seed_value = int(data.get("seed", 0))
-	ticks = int(data.get("ticks", 0))
+	day = int(data.get("day", 1))
+	region_id = StringName(data.get("region_id", "claro_inicial"))
+	chunk = data.get("chunk", {})
 	rng.seed = seed_value
 	rng.state = int(data.get("rng_state", rng.state))
 	resources = data.get("resources", {})

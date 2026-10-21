@@ -10,8 +10,8 @@ config_version=5
 
 [application]
 
-config/name="Nuevos Bosques"
-config/description="RPG + gestión de ciudad, pixel art 8-bit."
+config/name="Nardaram: Los Nuevos Bosques"
+config/description="RPG + gestión de ciudad por días, pixel art 8-bit, supervivencia."
 run/main_scene="res://scenes/main/main.tscn"
 config/features=PackedStringArray("4.5", "GL Compatibility")
 config/icon="res://icon.svg"

@@ -1,0 +1,14 @@
+{
+  "$comment": "Región de arranque. Valores iniciales de referencia; game-designer los ajusta.",
+  "id": "claro_inicial",
+  "biome": "bosque_templado",
+  "climate": "templado",
+  "relief": "llano",
+  "faction": "ninguna",
+  "danger": 1,
+  "forest_density": 0.6,
+  "water": 0.1,
+  "resources": { "wood": 1.0, "stone": 0.5, "food_wild": 0.7 },
+  "enemies": ["lobo", "jabali"],
+  "events": ["lluvia", "visita_mercader"]
+}

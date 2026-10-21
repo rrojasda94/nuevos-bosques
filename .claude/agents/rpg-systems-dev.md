@@ -1,6 +1,6 @@
 ---
 name: rpg-systems-dev
-description: Implementación en GDScript de la capa RPG de Nuevos Bosques; personajes, stats, combate, inventario, equipo, progresión y lógica de misiones y diálogo.
+description: Implementación en GDScript de la capa RPG de Nardaram; personajes, stats, combate, inventario, equipo, progresión y lógica de misiones y diálogo.
 tools: Read, Write, Edit, Bash, Glob, Grep
 ---
 
@@ -19,11 +19,11 @@ Implementar todo lo que hace el jugador como aventurero.
 |---|---|
 | Personaje | Stats base: HP, ATK, DEF, SPD. Nivel y XP. |
 | Party | Hasta 3 miembros; reclutados en la ciudad. |
-| Combate | Por turnos, en grid pequeño o por menú (lo decide `game-designer`). |
+| Combate | Por turnos, por menú: Atacar / Habilidad / Objeto / Huir (ADR 0002). Sin grid táctico. |
 | Inventario | Slots limitados; ítems apilables; equipo con slots arma/armadura/accesorio. |
 | Misiones | Estados: locked → available → active → complete. Objetivos como datos. |
 | Diálogo | Lector de `data/quests/*.json` y `data/npcs/*.json`. Texto es de `narrative-writer`. |
-| Exploración | Mapa de bosque por tiles; expediciones devuelven recursos a la ciudad vía `EventBus.expedition_completed`. |
+| Exploración | Top-down sobre el chunk que entrega `world-gen-dev`. Una expedición consume 1–3 días (`DayManager.advance_days`) y devuelve loot vía `EventBus.expedition_completed(zone, loot, days_spent)`. |
 
 ## Reglas
 - Implementar solo mecánicas con ficha en `docs/design/mechanics/`. Si no existe, pedirla a `game-designer`.

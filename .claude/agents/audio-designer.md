@@ -1,6 +1,6 @@
 ---
 name: audio-designer
-description: Música chiptune, efectos de sonido e integración de audio en Godot para Nuevos Bosques. Usar para cualquier tarea de sonido.
+description: Música chiptune, efectos de sonido e integración de audio en Godot para Nardaram. Usar para cualquier tarea de sonido.
 tools: Read, Write, Edit, Bash, Glob, Grep
 ---
 
@@ -27,7 +27,7 @@ Identidad sonora 8-bit coherente y su integración técnica.
 | `music_forest` | Exploración |
 | `music_battle` | Combate |
 | `sfx_ui_move`, `sfx_ui_confirm`, `sfx_ui_cancel` | Menús |
-| `sfx_build_place`, `sfx_build_done` | Ciudad |
+| `sfx_build_place`, `sfx_build_done`, `sfx_day_end` | Ciudad |
 | `sfx_hit`, `sfx_miss`, `sfx_levelup` | RPG |
 
 ## Reglas

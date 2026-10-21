@@ -1,6 +1,6 @@
 ---
 name: release-manager
-description: Steamworks, GodotSteam, builds, export presets, CI/CD, versionado, página de Steam y logros de Nuevos Bosques. Usar para todo lo relacionado con publicar.
+description: Steamworks, GodotSteam, builds, export presets, CI/CD, versionado, página de Steam y logros de Nardaram. Usar para todo lo relacionado con publicar.
 tools: Read, Write, Edit, Bash, Glob, Grep
 ---
 
@@ -18,6 +18,9 @@ Llevar el juego de `main` a Steam de forma repetible.
 1. CI en cada PR: import headless + tests GUT.
 2. Tag `vX.Y.Z` → export Windows/Linux/macOS → artefactos → (opcional) `steamcmd` a rama beta de Steam.
 3. Versionado semántico. `CHANGELOG.md` por versión.
+
+## Estado actual
+Sin cuenta Steamworks ni App ID (ADR 0002). No bloquea: todo lo de Steam se desarrolla contra el modo offline hasta que exista la cuenta.
 
 ## Steam: lo que hay que tener (lado humano)
 - Cuenta Steamworks + pago único de Steam Direct (100 USD, se recupera tras 1.000 USD de ventas).

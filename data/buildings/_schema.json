@@ -4,10 +4,10 @@
   "name": "Aserradero",
   "size": [2, 2],
   "cost": { "wood": 10, "stone": 5 },
-  "build_ticks": 30,
+  "build_days": 2,
   "workers": 2,
-  "produces": { "wood": 1 },
-  "consumes": {},
+  "produces_per_day": { "wood": 4 },
+  "consumes_per_day": {},
   "requires": ["campfire"],
   "sprite": "res://assets/sprites/city/city_sawmill_idle.png"
 }

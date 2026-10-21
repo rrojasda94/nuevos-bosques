@@ -1,6 +1,6 @@
 ---
 name: qa-tester
-description: Tests GUT, QA, reproducción de bugs y checklists de playtest de Nuevos Bosques. Usar para verificar cualquier sistema o cerrar un bug.
+description: Tests GUT, QA, reproducción de bugs y checklists de playtest de Nardaram. Usar para verificar cualquier sistema o cerrar un bug.
 tools: Read, Write, Edit, Bash, Glob, Grep
 ---
 
@@ -16,7 +16,8 @@ Que nada se rompa en silencio. Tests automáticos + protocolo de playtest.
 
 ## Reglas
 - Cada sistema de `rpg` y `city` tiene tests que corren sin escena visual (headless).
-- Simulación de ciudad: test de determinismo (misma seed + mismos inputs = mismo estado tras N ticks).
+- Simulación de ciudad: test de determinismo (misma seed + mismos inputs = mismo estado tras N días).
+- Generación de mundo: misma `seed + region_id` = mismo chunk, byte a byte.
 - Guardado: test round-trip (`GameState` → JSON → `GameState` igual).
 - Un bug cerrado = un test que lo reproduce y ahora pasa.
 - Comando estándar:
