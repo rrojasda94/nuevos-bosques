@@ -29,7 +29,8 @@ Ninguna en este slice. Las presiones de Aventura (muerte = game over, Luz, Únic
 ### 2. Escala y Bosque inicial
 - Escala espacial (ADR 0007, 0008): **chunk < Bosque < área < subregión < región < Sur Lenfi**. El nivel "Bosque" se llamaba antes "zona"; "subregión" es nombre propuesto (#100).
 - Cada chunk mide **64×64 tiles** (ADR 0004). Un Bosque tiene **de 4 a 16 chunks** (ADR 0007). La **forma y el número** de chunks se generan **aleatoriamente** con la seed; no tiene por qué ser cuadrado (ADR 0008). Se asume que los chunks son contiguos.
-- Región: **Valle del Sara** (ADR 0007). El jugador elige el área de origen (ADR 0008), pero en el slice es un área fija sin pantalla de elección (#92). Las 7 áreas del mapa y sus vecinos están en [`../world/sur-lenfi.md`](../world/sur-lenfi.md).
+- Región: **Valle del Sara** (ADR 0007). El jugador elige el área de origen (ADR 0008), pero en el slice es un área fija sin pantalla de elección (#92). Las 7 subregiones del mapa y sus vecinos están en [`../world/sur-lenfi.md`](../world/sur-lenfi.md).
+- **El jugador empieza en una villa, su lugar natal**: el Bosque inicial siempre tiene villa (ADR 0010).
 - Aspecto del Bosque inicial (con Nujio): **un solo tipo de árbol** y una **combinación de colores definida por su Nujio**, siempre con los **32 colores de la paleta del proyecto** (ADR 0008). Dentro del slice basta un tipo de árbol y una combinación, generados por seed (#86).
 - El Nujio está en el **centro del Bosque**, en su chunk más central; si hay villa, la villa ocupa ese chunk y el Nujio está en su centro (ADR 0008). En el slice, el Nujio puede ser un placeholder en ese chunk, o no aparecer.
 - Cada chunk se genera **al entrar por primera vez**, a partir de la seed de la partida y de su posición en la jerarquía (región, área, Bosque, chunk) (ADR 0005, 0007).

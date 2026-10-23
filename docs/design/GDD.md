@@ -54,8 +54,11 @@ Antes de implementarse necesitan fuente, sumidero y qué pasa si se agotan:
   - **Al agotarse**: hay que cruzar combatiendo o retroceder.
   - Que al principio sea difícil ir lejos es intencionado.
   - Valores provisionales en [`mechanics/cruce-y-combate-v1.md`](mechanics/cruce-y-combate-v1.md). Abiertas: #107–#109.
-- **Curación de PV** (Aventura, ADR 0010): en una villa (plaza o junto a su Nujio) o tras un riutash (cambio entre día y noche; #111). Las villas solo están en 1 de cada 5 Bosques (#110).
-- Cansancio (Aventura): el viaje a pie cansa al personaje (ADR 0007). Medida, efectos y recuperación: por definir (#73).
+- **Luz suelta** (ADR 0010): tiene un límite (ejemplo: 10). Por encima, la Luz requiere ofrendas. Las ofrendas también se pueden ofrecer en combate "para que el Único se vaya", y eso abre el paso igual que vencer (#112). Excedente sobre el límite: #115.
+- **Inventario**: sin decidir entre cuadrícula (Diablo), slots (Minecraft) o peso (Kingdom Come: Deliverance) (#113).
+- **Curación de PV** (Aventura, ADR 0010): en una villa (plaza o junto a su Nujio) o, en parte, tras un riutash (cambio entre día y noche). El riutash **no cura heridas graves**.
+- **Heridas graves** (Aventura, ADR 0010): perks o estados negativos que deja un combate complicado, aparte de los PV. Solo se curan en una villa con el oficiante adecuado, por ejemplo un dumno ([glosario §5](../glosario_nuevos_bosques.md)). Se puede pedir un dumno a otra villa, a cambio de quedarse más tiempo. Pendiente: #116–#118. Las villas solo están en 1 de cada 5 Bosques, pero **se empieza en la villa natal** y el Bosque inicial siempre tiene villa.
+- **Estamina** (Aventura): el viaje a pie cansa al personaje (ADR 0007) y el riutash la regenera (ADR 0010). Medida, gasto y efectos: por definir (#73).
 - Luz en Supervivencia: se pide a los pobladores (ADR 0005). Reglas: por definir (#59).
 
 ### Presiones de supervivencia por modo
