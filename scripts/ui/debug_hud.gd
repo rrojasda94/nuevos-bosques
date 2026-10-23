@@ -5,6 +5,8 @@ extends CanvasLayer
 const NOTICE_TIME: float = 3.0
 const NOTICE_REST: String = "Descansas en la villa"
 const NOTICE_REGION_EDGE: String = "Límite de la región"
+const NOTICE_SIGN_BOSQUE: String = "Letrero de piedra: hacia la villa, al %s"
+const NOTICE_SIGN_HOME: String = "Letrero del camino: hacia tu villa natal, al %s"
 
 var _bosque_id: int = -1
 var _bosque_size: int = 0
@@ -21,9 +23,16 @@ func _ready() -> void:
 	EventBus.luz_changed.connect(func(_l: int) -> void: _refresh())
 	EventBus.hp_changed.connect(func(_h: int, _m: int) -> void: _refresh())
 	EventBus.rested_in_villa.connect(func() -> void: _show_notice(NOTICE_REST))
-	EventBus.signpost_read.connect(func(direction: String) -> void: _show_notice("Letrero de piedra: hacia la villa, al %s" % direction))
+	EventBus.signpost_read.connect(_on_signpost_read)
 	_notice.text = ""
 	_refresh()
+
+
+func _on_signpost_read(direction: String, kind: int) -> void:
+	if kind == ChunkData.SignKind.HOME_VILLA:
+		_show_notice(NOTICE_SIGN_HOME % direction)
+	else:
+		_show_notice(NOTICE_SIGN_BOSQUE % direction)
 
 
 func _on_chunk_entered(_coord: Vector2i, bosque_id: int, bosque_size: int) -> void:

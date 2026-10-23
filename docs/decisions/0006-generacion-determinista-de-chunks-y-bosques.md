@@ -20,6 +20,8 @@ Iteración 3, tras el segundo playtest (ADR 0008):
 - Cada Bosque tiene un Nujio (6×6 a 8×8) y, con probabilidad 1/5, una villa. Hay letreros de piedra que señalan hacia la villa.
 - Paleta: las combinaciones son ilimitadas, pero los colores son solo los 32 de la `.gpl` (confirmado por el dueño). No hay conflicto con el STACK.
 
+Iteración 4, versión 0.2.0 (plan "Primer encargo"): el dueño pide que no sea fácil perderse y que se sepa volver a la villa, y que haya refugio ante el riutash. Se añaden caminos principales entre villas, letreros hacia la villa natal y refugios (ver "Caminos principales y refugios").
+
 ## Decisión
 
 ### Identidad y determinismo
@@ -71,6 +73,29 @@ Iteración 3, tras el segundo playtest (ADR 0008):
 - **Letreros de piedra** (`SIGN`, transitables): en cada chunk de un Bosque con villa, salvo el de la villa, hay uno sobre el sendero de la entrada más orientada hacia la villa.
   - Al pisarlo o estar al lado, se emite `EventBus.signpost_read(dirección)` y el HUD dice "hacia la villa, al norte/sureste/...".
 
+### Caminos principales y refugios (0.2.0)
+- **Red** (`BosqueMap`, una vez por mapa, determinista por seed):
+  - `home_bosque`: el Bosque de `home_chunk` (sin él, el del centro de la región). Coincide con `AdventureRules.home_bosque`.
+  - Árbol de expansión (Prim) sobre la adyacencia de Bosques, desde el Bosque natal, con pesos `hash(seed, a, b)`. Además, cada arista de adyacencia fuera del árbol lleva camino con probabilidad `ROAD_EXTRA_PERCENT` = 15 % (ciclos). Lista en `road_edges`.
+  - Cada arista Bosque–Bosque se traduce en chunks contiguos con un BFS por la rejilla de chunks desde el chunk de Nujio de uno hasta el del otro, **sin salir de esos dos Bosques**. El orden de vecinos del BFS sale de un hash por chunk, para que las rutas no sean todo eles.
+  - `road_sides(coord)`: lados del chunk por los que pasa un camino. Siempre simétricos con el vecino.
+  - BFS por la red desde el chunk de Nujio natal: `road_distance(coord)` y `road_home_side(coord)` (lado por el que sigue el camino hacia casa).
+  - Un test comprueba con 40 seeds que desde cualquier chunk de Nujio se llega por camino a la villa natal.
+- **Tallado** (`ChunkGenerator`): en los lados con camino, en vez del sendero se talla un `ROAD` (tile nuevo, caminable, tierra apisonada clara con rodadas) de **2 casillas de ancho**:
+  - `_carve_path` con `width`, `tile`, `wiggle` (0,08 frente a 0,3 del sendero) y `straight` (6 casillas rectas desde la puerta).
+  - Cada paso talla un bloque de 2×2 hacia +x/+y, así la puerta ocupa las casillas `gate` y `gate + 1` del borde vistas desde los dos chunks.
+  - Puentes (`BRIDGE`) sobre los ríos y respeto de los vados, como el sendero. Un sendero nunca pisa un camino.
+  - Los lados sin camino siguen con su sendero `PATH`.
+- **Letreros hacia la villa natal** (`ChunkData.home_sign`, `home_direction`, `sign_kind(cell)` → `SignKind.BOSQUE_VILLA` / `HOME_VILLA`):
+  - En los chunks de camino con 3 o más lados (cruces) y en los de `x + y` par. La paridad alterna entre chunks contiguos, así que en cualquier camino hay letrero al menos un chunk de cada dos.
+  - Van junto al tramo recto del camino que lleva a casa (a 2–5 casillas de la puerta, en el lateral) y señalan el **siguiente tramo hacia casa** (`road_home_side`), no la línea recta: seguir las flechas lleva a la villa natal.
+  - `EventBus.signpost_read(direction, kind)`. El HUD dice "Letrero del camino: hacia tu villa natal, al este" o, en los letreros de siempre, "hacia la villa, al ...".
+  - Los letreros hacia la villa del Bosque no cambian.
+- **Refugios** (`REFUGE`, no bloquea; `ChunkData.is_refuge(cell)`):
+  - En los chunks de camino con `road_distance % 5` en {1, 3}: yendo hacia casa hay refugio cada 2 o 3 chunks (40 % de los chunks de camino). En la villa no hace falta: su plaza cuenta como refugio (`AdventureRules.is_villa_rest`, PR del reloj).
+  - Uno por chunk, pegado a un `ROAD` y fuera del claro central, prefiriendo ocupar un árbol (árbol hueco). Si toca roca se dibuja como cueva.
+  - Al estar junto al camino, siempre se llega a pie desde el hub (test).
+
 ### Bosques
 - `BosqueMap` (`scripts/world/bosque_map.gd`) reparte el grid de chunks de la región en Bosques de **4 a 16 chunks contiguos**, de forma determinista por seed:
   1. Crecimiento aleatorio desde semillas en orden barajado (objetivo de 6 a 12 chunks).
@@ -101,13 +126,14 @@ Iteración 3, tras el segundo playtest (ADR 0008):
   - Dentro de la sesión hay una caché en memoria en la escena de exploración.
   - `SAVE_VERSION` = 2; las partidas v1 se cargan con valores por defecto.
 - **Datos**: `ChunkData` (`scripts/core/data/chunk_data.gd`, `Resource`): un `PackedByteArray` de 64×64 con `ChunkData.Tile`, más `hub`, `nujio_rect` y `has_villa`.
-  - Tipos: GRASS, CLEARING, PATH, TREE, ROCKY, CLIFF, RIVER_NARROW, RIVER_NAVIGABLE, BRIDGE, FORD, PLAZA, BUILDING, SIGN y NUJIO.
+  - Tipos: GRASS, CLEARING, PATH, TREE, ROCKY, CLIFF, RIVER_NARROW, RIVER_NAVIGABLE, BRIDGE, FORD, PLAZA, BUILDING, SIGN, NUJIO, ROAD y REFUGE (0.2.0).
   - Bloquean TREE, CLIFF, los dos ríos, BUILDING y NUJIO.
 - **Región del MVP**: `data/world/regions/valle_del_sara.json`. `world_map.json` la marca como `start_region`; `claro_inicial` queda como dato antiguo sin uso.
 - **Píxel**: `rendering/2d/snap/snap_2d_transforms_to_pixel=true`, para que el tween entre casillas no deje subpíxeles. El color de fondo es el más oscuro de la paleta.
 
 ## Consecuencias
-- Determinismo y reglas verificados en `tests/unit/world/test_chunk_generator.gd` y `tests/unit/world/test_bosque_map.gd`.
+- Determinismo y reglas verificados en `tests/unit/world/test_chunk_generator.gd`, `tests/unit/world/test_bosque_map.gd` y `tests/unit/world/test_roads.gd` (caminos, letreros y refugios).
+- Los caminos se trazan por chunks; dentro de un chunk el camino puede cruzar un río en diagonal y dejar un puente escalonado. Es aceptable con el placeholder; con el arte final convendrá forzar cruces rectos.
 - Los cambios del jugador sobre un chunk (ADR 0005, #54: "tal como lo dejé") no persisten todavía. Cuando existan, se guardarán como **diferencias** por chunk en `GameState.chunk` y se aplicarán sobre el chunk regenerado; no se guardarán los tiles completos.
 - Cambiar el algoritmo, las constantes, las sales, los parámetros de región o las tablas de estilo cambia los mundos de las partidas guardadas. Una vez publicado habrá que versionar el generador (`generator_version` en el guardado).
 - El determinismo depende de que `FastNoiseLite` dé los mismos valores entre versiones de Godot; actualizar el motor puede cambiar los mundos generados.

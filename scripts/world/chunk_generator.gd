@@ -13,6 +13,8 @@ extends RefCounted
 ## - La aleatoriedad local sale de un RNG propio sembrado con hash(seed, x, y). No se usa
 ##   GameState.rng ni randi()/randf() globales.
 ## - Cada borde tiene una entrada (sendero) en la misma posición vista desde los dos chunks.
+## - Los lados con camino principal (BosqueMap.road_sides) llevan un ROAD de 2 casillas en vez
+##   del sendero, con letreros hacia la villa natal y refugios junto al camino.
 
 const REGION_DIR: String = "res://data/world/regions/"
 ## Radio del claro central (punto de aparición seguro).
@@ -21,6 +23,10 @@ const CENTER_CLEARING_RADIUS: int = 4
 const GATE_MARGIN: int = 6
 ## Probabilidad de que un sendero se desvíe en cada paso.
 const PATH_WIGGLE: float = 0.3
+## Camino principal: ancho, desvío (menos zigzag que un sendero) y tramo recto desde la puerta.
+const ROAD_WIDTH: int = 2
+const ROAD_WIGGLE: float = 0.08
+const ROAD_STRAIGHT: int = 6
 ## Frecuencias del ruido (más alto = manchas más pequeñas).
 const HEIGHT_FREQUENCY: float = 0.015
 const OUTCROP_FREQUENCY: float = 0.045
@@ -40,6 +46,7 @@ const SALT_OUTCROP: int = 11
 const SALT_CORRIDOR: int = 12
 const SALT_TREE: int = 13
 const SALT_FORD: int = 14
+const SALT_REFUGE: int = 18
 
 ## Valores por defecto de los parámetros de región (data/world/regions/*.json).
 const DEFAULT_SIZE_CHUNKS: Array = [8, 8]
@@ -88,9 +95,19 @@ static func generate(seed_value: int, coord: Vector2i, region: Dictionary = {}, 
 		chunk.has_villa = villa
 		chunk.hub = center + Vector2i(0, nujio_n / 2 + 1)
 
+	var roads: Array[Vector2i] = []
+	if bosques != null:
+		roads = bosques.road_sides(coord)
 	for side: Vector2i in ChunkData.SIDES:
+		if roads.has(side):
+			continue
 		var gate: Vector2i = ChunkData.border_cell(side, gate_index(seed_value, coord, side))
 		_carve_path(chunk, gate, -side, chunk.hub, rng)
+	for side: Vector2i in ChunkData.SIDES:
+		if not roads.has(side):
+			continue
+		var gate: Vector2i = ChunkData.border_cell(side, gate_index(seed_value, coord, side))
+		_carve_path(chunk, gate, -side, chunk.hub, rng, ROAD_WIDTH, ChunkData.Tile.ROAD, ROAD_WIGGLE, ROAD_STRAIGHT)
 
 	if villa:
 		_build_villa(chunk, center, nujio_n, rng)
@@ -105,7 +122,73 @@ static func generate(seed_value: int, coord: Vector2i, region: Dictionary = {}, 
 		var side: Vector2i = _side_towards(to_villa)
 		var gate: Vector2i = ChunkData.border_cell(side, gate_index(seed_value, coord, side))
 		chunk.set_tile(gate - side * 3, ChunkData.Tile.SIGN)
+
+	if not roads.is_empty():
+		var home_side: Vector2i = bosques.road_home_side(coord)
+		if home_side != Vector2i.ZERO and (roads.size() >= 3 or posmod(coord.x + coord.y, 2) == 0):
+			_place_home_sign(chunk, seed_value, coord, home_side)
+		if bosques.has_refuge(coord) and not villa:
+			_place_refuge(chunk, seed_value, coord)
 	return chunk
+
+
+## Letrero hacia la villa natal junto al tramo recto del camino que lleva a casa (lado `side`).
+## Un chunk de cada dos del camino (paridad de x + y: alterna en chunks contiguos) y los cruces.
+static func _place_home_sign(chunk: ChunkData, seed_value: int, coord: Vector2i, side: Vector2i) -> void:
+	var gate: Vector2i = ChunkData.border_cell(side, gate_index(seed_value, coord, side))
+	var lateral := Vector2i(1, 0) if side.y != 0 else Vector2i(0, 1)
+	# Si no hay sitio a los lados, el letrero va sobre el propio camino (también se camina).
+	var cell: Vector2i = gate - side * 4
+	var candidates: Array[Vector2i] = []
+	for depth: int in [4, 3, 5, 2]:
+		for lane: int in [-1, ROAD_WIDTH]:
+			candidates.append(Vector2i(depth, lane))
+	for k: Vector2i in candidates:
+		var c: Vector2i = gate - side * k.x + lateral * k.y
+		var beside: Vector2i = gate - side * k.x + lateral * clampi(k.y, 0, ROAD_WIDTH - 1)
+		if ChunkData.in_bounds(c) and _is_free_ground(chunk.get_tile(c)) and chunk.is_walkable(beside):
+			cell = c
+			break
+	chunk.set_tile(cell, ChunkData.Tile.SIGN)
+	chunk.home_sign = cell
+	chunk.home_direction = side
+
+
+## Refugio (árbol hueco o cueva) pegado al camino y lejos del claro central. Prefiere ocupar un
+## árbol. Como está junto a un ROAD, se llega a pie desde el hub.
+static func _place_refuge(chunk: ChunkData, seed_value: int, coord: Vector2i) -> void:
+	var size: int = ChunkData.SIZE
+	var trees: Array[Vector2i] = []
+	var open: Array[Vector2i] = []
+	var road: Array[Vector2i] = []
+	var keep_away: int = CENTER_CLEARING_RADIUS + 4
+	for y: int in range(2, size - 2):
+		for x: int in range(2, size - 2):
+			var c := Vector2i(x, y)
+			var tile: int = chunk.get_tile(c)
+			if tile == ChunkData.Tile.ROAD:
+				road.append(c)
+				continue
+			if not _is_free_ground(tile) or absi(c.x - chunk.hub.x) + absi(c.y - chunk.hub.y) <= keep_away:
+				continue
+			var by_road: bool = false
+			var by_sign: bool = false
+			for d: Vector2i in ChunkData.SIDES:
+				var n: int = chunk.get_tile(c + d)
+				by_road = by_road or n == ChunkData.Tile.ROAD
+				by_sign = by_sign or n == ChunkData.Tile.SIGN
+			if by_road and not by_sign:
+				(trees if tile == ChunkData.Tile.TREE else open).append(c)
+	var pool: Array[Vector2i] = trees if not trees.is_empty() else (open if not open.is_empty() else road)
+	if pool.is_empty():
+		return
+	var pick: int = hash_ints([seed_value, coord.x, coord.y, SALT_REFUGE]) % pool.size()
+	chunk.set_tile(pool[pick], ChunkData.Tile.REFUGE)
+
+
+## Suelo natural donde se puede poner un letrero o un refugio (no agua, ni camino, ni villa).
+static func _is_free_ground(tile: int) -> bool:
+	return tile == ChunkData.Tile.TREE or tile == ChunkData.Tile.GRASS or tile == ChunkData.Tile.CLEARING 		or tile == ChunkData.Tile.ROCKY or tile == ChunkData.Tile.CLIFF
 
 
 ## Tamaño de la región en chunks.
@@ -190,21 +273,23 @@ static func _side_towards(delta: Vector2i) -> Vector2i:
 
 
 ## Sendero serpenteante desde `from` hasta `to`. Atraviesa árboles y riscos y cruza los ríos con
-## puentes, así que deja `from` conectado con `to`.
-static func _carve_path(chunk: ChunkData, from: Vector2i, inward: Vector2i, to: Vector2i, rng: RandomNumberGenerator) -> void:
+## puentes, así que deja `from` conectado con `to`. `width` x `width` casillas por paso (hacia +x
+## y +y, así la puerta ocupa las mismas casillas del borde vista desde los dos chunks).
+static func _carve_path(chunk: ChunkData, from: Vector2i, inward: Vector2i, to: Vector2i, rng: RandomNumberGenerator,
+		width: int = 1, tile: int = ChunkData.Tile.PATH, wiggle: float = PATH_WIGGLE, straight: int = 3) -> void:
 	var size: int = ChunkData.SIZE
 	var cell: Vector2i = from
 	# Los primeros pasos van rectos hacia dentro para que la entrada se vea clara.
-	for _i: int in 3:
-		_carve_cell(chunk, cell)
+	for _i: int in straight:
+		_carve_cell(chunk, cell, tile, width)
 		cell += inward
 	var steps: int = 0
 	while cell != to:
-		_carve_cell(chunk, cell)
+		_carve_cell(chunk, cell, tile, width)
 		steps += 1
 		var diff: Vector2i = to - cell
 		var step: Vector2i
-		if steps < 200 and rng.randf() < PATH_WIGGLE:
+		if steps < 200 and rng.randf() < wiggle:
 			step = ChunkData.SIDES[rng.randi() % ChunkData.SIDES.size()]
 		elif absi(diff.x) >= absi(diff.y):
 			step = Vector2i(signi(diff.x), 0)
@@ -214,15 +299,22 @@ static func _carve_path(chunk: ChunkData, from: Vector2i, inward: Vector2i, to: 
 		if next.x < 1 or next.y < 1 or next.x > size - 2 or next.y > size - 2:
 			continue
 		cell = next
-	_carve_cell(chunk, to)
+	_carve_cell(chunk, to, tile, width)
 
 
-static func _carve_cell(chunk: ChunkData, cell: Vector2i) -> void:
-	var tile: int = chunk.get_tile(cell)
-	if ChunkData.is_river(tile) or tile == ChunkData.Tile.BRIDGE:
-		chunk.set_tile(cell, ChunkData.Tile.BRIDGE)
-	elif tile != ChunkData.Tile.FORD:
-		chunk.set_tile(cell, ChunkData.Tile.PATH)
+## Talla un bloque de `width` x `width` desde `cell`: puente sobre los ríos, respeta los vados y
+## un sendero nunca pisa un camino principal.
+static func _carve_cell(chunk: ChunkData, cell: Vector2i, tile: int = ChunkData.Tile.PATH, width: int = 1) -> void:
+	for dy: int in width:
+		for dx: int in width:
+			var c: Vector2i = cell + Vector2i(dx, dy)
+			if not ChunkData.in_bounds(c):
+				continue
+			var current: int = chunk.get_tile(c)
+			if ChunkData.is_river(current) or current == ChunkData.Tile.BRIDGE:
+				chunk.set_tile(c, ChunkData.Tile.BRIDGE)
+			elif current != ChunkData.Tile.FORD and not (current == ChunkData.Tile.ROAD and tile == ChunkData.Tile.PATH):
+				chunk.set_tile(c, tile)
 
 
 static func _carve_clearing(chunk: ChunkData, center: Vector2i, radius: int, tile: int) -> void:
