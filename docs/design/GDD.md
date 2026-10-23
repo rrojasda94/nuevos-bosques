@@ -72,7 +72,7 @@ Antes de implementarse necesitan fuente, sumidero y qué pasa si se agotan:
 - **Origen:** el jugador elige región y área de origen al empezar (ADR 0005, 0008). Le da conocimiento automático del área y sus Bosques. Cuanto más lejos del punto inicial, más complicado el viaje (#56, #57, #66).
 - **Viaje** (ADR 0007):
   - Movimiento libre dentro del Bosque inicial.
-  - Para entrar a otro Bosque que aún tenga Nujio: pagar Luz o enfrentarse a los Únicos que envía (#70, #71).
+  - Para entrar a otro Bosque que aún tenga Nujio: pagar Luz o enfrentarse a los Únicos que envía (#70, #71). Versión de prueba con números provisionales: [`mechanics/cruce-y-combate-v1.md`](mechanics/cruce-y-combate-v1.md).
   - Se puede recorrer todo el mapa a pie: es más lento, cansa al personaje y **también cuesta**, pero da más control sobre el gasto y el riesgo (ADR 0008; #73, #91). También se puede usar el mapa de la región para distancias largas (#56).
 - **Terreno** (ADR 0007, 0008):
   - Árboles: bloquean, con espacio para caminar entre ellos (ADR 0008, confirmado).
@@ -97,6 +97,8 @@ Antes de implementarse necesitan fuente, sumidero y qué pasa si se agotan:
 
 ## Capa RPG (MVP)
 > Por revisar: en Aventura se crea un solo personaje y en Garelino se comandan tropas (#32, #49). Combates contra animales: #51.
+>
+> **Versión de prueba en curso** (Aventura): un solo personaje, un Adoc (30 PV, ATQ 6, DEF 3, 10 de Luz), en combate por menú contra Únicos con las acciones Atacar, Defender, Ofrecer Luz y Huir. Números provisionales en [`mechanics/cruce-y-combate-v1.md`](mechanics/cruce-y-combate-v1.md). La lista siguiente es previa y por revisar.
 - Party de hasta 3. Stats: HP, ATK, DEF, SPD.
 - Combate por turnos, menú: Atacar / Habilidad / Objeto / Huir.
 - Exploración top-down del chunk; encuentros según bioma de la región.

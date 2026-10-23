@@ -33,7 +33,7 @@ Ninguna en este slice. Las presiones de Aventura (muerte = game over, Luz, Únic
 - Aspecto del Bosque inicial (con Nujio): **un solo tipo de árbol** y una **combinación de colores definida por su Nujio**, siempre con los **32 colores de la paleta del proyecto** (ADR 0008). Dentro del slice basta un tipo de árbol y una combinación, generados por seed (#86).
 - El Nujio está en el **centro del Bosque**, en su chunk más central; si hay villa, la villa ocupa ese chunk y el Nujio está en su centro (ADR 0008). En el slice, el Nujio puede ser un placeholder en ese chunk, o no aparecer.
 - Cada chunk se genera **al entrar por primera vez**, a partir de la seed de la partida y de su posición en la jerarquía (región, área, Bosque, chunk) (ADR 0005, 0007).
-- El slice cubre **un solo Bosque inicial**. Salir a otro Bosque, área o región queda para la siguiente iteración.
+- El slice empezó con **un solo Bosque inicial**. Cruzar a Bosques vecinos (pagando Luz o combatiendo contra su Único) se añade en la versión de prueba descrita en [`cruce-y-combate-v1.md`](cruce-y-combate-v1.md). Viajar a otra área, subregión o región queda para después.
 
 ### 3. Terreno
 - **Árboles**: **bloquean**, como en la v1, **con más espacio para caminar entre ellos** (ADR 0008, confirmado; sustituye lo dicho en ADR 0007).
@@ -59,10 +59,10 @@ Ninguna en este slice. Las presiones de Aventura (muerte = game over, Luz, Únic
 - `world-gen-dev`: generación del Bosque y sus chunks (terreno, barreras).
 - `engine-architect`: transición entre chunks y guardado de los chunks visitados.
 - `rpg-systems-dev`: personaje y movimiento.
-- No intervienen la capa ciudad, el combate, la Luz ni el ciclo día/noche en este slice.
+- No intervienen la capa ciudad ni el ciclo día/noche. El combate y la Luz entran con [`cruce-y-combate-v1.md`](cruce-y-combate-v1.md).
 
 ## Casos límite
-- Llegar al borde del Bosque inicial: en el slice es un límite que no se puede cruzar. En el juego completo, entrar a otro Bosque con Nujio cuesta Luz o un enfrentamiento con Únicos (#70, #71).
+- Llegar al borde del Bosque inicial: con la v1 de cruce aparece el menú "Ofrecer N Luz / Enfrentar a sus Únicos / Retroceder" ([`cruce-y-combate-v1.md`](cruce-y-combate-v1.md)). Bosques sin Nujio: #70.
 - Chunk con un río que lo atraviesa entero: los ríos tienen zonas de paso (ADR 0008), así que todos los chunks del Bosque inicial deben ser alcanzables a pie.
 - Árboles que bloquean demasiado: no debe quedar ninguna parte del Bosque inaccesible por culpa de los árboles (propuesta de game-designer).
 - Volver a un chunk tras visitar muchos: tiene que seguir como el jugador lo dejó.
@@ -87,7 +87,7 @@ Propuesta de `game-designer`, a confirmar con el dueño:
 | Misiones | Aparecen y hacen viajar de lugar en lugar; las villas llaman al adoc. | #20, #21, #31 |
 | Muerte | Game over (ADR 0004). | #21 |
 | Progresión | Experiencia, habilidades, objetos, fama (ADR 0004). | #33 |
-| Salir del Bosque inicial | A un Bosque con Nujio: pagar Luz o enfrentarse a sus Únicos. Sin Nujio: por definir (ADR 0007). | #70, #71 |
+| Salir del Bosque inicial | **En curso**: versión de prueba con números provisionales en [`cruce-y-combate-v1.md`](cruce-y-combate-v1.md) (pagar N = 3 + d de Luz o combatir contra el Único; si pierdes, despiertas en tu Bosque). Sin Nujio: por definir (ADR 0007). | #70, #71, #103–#105 |
 | Luz | Recurso de viaje y peaje entre Bosques (ADR 0005, 0007). | #57, #71 |
 | Viaje a pie y cansancio | Se puede recorrer todo el mapa a pie; es más lento y cansa al personaje (ADR 0007). Ir a pie también cuesta, pero da más control sobre el gasto y el riesgo (ADR 0008). | #73, #91 |
 | Villas | 1 de cada 5 Bosques tiene villa, dentro de un solo chunk. Hay letreros de piedra en algunos caminos que indican hacia una villa (ADR 0008). | #14b, #47, #50, #87 |
