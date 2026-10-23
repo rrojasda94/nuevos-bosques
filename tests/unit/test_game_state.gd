@@ -37,4 +37,5 @@ func test_round_trip_preserves_chunk_coord_and_player_cell() -> void:
 func test_new_game_resets_chunk_position() -> void:
 	GameState.chunk_coord = Vector2i(4, 4)
 	GameState.new_game(5)
-	assert_eq(GameState.chunk_coord, Vector2i.ZERO)
+	assert_eq(GameState.chunk_coord, Vector2i(-1, -1), "(-1, -1) = chunk inicial de la región")
+	assert_eq(GameState.region_id, &"valle_del_sara")

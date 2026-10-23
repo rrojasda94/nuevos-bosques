@@ -66,6 +66,12 @@ func _unhandled_input(event: InputEvent) -> void:
 			_held.erase(action)
 
 
+func _notification(what: int) -> void:
+	# Al perder el foco (alt-tab, ventana incrustada en el editor) los "released" pueden no llegar.
+	if what == NOTIFICATION_APPLICATION_FOCUS_OUT or what == NOTIFICATION_WM_WINDOW_FOCUS_OUT:
+		_held.clear()
+
+
 func _process(_delta: float) -> void:
 	if not is_moving():
 		_try_step()

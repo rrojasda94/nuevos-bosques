@@ -9,7 +9,9 @@ signal day_started(day: int)
 # --- Mundo (ADR 0003) ---
 signal chunk_generated(region_id: StringName, seed_value: int)
 ## El jugador entra en un chunk (al empezar, al cruzar un borde o al cambiar de seed).
-signal chunk_entered(chunk_coord: Vector2i)
+signal chunk_entered(chunk_coord: Vector2i, bosque_id: int, bosque_size: int)
+## El jugador intenta salir de su Bosque. bosque_id = -1 si el borde es el límite de la región.
+signal bosque_border_reached(bosque_id: int)
 
 # --- Ciudad ---
 signal build_requested(building_id: StringName, cell: Vector2i)

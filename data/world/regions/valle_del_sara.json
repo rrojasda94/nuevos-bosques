@@ -1,0 +1,28 @@
+{
+  "$comment": "Región del MVP de Aventura. El glosario la lista como 'Sagra (valle del Sara)'. Lore: docs/glosario_nuevos_bosques.md. Estructura y parámetros de generación: world-gen-dev (ADR 0006); valores a ajustar por game-designer. Más agreste al norte, más plana al sur con claros ribereños. Coordenadas de chunk: (0,0) es la esquina noroeste.",
+  "id": "valle_del_sara",
+  "name": "Valle del Sara",
+  "areas": ["Lean", "Tossie", "Ostie", "Casie", "Vastie", "Alss", "Causie"],
+  "size_chunks": [12, 16],
+  "start_chunk": [6, 13],
+  "forest_density": 0.75,
+  "relief": {
+    "north_base": 0.55,
+    "south_base": -0.35,
+    "north_roughness": 1.1,
+    "south_roughness": 0.3,
+    "cliff_gradient": 0.016,
+    "steep_gradient": 0.075,
+    "terrace_step": 0.15,
+    "rocky_level": 0.6
+  },
+  "rivers": {
+    "main_width_north": 0.012,
+    "main_width_south": 0.03,
+    "navigable_from": 0.45,
+    "stream_width": 0.035,
+    "stream_until": 0.65,
+    "riverside_clearing_from": 0.5,
+    "riverside_clearing_factor": 2.5
+  }
+}

@@ -1,9 +1,12 @@
 class_name ChunkData
 extends Resource
-## Chunk (zona) generado: 64x64 tiles (ADR 0004). Lo produce ChunkGenerator (ADR 0006);
-## el resto de sistemas solo lo leen.
+## Chunk generado: 64x64 tiles (ADR 0004). Escala: chunk < Bosque < área < región.
+## Lo produce ChunkGenerator (ADR 0006); el resto de sistemas solo lo leen.
 
-enum Tile { GRASS, CLEARING, PATH, TREE, WATER }
+## Bloquean el paso: CLIFF (riscos y pendientes pronunciadas) y los dos tipos de río.
+## FOREST se camina (bosque tupido). RIVER_NAVIGABLE = "rio_navegable" (bloquea a pie hasta que
+## haya navegación); RIVER_NARROW = "rio_estrecho" (arroyos de montaña, nunca navegable).
+enum Tile { GRASS, CLEARING, PATH, FOREST, ROCKY, CLIFF, RIVER_NARROW, RIVER_NAVIGABLE, BRIDGE }
 
 const SIZE: int = 64
 ## Bordes del chunk, como dirección hacia fuera.
@@ -48,8 +51,15 @@ func set_tile(cell: Vector2i, tile: int) -> void:
 func is_walkable(cell: Vector2i) -> bool:
 	if not in_bounds(cell):
 		return false
-	var tile: int = get_tile(cell)
-	return tile != Tile.TREE and tile != Tile.WATER
+	return is_walkable_tile(get_tile(cell))
+
+
+static func is_walkable_tile(tile: int) -> bool:
+	return tile != Tile.CLIFF and tile != Tile.RIVER_NARROW and tile != Tile.RIVER_NAVIGABLE
+
+
+static func is_river(tile: int) -> bool:
+	return tile == Tile.RIVER_NARROW or tile == Tile.RIVER_NAVIGABLE
 
 
 ## 1 por cada casilla a la que se llega andando desde el centro.

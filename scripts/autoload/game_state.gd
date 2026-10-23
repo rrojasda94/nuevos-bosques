@@ -12,8 +12,9 @@ var region_id: StringName = &""
 ## Reservado para cambios persistentes sobre chunks (ADR 0006). Los tiles NO se guardan:
 ## se regeneran con ChunkGenerator a partir de seed + coordenadas.
 var chunk: Dictionary = {}
-## Chunk (zona) donde está el jugador. (0, 0) es el chunk inicial de la partida.
-var chunk_coord: Vector2i = Vector2i.ZERO
+## Chunk donde está el jugador, en coordenadas de la región ((0, 0) = esquina noroeste).
+## (-1, -1) = el chunk inicial de la región (start_chunk en su JSON).
+var chunk_coord: Vector2i = Vector2i(-1, -1)
 ## Casilla del jugador dentro del chunk. (-1, -1) = aparecer en el centro.
 var player_cell: Vector2i = Vector2i(-1, -1)
 
@@ -31,13 +32,13 @@ var inventory: Dictionary = {}
 var quests: Dictionary = {}
 
 
-func new_game(new_seed: int = 0, new_region: StringName = &"claro_inicial") -> void:
+func new_game(new_seed: int = 0, new_region: StringName = &"valle_del_sara") -> void:
 	seed_value = new_seed if new_seed != 0 else int(Time.get_unix_time_from_system())
 	rng.seed = seed_value
 	day = 1
 	region_id = new_region
 	chunk = {}
-	chunk_coord = Vector2i.ZERO
+	chunk_coord = Vector2i(-1, -1)
 	player_cell = Vector2i(-1, -1)
 	resources = { "wood": 20, "stone": 10, "food": 15, "gold": 0 }
 	buildings = []
@@ -69,9 +70,9 @@ func to_dict() -> Dictionary:
 func from_dict(data: Dictionary) -> void:
 	seed_value = int(data.get("seed", 0))
 	day = int(data.get("day", 1))
-	region_id = StringName(data.get("region_id", "claro_inicial"))
+	region_id = StringName(data.get("region_id", "valle_del_sara"))
 	chunk = data.get("chunk", {})
-	chunk_coord = _to_vector2i(data.get("chunk_coord", [0, 0]), Vector2i.ZERO)
+	chunk_coord = _to_vector2i(data.get("chunk_coord", [-1, -1]), Vector2i(-1, -1))
 	player_cell = _to_vector2i(data.get("player_cell", [-1, -1]), Vector2i(-1, -1))
 	rng.seed = seed_value
 	rng.state = int(data.get("rng_state", rng.state))
