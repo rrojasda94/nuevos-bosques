@@ -138,15 +138,21 @@ static func _make_texture(dir: Vector2i) -> Texture2D:
 		img.set_pixel(5, 5, outline)
 	elif dir == Vector2i.RIGHT:
 		img.set_pixel(10, 5, outline)
-	# Contorno: píxeles vacíos que tocan algo pintado.
+	add_outline(img, outline)
+	return ImageTexture.create_from_image(img)
+
+
+## Contorno: pinta de `color` los píxeles vacíos que tocan algo pintado (también para los NPC).
+static func add_outline(img: Image, color: Color) -> void:
 	var filled := img.duplicate() as Image
-	for y: int in TILE_SIZE:
-		for x: int in TILE_SIZE:
+	var w: int = img.get_width()
+	var h: int = img.get_height()
+	for y: int in h:
+		for x: int in w:
 			if filled.get_pixel(x, y).a > 0.0:
 				continue
 			for d: Vector2i in ChunkData.SIDES:
 				var p := Vector2i(x, y) + d
-				if p.x >= 0 and p.y >= 0 and p.x < TILE_SIZE and p.y < TILE_SIZE and filled.get_pixelv(p).a > 0.0:
-					img.set_pixel(x, y, outline)
+				if p.x >= 0 and p.y >= 0 and p.x < w and p.y < h and filled.get_pixelv(p).a > 0.0:
+					img.set_pixel(x, y, color)
 					break
-	return ImageTexture.create_from_image(img)

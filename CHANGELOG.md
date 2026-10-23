@@ -7,8 +7,10 @@ Todos los cambios que nota el jugador. Formato [Keep a Changelog](https://keepac
 ### Añadido
 - Caminos principales de tierra clara, de dos casillas de ancho, que unen las villas de todos los Bosques con la villa natal. En los cruces y cada pocos chunks hay letreros del camino que señalan hacia tu villa natal, y junto al camino hay refugios (árboles huecos o cuevas) cada 2 o 3 chunks.
 - El tiempo avanza en Aventura y se para con los menús y el combate: un Día de Gietos de 8 minutos y una Noche de Riumna de 5 con luz de luna plateada, en la que los claros del mundo resaltan. Entre uno y otro pasa el riutash, avisado a los 60 y a los 15 segundos: en un refugio o en la plaza de una villa te cura la mitad de los PV que te faltan; expuesto te quita el 30% de tus PV máximos, pero nunca te mata. El día sube al amanecer y el HUD muestra el Momento y el tiempo que falta para el riutash.
+- Tecla E (botón A del mando) para interactuar. El sfida espera en la plaza de la villa natal y te saluda. Los letreros se leen con E: muestran una flecha hacia la villa de destino, su nombre y cuántos minutos de camino quedan (y si te pillará el riutash). Los refugios también se examinan con E.
 
 ### Cambiado
+- Los letreros ya no se leen solos al pisarlos ni al pasar al lado.
 - El combate se narra estilo Pokémon: letra a letra, un mensaje por acción, con barras de PV animadas.
 - Los Únicos son monstruos (cuadrúpedo, serpiente, cornudo, de muchos ojos, alado) con los colores de su Bosque. La serpiente es Aledra y el resto, Ofomni.
 

@@ -1,9 +1,10 @@
-[gd_scene load_steps=5 format=3]
+[gd_scene load_steps=6 format=3]
 
 [ext_resource type="Script" path="res://scripts/world/exploration.gd" id="1_expl"]
 [ext_resource type="Script" path="res://scripts/rpg/player_walker.gd" id="2_player"]
 [ext_resource type="Script" path="res://scripts/ui/debug_hud.gd" id="3_hud"]
 [ext_resource type="PackedScene" path="res://scenes/rpg/crossing.tscn" id="4_cross"]
+[ext_resource type="PackedScene" path="res://scenes/ui/dialogue_box.tscn" id="5_dialogue"]
 
 [node name="Exploration" type="Node2D"]
 script = ExtResource("1_expl")
@@ -11,6 +12,8 @@ script = ExtResource("1_expl")
 [node name="Terrain" type="TileMapLayer" parent="."]
 
 [node name="Nujios" type="Node2D" parent="."]
+
+[node name="Npcs" type="Node2D" parent="."]
 
 [node name="Player" type="Node2D" parent="."]
 script = ExtResource("2_player")
@@ -59,3 +62,14 @@ mouse_filter = 2
 color = Color(0.0941, 0.0784, 0.1451, 0)
 
 [node name="Crossing" parent="." instance=ExtResource("4_cross")]
+
+[node name="Dialogue" type="CanvasLayer" parent="."]
+process_mode = 3
+layer = 7
+
+[node name="DialogueBox" parent="Dialogue" instance=ExtResource("5_dialogue")]
+offset_left = 4.0
+offset_top = 128.0
+offset_right = 316.0
+offset_bottom = 176.0
+pause_tree = true

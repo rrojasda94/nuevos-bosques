@@ -1,9 +1,9 @@
 extends CanvasLayer
 ## Pantalla de combate (ADR 0009): dibuja un BattleLogic y le pasa las acciones del menú.
 ## Arriba el Único (monstruo de placeholder con los colores de su Bosque, ver UnicoArt), abajo el
-## Adoc. Narración estilo Pokémon: un mensaje por acción, letra a letra; pulsar durante la
-## escritura lo completa y pulsar después pasa al siguiente. Las barras cambian al mostrarse el
-## mensaje que las cambia. El menú solo aparece cuando no queda ningún mensaje.
+## Adoc. Narración estilo Pokémon con DialogueBox: un mensaje por acción, letra a letra; pulsar
+## durante la escritura lo completa y pulsar después pasa al siguiente. Las barras cambian al
+## mostrarse el mensaje que las cambia. El menú solo aparece cuando no queda ningún mensaje.
 ## No aplica nada a GameState: al terminar emite `finished` y Crossing aplica el resultado.
 
 signal finished(logic: BattleLogic)
@@ -22,8 +22,6 @@ const TEXT_VICTORY_LUZ: String = " (+%d Luz)"
 const TEXT_DEFEAT: String = "Caes. Despertarás junto al Nujio de tu villa."
 const OPTIONS: Array[String] = ["Atacar", "Defender", "Ofrecer Luz", "Huir"]
 
-## Letras por segundo de la narración. AJUSTAR AQUÍ la velocidad del texto.
-const TEXT_SPEED: float = 45.0
 ## Segundos que tarda una barra de PV en llegar a su nuevo valor.
 const BAR_TIME: float = 0.35
 ## Tamaño del Único en casillas de 16 px.
@@ -31,11 +29,6 @@ const UNICO_TILES: int = 6
 const BAR_WIDTH: float = 100.0
 
 var _logic: BattleLogic
-## Mensajes pendientes: { "text", y opcionalmente "unico_hp", "adoc_hp", "luz", "flash" }.
-var _queue: Array[Dictionary] = []
-var _typing: bool = false
-var _chars: float = 0.0
-var _blink: float = 0.0
 
 @onready var _ground: ColorRect = $Ground
 @onready var _unico: TextureRect = $Unico
@@ -45,10 +38,15 @@ var _blink: float = 0.0
 @onready var _unico_bar: ColorRect = $UnicoBox/Bar
 @onready var _adoc_stats: Label = $AdocBox/Stats
 @onready var _adoc_bar: ColorRect = $AdocBox/Bar
-@onready var _narration: Label = $TextBox/Narration
-@onready var _more: CanvasItem = $TextBox/More
+## Mensajes: { "text", y opcionalmente "unico_hp", "adoc_hp", "luz", "flash" }.
+@onready var _text_box: DialogueBox = $TextBox
 @onready var _menu_box: Control = $MenuBox
 @onready var _menu: OptionMenu = $MenuBox/Options
+
+
+func _ready() -> void:
+	_text_box.line_started.connect(_on_message_started)
+	_text_box.finished.connect(_on_messages_finished)
 
 
 func begin(logic: BattleLogic, style: Dictionary, kind: UnicoArt.Kind) -> void:
@@ -99,17 +97,6 @@ static func messages_for(events: Array[Dictionary], balance: Dictionary) -> Arra
 	return out
 
 
-func _process(delta: float) -> void:
-	if _typing:
-		_chars += delta * TEXT_SPEED
-		_narration.visible_characters = int(_chars)
-		if _narration.visible_characters >= _narration.get_total_character_count():
-			_finish_typing()
-	elif not _menu_box.visible and _logic != null:
-		_blink += delta
-		_more.visible = fmod(_blink, 0.6) < 0.4
-
-
 func _unhandled_input(event: InputEvent) -> void:
 	if _logic == null or event is InputEventMouseMotion:
 		return
@@ -121,33 +108,16 @@ func _unhandled_input(event: InputEvent) -> void:
 			if not events.is_empty():
 				_show_messages(messages_for(events, _logic.balance))
 		return
-	if event.is_action_pressed(&"ui_accept") or event.is_action_pressed(&"ui_cancel"):
-		if _typing:
-			_finish_typing()
-		else:
-			_next_message()
+	_text_box.handle(event)
 
 
 func _show_messages(messages: Array[Dictionary]) -> void:
-	_queue = messages
 	_menu_box.visible = false
-	_next_message()
+	_text_box.show_lines(messages)
 
 
-## Muestra el siguiente mensaje; sin mensajes, abre el menú o, si el combate acabó, lo cierra.
-func _next_message() -> void:
-	if _queue.is_empty():
-		if _logic.is_over():
-			finished.emit(_logic)
-		else:
-			_open_menu()
-		return
-	var m: Dictionary = _queue.pop_front()
-	_narration.text = m.text
-	_narration.visible_characters = 0
-	_chars = 0.0
-	_typing = true
-	_more.visible = false
+## Al mostrarse cada mensaje: barras y destellos con el estado que trae.
+func _on_message_started(m: Dictionary) -> void:
 	if m.has("unico_hp"):
 		_set_bars(m, true)
 	match m.get("flash", &""):
@@ -159,17 +129,16 @@ func _next_message() -> void:
 			create_tween().tween_property(_unico, "modulate:a", 0.0, 0.8)
 
 
-func _finish_typing() -> void:
-	_typing = false
-	_narration.visible_characters = -1
-	_blink = 0.0
-	_more.visible = true
+## Sin mensajes pendientes: abre el menú o, si el combate acabó, lo cierra.
+func _on_messages_finished() -> void:
+	if _logic.is_over():
+		finished.emit(_logic)
+	else:
+		_open_menu()
 
 
 func _open_menu() -> void:
-	_narration.text = TEXT_PROMPT
-	_narration.visible_characters = -1
-	_more.visible = false
+	_text_box.show_static(TEXT_PROMPT)
 	var enabled: Array[bool] = [true, true, _logic.can_offer_luz(), true]
 	_menu.set_options(OPTIONS, enabled, true)
 	_menu_box.visible = true
