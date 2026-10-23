@@ -14,6 +14,6 @@ Hasta ahora todo se commiteaba directamente en una sola rama (`claude/nuevos-bos
 - `*.import` pasa a commitearse, como recomienda Godot 4: guarda los ajustes de importación de cada asset.
 
 ## Consecuencias
-- El PR #1 se cierra con merge a `main` y se crea el tag `v0.1.0`. A partir de ahí, cada tema va en su propia rama y su propio PR.
+- El PR #1 (fundacional) se integra en `main` con merge commit, como excepción al squash, para conservar el historial de la configuración inicial. Después se crea el tag `v0.1.0`. A partir de ahí, cada tema va en su propia rama y su propio PR.
 - La protección de `main` exige que pase el check `Tests`.
 - Antes de 0.2.0 se hace una pasada `refactor` para alinear el código existente con `CONVENCIONES.md`. Ejemplos ya detectados: las señales `expedition_*` usan `zone_id`, y el nombre de archivo del ADR 0006 todavía dice "zonas".
