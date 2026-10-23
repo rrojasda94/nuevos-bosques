@@ -1,0 +1,114 @@
+{
+  "id": "primera_mision",
+  "title": "Primer encargo",
+  "objective": "Intercepta al Ofomni",
+  "map_description": "Un Ofomni avanza hacia tu villa. Sal a su paso y véncelo.",
+  "giver": "sfida_natal",
+  "target": "ofomni",
+  "reward": {
+    "refill_luz_to_max": true,
+    "ofrenda": "cuenco_ritual",
+    "ofrenda_luz": 6,
+    "xp": 25,
+    "fama": 1
+  },
+  "texts": {
+    "offer": {
+      "id": "primera_mision_offer",
+      "lines": [
+        { "speaker": "Sfida", "text": "Adoc, espera. Te estaba buscando." },
+        { "speaker": "Sfida", "text": "El Nujio ha oído algo en Pensamiento." },
+        { "speaker": "Sfida", "text": "Un Ofomni. Un ojo enorme, con tentáculos." },
+        { "speaker": "Sfida", "text": "Ya ha cruzado varios Bosques. Viene hacia nuestra villa." },
+        { "speaker": "Sfida", "text": "Hay que salirle al paso y vencerlo antes de que llegue." },
+        { "speaker": "Sfida", "text": "Será difícil. Es tu primera misión, lo sé." },
+        { "speaker": "Sfida", "text": "Pero los otros adoc han salido a otras misiones." },
+        { "speaker": "Sfida", "text": "Tu brújula lo señala. En el mapa (M) verás dónde lo oímos." }
+      ]
+    },
+    "accept_prompt": {
+      "id": "primera_mision_accept_prompt",
+      "speaker": "Sfida",
+      "text": "¿Saldrás a su encuentro?",
+      "options": [
+        { "id": "accept", "text": "Acepto" },
+        { "id": "decline", "text": "Aún no" }
+      ]
+    },
+    "accepted": {
+      "id": "primera_mision_accepted",
+      "lines": [
+        { "speaker": "Sfida", "text": "En cada riutash, el Nujio volverá a oírlo. Te avisaré." },
+        { "speaker": "Sfida", "text": "Busca refugio cuando llegue el riutash. Brille tu Luz." }
+      ]
+    },
+    "declined": {
+      "id": "primera_mision_declined",
+      "lines": [
+        { "speaker": "Sfida", "text": "Prepárate, entonces. Pero no tardes." },
+        { "speaker": "Sfida", "text": "Aquí estaré. Vuelve cuando sea el momento." }
+      ]
+    },
+    "reminder": {
+      "id": "primera_mision_reminder",
+      "lines": [
+        { "speaker": "Sfida", "text": "El Ofomni sigue avanzando. No te demores." },
+        { "speaker": "Sfida", "text": "Sigue tu brújula. El Nujio lo oye en cada riutash." }
+      ]
+    },
+    "nujio_hears": {
+      "id": "primera_mision_nujio_hears",
+      "text": "El Nujio vuelve a oír al Ofomni: %s."
+    },
+    "victory_battle": {
+      "id": "primera_mision_victory_battle",
+      "lines": [
+        { "speaker": "", "text": "El ojo se cierra. Los tentáculos se aflojan." },
+        { "speaker": "", "text": "El Ofomni vuelve a la Luz del Bosque." },
+        { "speaker": "", "text": "Vuelve con el sfida de tu villa." }
+      ]
+    },
+    "completed_return": {
+      "id": "primera_mision_completed_return",
+      "lines": [
+        { "speaker": "Sfida", "text": "Lo sentí, adoc. El Nujio ya no lo oye." },
+        { "speaker": "Sfida", "text": "Lo has apaciguado. La villa te lo debe." },
+        { "speaker": "", "text": "Tu Luz se llena." },
+        { "speaker": "", "text": "Recibes: Cuenco ritual." },
+        { "speaker": "Sfida", "text": "Lo hicieron nuestros sarua. Guarda Luz para el camino." },
+        { "speaker": "Sfida", "text": "Déjalo entero en el Bosque cuando lo necesites." },
+        { "speaker": "Sfida", "text": "Brille tu Luz, adoc." }
+      ]
+    },
+    "failed": {
+      "id": "primera_mision_failed",
+      "lines": [
+        { "speaker": "", "text": "El Ofomni ha llegado a tu villa." },
+        { "speaker": "", "text": "La villa queda dañada. Pierdes Luz." },
+        { "speaker": "Sfida", "text": "Llegó antes que tú, adoc." },
+        { "speaker": "Sfida", "text": "Era tu primera misión. Aun así, nos ha costado." },
+        { "speaker": "Sfida", "text": "Sigue aquí. Apacígualo, por la villa." }
+      ]
+    },
+    "failed_reminder": {
+      "id": "primera_mision_failed_reminder",
+      "lines": [
+        { "speaker": "Sfida", "text": "El Ofomni sigue en la villa. No podemos esperar." }
+      ]
+    },
+    "failed_victory_return": {
+      "id": "primera_mision_failed_victory_return",
+      "lines": [
+        { "speaker": "Sfida", "text": "Tarde, pero lo has apaciguado. Gracias." },
+        { "speaker": "Sfida", "text": "La villa sanará. Recuerda esto la próxima vez." }
+      ]
+    },
+    "rewarded_idle": {
+      "id": "primera_mision_rewarded_idle",
+      "lines": [
+        { "speaker": "Sfida", "text": "El Nujio está en calma. Tú también deberías." },
+        { "speaker": "Sfida", "text": "Gracias otra vez, adoc. Brille tu Luz." }
+      ]
+    }
+  }
+}
