@@ -27,7 +27,22 @@ El "juego enorme de enanos" es **probablemente Dwarf Fortress, a confirmar**.
 |---|---|---|---|
 | **Supervivencia** | Mantener con vida al Nujio. Modo largo. Debe evitar que los garelinos enloquezcan al Nujio o aniquilen el bosque. | **No hay victoria.** | Los garelinos enloquecen al Nujio o aniquilan el bosque. |
 | **Garelino** | Comanda un grupo de fanáticos (garelinos) que buscan destruir los bosques dominados por un Nujio. Puede mejorar sus tropas, aprender habilidades y estrategias para acelerar la decadencia, y reclutar nuevos individuos. Se enfrenta a los Humores del mundo, a los Únicos que envía el bosque y a la resistencia de la población de la villa. | Eliminar al Nujio y sembrar las primeras semillas de los Nuevos Bosques. | Quedarse sin individuos. |
-| **Aventura** | Crea un personaje que viaja de lugar en lugar según las misiones que aparezcan (misiones para derrotar Únicos; las villas suelen llamar al adoc para combatirlos). Sube experiencia, aprende habilidades, gana objetos y fama. | Por definir ("debe ganar"; ver #31). | La muerte del personaje es game over. |
+| **Aventura** | Crea un personaje que viaja de lugar en lugar según las misiones que aparezcan (misiones para derrotar Únicos; las villas suelen llamar al adoc para combatirlos). Sube experiencia, aprende habilidades, gana objetos y fama. | Por definir ("debe ganar"; ver #31). Es un survival (nota de abajo). | La muerte del personaje es game over **si el monstruo es fatal** (nota "Derrota en Aventura"). |
+
+### Nota: derrota en Aventura (2026-10-23)
+Respuesta del dueño a la #126 ("si fallar un encargo no acaba la partida, ¿cuál es la misión de la partida en Aventura?"):
+
+> "es un survival, deberia ser game over dependiendo del monstruo que te ataque, un iserald es fatal."
+
+- **Aventura es un survival.** No hay una "misión de la partida" aparte: los encargos de villa (por ejemplo, el del Ofomni) pueden fallar sin que la partida acabe.
+- **Que perder sea game over depende del monstruo que te vence.**
+  - Regla provisional para el código: cada tipo de Único tiene `fatal: bool`.
+  - Perder contra uno **fatal** es **game over**: la partida termina y se empieza otra.
+  - Perder contra uno **no fatal**: despiertas en la villa natal (regla de v1).
+- **Iserald es fatal** siempre (todavía no existe en el juego).
+- **Provisional, a confirmar**: los Únicos comunes de borde y el Ofomni de la primera misión **no son fatales**, porque es la primera misión y una versión de prueba.
+- Esto matiza la fila "Aventura" de la tabla de arriba: "la muerte del personaje es game over" vale solo contra monstruos fatales.
+- Qué otros monstruos son fatales: #127.
 
 ### Reglas de no matar
 - **Aventura**: no se puede matar gente en lugares donde haya otras personas o seres con consciencia.
