@@ -60,14 +60,14 @@ Antes de implementarse necesitan fuente, sumidero y qué pasa si se agotan:
 ## Mundo (ADR 0003, 0004, 0005, 0007, 0008)
 - **Mapa mundial fijo** (ADR 0005): `data/world/world_map.json` + arte de referencia en `docs/design/world/`. El PNG del Sur Lenfi con regiones y áreas por colores (preliminar; norte arriba) **todavía no está en el repo** (#80).
 - Región → bioma, clima, relieve, facción, recursos, peligro.
-- **Ámbito jugable:** solo la parte suroccidental de Nardaram. Nombres conocidos: Valle del Sara (región), Alcuss (nivel por aclarar) y Alciss (región dentro de Alcuss) (#64, #77).
+- **Ámbito jugable:** solo la parte suroccidental de Nardaram. Regiones conocidas: Valle del Sara y Alcuss (lista completa: #64).
 - **Escala** (ADR 0007, 0008): chunk (64×64 tiles) < **Bosque** (4–16 chunks, forma y número aleatorios) < área (6–12 Bosques) < región (de decenas a un centenar de áreas) < Sur Lenfi.
 - **Tipos de Bosque** (ADR 0008):
-  - Con Nujio: un solo tipo de árbol (coníferas, cactus, palmeras, espinosos, copas redondas…) y una paleta definida por su Nujio. El Bosque contiguo puede ser totalmente distinto, incluso monocromo.
+  - Con Nujio: un solo tipo de árbol (coníferas, cactus, palmeras, espinosos, copas redondas…) y una combinación de colores definida por su Nujio. El Bosque contiguo puede ser totalmente distinto, incluso monocromo.
   - Nuevos Bosques: se parecen a los bosques de nuestro mundo.
   - El límite entre Bosques se ve por el color de la vegetación.
-  - Choca con la paleta fija de 32 colores (#85). Tipos para el MVP: #86. Otros tipos: #61.
-- **Villas** (ADR 0008): 1 de cada 5 Bosques tiene villa, dentro de un solo chunk. Algunos caminos tienen letreros de piedra que indican hacia una villa (#87, #89, #90).
+  - Colores: solo los 32 de la paleta del proyecto. Lo "sin límite" son las combinaciones entre Bosques (ADR 0008, confirmaciones). Tipos para el MVP: #86. Otros tipos: #61.
+- **Villas** (ADR 0008): 1 de cada 5 Bosques tiene villa, dentro de un solo chunk. Algunos caminos tienen letreros de piedra que indican hacia una villa (#87, #90). El Nujio está en el centro del Bosque (chunk más central); si hay villa, la villa ocupa ese chunk y el Nujio está en su centro.
 - Generación: lo que se visita se genera al entrar, con la seed de la partida. Si vuelves dentro de la misma partida, todo sigue como lo dejaste. Con mucho tiempo, lo orgánico puede crecer o desaparecer y la gente moverse (#65). Otra partida genera lugares distintos.
 - **Origen:** el jugador elige región y área de origen al empezar (ADR 0005, 0008). Le da conocimiento automático del área y sus Bosques. Cuanto más lejos del punto inicial, más complicado el viaje (#56, #57, #66).
 - **Viaje** (ADR 0007):
@@ -75,15 +75,15 @@ Antes de implementarse necesitan fuente, sumidero y qué pasa si se agotan:
   - Para entrar a otro Bosque que aún tenga Nujio: pagar Luz o enfrentarse a los Únicos que envía (#70, #71).
   - Se puede recorrer todo el mapa a pie: es más lento, cansa al personaje y **también cuesta**, pero da más control sobre el gasto y el riesgo (ADR 0008; #73, #91). También se puede usar el mapa de la región para distancias largas (#56).
 - **Terreno** (ADR 0007, 0008):
-  - Árboles: tras el playtest, el dueño prefiere que bloqueen, con espacio para caminar entre ellos (a confirmar, #83).
+  - Árboles: bloquean, con espacio para caminar entre ellos (ADR 0008, confirmado).
   - Otras barreras físicas: agua, riscos y pendientes pronunciadas (aspecto de los riscos: #84).
   - Ríos continuos con zonas de paso (#88); los grandes son navegables, los estrechos y de montaña no (#74).
 - **Día y noche** (ADR 0007): Momento de Gietos y Momento de Riumna, con peligros distintos; hay Bosques donde no se puede andar de noche (#75).
-- **Región Valle del Sara** (MVP): Lean, Tossie, Ostie, Casie, Vastie, Alss, Causie (áreas, a confirmar, #77). Más agreste al norte; el sur es más plano, con claros ribereños (#80). Ambigüedad del nombre "Sara" (río o región): #93.
-- **Alcuss**: Adess, Istil, Sass, Ness, Alciss. Alciss es una región, así que el nivel de Alcuss está por aclarar (#77).
-- **Frecuencia de Nuevos Bosques**: alta en Lean, Tossie y Ostie (origen de la expansión); muy rara en Nosie; casi imposible en Alciss (#77, #78, #79).
+- **Región Valle del Sara** (MVP): Lean, Tossie, Ostie, Casie, Vastie, Alss, Causie (áreas, probable, #77b). Más agreste al norte; el sur es más plano, con claros ribereños (#80). "Sara" es el río; la región es "Valle del Sara" (interpretado, ADR 0008).
+- **Región Alcuss**: Alciss es un área; Adess, Istil, Sass y Ness, probablemente también (#77b).
+- **Frecuencia de Nuevos Bosques**: alta en Lean, Tossie y Ostie (origen de la expansión); muy rara en Nosie (sin ubicar, #77b); casi imposible en Alciss, el área más alejada (#78, #79).
 - Villa: edificios pequeños para dormir o almacenar; el resto de estructuras está al aire libre; cabe en un chunk. Tamaño interno: por definir (#14b). Hay contradicciones con el glosario (#47, #50).
-- Nujio: enorme, define la paleta de su Bosque; suele estar en el centro de la villa (si la hay); ocupa "entre 6x6 y 8x8 de diámetro" (unidad: por confirmar, #40; ubicación sin villa: #89).
+- Nujio: enorme, define la combinación de colores de su Bosque; está en el centro del Bosque (y de la villa, si la hay); ocupa "entre 6x6 y 8x8 de diámetro" (unidad: por confirmar, #40).
 
 ## Capa ciudad (MVP)
 > Corresponde sobre todo al modo Supervivencia (ADR 0005), que **no está en el MVP**. Por revisar frente a villas, Nujio y glosario (#14b, #48, #59). Choques: la hoguera central frente al Nujio en el centro, y la comida almacenada, la madera y el oro frente a la economía y las costumbres del glosario.
