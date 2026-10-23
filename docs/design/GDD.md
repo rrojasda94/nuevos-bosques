@@ -1,6 +1,6 @@
 # GDD — Nardaram: Los Nuevos Bosques
 
-> Dueño: `game-designer`. Estado: borrador v0.8 (incorpora ADR 0002 a 0005, ADR 0007, ADR 0008 y la conciliación con el glosario del dueño).
+> Dueño: `game-designer`. Estado: borrador v0.9 (incorpora ADR 0002 a 0005, ADR 0007, 0008 y 0010, y la conciliación con el glosario del dueño).
 >
 > **MVP = modo Aventura en la región Valle del Sara** (ADR 0005, 0007). Alcance del primer vertical slice: [`mechanics/aventura-mvp.md`](mechanics/aventura-mvp.md).
 >
@@ -48,7 +48,13 @@ Antes de implementarse necesitan fuente, sumidero y qué pasa si se agotan:
 - Fama (Aventura): por definir (#33).
 - Reputación del grupo (Garelino): por definir (#35).
 - Individuos/tropas (Garelino): cuando llegan a 0, derrota. Reclutamiento y mejora: por definir (#37).
-- Luz de viaje (Aventura y Garelino): quedarse sin ella es un riesgo del viaje y sirve para pagar la entrada a Bosques con Nujio (ADR 0005, 0007). Fuente, sumidero y efecto al agotarse: por definir (#57, #71).
+- **Luz** (Aventura; ADR 0005, 0007, 0010):
+  - **Fuentes**: vencer a Únicos y ayudar a la gente de la villa con sus peligros (misiones de villa, #106). Las villas también otorgan **ofrendas**: artefactos que almacenan Luz, de valores distintos.
+  - **Sumideros**: pagar la entrada a Bosques con Nujio y la acción "Ofrecer Luz" en combate. Las ofrendas se usan **enteras**: se deja el artefacto completo en el Bosque y se pierde todo su valor aunque el coste fuera menor. Es gestión de recursos intencionada.
+  - **Al agotarse**: hay que cruzar combatiendo o retroceder.
+  - Que al principio sea difícil ir lejos es intencionado.
+  - Valores provisionales en [`mechanics/cruce-y-combate-v1.md`](mechanics/cruce-y-combate-v1.md). Abiertas: #107–#109.
+- **Curación de PV** (Aventura, ADR 0010): en una villa (plaza o junto a su Nujio) o tras un riutash (cambio entre día y noche; #111). Las villas solo están en 1 de cada 5 Bosques (#110).
 - Cansancio (Aventura): el viaje a pie cansa al personaje (ADR 0007). Medida, efectos y recuperación: por definir (#73).
 - Luz en Supervivencia: se pide a los pobladores (ADR 0005). Reglas: por definir (#59).
 

@@ -75,6 +75,9 @@ Choques nuevos, sin resolver:
 - #81 decía que el jugador elige su "área" de origen, pero las 7 opciones del Valle del Sara son subregiones (#92).
 - El glosario §8 dice "al este de Ungol no hay lenfi, solo kulvar", lo que choca con que haya lenfi en Ness y Alciss. El glosario no se edita; queda matizado aquí.
 
+## Nota: economía de Luz y curación
+Registradas en ADR 0010: curación en villas o tras un riutash, fuentes de Luz y ofrendas. Choque con este ADR: con villa en solo 1 de cada 5 Bosques, la curación es escasa (#110).
+
 ## Contradicciones registradas
 - ~~**ADR 0007** dice "puedes caminar entre los árboles". Ahora el dueño prefiere que no se pueda caminar entre ellos (#83).~~ Resuelta: los árboles bloquean, con más espacio (confirmaciones).
 - ~~**Alcuss y la escala** (#77).~~ Resuelta: Alcuss es una región y Alciss un área (confirmaciones).
