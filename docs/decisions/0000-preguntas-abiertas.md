@@ -2,21 +2,24 @@
 
 Las 8 preguntas iniciales están resueltas en `0002-decisiones-fundacionales.md` y `0003-mapa-mundial-y-chunks.md`. Las resueltas después se tachan y apuntan a su fuente: un ADR o una entrada de `docs/glosario_nuevos_bosques.md` (en adelante, "glosario"; es la fuente de verdad del lore).
 
-## Prioritaria
+## Prioritarias: bloquean el vertical slice de Aventura (ADR 0005, `docs/design/mechanics/aventura-mvp.md`)
 
 | # | Pregunta | Bloquea a |
 |---|---|---|
-| 27 | **¿Se genera el mundo entero o solo el chunk?** El dueño dijo: "el mapa se genera similar a minecraft o al juego enorme de enanos" (probablemente Dwarf Fortress, a confirmar). Esto puede contradecir ADR 0003. Hay dos lecturas posibles: **(a)** el mapa mundial de Nardaram sigue diseñado a mano y solo el chunk de 64×64 de cada partida se genera con seed, como dice ADR 0003, y la comparación con Minecraft/Dwarf Fortress se refiere a cómo se genera ese chunk; **(b)** el mundo también se genera proceduralmente, al estilo Dwarf Fortress: primero se genera el mundo y después el jugador elige dónde empezar. En ese caso ADR 0003 cambiaría. Dato a tener en cuenta (no resuelve nada): el glosario cita mapas hechos por el autor (general, culturales lenfi/kulvar/wertrak, ecosistemas) y una lista fija de regiones del Sur y del Norte (§8). Afecta también a #9, #13 y #30. | world-gen-dev, game-designer, narrative-writer, engine-architect |
+| 54 | Persistencia de zonas: si vuelves a una zona "se mantiene tal cual". ¿Eso incluye los cambios del jugador (enemigos derrotados, objetos recogidos, elementos alterados) o solo la disposición generada? | engine-architect, world-gen-dev, rpg-systems-dev |
+| 55 | ¿Una "zona" es exactamente un chunk de 64×64? ¿Cómo se pasa de un chunk a otro: cruzando el borde hacia el chunk adyacente, solo desde el mapa de la región, o de las dos formas? | world-gen-dev, engine-architect, game-designer |
+| 9 | Región jugable del MVP (ver abajo). | world-gen-dev, narrative-writer |
+| 13 | ¿Dónde empieza el jugador: elige región o es aleatoria? (ver abajo) | world-gen-dev, ui-ux-dev |
 
 ## Lista
 
 | # | Pregunta | Bloquea a |
 |---|---|---|
-| 9 | ¿Cuántas regiones tiene el mapa mundial y cuáles son jugables en MVP? (depende de #27). Candidatas según el glosario §8, regiones del Sur: Safio (Safis), Nan, Dorias, Sagra (valle del Sara), Gumna, Calf (= Naca), Ungol, Amuss, Hagat, Uta, Sanag, Sunasem, Ifa, Foss. | world-gen-dev, narrative-writer |
+| 9 | ¿Cuántas regiones tiene el mapa mundial (fijo, ADR 0005) y cuál es jugable en el MVP de Aventura? Candidatas según el glosario §8, regiones del Sur: Safio (Safis), Nan, Dorias, Sagra (valle del Sara), Gumna, Calf (= Naca), Ungol, Amuss, Hagat, Uta, Sanag, Sunasem, Ifa, Foss. | world-gen-dev, narrative-writer |
 | 10 | ~~¿Tamaño de chunk?~~ **Resuelta** en ADR 0004: 64×64 tiles. | — |
 | 11 | ~~¿Condición de derrota?~~ **Resuelta** en ADR 0004: fallar la misión de la partida (concretada por modo). | — |
 | 12 | ¿Cuántos días dura una expedición típica? (propuesta: 1–3) | game-designer, rpg-systems-dev |
-| 13 | ¿El jugador elige región al empezar o es aleatoria? (depende de #27) | world-gen-dev, ui-ux-dev |
+| 13 | ¿El jugador elige región o punto de partida al empezar, o es aleatorio? (El mapa es fijo, ADR 0005.) | world-gen-dev, ui-ux-dev |
 | 14 | ~~¿Dónde está y qué tamaño tiene la ciudad dentro del chunk?~~ **Resuelta en parte** en ADR 0004: el chunk puede tener o no una villa; el Nujio suele estar en el centro. Lo que falta pasa a #14b, #40, #42 y #50. | — |
 | 14b | ¿Qué tamaño tiene una villa dentro del chunk de 64×64 y cuántos edificios tiene? ¿Siguen valiendo el grid de ciudad de 16×16 y la hoguera en el centro del GDD, o los sustituyen la villa y el Nujio? (El glosario §5 pone al Nujio en el centro, con una zona de eventos y ofrendas.) | world-gen-dev, city-systems-dev |
 | 15 | ~~¿El modo se elige al empezar?~~ **Resuelta** en ADR 0004: se elige al empezar, de forma similar a Project Zomboid. Lo que falta pasa a #43. | — |
@@ -32,9 +35,10 @@ Las 8 preguntas iniciales están resueltas en `0002-decisiones-fundacionales.md`
 | 24 | ~~¿Qué son "las villas"?~~ **Resuelta** en el glosario §5 "Villa": espacio dentro de un Bosque para los lenfi, una por Bosque, regida por el Nujio y administrada por el Ildo. Las contradicciones con el chat pasan a #47 y #50. | — |
 | 25 | ~~¿Qué significa "Garelino"?~~ **Resuelta en parte** en el glosario §7 "Estrella Azul (Garel / Gael Estrella Azul)". Que los garelinos sean seguidores de Garel Estrella Azul es una deducción, **a confirmar**. La grafía pasa a #46. | — |
 | 26 | ¿Hay Únicos en Supervivencia? ¿Hay Nujio y garelinos en Aventura? | game-designer, narrative-writer |
-| 28 | Supervivencia: ¿a quién controla el jugador: la villa, el Nujio u otra cosa? (El glosario §9 dice que el Nujio no es jugable.) | game-designer, city-systems-dev, rpg-systems-dev |
-| 29 | ¿Cómo encaja cada modo en las dos capas de ADR 0002 y del pilar 1 (ciudad por días + RPG por turnos)? ¿Hay gestión de ciudad en los tres modos? ¿El tiempo avanza por días en todos? | game-designer, city-systems-dev, rpg-systems-dev |
-| 30 | Aventura: el personaje "va viajando de lugar en lugar". ¿Cada lugar es un chunk distinto? ¿Una partida abarca varios chunks? (ADR 0003 dice un chunk por partida; ligada a #27) | world-gen-dev, game-designer, engine-architect |
+| 27 | ~~¿Se genera el mundo entero o solo el chunk?~~ **Resuelta** en ADR 0005: lectura (a). El mapa de Nardaram es fijo (ADR 0003 sigue vigente); las zonas se generan al entrar, con la seed de la partida, y persisten durante esa partida. | — |
+| 28 | ~~Supervivencia: ¿a quién controla el jugador?~~ **Resuelta en parte** en ADR 0005: "en teoría" al Nujio, como juego de gestión de villa. Choca con el glosario §9; pasa a #59. | — |
+| 29 | ~~¿Cómo encaja cada modo en las dos capas?~~ **Resuelta en parte** en ADR 0005: la gestión de villa (ciudad por días) es sobre todo Supervivencia. Lo que falta de Aventura y Garelino pasa a #60. | — |
+| 30 | ~~Aventura: ¿varios chunks por partida?~~ **Resuelta** en ADR 0005: en Aventura y Garelino se viaja entre chunks y por el mapa de la región para distancias largas. | — |
 | 31 | Aventura: ¿hay una victoria final ("debe ganar": ganar qué) o es un modo sin final? | game-designer |
 | 32 | Aventura: ¿se juega con un solo personaje o con party? (el GDD tenía party de hasta 3) ¿Y en Garelino, cuántas tropas combaten a la vez? | game-designer, rpg-systems-dev |
 | 33 | Aventura: ¿qué es la fama, cómo se gana o se pierde y qué efectos tiene? | game-designer, rpg-systems-dev |
@@ -51,7 +55,7 @@ Las 8 preguntas iniciales están resueltas en `0002-decisiones-fundacionales.md`
 | 42 | Si el chunk no tiene villa, ¿qué modos se pueden jugar en él? ¿Puede haber un Nujio sin villa? | world-gen-dev, game-designer |
 | 43 | ¿Se puede cambiar de modo durante la partida? ¿Qué parte de Project Zomboid se toma como referencia? | game-designer, ui-ux-dev |
 | 44 | ~~¿Los Únicos que envía el bosque son los mismos que los de Aventura?~~ **Resuelta** en el glosario §3 "Únicos": son agentes del Bosque que se activan como anticuerpos según su temperamento; Iserald sale del propio Nujio. El adoc apacigua a los "Únicos descarriados" (§5). | — |
-| 45 | ¿Qué modos entran en el MVP: los tres o solo alguno? | game-designer, release-manager |
+| 45 | ~~¿Qué modos entran en el MVP?~~ **Resuelta** en ADR 0005: el modo Aventura, para probar los controles y que sea divertido. | — |
 | 46 | Grafía: el glosario registra "Garel" y "Gael" para Estrella Azul. ¿El modo se llama definitivamente "Garelino"? | narrative-writer, ui-ux-dev |
 | 47 | Villa: el dueño dijo que sus edificios sirven "para dormir o almacenar"; el glosario dice que la villa "no almacena comida". ¿Qué se almacena (herramientas, objetos, nada de comida)? | game-designer, city-systems-dev |
 | 48 | Capa ciudad del GDD frente al glosario: recursos (madera, comida, oro), almacén, huerto, aserradero y cantera chocan con "no almacena comida", "madera solo de árboles muertos y con permiso" y la economía de Luz/Piedras (glosario §5, §6). ¿Se rediseña la capa ciudad? | game-designer, city-systems-dev |
@@ -60,3 +64,9 @@ Las 8 preguntas iniciales están resueltas en `0002-decisiones-fundacionales.md`
 | 51 | El glosario dice que la caza y la guerra eran tabú en la era de los Bosques (§7 "Guerra"). ¿Hay combates contra animales del bosque? ¿Cómo encaja con los encuentros por bioma del GDD? | game-designer, rpg-systems-dev |
 | 52 | Humores: el chat los describe como "climas agresivos"; el glosario dice que "no necesariamente son malas". ¿En el juego pueden ser favorables? | game-designer |
 | 53 | Inaind (glosario §9, game master de la Mecánica v0.2): ¿tiene equivalente en el videojuego (director de eventos, generador de villas y caminos)? | game-designer, world-gen-dev |
+| 56 | Mapa de la región: ¿cómo funciona el viaje largo (coste, tiempo, encuentros)? ¿Qué significa "conocer" una región y cómo se llega a conocerla? | game-designer, world-gen-dev, ui-ux-dev |
+| 57 | Luz como recurso de viaje: ¿cómo se obtiene, cómo se gasta y qué pasa si te quedas sin ella? ¿Es la misma Luz que la moneda del glosario §6? | game-designer, rpg-systems-dev |
+| 58 | ¿Qué son en reglas los "bosques agresivos" y los "Únicos poderosos" de las regiones desconocidas? | game-designer, world-gen-dev |
+| 59 | Supervivencia: el dueño dice que se juega "en teoría" con el Nujio; el glosario §9 dice que el Nujio no es jugable (dato de la Mecánica v0.2, de rol de mesa). ¿Se confirma el Nujio como avatar del jugador? ¿Cómo son en reglas las acciones: pedir Luz, controlar la población, el contento, amenazar con los Únicos y defenderse de los garelinos? | game-designer, city-systems-dev, narrative-writer |
+| 60 | Aventura y Garelino: ¿avanza el tiempo por días? ¿Hay alguna gestión de villa o ciudad en estos modos? | game-designer, rpg-systems-dev, city-systems-dev |
+| 61 | Zonas: ¿qué decide si una zona nueva es villa, bosque o "geografía"? ¿Depende de la región del mapa fijo? ¿En Supervivencia también se generan zonas nuevas o solo la villa del Nujio? | world-gen-dev, game-designer |
