@@ -34,11 +34,20 @@ El "juego enorme de enanos" es **probablemente Dwarf Fortress, a confirmar**.
 - **Garelino**: matar gente afecta mucho a la reputación del grupo y hace más difícil el trabajo, o vuelve a los enemigos más agresivos y fuertes.
 
 ### Términos introducidos
-- **Garelinos**: fanáticos que buscan destruir los bosques dominados por un Nujio. "Expandir los Nuevos Bosques" (ronda 1) consiste en eliminar al Nujio y sembrar las primeras semillas de los Nuevos Bosques. En Supervivencia son el enemigo.
-- **Humores del mundo**: climas agresivos que ocurren si el grupo garelino delata su intención y su ubicación.
-- **Únicos**: monstruos defensores de bosques que se han descarriado y entrado en modo berserk; hay muchos tipos. En Garelino, el bosque los envía contra el jugador.
+El lore de estos términos lo fija `docs/glosario_nuevos_bosques.md`, que es la fuente de verdad y no se edita. Aquí solo figura lo que el dueño dijo en el chat como **regla de juego**.
+- **Garelinos**: en el juego, el grupo de fanáticos que buscan destruir los bosques dominados por un Nujio. "Expandir los Nuevos Bosques" (ronda 1) consiste en eliminar al Nujio y sembrar las primeras semillas. En Supervivencia son el enemigo. El glosario no tiene una entrada "garelino". Que sean seguidores de Garel/Gael Estrella Azul (glosario §7) es una deducción, **a confirmar**.
+- **Humores del mundo**: en Garelino aparecen como climas agresivos si el grupo delata su intención y su ubicación. Lore: glosario §2.
+- **Únicos**: en Aventura son el objetivo de las misiones y en Garelino los envía el bosque. Lore: glosario §3 (anticuerpos del Bosque; subtipos Iserald, Aledra, Ofomni).
+- **Villa, Nujio, adoc**: lore en el glosario, §5, §3 y §5 (Oficios) respectivamente.
 
-Lo que no está en las citas se queda por definir (ver `0000-preguntas-abiertas.md`).
+Lo que no está ni en las citas ni en el glosario se queda por definir (ver `0000-preguntas-abiertas.md`).
+
+### Conciliación con el glosario (2026-10-23)
+Hay puntos en los que lo que el dueño dijo en el chat no cuadra con el glosario. No están resueltos; las preguntas están en `0000-preguntas-abiertas.md`.
+- Villa: según el chat, sus edificios sirven "para dormir o almacenar"; según el glosario, la villa "no almacena comida" (#47).
+- Grafía Garel / Gael (glosario, inconsistencias), que afecta al nombre del modo Garelino (#46).
+- Humores: en el chat son "climas agresivos"; en el glosario, "no necesariamente malas" (#52).
+- Personaje de Aventura: según el glosario, los adoc son los "únicos especialistas en armas", y los personajes jugables son lenfi, ueutrec o kulvar "con el oficio que se desee". Pero los ueutrec "no tienen oficios" (#49).
 
 ## Consecuencias
 - Modifica ADR 0002: el "Objetivo de partida" ya no es "sobrevivir mientras el pueblo sobreviva". Lo fija el modo, y la derrota de ejemplo (población 0 / hambruna) queda sustituida.
@@ -50,4 +59,4 @@ Lo que no está en las citas se queda por definir (ver `0000-preguntas-abiertas.
 - La ciudad del GDD (grid 16×16, hoguera en el centro) pasa a revisarse frente a villas y Nujio (#14b).
 - `GameState` deberá guardar el modo y el estado de la misión (estructura: `engine-architect`).
 - Hay recursos nuevos (fama, reputación, tropas/individuos) que necesitan fuente, sumidero y efecto al agotarse antes de implementarse (`game-designer`).
-- `narrative-writer` es dueño del lore de Nujio, garelinos, Únicos, Humores del mundo, villas y adoc. El dueño entregará un glosario propio; el glosario actual es provisional.
+- El lore lo fija `docs/glosario_nuevos_bosques.md` (del dueño del proyecto; no se edita). El GDD enlaza a él en vez de duplicarlo. `narrative-writer` trabaja a partir de ese archivo.
