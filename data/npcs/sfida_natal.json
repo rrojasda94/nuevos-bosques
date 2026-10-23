@@ -1,0 +1,33 @@
+{
+  "id": "sfida_natal",
+  "oficio": "sfida",
+  "name": "Sfida",
+  "description": "Oficiante de la Luz de tu villa. Interpreta riutash y sueños, y habla con el Nujio.",
+  "voice_line": "Lo que el Nujio oye, yo lo digo.",
+  "greeting": {
+    "id": "sfida_natal_greeting",
+    "lines": [
+      { "speaker": "Sfida", "text": "Brille tu Luz, adoc." }
+    ]
+  },
+  "ambient": [
+    {
+      "id": "sfida_natal_ambient_luz",
+      "lines": [
+        { "speaker": "Sfida", "text": "La Luz no se ve, adoc. Se siente." }
+      ]
+    },
+    {
+      "id": "sfida_natal_ambient_pensamiento",
+      "lines": [
+        { "speaker": "Sfida", "text": "Duerme cerca del Nujio. Quizá lo oigas en Pensamiento." }
+      ]
+    },
+    {
+      "id": "sfida_natal_ambient_riutash",
+      "lines": [
+        { "speaker": "Sfida", "text": "Tras el riutash cuesta recordar. Yo lo intento." }
+      ]
+    }
+  ]
+}
