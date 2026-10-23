@@ -24,8 +24,8 @@ signal resource_changed(resource_id: StringName, amount: int)
 signal citizen_arrived(citizen_id: StringName)
 
 # --- RPG ---
-signal expedition_started(zone_id: StringName)
-signal expedition_completed(zone_id: StringName, loot: Dictionary, days_spent: int)
+signal expedition_started(bosque_id: int)
+signal expedition_completed(bosque_id: int, loot: Dictionary, days_spent: int)
 ## Combate contra el Único de un Bosque (ADR 0009). result: &"victory", &"defeat" o &"fled".
 signal battle_started(bosque_id: int)
 signal battle_ended(bosque_id: int, result: StringName)
@@ -38,7 +38,7 @@ signal hp_changed(hp: int, max_hp: int)
 signal rested_in_villa
 signal quest_state_changed(quest_id: StringName, state: StringName)
 signal character_leveled_up(character_id: StringName, level: int)
-signal game_over(reason: StringName)
+signal game_ended(reason: StringName)
 
 # --- Partida ---
 signal game_saved(slot: int)

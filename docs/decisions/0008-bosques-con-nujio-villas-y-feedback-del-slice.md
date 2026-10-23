@@ -40,7 +40,7 @@ Respuesta textual:
 | #93 Sara | La región se llama **"Valle del Sara"** y **"Sara"** es el río. *Interpretado*: el "sí" respondía a una pregunta de "o esto o lo otro"; se elige esta lectura porque el dueño siempre dice "región del Valle del Sara". Confirmar si hace falta. En el glosario §8, "Sara (valle del Sara)" se lee como esa región. |
 | #89 Nujio | El Nujio está **en el centro del Bosque**. Para la implementación: en el chunk más central del Bosque. Si el Bosque tiene villa, la villa va en ese chunk y el Nujio en su centro (coherente con ADR 0004). |
 | #77 Alcuss | **Alcuss es una región** y **Alciss es un área**. Adess, Istil, Sass y Ness son probablemente áreas de Alcuss, a confirmar. La frase de ADR 0007 "Alciss… la región más alejada" se lee como "el área más alejada". La escala chunk < Bosque < área < región < Sur Lenfi queda intacta. "Nosie" sigue sin ubicar. |
-| #85 Paleta | Solo se usan los **32 colores de la paleta del proyecto** (`assets/palettes/nuevos-bosques.gpl`). Lo "sin límite" son las **combinaciones** de esos colores entre Bosques. Ya no hay conflicto con `docs/STACK.md` ni con `docs/art/style-guide.md`. |
+| #85 Paleta | Solo se usan los **32 colores de la paleta del proyecto** (`assets/palettes/palette_nuevos_bosques.gpl`). Lo "sin límite" son las **combinaciones** de esos colores entre Bosques. Ya no hay conflicto con `docs/STACK.md` ni con `docs/art/style-guide.md`. |
 
 ## Nota: mapa del Sur Lenfi (2026-10-23)
 El dueño subió el mapa a `docs/design/world/Sur-Lenfi_02.jpg`; su descripción está en `docs/design/world/sur-lenfi.md`. Según el mapa:

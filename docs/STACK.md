@@ -7,7 +7,7 @@
 | Lenguaje | **GDScript** | Iteración rápida, integrado en el editor. C# solo si un sistema lo exige por rendimiento. |
 | Render | `gl_compatibility` | Máxima compatibilidad con PCs modestos (target indie). |
 | Arte | **Aseprite** | Estándar para pixel art; exporta spritesheets + JSON. |
-| Paleta | 32 colores fijos (`assets/palettes/nuevos-bosques.gpl`) | Look 8-bit consistente. Nada fuera de paleta. |
+| Paleta | 32 colores fijos (`assets/palettes/palette_nuevos_bosques.gpl`) | Look 8-bit consistente. Nada fuera de paleta. |
 | Audio | **FamiStudio** (música chiptune) + **jsfxr / Bfxr** (SFX) | Estética NES, exporta WAV/OGG. |
 | Steam | **GodotSteam** (addon GDExtension) | Logros, overlay, cloud saves, Steam Input. |
 | Tests | **GUT** (Godot Unit Test) | Tests unitarios de GDScript en headless. |

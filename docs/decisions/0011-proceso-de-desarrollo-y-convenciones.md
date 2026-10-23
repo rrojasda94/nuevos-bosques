@@ -17,3 +17,6 @@ Hasta ahora todo se commiteaba directamente en una sola rama (`claude/nuevos-bos
 - El PR #1 (fundacional) se integra en `main` con merge commit, como excepción al squash, para conservar el historial de la configuración inicial. Después se crea el tag `v0.1.0`. A partir de ahí, cada tema va en su propia rama y su propio PR.
 - La protección de `main` exige que pase el check `Tests`.
 - Antes de 0.2.0 se hace una pasada `refactor` para alinear el código existente con `CONVENCIONES.md`. Ejemplos ya detectados: las señales `expedition_*` usan `zone_id`, y el nombre de archivo del ADR 0006 todavía dice "zonas".
+
+## Seguimiento
+- 2026-10-23: pasada `refactor` hecha. `expedition_*` pasan a `bosque_id: int`, `game_over` pasa a `game_ended` (participio), el ADR 0006 se llama `0006-generacion-determinista-de-chunks-y-bosques.md` y la paleta, `assets/palettes/palette_nuevos_bosques.gpl`.

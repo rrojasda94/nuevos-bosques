@@ -81,7 +81,7 @@ func _enter_chunk(coord: Vector2i, cell: Vector2i) -> void:
 		cell = _chunk.hub
 	GameState.player_cell = cell
 	_player.place_at(cell)
-	# Aparecer en la zona de descanso no repite el aviso; cuenta como ya dentro.
+	# Aparecer en el lugar de descanso no repite el aviso; cuenta como ya dentro.
 	_resting = AdventureRules.is_villa_rest(_chunk, cell)
 	_camera.reset_smoothing()
 	var bosque_id: int = _bosques.bosque_at(coord)
@@ -206,7 +206,7 @@ func _on_crossing_resolved(_bosque_id: int, outcome: StringName) -> void:
 
 
 ## En la plaza de una villa o junto a su Nujio el Adoc descansa: PV al máximo y aviso en el HUD
-## (una vez al entrar en la zona de descanso).
+## (una vez al entrar en el lugar de descanso).
 func _check_villa_rest(cell: Vector2i) -> void:
 	var resting: bool = AdventureRules.is_villa_rest(_chunk, cell)
 	if resting and not _resting:
