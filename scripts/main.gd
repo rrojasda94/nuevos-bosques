@@ -10,10 +10,5 @@ func _ready() -> void:
 	$Exploration.start()
 
 
-func _unhandled_input(event: InputEvent) -> void:
-	if event.is_action_pressed("ui_accept"):
-		EventBus.end_day_requested.emit()
-
-
 func _on_scene_change_requested(scene_path: String) -> void:
 	get_tree().change_scene_to_file(scene_path)

@@ -96,6 +96,25 @@ func test_villa_frequency_is_about_one_in_five() -> void:
 	assert_between(float(villas) / total, 0.17, 0.23, "%d villas en %d Bosques" % [villas, total])
 
 
+func test_home_bosque_always_has_villa_and_others_keep_one_in_five() -> void:
+	var start := ChunkGenerator.region_start_chunk(_region)
+	var villas := 0
+	var total := 0
+	for s in range(1, 301):
+		var map := BosqueMap.for_region(s, _region)
+		var plain := BosqueMap.build(s, _grid)
+		var home := map.bosque_at(start)
+		assert_true(map.has_villa[home], "seed %d: el Bosque inicial tiene villa" % s)
+		for id in map.count():
+			if id == home:
+				continue
+			assert_eq(map.has_villa[id], plain.has_villa[id], "el resto no cambia")
+			total += 1
+			if map.has_villa[id]:
+				villas += 1
+	assert_between(float(villas) / total, 0.17, 0.23, "%d villas en %d Bosques" % [villas, total])
+
+
 func test_nujio_is_6_to_8_tiles_and_reachable_on_foot() -> void:
 	for s in [1, 42, 777, 9001]:
 		var map := BosqueMap.build(s, _grid)
@@ -159,7 +178,7 @@ func test_home_bosque_is_fully_reachable_on_foot() -> void:
 	# mismo Bosque. Ni árboles, ni ríos, ni riscos, ni la villa pueden aislar un chunk.
 	var start := ChunkGenerator.region_start_chunk(_region)
 	for s in [1, 42, 777, 123456789, 5, 6]:
-		var map := BosqueMap.build(s, _grid)
+		var map := BosqueMap.for_region(s, _region)
 		var home := map.bosque_at(start)
 		var chunks := {}
 		for c in map.chunks_of(home):

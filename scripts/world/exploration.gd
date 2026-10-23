@@ -1,8 +1,10 @@
 extends Node2D
 ## Exploración del modo Aventura: dibuja el chunk actual y una franja de los chunks vecinos (para
 ## ver el color de la vegetación del Bosque de al lado), mueve al jugador y cambia al chunk vecino
-## al salir por un borde, siempre dentro del Bosque inicial (ADR 0006). Los chunks se regeneran
-## desde la seed; la caché es solo para no recalcular durante la sesión.
+## al salir por un borde (ADR 0006). Se entra libremente en el Bosque inicial y en los Bosques con
+## el paso abierto; en el borde de uno cerrado se emite bosque_border_reached y el menú del borde
+## (scenes/rpg/crossing.tscn, ADR 0009) decide si se cruza. Los chunks se regeneran desde la seed;
+## la caché es solo para no recalcular durante la sesión.
 
 const TILE_SIZE: int = 16
 ## Duración del fundido al cambiar de chunk.
@@ -19,6 +21,9 @@ var _nujio_textures: Dictionary = {}
 ## Evita repetir el aviso cada frame mientras se empuja contra un borde bloqueado.
 var _blocked_dir: Vector2i = Vector2i.ZERO
 var _last_sign: Vector2i = Vector2i(-1, -1)
+## Dirección del último borde cerrado contra el que se empujó (la usa crossing_resolved).
+var _pending_dir: Vector2i = Vector2i.ZERO
+var _resting: bool = false
 
 @onready var _terrain: TileMapLayer = $Terrain
 @onready var _nujios: Node2D = $Nujios
@@ -31,6 +36,7 @@ func _ready() -> void:
 	_player.is_walkable = func(c: Vector2i) -> bool: return _chunk != null and _chunk.is_walkable(c)
 	_player.edge_reached.connect(_on_edge_reached)
 	_player.stepped.connect(_on_player_stepped)
+	EventBus.crossing_resolved.connect(_on_crossing_resolved)
 
 
 ## Arranca la exploración con el estado actual de GameState (partida nueva o cargada).
@@ -39,19 +45,30 @@ func start() -> void:
 	_cache.clear()
 	_nujio_textures.clear()
 	_terrain.tile_set = PlaceholderTileset.make_tile_set()
-	_bosques = BosqueMap.build(GameState.seed_value, ChunkGenerator.region_size(_region))
-	var start_chunk: Vector2i = ChunkGenerator.region_start_chunk(_region)
-	_home_bosque = _bosques.bosque_at(start_chunk)
+	_bosques = BosqueMap.for_region(GameState.seed_value, _region)
+	_home_bosque = AdventureRules.home_bosque(_bosques, _region)
 	var coord: Vector2i = GameState.chunk_coord
-	if _bosques.bosque_at(coord) != _home_bosque:
-		coord = start_chunk
+	if not AdventureRules.is_passable(_bosques.bosque_at(coord), _home_bosque):
+		_enter_home_villa()
+		return
 	_enter_chunk(coord, GameState.player_cell)
+
+
+## El Adoc aparece (partida nueva) o despierta (derrota) en su villa natal, junto al Nujio:
+## en la casilla justo al sur del Nujio, o en el hub si no fuese transitable.
+func _enter_home_villa() -> void:
+	var coord: Vector2i = _bosques.nujio_chunk[_home_bosque]
+	var chunk: ChunkData = _get_chunk(coord)
+	var rect: Rect2i = chunk.nujio_rect
+	var cell := Vector2i(rect.position.x + rect.size.x / 2, rect.end.y)
+	_enter_chunk(coord, cell if chunk.is_walkable(cell) else chunk.hub)
 
 
 func _on_player_stepped(cell: Vector2i) -> void:
 	GameState.player_cell = cell
 	_blocked_dir = Vector2i.ZERO
 	_check_sign(cell)
+	_check_villa_rest(cell)
 
 
 func _enter_chunk(coord: Vector2i, cell: Vector2i) -> void:
@@ -64,8 +81,11 @@ func _enter_chunk(coord: Vector2i, cell: Vector2i) -> void:
 		cell = _chunk.hub
 	GameState.player_cell = cell
 	_player.place_at(cell)
+	# Aparecer en la zona de descanso no repite el aviso; cuenta como ya dentro.
+	_resting = AdventureRules.is_villa_rest(_chunk, cell)
 	_camera.reset_smoothing()
-	EventBus.chunk_entered.emit(coord, _home_bosque, _bosques.size_of(_home_bosque))
+	var bosque_id: int = _bosques.bosque_at(coord)
+	EventBus.chunk_entered.emit(coord, bosque_id, _bosques.size_of(bosque_id))
 	_fade.color.a = 1.0
 	create_tween().tween_property(_fade, "color:a", 0.0, TRANSITION_TIME)
 
@@ -144,7 +164,7 @@ func _check_sign(cell: Vector2i) -> void:
 		if ChunkData.in_bounds(c) and _chunk.get_tile(c) == ChunkData.Tile.SIGN:
 			if c != _last_sign:
 				_last_sign = c
-				var to_villa: Vector2i = _bosques.nujio_chunk[_home_bosque] - _chunk.coord
+				var to_villa: Vector2i = _bosques.nujio_chunk[_bosques.bosque_at(_chunk.coord)] - _chunk.coord
 				EventBus.signpost_read.emit(ChunkGenerator.direction_name(to_villa))
 			return
 	_last_sign = Vector2i(-1, -1)
@@ -153,14 +173,45 @@ func _check_sign(cell: Vector2i) -> void:
 func _on_edge_reached(direction: Vector2i) -> void:
 	var next_coord: Vector2i = GameState.chunk_coord + direction
 	var next_bosque: int = _bosques.bosque_at(next_coord)
-	if next_bosque != _home_bosque:
+	if not AdventureRules.is_passable(next_bosque, _home_bosque):
 		if direction != _blocked_dir:
 			_blocked_dir = direction
+			_pending_dir = direction
 			EventBus.bosque_border_reached.emit(next_bosque)
 		return
+	_cross(direction)
+
+
+func _cross(direction: Vector2i) -> void:
+	var next_coord: Vector2i = GameState.chunk_coord + direction
 	var along: int = _player.cell.y if direction.x != 0 else _player.cell.x
 	var entry: Vector2i = _get_chunk(next_coord).find_entry(-direction, along)
 	_enter_chunk(next_coord, entry)
+
+
+## Resultado del menú del borde (ADR 0009).
+func _on_crossing_resolved(_bosque_id: int, outcome: StringName) -> void:
+	match outcome:
+		&"paid", &"won":
+			_cross(_pending_dir)
+		&"defeated":
+			_enter_home_villa()
+		_:
+			# Retroceder o huir: un paso atrás, hacia dentro del Bosque.
+			var back: Vector2i = _player.cell - _pending_dir
+			if _chunk.is_walkable(back):
+				_player.place_at(back)
+				GameState.player_cell = back
+			_blocked_dir = Vector2i.ZERO
+
+
+## En la plaza de una villa o junto a su Nujio el Adoc descansa: PV al máximo y aviso en el HUD
+## (una vez al entrar en la zona de descanso).
+func _check_villa_rest(cell: Vector2i) -> void:
+	var resting: bool = AdventureRules.is_villa_rest(_chunk, cell)
+	if resting and not _resting:
+		AdventureRules.rest()
+	_resting = resting
 
 
 func _unhandled_input(event: InputEvent) -> void:

@@ -32,7 +32,14 @@ var nujio_chunk: Array[Vector2i] = []
 var nujio_size: Array[int] = []
 
 
-static func build(seed_value: int, size: Vector2i) -> BosqueMap:
+## Reparto de la región `region` (JSON) con su Bosque inicial (el de start_chunk) con villa.
+static func for_region(seed_value: int, region: Dictionary) -> BosqueMap:
+	return build(seed_value, ChunkGenerator.region_size(region), ChunkGenerator.region_start_chunk(region))
+
+
+## `home_chunk`: chunk inicial de la partida. Su Bosque tiene siempre villa (el lugar natal del
+## Adoc, ADR 0009), fuera del sorteo de 1 de cada VILLA_ODDS; el resto no cambia.
+static func build(seed_value: int, size: Vector2i, home_chunk: Vector2i = Vector2i(-1, -1)) -> BosqueMap:
 	var map := BosqueMap.new()
 	map.grid_size = size
 	map.ids.resize(size.x * size.y)
@@ -43,6 +50,8 @@ static func build(seed_value: int, size: Vector2i) -> BosqueMap:
 	map._fix_small_groups()
 	map._compact()
 	map._assign_traits(seed_value)
+	if map._in_grid(home_chunk):
+		map.has_villa[map.bosque_at(home_chunk)] = true
 	return map
 
 
@@ -247,6 +256,26 @@ func _assign_traits(seed_value: int) -> void:
 
 func neighbours_of(bosque_id: int) -> Array[int]:
 	return _neighbour_ids(bosque_id)
+
+
+## Distancia en saltos de adyacencia entre dos Bosques (0 = el mismo, 1 = vecinos).
+## -1 si alguno no existe o no están conectados.
+func distance(from_id: int, to_id: int) -> int:
+	if from_id < 0 or to_id < 0 or from_id >= count() or to_id >= count():
+		return -1
+	var dist: Dictionary = { from_id: 0 }
+	var queue: Array[int] = [from_id]
+	var head: int = 0
+	while head < queue.size():
+		var id: int = queue[head]
+		head += 1
+		if id == to_id:
+			return dist[id]
+		for n: int in _neighbour_ids(id):
+			if not dist.has(n):
+				dist[n] = dist[id] + 1
+				queue.append(n)
+	return -1
 
 
 ## Chunk del Bosque más cercano a su centroide (empates: el primero en orden de crecimiento).

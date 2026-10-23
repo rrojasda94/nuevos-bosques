@@ -1,9 +1,9 @@
 extends CanvasLayer
-## HUD de depuración del vertical slice: seed, chunk, Bosque y día, más avisos temporales.
-## Solo escucha EventBus.
+## HUD de depuración del vertical slice: PV y Luz del Adoc, seed, chunk, Bosque y día, más avisos
+## temporales. Solo escucha EventBus y lee GameState.
 
 const NOTICE_TIME: float = 3.0
-const NOTICE_OTHER_BOSQUE: String = "Este Bosque tiene Nujio: necesitas Luz\no enfrentarte a sus Únicos (próximamente)"
+const NOTICE_REST: String = "Descansas en la villa"
 const NOTICE_REGION_EDGE: String = "Límite de la región"
 
 var _bosque_id: int = -1
@@ -18,6 +18,9 @@ func _ready() -> void:
 	EventBus.chunk_entered.connect(_on_chunk_entered)
 	EventBus.day_ended.connect(func(_d: int) -> void: _refresh())
 	EventBus.bosque_border_reached.connect(_on_bosque_border_reached)
+	EventBus.luz_changed.connect(func(_l: int) -> void: _refresh())
+	EventBus.hp_changed.connect(func(_h: int, _m: int) -> void: _refresh())
+	EventBus.rested_in_villa.connect(func() -> void: _show_notice(NOTICE_REST))
 	EventBus.signpost_read.connect(func(direction: String) -> void: _show_notice("Letrero de piedra: hacia la villa, al %s" % direction))
 	_notice.text = ""
 	_refresh()
@@ -30,14 +33,16 @@ func _on_chunk_entered(_coord: Vector2i, bosque_id: int, bosque_size: int) -> vo
 
 
 func _refresh() -> void:
-	_label.text = "Seed %d  Chunk (%d, %d)  Día %d\nBosque #%d (%d chunks)  Shift corre  R seed" % [
-		GameState.seed_value, GameState.chunk_coord.x, GameState.chunk_coord.y, GameState.day,
+	_label.text = "PV %d/%d   Luz %d/%d\nSeed %d  Chunk (%d, %d)  Día %d\nBosque #%d (%d chunks)  Shift corre  R seed" % [
+		GameState.hp, AdventureRules.max_hp(), GameState.luz, AdventureRules.luz_max(), GameState.seed_value, GameState.chunk_coord.x, GameState.chunk_coord.y, GameState.day,
 		_bosque_id, _bosque_size,
 	]
 
 
 func _on_bosque_border_reached(bosque_id: int) -> void:
-	_show_notice(NOTICE_REGION_EDGE if bosque_id < 0 else NOTICE_OTHER_BOSQUE)
+	# Los Bosques con Nujio abren el menú del borde (Crossing); aquí solo el límite de la región.
+	if bosque_id < 0:
+		_show_notice(NOTICE_REGION_EDGE)
 
 
 func _show_notice(text: String) -> void:

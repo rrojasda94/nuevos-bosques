@@ -1,8 +1,9 @@
-[gd_scene load_steps=4 format=3]
+[gd_scene load_steps=5 format=3]
 
 [ext_resource type="Script" path="res://scripts/world/exploration.gd" id="1_expl"]
 [ext_resource type="Script" path="res://scripts/rpg/player_walker.gd" id="2_player"]
 [ext_resource type="Script" path="res://scripts/ui/debug_hud.gd" id="3_hud"]
+[ext_resource type="PackedScene" path="res://scenes/rpg/crossing.tscn" id="4_cross"]
 
 [node name="Exploration" type="Node2D"]
 script = ExtResource("1_expl")
@@ -25,7 +26,7 @@ script = ExtResource("3_hud")
 offset_left = 2.0
 offset_top = 1.0
 offset_right = 318.0
-offset_bottom = 24.0
+offset_bottom = 32.0
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_colors/font_outline_color = Color(0.0941, 0.0784, 0.1451, 1)
 theme_override_constants/outline_size = 3
@@ -56,3 +57,5 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 color = Color(0.0941, 0.0784, 0.1451, 0)
+
+[node name="Crossing" parent="." instance=ExtResource("4_cross")]

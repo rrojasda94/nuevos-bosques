@@ -1,8 +1,9 @@
 extends Node
 ## GameState: estado serializable de la partida. Sin lógica de dominio.
 
-## v2: chunk_coord y player_cell (ADR 0006). Las v1 se cargan con valores por defecto.
-const SAVE_VERSION: int = 2
+## v2: chunk_coord y player_cell (ADR 0006). v3: luz, hp, open_bosques y battle_attempts
+## (ADR 0009). Las versiones anteriores se cargan con valores por defecto.
+const SAVE_VERSION: int = 3
 
 var rng := RandomNumberGenerator.new()
 var seed_value: int = 0
@@ -17,6 +18,13 @@ var chunk: Dictionary = {}
 var chunk_coord: Vector2i = Vector2i(-1, -1)
 ## Casilla del jugador dentro del chunk. (-1, -1) = aparecer en el centro.
 var player_cell: Vector2i = Vector2i(-1, -1)
+## Adoc (ADR 0009): Luz y PV actuales. Valores iniciales en data/combat/balance.json.
+var luz: int = 0
+var hp: int = 0
+## Ids de los Bosques con el paso abierto (pagado o ganado), además del inicial.
+var open_bosques: Array[int] = []
+## Combates empezados por Bosque: { "id": n }. Forma parte de la semilla de cada combate.
+var battle_attempts: Dictionary = {}
 
 ## Recursos de la ciudad: { "wood": 10, "stone": 5, ... }
 var resources: Dictionary = {}
@@ -40,6 +48,10 @@ func new_game(new_seed: int = 0, new_region: StringName = &"valle_del_sara") -> 
 	chunk = {}
 	chunk_coord = Vector2i(-1, -1)
 	player_cell = Vector2i(-1, -1)
+	luz = AdventureRules.start_luz()
+	hp = AdventureRules.max_hp()
+	open_bosques = []
+	battle_attempts = {}
 	resources = { "wood": 20, "stone": 10, "food": 15, "gold": 0 }
 	buildings = []
 	citizens = []
@@ -57,6 +69,10 @@ func to_dict() -> Dictionary:
 		"chunk": chunk,
 		"chunk_coord": [chunk_coord.x, chunk_coord.y],
 		"player_cell": [player_cell.x, player_cell.y],
+		"luz": luz,
+		"hp": hp,
+		"open_bosques": open_bosques,
+		"battle_attempts": battle_attempts,
 		"rng_state": rng.state,
 		"resources": resources,
 		"buildings": buildings,
@@ -74,6 +90,15 @@ func from_dict(data: Dictionary) -> void:
 	chunk = data.get("chunk", {})
 	chunk_coord = _to_vector2i(data.get("chunk_coord", [-1, -1]), Vector2i(-1, -1))
 	player_cell = _to_vector2i(data.get("player_cell", [-1, -1]), Vector2i(-1, -1))
+	luz = clampi(int(data.get("luz", AdventureRules.start_luz())), 0, AdventureRules.luz_max())
+	hp = clampi(int(data.get("hp", AdventureRules.max_hp())), 1, AdventureRules.max_hp())
+	open_bosques = []
+	for id: Variant in data.get("open_bosques", []):
+		open_bosques.append(int(id))
+	battle_attempts = {}
+	var attempts: Dictionary = data.get("battle_attempts", {})
+	for key: Variant in attempts:
+		battle_attempts[str(key)] = int(attempts[key])
 	rng.seed = seed_value
 	rng.state = int(data.get("rng_state", rng.state))
 	resources = data.get("resources", {})

@@ -32,7 +32,8 @@ func load_game(slot: int) -> Error:
 	var version: int = int(data.get("save_version", 0))
 	if version < 1 or version > GameState.SAVE_VERSION:
 		return ERR_INVALID_DATA
-	# Migraciones: de v1 a v2 solo se añadieron campos con valor por defecto en GameState.from_dict.
+	# Migraciones: de v1 a v2 y de v2 a v3 solo se añadieron campos; GameState.from_dict les da
+	# su valor por defecto (v3: Luz y PV iniciales, ningún Bosque abierto).
 	GameState.from_dict(data)
 	EventBus.game_loaded.emit(slot)
 	return OK
