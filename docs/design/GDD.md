@@ -107,7 +107,7 @@ Antes de implementarse necesitan fuente, sumidero y qué pasa si se agotan:
 ## Capa RPG (MVP)
 > Por revisar: en Aventura se crea un solo personaje y en Garelino se comandan tropas (#32, #49). Combates contra animales: #51.
 >
-> **Versión de prueba en curso** (Aventura): un solo personaje, un Adoc (30 PV, ATQ 6, DEF 3, 10 de Luz), en combate por menú contra Únicos con las acciones Atacar, Defender, Ofrecer Luz y Huir. Números provisionales en [`mechanics/cruce-y-combate-v1.md`](mechanics/cruce-y-combate-v1.md). La lista siguiente es previa y por revisar.
+> **Versión de prueba en curso** (Aventura): un solo personaje, un Adoc (30 PV, ATQ 6, DEF 3, 10 de Luz), en combate por menú contra Únicos con las acciones Atacar, Defender, Ofrecer Luz y Huir. Números provisionales en [`mechanics/cruce-y-combate-v1.md`](mechanics/cruce-y-combate-v1.md). Tras el playtest de v1, el dueño da por buenos **de momento** la dificultad y el coste en Luz. La narración del combate va mensaje a mensaje, **estilo Pokémon**. Los **Únicos son monstruos, no árboles** (aspecto, tipos y nombres: #119) y **se regeneran con el tiempo** (#120). La lista siguiente es previa y por revisar.
 - Party de hasta 3. Stats: HP, ATK, DEF, SPD.
 - Combate por turnos, menú: Atacar / Habilidad / Objeto / Huir.
 - Exploración top-down del chunk; encuentros según bioma de la región.

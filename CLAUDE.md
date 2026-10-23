@@ -33,7 +33,8 @@ Motor: Godot 4.x (GDScript). Ver `docs/STACK.md`.
 5. Si no está claro qué agente aplica, usar `engine-architect` para triaje.
 
 ## Lectura mínima antes de cualquier tarea
-- `docs/STACK.md` — stack y convenciones.
+- `docs/STACK.md` — stack.
+- `docs/CONVENCIONES.md` y `CONTRIBUTING.md` — nombres, ramas, commits, PR, tests y versiones.
 - `docs/design/GDD.md` — visión del juego.
 - `docs/decisions/0002-*.md` y `0003-*.md` — decisiones fundacionales y modelo de mundo.
 - El `.md` del agente correspondiente.

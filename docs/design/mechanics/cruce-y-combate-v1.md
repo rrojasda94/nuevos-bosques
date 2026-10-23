@@ -52,8 +52,10 @@ Pagar o ganar **abre ese borde** (entre esos dos Bosques) **para el resto de la 
 
 ### Único (provisional)
 - **Uno por Bosque**, generado por seed.
-- Toma la **silueta y los colores de su Bosque**: según el glosario §3, nace de un árbol, un animal o una sustancia del Bosque. En v1 usa el tipo de árbol y la combinación de colores del Bosque (ADR 0008).
-- Nombre provisional: **"Único de <tipo de árbol>"**.
+- **Los Únicos son monstruos, no árboles** (dueño, playtest v1). Según el glosario §3, nacen al activarse a partir de un árbol, un animal o una sustancia del Bosque. No hay contradicción: nacen de eso, pero son monstruos.
+- Placeholder: **una criatura con la combinación de colores de su Bosque** (ADR 0008). Sustituye a la silueta de árbol del principio de v1.
+- Nombre provisional: **"Único de <tipo de árbol>"**. Por revisar junto con aspecto, tipos y nombres (#119).
+- **Regeneración**: los Únicos se regeneran con el tiempo (dueño). Hoy recuperan todos los PV cuando el jugador huye. La regeneración por tiempo espera al ciclo día/noche (#75). Ritmo y Únicos derrotados: #104, #120.
 
 | Stat | Fórmula |
 |---|---|
@@ -125,7 +127,7 @@ Con la acción "Ofrecer Luz", por ejemplo en d = 3: 2 usos (4 de Luz) quitan 16 
 - **No tener Luz suficiente para pagar N**: la opción "Ofrecer N Luz" aparece deshabilitada (o con un aviso). Siguen disponibles "Enfrentar" y "Retroceder".
 - **Luz < 2 en combate**: "Ofrecer Luz" no está disponible.
 - **Volver a un borde ya abierto**: no aparece el menú; se cruza libremente en ambos sentidos.
-- **Huir con éxito**: vuelves a tu lado del borde y el borde sigue cerrado. Si el Único conserva su daño al volver a enfrentarlo: por definir (propuesta de ajuste 4).
+- **Huir con éxito**: vuelves a tu lado del borde y el borde sigue cerrado. El Único recupera todos sus PV (implementado). Más adelante se regenerará con el tiempo (#120).
 - **Huida fallida (25%)**: se pierde el turno y el Único ataca.
 - **Derrota con 0 o 1 de Luz**: pierdes ⌊Luz/2⌋ = 0. La partida sigue.
 - **Defender seguido de Huir con éxito**: la reducción no se aplica, porque no hay turno siguiente.
@@ -139,10 +141,19 @@ Con la acción "Ofrecer Luz", por ejemplo en d = 3: 2 usos (4 de Luz) quitan 16 
 1. **Defender casi nunca compensa**: renuncia a ~4,5 de daño infligido para ahorrar ~1–3 de daño recibido, sin otro beneficio. Propuesta: que además dé algo (por ejemplo, +2 al siguiente ataque) o que reduzca todo el daño del turno en curso.
 2. ~~**A partir de d = 4 no se puede ganar solo atacando.**~~ **Cerrada**: el dueño confirma que es intencionado que al principio sea complicado ir lejos (ADR 0010).
 3. **Tope de DEF**: propuesta DEF máx. = 4, para que el daño base del jugador (ATQ 6) nunca baje de 2 antes del aleatorio.
-4. **Huir y volver**: si el Único conserva el daño recibido, se puede "picar, huir, curarse en una villa y volver" hasta ganar cualquier pelea. Propuesta: el Único recupera sus PV completos cuando el jugador huye o retrocede.
+4. ~~**Huir y volver.**~~ **Aplicada**: el Único recupera todos sus PV al huir. El dueño indica que los Únicos "pueden regenerarse con el tiempo"; cuando exista el ciclo día/noche, la regeneración pasará a depender del tiempo (#120). Ojo: si se regenera despacio, vuelve a ser posible picar y huir.
 5. ~~**Economía de Luz cerrada.**~~ **Resuelta en parte** (ADR 0010): habrá misiones de villa y ofrendas. En v1.1 la economía sigue cerrada hasta que se implementen.
 6. ~~**Curación escasa en v1.1.**~~ **Resuelta**: el Bosque inicial siempre tiene villa (ADR 0010).7. **Ofrendas enteras**: si una ofrenda vale más que N, se pierde el excedente. Para que la decisión sea interesante, conviene que haya ofrendas de valores bajos (por ejemplo, del orden de N = 4–6) y no solo grandes.
 8. **Luz inicial igual al límite**: empezar con 10 y `luz_max` = 10 hace que la recompensa de la primera victoria se pierda si no se ha gastado nada. Propuesta: empezar con menos (por ejemplo, 6–8) o que el excedente se convierta en una ofrenda pequeña.
+
+## Feedback de playtest del dueño
+| Versión | Pregunta | Respuesta textual | Acción |
+|---|---|---|---|
+| v1 (commit 5225c92) | Dificultad | "esta bien el nivel de dificultad asi por ahora." | Números de combate **validados de momento**. |
+| v1 | Ritmo de la narración | "que vaya narrandose asi como en pokemon." | Narración mensaje a mensaje, estilo Pokémon (en implementación). |
+| v1 | ¿El Único se distingue de un árbol? | "los únicos no son arboles, son monstruos." | Placeholder de criatura con los colores de su Bosque. Aspecto, tipos y nombres: #119. |
+| v1 | Regeneración al huir | "Los Únicos pueden regenerarse con el tiempo." | Hoy recupera todos los PV al huir. Por tiempo cuando exista día/noche (#120). |
+| v1 | Coste en Luz | "si por ahora." | N = 3 + d **validado de momento**. |
 
 ## Criterios de éxito para playtest
 Propuestas de `game-designer`, a confirmar con el dueño:
@@ -161,7 +172,8 @@ Propuestas de `game-designer`, a confirmar con el dueño:
 - Heridas graves: qué es un combate complicado, tipos y efectos, tiempo de espera del dumno, oficiantes de cada villa (#114, #116–#118).
 - Inventario: cuadrícula, slots o peso (#113).
 - Luz al superar `luz_max` (#115).
-- **Tipos de Únicos**: cuáles y cuántos, y si dependen del Bosque o del temperamento (#22b).
+- **Tipos de Únicos**: cuáles y cuántos, y si dependen del Bosque o del temperamento (#22b). Aspecto como monstruos y nombres (#119).
+- Regeneración de los Únicos con el tiempo (#120).
 - **Iserald**: el Único más poderoso, que sale del propio Nujio (glosario §3). ¿Aparece? ¿Cuándo? (#103)
 - **Combate contra varios Únicos**: el menú dice "sus Únicos" en plural, pero v1 tiene uno por Bosque. ¿Habrá grupos? (#103)
 - ¿El Único de un Bosque protege todos sus bordes? ¿Desaparece al ser derrotado? (#104)

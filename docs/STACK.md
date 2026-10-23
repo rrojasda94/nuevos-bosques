@@ -35,6 +35,7 @@ docs/        GDD, arte, decisiones (ADR)
 ```
 
 ## Convenciones
+Nombres y estilo completos en [`CONVENCIONES.md`](CONVENCIONES.md); proceso de ramas, commits y versiones en [`CONTRIBUTING.md`](../CONTRIBUTING.md). Resumen:
 - `snake_case` para archivos, funciones y variables; `PascalCase` para clases y nodos.
 - Un script por escena; lógica compartida en `scripts/core/`.
 - Comunicación entre sistemas por señales vía `EventBus`, nunca referencias directas cruzadas.
