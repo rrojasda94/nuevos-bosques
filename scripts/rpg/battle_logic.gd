@@ -66,7 +66,8 @@ func is_over() -> bool:
 
 
 ## Juega un turno completo (primero el Adoc, luego el Único si sigue en pie).
-## Devuelve eventos para narrar: { "kind": StringName, "amount": int }.
+## Devuelve eventos para narrar, en orden: { "kind": StringName, "amount": int, y el estado justo
+## después del evento: "unico_hp", "adoc_hp", "luz" } (la UI actualiza las barras con cada uno).
 ## kind: attack, defend, offer_luz, flee_ok, flee_fail, unico_attack, victory, defeat.
 ## Una acción no válida (Ofrecer Luz sin Luz, combate acabado) devuelve [] y no consume turno.
 func play_turn(action: Action) -> Array[Dictionary]:
@@ -77,35 +78,39 @@ func play_turn(action: Action) -> Array[Dictionary]:
 		Action.ATTACK:
 			var dmg: int = _roll_attack(adoc_atk, unico_def)
 			unico_hp = maxi(0, unico_hp - dmg)
-			events.append({ "kind": &"attack", "amount": dmg })
+			events.append(_event(&"attack", dmg))
 		Action.DEFEND:
 			defending = true
-			events.append({ "kind": &"defend", "amount": 0 })
+			events.append(_event(&"defend"))
 		Action.OFFER_LUZ:
 			luz -= luz_cost()
 			var dmg_luz: int = int(balance.offer_luz.damage)
 			unico_hp = maxi(0, unico_hp - dmg_luz)
-			events.append({ "kind": &"offer_luz", "amount": dmg_luz })
+			events.append(_event(&"offer_luz", dmg_luz))
 		Action.FLEE:
 			if rng.randf() < float(balance.flee_chance):
 				result = Result.FLED
-				events.append({ "kind": &"flee_ok", "amount": 0 })
+				events.append(_event(&"flee_ok"))
 				return events
-			events.append({ "kind": &"flee_fail", "amount": 0 })
+			events.append(_event(&"flee_fail"))
 	if unico_hp <= 0:
 		result = Result.VICTORY
-		events.append({ "kind": &"victory", "amount": 0 })
+		events.append(_event(&"victory"))
 		return events
 	var hit: int = _roll_attack(unico_atk, adoc_def)
 	if defending:
 		hit = defended_damage(hit, float(balance.defend_factor))
 		defending = false
 	adoc_hp = maxi(0, adoc_hp - hit)
-	events.append({ "kind": &"unico_attack", "amount": hit })
+	events.append(_event(&"unico_attack", hit))
 	if adoc_hp <= 0:
 		result = Result.DEFEAT
-		events.append({ "kind": &"defeat", "amount": 0 })
+		events.append(_event(&"defeat"))
 	return events
+
+
+func _event(kind: StringName, amount: int = 0) -> Dictionary:
+	return { "kind": kind, "amount": amount, "unico_hp": unico_hp, "adoc_hp": adoc_hp, "luz": luz }
 
 
 func _roll_attack(atk: int, def: int) -> int:

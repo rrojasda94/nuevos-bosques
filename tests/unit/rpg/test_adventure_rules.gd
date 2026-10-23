@@ -58,14 +58,14 @@ func test_toll_cost_grows_with_distance() -> void:
 
 
 func test_unico_stats_by_distance_with_caps() -> void:
-	var u1: Dictionary = AdventureRules.make_unico(1, "conífera")
-	assert_eq(u1.name, "Único de conífera")
+	var u1: Dictionary = AdventureRules.make_unico(1, "Único serpiente")
+	assert_eq(u1.name, "Único serpiente")
 	assert_eq([u1.max_hp, u1.atk, u1.def], [22, 5, 1])
-	var u3: Dictionary = AdventureRules.make_unico(3, "sauce")
+	var u3: Dictionary = AdventureRules.make_unico(3, "Único alado")
 	assert_eq([u3.max_hp, u3.atk, u3.def], [30, 7, 2])
-	var u6: Dictionary = AdventureRules.make_unico(6, "cactus")
+	var u6: Dictionary = AdventureRules.make_unico(6, "Único cornudo")
 	assert_eq([u6.max_hp, u6.atk, u6.def], [42, 10, 4])
-	var far: Dictionary = AdventureRules.make_unico(20, "cactus")
+	var far: Dictionary = AdventureRules.make_unico(20, "Único cornudo")
 	assert_eq([far.max_hp, far.atk, far.def], [42, 10, 4], "tope de d = 6")
 	assert_lte(far.def, int(_b.unico.def_max), "tope de DEF")
 
@@ -85,7 +85,7 @@ func test_pay_toll_opens_passage_or_refuses() -> void:
 
 func test_victory_restores_luz_bonus_keeps_hp_and_opens() -> void:
 	var target: int = _map.neighbours_of(_home)[0]
-	var logic: BattleLogic = AdventureRules.start_battle(target, 1, "conífera")
+	var logic: BattleLogic = AdventureRules.start_battle(target, 1, "Único serpiente")
 	logic.adoc_hp = 17
 	logic.luz = 4
 	logic.result = BattleLogic.Result.VICTORY
@@ -97,7 +97,7 @@ func test_victory_restores_luz_bonus_keeps_hp_and_opens() -> void:
 
 func test_victory_at_luz_cap_does_not_exceed_max() -> void:
 	var target: int = _map.neighbours_of(_home)[0]
-	var logic: BattleLogic = AdventureRules.start_battle(target, 1, "conífera")
+	var logic: BattleLogic = AdventureRules.start_battle(target, 1, "Único serpiente")
 	logic.luz = AdventureRules.luz_max()
 	logic.result = BattleLogic.Result.VICTORY
 	AdventureRules.finish_battle(logic, target)
@@ -111,7 +111,7 @@ func test_victory_at_luz_cap_does_not_exceed_max() -> void:
 func test_defeat_restores_hp_halves_luz_and_keeps_closed() -> void:
 	var target: int = _map.neighbours_of(_home)[0]
 	GameState.luz = 7
-	var logic: BattleLogic = AdventureRules.start_battle(target, 1, "conífera")
+	var logic: BattleLogic = AdventureRules.start_battle(target, 1, "Único serpiente")
 	logic.adoc_hp = 0
 	logic.result = BattleLogic.Result.DEFEAT
 	assert_eq(AdventureRules.finish_battle(logic, target), &"defeat")
@@ -122,14 +122,14 @@ func test_defeat_restores_hp_halves_luz_and_keeps_closed() -> void:
 
 func test_fled_keeps_damage_taken_and_unico_returns_at_full_hp() -> void:
 	var target: int = _map.neighbours_of(_home)[0]
-	var first: BattleLogic = AdventureRules.start_battle(target, 2, "palmera")
+	var first: BattleLogic = AdventureRules.start_battle(target, 2, "Único alado")
 	first.unico_hp = 3
 	first.adoc_hp = 12
 	first.result = BattleLogic.Result.FLED
 	assert_eq(AdventureRules.finish_battle(first, target), &"fled")
 	assert_eq(GameState.hp, 12)
 	assert_false(GameState.open_bosques.has(target), "el paso sigue cerrado")
-	var second: BattleLogic = AdventureRules.start_battle(target, 2, "palmera")
+	var second: BattleLogic = AdventureRules.start_battle(target, 2, "Único alado")
 	assert_eq(second.unico_hp, second.unico_max_hp, "huir no conserva el daño hecho al Único")
 	assert_eq(second.adoc_hp, 12)
 	assert_eq(GameState.battle_attempts[str(target)], 2)

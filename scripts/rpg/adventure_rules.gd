@@ -37,12 +37,13 @@ static func toll_cost(d: int) -> int:
 	return int(t.base) + int(t.per_d) * d
 
 
-## Stats del Único del Bosque a distancia d. Deterministas: solo dependen de d y del tipo de árbol.
-static func make_unico(d: int, tree_name: String) -> Dictionary:
+## Stats del Único del Bosque a distancia d (deterministas: solo dependen de d). `unico_name`:
+## nombre provisional, ver UnicoArt.display_name.
+static func make_unico(d: int, unico_name: String) -> Dictionary:
 	var u: Dictionary = balance().unico
 	var dc: int = clampi(d, 0, int(u.d_max))
 	return {
-		"name": "Único de %s" % tree_name,
+		"name": unico_name,
 		"max_hp": int(u.hp_base) + int(u.hp_per_d) * dc,
 		"atk": int(u.atk_base) + int(u.atk_per_d) * dc,
 		"def": mini(int(u.def_max), int(u.def_base) + floori(float(u.def_per_d) * dc)),
@@ -89,11 +90,11 @@ static func pay_toll(bosque_id: int, cost: int) -> bool:
 
 ## Prepara un combate nuevo contra el Único del Bosque. Cuenta el intento (cambia la semilla) y
 ## el Único empieza siempre con todos sus PV: huir o retroceder no conserva el daño hecho.
-static func start_battle(bosque_id: int, d: int, tree_name: String) -> BattleLogic:
+static func start_battle(bosque_id: int, d: int, unico_name: String) -> BattleLogic:
 	var key: String = str(bosque_id)
 	var attempt: int = int(GameState.battle_attempts.get(key, 0))
 	GameState.battle_attempts[key] = attempt + 1
-	var logic := BattleLogic.new(balance(), GameState.hp, GameState.luz, make_unico(d, tree_name),
+	var logic := BattleLogic.new(balance(), GameState.hp, GameState.luz, make_unico(d, unico_name),
 		battle_seed(GameState.seed_value, bosque_id, attempt))
 	EventBus.battle_started.emit(bosque_id)
 	return logic

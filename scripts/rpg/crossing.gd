@@ -73,13 +73,12 @@ func _unhandled_input(event: InputEvent) -> void:
 
 func _start_battle() -> void:
 	_panel.visible = false
-	var style: Dictionary = _map.styles[_bosque_id]
-	var tree_name: String = PlaceholderTileset.SHAPE_NAMES[int(style.shape)]
-	var logic: BattleLogic = AdventureRules.start_battle(_bosque_id, _distance, tree_name)
+	var kind: UnicoArt.Kind = UnicoArt.kind_for(GameState.seed_value, _bosque_id)
+	var logic: BattleLogic = AdventureRules.start_battle(_bosque_id, _distance, UnicoArt.display_name(kind))
 	_battle = BATTLE_SCENE.instantiate()
 	add_child(_battle)
 	_battle.finished.connect(_on_battle_finished)
-	_battle.begin(logic, style)
+	_battle.begin(logic, _map.styles[_bosque_id], kind)
 
 
 func _on_battle_finished(logic: BattleLogic) -> void:
