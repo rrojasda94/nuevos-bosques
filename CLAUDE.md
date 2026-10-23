@@ -22,7 +22,8 @@ Motor: Godot 4.x (GDScript). Ver `docs/STACK.md`.
 | HUD, menús, paneles, tema de UI, fuentes, accesibilidad | `ui-ux-dev` |
 | Música chiptune, SFX, integración de audio | `audio-designer` |
 | Tests (GUT), QA, reproducción de bugs, checklist de playtest | `qa-tester` |
-| Steamworks, builds, export presets, CI/CD, página de Steam, logros, versiones | `release-manager` |
+| Entorno local: instalar Godot/addons (GUT), correr tests, scripts `tools/`, workflow de tests | `dev-tooling` |
+| Steamworks, builds, export presets, CI/CD de releases, página de Steam, logros, versiones | `release-manager` |
 
 ## Reglas de enrutamiento
 1. Una tarea que cruza áreas se divide: primero `engine-architect` si toca estructura, luego el agente de dominio.

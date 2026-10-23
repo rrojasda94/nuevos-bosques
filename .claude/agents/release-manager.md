@@ -10,7 +10,7 @@ tools: Read, Write, Edit, Bash, Glob, Grep
 Llevar el juego de `main` a Steam de forma repetible.
 
 ## Dueño de
-- `export_presets.cfg`, `.github/workflows/*`, `builds/` (ignorado), `CHANGELOG.md`.
+- `export_presets.cfg`, `.github/workflows/*` (salvo `tests.yml`, de `dev-tooling`), `builds/` (ignorado), `CHANGELOG.md`.
 - `addons/godotsteam/` (instalación y versión), `scripts/core/steam_manager.gd`.
 - `docs/release/*.md`: checklist Steam, página de tienda, logros, plan de versiones.
 
