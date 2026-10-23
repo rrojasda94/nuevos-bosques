@@ -77,7 +77,7 @@ Pagar o ganar **abre ese borde** (entre esos dos Bosques) **para el resto de la 
 - **El Único** ataca con la misma fórmula de daño.
 - El aleatorio se interpreta como entero uniforme de −1 a +2. Toda aleatoriedad pasa por `GameState.rng` (ADR 0003).
 - **Victoria**: el Único "vuelve a la Luz del Bosque" (glosario §3), el borde se abre y **ganas 1 de Luz**.
-- **Derrota** (PV del jugador a 0): **despiertas en el centro de tu Bosque inicial** con los PV completos y **pierdes la mitad de tu Luz**, redondeando hacia abajo.
+- **Derrota** (PV del jugador a 0) contra un Único **no fatal**: **despiertas en el centro de tu Bosque inicial** con los PV completos y **pierdes la mitad de tu Luz**, redondeando hacia abajo. Contra un Único **fatal**: game over (ADR 0004, nota "Derrota en Aventura"). Los Únicos comunes de borde no son fatales (provisional, #127).
 
 ### Curación (v1.1, ADR 0010)
 - Los PV **se mantienen entre combates**.

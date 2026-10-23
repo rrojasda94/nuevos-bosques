@@ -58,17 +58,20 @@ Si el Ofomni llega a la villa: "la misión falla y la villa queda dañada; la pa
 - **Distancia fija**: d_ofomni = (saltos del Bosque de aparición al Bosque natal) + 1, es decir, **4 o 5**, con las fórmulas de Único de v1.
   - Se fija al aparecer y **no cambia** aunque el Ofomni se acerque. Así no compensa esperar a que esté cerca, y se evita un exploit.
   - d = 4: PV 34, ATQ 8, DEF 3. d = 5: PV 38, ATQ 9, DEF 3.
-- **Mirada** (propuesta de `game-designer`, a confirmar):
-  - Cada **3.er ataque** del Ofomni es una "Mirada" que hace **×3 de daño**.
-  - Se **anuncia** en el mensaje del turno anterior (por ejemplo, "El ojo del Ofomni se dilata…").
-  - **Defender** la reduce a la mitad (×1,5).
-  - Da sentido a Defender: con pocos PV, una Mirada sin defender puede matar (~13–20 de daño).
+- **Látigos** (confirmado por el dueño: "el ofomni ataca con latigos y cada 3 turnos usa varios latigos"):
+  - El **ataque normal** del Ofomni es un **latigazo** (uno de sus tentáculos), con la fórmula de daño normal. Texto: `ofomni_whip_hit`.
+  - **Latigazo múltiple**: cada **3.er ataque** usa **varios látigos** y hace **×3 de daño**.
+  - Se **anuncia** en el mensaje del turno anterior: "El Ofomni alza todos sus látigos..." (`ofomni_whips_warning`).
+  - **Defender** lo reduce a la mitad (×1,5). Textos: `ofomni_whips_hit` y `ofomni_whips_defended` en `data/text/sistema.json`.
+  - Da sentido a Defender: con pocos PV, un Latigazo múltiple sin defender puede matar (~13–20 de daño).
+  - Las claves de texto `ofomni_gaze_*` pasan a llamarse `ofomni_whips_*`, y se añade `ofomni_whip_hit`. El código tiene que usar las claves nuevas.
+- **No es fatal** (provisional, a confirmar): perder contra el Ofomni no es game over (ver "Derrota" y ADR 0004).
 - **Acciones**: Atacar, Defender, Ofrecer Luz (2 de Luz, 8 de daño) y Huir (75%). **"Ofrecer ofrenda" no está disponible**: la misión es vencerlo.
 - **No abre Bosques** ni usa `battle_attempts` por Bosque (tiene su propia semilla de combate).
 - Al **huir**, el Ofomni recupera todos sus PV (como los Únicos) y sigue su ruta.
-- **Derrota**: despiertas en la villa natal (regla de v1: PV completos, mitad de la Luz suelta). El Ofomni **sigue avanzando**.
+- **Derrota**: el Ofomni es **no fatal** (provisional; ADR 0004, nota sobre la derrota en Aventura). Despiertas en la villa natal (regla de v1: PV completos, mitad de la Luz suelta). El Ofomni **sigue avanzando**.
 
-### Balance (valores medios; Mirada incluida; daño recibido frente a PV del adoc)
+### Balance (valores medios; Latigazo múltiple incluido; daño recibido frente a PV del adoc)
 Estrategia: primero todas las "Ofrecer Luz" disponibles, luego atacar.
 
 | Adoc | Ofomni d = 4 (34/8/3), 0 Luz | d = 4, 4 Luz | d = 4, 10 Luz | Ofomni d = 5 (38/9/3), 4 Luz | d = 5, 10 Luz |
@@ -78,7 +81,7 @@ Estrategia: primero todas las "Ofrecer Luz" disponibles, luego atacar.
 | Nivel 3 (38/7/4) | pierde (~50) | **gana** (~32 de 38) | **gana** (~27 de 38) | pierde | **gana** (~33 de 38) |
 | Nivel 4 (42/8/4) | pierde por poco (~45 de 42) | gana (~32 de 42) | gana (~27 de 42) | justo (~39 de 42) | gana (~33 de 42) |
 
-Lectura: con nivel 3 y al menos 4 de Luz, el Ofomni de d = 4 es difícil pero ganable. El de d = 5 exige nivel 3 con la Luz llena, o nivel 4. Defender en las Miradas no cambia mucho el daño medio, pero evita picos mortales cuando quedan pocos PV. Sin la Mirada, la pelea es más o menos un nivel más fácil.
+Lectura (dificultad **confirmada por el dueño**, "2 ok"): con nivel 3 y al menos 4 de Luz, el Ofomni de d = 4 es difícil pero ganable. El de d = 5 exige nivel 3 con la Luz llena, o nivel 4. Defender ante el Latigazo múltiple no cambia mucho el daño medio, pero evita picos mortales cuando quedan pocos PV. Sin el Latigazo múltiple, la pelea sería más o menos un nivel más fácil.
 
 ### Resultados
 | Resultado | Efecto |
@@ -97,7 +100,7 @@ Lectura: con nivel 3 y al menos 4 de Luz, el Ofomni de d = 4 es difícil pero ga
 ## Interacción con otros sistemas
 - **Tiempo** (`tiempo-y-riutash.md`): el movimiento y el rastro dependen del reloj y del riutash.
 - **Navegación** (`navegacion.md`): brújula y mapa con la última posición conocida.
-- **Combate** (`cruce-y-combate-v1.md`): fórmulas, más la Mirada y la ausencia de "Ofrecer ofrenda".
+- **Combate** (`cruce-y-combate-v1.md`): fórmulas, más los látigos (normal y múltiple) y la ausencia de "Ofrecer ofrenda".
 - **Progresión** (`progresion-adoc.md`): XP y fama.
 - **Ofrendas** (`ofrendas-v1.md`): recompensa.
 - **Guardado**: estado de la misión, Bosque del Ofomni, tiempo hasta su próximo movimiento, última posición conocida y villa dañada.
@@ -119,19 +122,28 @@ Propuestas, a confirmar con el dueño:
 - El jugador entiende el objetivo tras el diálogo del sfida y sale de la villa en menos de 2 minutos.
 - La misión completa (aceptar → vencer → cobrar) dura entre 15 y 25 minutos.
 - En la primera partida el jugador gana o pierde al Ofomni por poco (le quedan o le faltan menos de 10 PV).
-- El jugador usa "Defender" al menos una vez ante una Mirada anunciada.
+- El jugador usa "Defender" al menos una vez ante un Latigazo múltiple anunciado.
 - Al menos una vez el jugador elige pelear en un borde en vez de pagar para ganar XP antes del Ofomni (pregunta: "¿por qué peleaste o pagaste?").
 - El dueño considera justo el fracaso (villa dañada, la partida sigue) (pregunta directa).
 
-## Decisiones a confirmar con el dueño
-- La d del Ofomni es fija desde su aparición (4–5) (#125).
-- La **Mirada** (×3 cada 3.er ataque, anunciada, Defender la reduce a la mitad) (#125).
-- Movimiento cada 6 minutos. La misión solo empieza a correr al aceptarla.
-- Recompensa: rellenar la Luz, Cuenco ritual (6), 25 XP y +1 de fama.
+## Decisiones del dueño (2026-10-23)
+Respuesta textual a la propuesta: "1 si, me agrada eso. el ofomni ataca con latigos y cada 3 turnos usa varios latigos. 2 ok 3 ok 4 vale 5 es un survival, deberia ser game over dependiendo del monstruo que te ataque, un iserald es fatal."
+
+| Tema | Estado |
+|---|---|
+| Ataque fuerte cada 3 turnos (×3, anunciado, Defender a la mitad) | **Confirmado**, como **Latigazo múltiple** (látigos, no "Mirada"). |
+| Dificultad ganable desde nivel 3 | **Confirmada**. |
+| Avance de un Bosque cada 6 min, solo tras aceptar | **Confirmado**. |
+| Recompensa: Luz al tope, Cuenco ritual (6), 25 XP, +1 de fama | **Confirmada**. |
+| Derrota en Aventura | Depende del monstruo: hay monstruos **fatales** (game over) e Iserald siempre lo es. El Ofomni es **no fatal**, provisional (#126, ADR 0004). |
+
+## Decisiones aún a confirmar
+- La d del Ofomni es fija desde su aparición (4–5). La dificultad confirmada se calculó con esa regla.
 - Villa dañada: la mitad de la Luz suelta y una marca, sin más efectos en la 0.2.0 (#124).
 - Vencerlo después de fallar no da recompensa.
+- El Ofomni no es fatal (provisional; es la primera misión y una versión de prueba).
 
 ## Preguntas abiertas
 - Efectos reales de la villa dañada (#124).
-- Choque con ADR 0004 ("derrota = fallar la misión de la partida"): esta misión es un encargo de villa y fallarla no termina la partida. ¿La "misión de la partida" de Aventura es otra cosa? (#126; ver también #31)
+- Qué otros monstruos son fatales (#127).
 - Más misiones de villa (#106).

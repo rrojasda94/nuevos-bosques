@@ -84,7 +84,9 @@ El Ofomni aparece a 3–4 saltos (`mision-ofomni.md`). Si el jugador vence a los
 - **Victoria con la XP justo en el umbral**: se sube de nivel (umbral inclusivo).
 - **Varios niveles de golpe** (por ejemplo, la recompensa de misión más la victoria): se aplican en orden, con un mensaje por nivel.
 - **Nivel 10**: no se sube más. Se puede mostrar la XP, pero sin barra al siguiente nivel.
-- **Derrota**: no se pierde XP ni nivel (solo la mitad de la Luz suelta, como en v1).
+- **Derrota contra un monstruo no fatal**: no se pierde XP ni nivel (solo la mitad de la Luz suelta, como en v1).
+- **Derrota contra un monstruo fatal** (ADR 0004): game over. La partida termina y se empieza otra. Si algo de la progresión pasa a la partida siguiente: por definir (#127).
+- La curva y la dificultad ganable desde nivel 3 contra el Ofomni están **confirmadas por el dueño** (`mision-ofomni.md`).
 - **Cargar una partida de la 0.1.0** (sin XP): empieza en nivel 1 con 0 XP.
 
 ## Criterios de éxito para playtest
