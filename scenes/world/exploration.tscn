@@ -9,7 +9,7 @@ script = ExtResource("1_expl")
 
 [node name="Terrain" type="TileMapLayer" parent="."]
 
-[node name="Borders" type="Node2D" parent="."]
+[node name="Nujios" type="Node2D" parent="."]
 
 [node name="Player" type="Node2D" parent="."]
 script = ExtResource("2_player")

@@ -18,6 +18,7 @@ func _ready() -> void:
 	EventBus.chunk_entered.connect(_on_chunk_entered)
 	EventBus.day_ended.connect(func(_d: int) -> void: _refresh())
 	EventBus.bosque_border_reached.connect(_on_bosque_border_reached)
+	EventBus.signpost_read.connect(func(direction: String) -> void: _show_notice("Letrero de piedra: hacia la villa, al %s" % direction))
 	_notice.text = ""
 	_refresh()
 
@@ -36,7 +37,11 @@ func _refresh() -> void:
 
 
 func _on_bosque_border_reached(bosque_id: int) -> void:
-	_notice.text = NOTICE_REGION_EDGE if bosque_id < 0 else NOTICE_OTHER_BOSQUE
+	_show_notice(NOTICE_REGION_EDGE if bosque_id < 0 else NOTICE_OTHER_BOSQUE)
+
+
+func _show_notice(text: String) -> void:
+	_notice.text = text
 	_notice_serial += 1
 	var serial: int = _notice_serial
 	await get_tree().create_timer(NOTICE_TIME).timeout

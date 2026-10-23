@@ -1,18 +1,25 @@
 extends GutTest
-## Generación de chunks (ADR 0006): determinismo, tiles transitables, ríos y entradas.
+## Generación de chunks (ADR 0006): determinismo, árboles, riscos, ríos con vados y entradas.
 
 const SEEDS: Array[int] = [1, 2, 42, 777, 123456789, 2147483647]
 const COORDS: Array[Vector2i] = [Vector2i(6, 13), Vector2i(7, 13), Vector2i(0, 0), Vector2i(6, 1), Vector2i(11, 15)]
 
 var _region: Dictionary
+var _maps: Dictionary = {}
 
 
 func before_all() -> void:
 	_region = ChunkGenerator.load_region(&"valle_del_sara")
 
 
+func _map(seed_value: int) -> BosqueMap:
+	if not _maps.has(seed_value):
+		_maps[seed_value] = BosqueMap.build(seed_value, ChunkGenerator.region_size(_region))
+	return _maps[seed_value]
+
+
 func _gen(seed_value: int, coord: Vector2i) -> ChunkData:
-	return ChunkGenerator.generate(seed_value, coord, _region)
+	return ChunkGenerator.generate(seed_value, coord, _region, _map(seed_value))
 
 
 func _count(chunk: ChunkData, tile: int) -> int:
@@ -21,7 +28,7 @@ func _count(chunk: ChunkData, tile: int) -> int:
 
 func test_region_data_loads() -> void:
 	assert_eq(ChunkGenerator.region_size(_region), Vector2i(12, 16))
-	assert_true(_region.has("relief") and _region.has("rivers"))
+	assert_true(_region.has("relief") and _region.has("rivers") and _region.has("forest"))
 	assert_eq((_region.get("areas", []) as Array).size(), 7)
 
 
@@ -52,26 +59,30 @@ func test_different_coords_give_different_chunks() -> void:
 	assert_ne(_gen(42, Vector2i(6, 13)).tiles, _gen(42, Vector2i(7, 13)).tiles)
 
 
-func test_forest_is_walkable_and_present() -> void:
-	assert_true(ChunkData.is_walkable_tile(ChunkData.Tile.FOREST))
-	assert_gt(_count(_gen(42, Vector2i(6, 13)), ChunkData.Tile.FOREST), 500, "bosque tupido")
+func test_trees_block_and_leave_room_to_walk() -> void:
+	assert_false(ChunkData.is_walkable_tile(ChunkData.Tile.TREE))
+	for s in SEEDS:
+		var trees := _count(_gen(s, Vector2i(6, 12)), ChunkData.Tile.TREE)
+		var ratio := float(trees) / (ChunkData.SIZE * ChunkData.SIZE)
+		assert_between(ratio, 0.12, 0.40, "seed %d: %.0f%% árboles" % [s, ratio * 100.0])
 
 
-func test_barriers_are_cliffs_and_rivers() -> void:
-	assert_false(ChunkData.is_walkable_tile(ChunkData.Tile.CLIFF))
-	assert_false(ChunkData.is_walkable_tile(ChunkData.Tile.RIVER_NARROW))
-	assert_false(ChunkData.is_walkable_tile(ChunkData.Tile.RIVER_NAVIGABLE))
-	assert_true(ChunkData.is_walkable_tile(ChunkData.Tile.BRIDGE))
+func test_barriers_and_crossings() -> void:
+	for t in [ChunkData.Tile.CLIFF, ChunkData.Tile.RIVER_NARROW, ChunkData.Tile.RIVER_NAVIGABLE, ChunkData.Tile.BUILDING, ChunkData.Tile.NUJIO]:
+		assert_false(ChunkData.is_walkable_tile(t), "tile %d bloquea" % t)
+	for t in [ChunkData.Tile.BRIDGE, ChunkData.Tile.FORD, ChunkData.Tile.PLAZA, ChunkData.Tile.SIGN, ChunkData.Tile.PATH]:
+		assert_true(ChunkData.is_walkable_tile(t), "tile %d se camina" % t)
 
 
-func test_north_is_more_rugged_than_south() -> void:
+func test_cliffs_cluster_in_northern_mountains() -> void:
 	var north := 0
 	var south := 0
 	for s in SEEDS:
 		for x in [2, 6, 9]:
 			north += _count(_gen(s, Vector2i(x, 1)), ChunkData.Tile.CLIFF)
-			south += _count(_gen(s, Vector2i(x, 14)), ChunkData.Tile.CLIFF)
-	assert_gt(north, south * 2, "norte %d riscos, sur %d" % [north, south])
+			south += _count(_gen(s, Vector2i(x, 12)), ChunkData.Tile.CLIFF)
+	assert_gt(north, 0, "hay riscos en el norte")
+	assert_eq(south, 0, "sin riscos en el sur llano")
 
 
 func test_both_river_types_appear_in_region() -> void:
@@ -86,10 +97,46 @@ func test_both_river_types_appear_in_region() -> void:
 	assert_gt(navigable, 0, "ríos navegables")
 
 
+func test_main_river_is_continuous_from_north_to_south() -> void:
+	# Cada fila de la región tiene río principal (o vado) y toca la fila siguiente (conexión 4).
+	var height: int = ChunkGenerator.region_size(_region).y * ChunkData.SIZE
+	for s in SEEDS:
+		var terrain := ChunkGenerator.Terrain.new(s, _region)
+		var breaks := 0
+		for y in height - 1:
+			var a := terrain.river_span(y)
+			var b := terrain.river_span(y + 1)
+			if a.y < a.x or a.x > b.y or b.x > a.y:
+				breaks += 1
+			var mid: int = (a.x + a.y) / 2
+			var tile := terrain.tile_at(mid, y)
+			if not (ChunkData.is_river(tile) or tile == ChunkData.Tile.FORD):
+				breaks += 1
+		assert_eq(breaks, 0, "seed %d: cortes en el río principal" % s)
+
+
+func test_main_river_has_fords_regularly() -> void:
+	var height: int = ChunkGenerator.region_size(_region).y * ChunkData.SIZE
+	var spacing: int = int((_region.rivers as Dictionary).ford_spacing)
+	for s in SEEDS:
+		var terrain := ChunkGenerator.Terrain.new(s, _region)
+		var last := -1
+		var max_gap := 0
+		for y in height:
+			var span := terrain.river_span(y)
+			if terrain.tile_at((span.x + span.y) / 2, y) == ChunkData.Tile.FORD:
+				if last >= 0:
+					max_gap = maxi(max_gap, y - last)
+				last = y
+		assert_gt(last, 0, "seed %d: hay vados" % s)
+		assert_lte(max_gap, spacing * 2, "seed %d: vados como mucho cada %d filas" % [s, spacing * 2])
+
+
 func test_rivers_are_sampled_in_world_space() -> void:
-	# Los ríos salen de una función de coordenadas de mundo: cada casilla no tallada de un chunk
-	# coincide con el terreno base en esa posición del mundo. Así un río sigue al cruzar el borde.
-	var rng := RandomNumberGenerator.new()
+	# Cada casilla no tallada de un chunk coincide con el terreno base en esa posición del mundo,
+	# así que los ríos siguen al cruzar el borde entre chunks.
+	var carved: Array[int] = [ChunkData.Tile.PATH, ChunkData.Tile.BRIDGE, ChunkData.Tile.CLEARING,
+		ChunkData.Tile.PLAZA, ChunkData.Tile.BUILDING, ChunkData.Tile.NUJIO, ChunkData.Tile.SIGN]
 	for s in [1, 42]:
 		var terrain := ChunkGenerator.Terrain.new(s, _region)
 		for c in [Vector2i(6, 13), Vector2i(7, 13), Vector2i(3, 5)]:
@@ -98,66 +145,21 @@ func test_rivers_are_sampled_in_world_space() -> void:
 			for y in ChunkData.SIZE:
 				for x in ChunkData.SIZE:
 					var tile := chunk.get_tile(Vector2i(x, y))
-					if tile == ChunkData.Tile.PATH or tile == ChunkData.Tile.BRIDGE or tile == ChunkData.Tile.CLEARING:
+					if carved.has(tile):
 						continue
-					var base := terrain.tile_at(c.x * ChunkData.SIZE + x, c.y * ChunkData.SIZE + y, rng)
-					if ChunkData.is_river(tile) != ChunkData.is_river(base):
+					if tile != terrain.tile_at(c.x * ChunkData.SIZE + x, c.y * ChunkData.SIZE + y):
 						mismatches += 1
 			assert_eq(mismatches, 0, "seed %d chunk %s" % [s, c])
 
 
-func test_rivers_are_long_not_puddles() -> void:
-	# En una ventana de 3x3 chunks, todo río que no toca el borde de la ventana es largo.
-	var rng := RandomNumberGenerator.new()
-	var window: int = ChunkData.SIZE * 3
-	var components := 0
-	for case: Array in [[1, Vector2i(5, 8)], [42, Vector2i(5, 8)], [777, Vector2i(5, 8)], [42, Vector2i(2, 0)], [777, Vector2i(7, 12)]]:
-		var s: int = case[0]
-		var terrain := ChunkGenerator.Terrain.new(s, _region)
-		var origin: Vector2i = (case[1] as Vector2i) * ChunkData.SIZE
-		var river := PackedByteArray()
-		river.resize(window * window)
-		for y in window:
-			for x in window:
-				river[y * window + x] = 1 if ChunkData.is_river(terrain.tile_at(origin.x + x, origin.y + y, rng)) else 0
-		var seen := PackedByteArray()
-		seen.resize(window * window)
-		for i in window * window:
-			if river[i] == 0 or seen[i] == 1:
-				continue
-			var queue: Array[int] = [i]
-			seen[i] = 1
-			var head := 0
-			var touches_edge := false
-			components += 1
-			while head < queue.size():
-				var p: int = queue[head]
-				head += 1
-				var px: int = p % window
-				var py: int = p / window
-				if px == 0 or py == 0 or px == window - 1 or py == window - 1:
-					touches_edge = true
-				for d in [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1), Vector2i(1, 1), Vector2i(-1, 1), Vector2i(1, -1), Vector2i(-1, -1)]:
-					var nx: int = px + d.x
-					var ny: int = py + d.y
-					if nx < 0 or ny < 0 or nx >= window or ny >= window:
-						continue
-					var n: int = ny * window + nx
-					if river[n] == 1 and seen[n] == 0:
-						seen[n] = 1
-						queue.append(n)
-			if not touches_edge:
-				assert_gt(queue.size(), 40, "seed %d: charco de %d casillas en %s" % [s, queue.size(), origin + Vector2i(i % window, i / window)])
-	assert_gt(components, 0, "la ventana debe contener ríos")
-
-
-func test_center_is_walkable() -> void:
+func test_hub_is_walkable() -> void:
 	for s in SEEDS:
 		for c in COORDS:
-			assert_true(_gen(s, c).is_walkable(ChunkData.center()), "seed %d chunk %s" % [s, c])
+			var chunk := _gen(s, c)
+			assert_true(chunk.is_walkable(chunk.hub), "seed %d chunk %s" % [s, c])
 
 
-func test_every_side_has_walkable_entry_reachable_from_center() -> void:
+func test_every_side_has_walkable_entry_reachable_from_hub() -> void:
 	for s in SEEDS:
 		for c in COORDS:
 			var chunk := _gen(s, c)
@@ -182,3 +184,10 @@ func test_find_entry_returns_walkable_cell_on_requested_side() -> void:
 				assert_true(chunk.is_walkable(cell), "seed %d borde %s along %d" % [s, side, along])
 				assert_eq(cell, ChunkData.border_cell(side, cell.y if side.x != 0 else cell.x),
 					"la entrada debe estar en el borde %s" % side)
+
+
+func test_direction_names() -> void:
+	assert_eq(ChunkGenerator.direction_name(Vector2i(0, -3)), "norte")
+	assert_eq(ChunkGenerator.direction_name(Vector2i(2, 2)), "sureste")
+	assert_eq(ChunkGenerator.direction_name(Vector2i(-5, 0)), "oeste")
+	assert_eq(ChunkGenerator.direction_name(Vector2i(1, -1)), "noreste")

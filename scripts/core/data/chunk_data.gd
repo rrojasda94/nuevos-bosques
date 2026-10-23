@@ -3,19 +3,30 @@ extends Resource
 ## Chunk generado: 64x64 tiles (ADR 0004). Escala: chunk < Bosque < área < región.
 ## Lo produce ChunkGenerator (ADR 0006); el resto de sistemas solo lo leen.
 
-## Bloquean el paso: CLIFF (riscos y pendientes pronunciadas) y los dos tipos de río.
-## FOREST se camina (bosque tupido). RIVER_NAVIGABLE = "rio_navegable" (bloquea a pie hasta que
-## haya navegación); RIVER_NARROW = "rio_estrecho" (arroyos de montaña, nunca navegable).
-enum Tile { GRASS, CLEARING, PATH, FOREST, ROCKY, CLIFF, RIVER_NARROW, RIVER_NAVIGABLE, BRIDGE }
+## Bloquean el paso: TREE (un árbol por casilla), CLIFF (riscos y pendientes), los dos ríos,
+## BUILDING (edificios de la villa) y NUJIO (el árbol enorme del Bosque).
+## RIVER_NAVIGABLE = "rio_navegable" (bloquea a pie hasta que haya navegación);
+## RIVER_NARROW = "rio_estrecho" (nunca navegable). FORD = vado; SIGN = letrero de piedra.
+enum Tile {
+	GRASS, CLEARING, PATH, TREE, ROCKY, CLIFF, RIVER_NARROW, RIVER_NAVIGABLE, BRIDGE, FORD,
+	PLAZA, BUILDING, SIGN, NUJIO,
+}
 
 const SIZE: int = 64
 ## Bordes del chunk, como dirección hacia fuera.
 const SIDES: Array[Vector2i] = [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]
+const BLOCKING: Array[int] = [Tile.TREE, Tile.CLIFF, Tile.RIVER_NARROW, Tile.RIVER_NAVIGABLE, Tile.BUILDING, Tile.NUJIO]
 
 @export var seed_value: int = 0
 @export var coord: Vector2i = Vector2i.ZERO
 ## Un byte por tile (ChunkData.Tile), fila a fila.
 @export var tiles: PackedByteArray = PackedByteArray()
+## Casilla transitable a la que llegan todos los senderos (aparición y cálculo de accesibilidad).
+@export var hub: Vector2i = Vector2i(SIZE / 2, SIZE / 2)
+## Huella del Nujio en este chunk (tamaño 0 si no lo hay).
+@export var nujio_rect: Rect2i = Rect2i()
+## Este chunk contiene la villa de su Bosque.
+@export var has_villa: bool = false
 
 var _reachable: PackedByteArray = PackedByteArray()
 
@@ -55,24 +66,23 @@ func is_walkable(cell: Vector2i) -> bool:
 
 
 static func is_walkable_tile(tile: int) -> bool:
-	return tile != Tile.CLIFF and tile != Tile.RIVER_NARROW and tile != Tile.RIVER_NAVIGABLE
+	return not BLOCKING.has(tile)
 
 
 static func is_river(tile: int) -> bool:
 	return tile == Tile.RIVER_NARROW or tile == Tile.RIVER_NAVIGABLE
 
 
-## 1 por cada casilla a la que se llega andando desde el centro.
-func reachable_from_center() -> PackedByteArray:
+## 1 por cada casilla a la que se llega andando desde el hub.
+func reachable_from_hub() -> PackedByteArray:
 	if not _reachable.is_empty():
 		return _reachable
 	_reachable.resize(SIZE * SIZE)
 	_reachable.fill(0)
-	var start: Vector2i = center()
-	if not is_walkable(start):
+	if not is_walkable(hub):
 		return _reachable
-	var queue: Array[Vector2i] = [start]
-	_reachable[start.y * SIZE + start.x] = 1
+	var queue: Array[Vector2i] = [hub]
+	_reachable[hub.y * SIZE + hub.x] = 1
 	var head: int = 0
 	while head < queue.size():
 		var cell: Vector2i = queue[head]
@@ -86,17 +96,17 @@ func reachable_from_center() -> PackedByteArray:
 
 
 func is_reachable(cell: Vector2i) -> bool:
-	return in_bounds(cell) and reachable_from_center()[cell.y * SIZE + cell.x] == 1
+	return in_bounds(cell) and reachable_from_hub()[cell.y * SIZE + cell.x] == 1
 
 
 ## Casilla donde aparece el jugador al entrar por el borde `side` a la altura `along`.
 ## Si esa casilla es transitable se respeta (continuidad); si no, la transitable y accesible
-## desde el centro más cercana del mismo borde.
+## desde el hub más cercana del mismo borde.
 func find_entry(side: Vector2i, along: int) -> Vector2i:
 	var wanted: Vector2i = border_cell(side, clampi(along, 0, SIZE - 1))
 	if is_walkable(wanted):
 		return wanted
-	var best: Vector2i = center()
+	var best: Vector2i = hub
 	var best_score: int = 1 << 30
 	for i: int in SIZE:
 		var cell: Vector2i = border_cell(side, i)

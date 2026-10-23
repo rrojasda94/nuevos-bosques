@@ -11,11 +11,25 @@ const MAX_SIZE: int = 16
 const GROW_MIN: int = 6
 const GROW_MAX: int = 12
 const SALT_BOSQUE: int = 5
+const SALT_STYLE: int = 8
+const SALT_VILLA: int = 9
+const SALT_NUJIO: int = 10
+## 1 de cada VILLA_ODDS Bosques tiene villa (ADR 0008).
+const VILLA_ODDS: int = 5
+const NUJIO_MIN: int = 6
+const NUJIO_MAX: int = 8
 
 var grid_size: Vector2i = Vector2i.ZERO
 ## Id de Bosque por chunk (fila a fila). Los ids van de 0 a count() - 1.
 var ids: PackedInt32Array = PackedInt32Array()
 var _groups: Array = []  # Array[Array[Vector2i]], índice = id
+## Por Bosque (índice = id): aspecto y rasgos. Todo determinista por seed.
+## style = { "shape", "leaf", "trunk", "ground" }: índices en las tablas de PlaceholderTileset.
+var styles: Array[Dictionary] = []
+var has_villa: Array[bool] = []
+## Chunk que contiene al Nujio (y a la villa, si la hay): el más central del Bosque.
+var nujio_chunk: Array[Vector2i] = []
+var nujio_size: Array[int] = []
 
 
 static func build(seed_value: int, size: Vector2i) -> BosqueMap:
@@ -28,6 +42,7 @@ static func build(seed_value: int, size: Vector2i) -> BosqueMap:
 	map._grow(rng)
 	map._fix_small_groups()
 	map._compact()
+	map._assign_traits(seed_value)
 	return map
 
 
@@ -191,3 +206,58 @@ func _compact() -> void:
 			_set_id(c, kept.size())
 		kept.append(group)
 	_groups = kept
+
+
+## Aspecto (forma de árbol y colores), villa y Nujio de cada Bosque. Cada Bosque se compara con
+## sus vecinos ya asignados: nunca comparten color de hoja y, si se puede, tampoco forma.
+func _assign_traits(seed_value: int) -> void:
+	var shapes: int = PlaceholderTileset.SHAPE_COUNT
+	var leaves: int = PlaceholderTileset.LEAVES.size()
+	var trunks: int = PlaceholderTileset.TRUNKS.size()
+	var grounds: int = PlaceholderTileset.GROUNDS.size()
+	for id: int in _groups.size():
+		var neighbours: Array[int] = []
+		for n: int in _neighbour_ids(id):
+			if n < id:
+				neighbours.append(n)
+		var style: Dictionary = {}
+		for attempt: int in 64:
+			var h: int = ChunkGenerator.hash_ints([seed_value, id, attempt, SALT_STYLE])
+			style = {
+				"shape": h % shapes,
+				"leaf": (h >> 4) % leaves,
+				"trunk": (h >> 9) % trunks,
+				"ground": (h >> 14) % grounds,
+			}
+			var clash: bool = false
+			for n: int in neighbours:
+				var other: Dictionary = styles[n]
+				if other.leaf == style.leaf or (attempt < 32 and other.shape == style.shape):
+					clash = true
+					break
+			if not clash:
+				break
+		styles.append(style)
+		var hv: int = ChunkGenerator.hash_ints([seed_value, id, SALT_VILLA])
+		has_villa.append(hv % VILLA_ODDS == 0)
+		var hn: int = ChunkGenerator.hash_ints([seed_value, id, SALT_NUJIO])
+		nujio_chunk.append(central_chunk(id))
+		nujio_size.append(NUJIO_MIN + (hn >> 8) % (NUJIO_MAX - NUJIO_MIN + 1))
+
+
+func neighbours_of(bosque_id: int) -> Array[int]:
+	return _neighbour_ids(bosque_id)
+
+
+## Chunk del Bosque más cercano a su centroide (empates: el primero en orden de crecimiento).
+func central_chunk(bosque_id: int) -> Vector2i:
+	var group: Array = _groups[bosque_id]
+	var centroid := Vector2.ZERO
+	for c: Vector2i in group:
+		centroid += Vector2(c)
+	centroid /= group.size()
+	var best: Vector2i = group[0]
+	for c: Vector2i in group:
+		if Vector2(c).distance_squared_to(centroid) < Vector2(best).distance_squared_to(centroid):
+			best = c
+	return best
