@@ -80,6 +80,20 @@ Propuesta de `game-designer`, a confirmar con el dueño:
 - Un observador distingue a simple vista dónde termina el Bosque inicial y empieza el vecino (color de la vegetación).
 - El jugador dice que moverse "se siente bien" (pregunta directa tras la sesión). Es el objetivo explícito del dueño.
 
+## Versión 0.2.0 "Primer encargo" (en curso)
+Plan aprobado por el dueño. Fichas con valores provisionales:
+
+| Tema | Ficha | Resumen |
+|---|---|---|
+| Misión | [`mision-ofomni.md`](mision-ofomni.md) | El sfida pide interceptar a un Ofomni (ojo con tentáculos) que avanza un Bosque cada 6 min hacia la villa. Si llega, la villa queda dañada y la partida sigue. |
+| Tiempo | [`tiempo-y-riutash.md`](tiempo-y-riutash.md) | Tiempo real con pausa (ADR 0012). Día de 8 min y noche de 5 min; riutash con avisos; refugio frente a exposición. |
+| Orientación | [`navegacion.md`](navegacion.md) | Caminos principales, letreros hacia la villa natal, refugios, mapa (M) y brújula. |
+| Progresión | [`progresion-adoc.md`](progresion-adoc.md) | XP = 4 + 3·d, niveles 1–10, fama. |
+| Ofrendas | [`ofrendas-v1.md`](ofrendas-v1.md) | 5 ofrendas (3–8), uso entero en peajes y en combate, hallazgos en refugios. |
+| Interacción | (PR 5 del plan) | Tecla **E** para hablar, leer letreros y examinar refugios. |
+
+Esto cubre varias filas de la tabla siguiente: misiones, progresión, Luz, día y noche, y parte de los peligros.
+
 ## Siguiente iteración (no decidido)
 | Elemento | Qué se sabe | Preguntas |
 |---|---|---|

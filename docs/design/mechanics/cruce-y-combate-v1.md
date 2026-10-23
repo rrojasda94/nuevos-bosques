@@ -6,6 +6,8 @@
 >
 > **Cambio v1.1 (ADR 0010):** la curación pasa de "junto a cualquier Nujio" a "en la plaza o junto al Nujio de una villa". La curación por riutash espera al ciclo día/noche. Las ofrendas (artefactos de Luz que se usan enteros) son la siguiente iteración: v1.1 sigue usando Luz suelta.
 >
+> **0.2.0:** el adoc sube de nivel ([`progresion-adoc.md`](progresion-adoc.md)): los stats de la tabla del personaje son los del nivel 1. Las ofrendas se usan en el borde y en combate según [`ofrendas-v1.md`](ofrendas-v1.md). El riutash cura y daña según [`tiempo-y-riutash.md`](tiempo-y-riutash.md).
+>
 > **Cambio v1.2 (ADR 0010, respuestas):** la Luz suelta tiene un límite de 10 (`luz_max`, provisional). El jugador empieza en la villa de su Bosque natal, que siempre existe. Las ofrendas se podrán usar en combate para que el Único se vaya (siguiente iteración).
 
 ## Objetivo
