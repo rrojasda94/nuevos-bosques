@@ -19,6 +19,7 @@
 - Viewport base: **320×180** (16:9). Escala entera: ×4 = 1280×720, ×6 = 1920×1080.
 - Tile: **16×16 px**. Personajes 16×16 o 16×24.
 - Filtro de texturas: `Nearest` (sin suavizado). Stretch mode `viewport`, aspect `keep`.
+- Transformaciones 2D ajustadas al píxel (`snap_2d_transforms_to_pixel`, ADR 0006). Cámara con zoom entero.
 
 ## Estructura de carpetas
 ```
@@ -39,7 +40,8 @@ docs/        GDD, arte, decisiones (ADR)
 - Comunicación entre sistemas por señales vía `EventBus`, nunca referencias directas cruzadas.
 - Estado global solo en `GameState`; guardado solo por `SaveManager`.
 - Simulación por días (`EventBus.day_ended`), nunca por `_process` ni tiempo real.
-- Toda aleatoriedad por `GameState.rng` (determinismo de chunks y simulación).
+- Aleatoriedad de la simulación por `GameState.rng`. La generación de chunks usa ruido y RNG locales derivados de `hash(seed, coordenadas)` (ADR 0006). Nunca `randi()`/`randf()` globales.
+- Input siempre por acciones del Input Map (`move_up/down/left/right`, `run`, `new_seed`), nunca teclas hardcodeadas.
 
 ## Alternativas descartadas
 - **Unity**: licencias cambiantes, overkill para 2D pixel.

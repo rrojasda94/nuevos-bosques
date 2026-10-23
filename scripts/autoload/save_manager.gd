@@ -29,9 +29,10 @@ func load_game(slot: int) -> Error:
 	var data: Variant = JSON.parse_string(text)
 	if typeof(data) != TYPE_DICTIONARY:
 		return ERR_PARSE_ERROR
-	if int(data.get("save_version", 0)) != GameState.SAVE_VERSION:
-		# TODO(engine-architect): migraciones entre versiones de guardado.
+	var version: int = int(data.get("save_version", 0))
+	if version < 1 or version > GameState.SAVE_VERSION:
 		return ERR_INVALID_DATA
+	# Migraciones: de v1 a v2 solo se añadieron campos con valor por defecto en GameState.from_dict.
 	GameState.from_dict(data)
 	EventBus.game_loaded.emit(slot)
 	return OK

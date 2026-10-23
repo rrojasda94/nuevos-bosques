@@ -1,15 +1,21 @@
 extends Node
 ## GameState: estado serializable de la partida. Sin lógica de dominio.
 
-const SAVE_VERSION: int = 1
+## v2: chunk_coord y player_cell (ADR 0006). Las v1 se cargan con valores por defecto.
+const SAVE_VERSION: int = 2
 
 var rng := RandomNumberGenerator.new()
 var seed_value: int = 0
 var day: int = 1
 ## Región del mapa mundial donde ocurre la partida (ADR 0003).
 var region_id: StringName = &""
-## Chunk generado: { "size": [w, h], "tiles": [...], "spawns": [...] }. Se regenera con seed+region si falta.
+## Reservado para cambios persistentes sobre chunks (ADR 0006). Los tiles NO se guardan:
+## se regeneran con ChunkGenerator a partir de seed + coordenadas.
 var chunk: Dictionary = {}
+## Chunk (zona) donde está el jugador. (0, 0) es el chunk inicial de la partida.
+var chunk_coord: Vector2i = Vector2i.ZERO
+## Casilla del jugador dentro del chunk. (-1, -1) = aparecer en el centro.
+var player_cell: Vector2i = Vector2i(-1, -1)
 
 ## Recursos de la ciudad: { "wood": 10, "stone": 5, ... }
 var resources: Dictionary = {}
@@ -31,6 +37,8 @@ func new_game(new_seed: int = 0, new_region: StringName = &"claro_inicial") -> v
 	day = 1
 	region_id = new_region
 	chunk = {}
+	chunk_coord = Vector2i.ZERO
+	player_cell = Vector2i(-1, -1)
 	resources = { "wood": 20, "stone": 10, "food": 15, "gold": 0 }
 	buildings = []
 	citizens = []
@@ -46,6 +54,8 @@ func to_dict() -> Dictionary:
 		"day": day,
 		"region_id": String(region_id),
 		"chunk": chunk,
+		"chunk_coord": [chunk_coord.x, chunk_coord.y],
+		"player_cell": [player_cell.x, player_cell.y],
 		"rng_state": rng.state,
 		"resources": resources,
 		"buildings": buildings,
@@ -61,6 +71,8 @@ func from_dict(data: Dictionary) -> void:
 	day = int(data.get("day", 1))
 	region_id = StringName(data.get("region_id", "claro_inicial"))
 	chunk = data.get("chunk", {})
+	chunk_coord = _to_vector2i(data.get("chunk_coord", [0, 0]), Vector2i.ZERO)
+	player_cell = _to_vector2i(data.get("player_cell", [-1, -1]), Vector2i(-1, -1))
 	rng.seed = seed_value
 	rng.state = int(data.get("rng_state", rng.state))
 	resources = data.get("resources", {})
@@ -69,3 +81,9 @@ func from_dict(data: Dictionary) -> void:
 	party = data.get("party", [])
 	inventory = data.get("inventory", {})
 	quests = data.get("quests", {})
+
+
+static func _to_vector2i(value: Variant, fallback: Vector2i) -> Vector2i:
+	if value is Array and value.size() == 2:
+		return Vector2i(int(value[0]), int(value[1]))
+	return fallback
