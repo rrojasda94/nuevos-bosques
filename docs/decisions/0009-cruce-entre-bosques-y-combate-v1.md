@@ -19,6 +19,7 @@ El slice de Aventura bloqueaba el paso a otros Bosques. El dueño eligió:
 | Reglas del Adoc | `scripts/rpg/adventure_rules.gd` (`AdventureRules`) | Funciones estáticas: balance, peaje, stats del Único, semilla del combate, aplicar el resultado a GameState, descanso en la villa. Escribe en GameState y emite en EventBus. |
 | Menú del borde | `scenes/rpg/crossing.tscn` + `scripts/rpg/crossing.gd` | Escucha `bosque_border_reached`, pausa el árbol, abre el combate y emite `crossing_resolved`. No conoce la exploración. |
 | Combate (UI) | `scenes/rpg/battle.tscn` + `scripts/rpg/battle.gd` | Solo dibuja un `BattleLogic` y le pasa las acciones. |
+| Aspecto del Único | `scripts/rpg/unico_art.gd` (`UnicoArt`) | Tipo de monstruo por Bosque, nombre provisional y textura de placeholder (v1.1). |
 | Menú con cursor | `scripts/rpg/option_menu.gd` (`OptionMenu`) | Lista vertical que comparten los dos menús. Se maneja con `ui_up`, `ui_down`, `ui_accept` y `ui_cancel` (teclado y mando sin configurar nada). Salta las opciones desactivadas. |
 | Números | `data/combat/balance.json` | Adoc, fórmulas del Único (con topes de d y de DEF), ataque, Defender, Ofrecer Luz, Huir, peaje, Luz de victoria, factor de derrota y `luz_max`. |
 
@@ -66,10 +67,22 @@ El slice de Aventura bloqueaba el paso a otros Bosques. El dueño eligió:
 - `hp_changed(hp, max_hp)`.
 - `rested_in_villa`.
 
+## v1.1 (feedback del dueño tras jugar la v1)
+- **Narración estilo Pokémon**:
+  - `BattleLogic.play_turn` devuelve un evento por acción, con el estado justo después (`unico_hp`, `adoc_hp`, `luz`).
+  - `battle.gd` convierte los eventos en mensajes (`messages_for`, función estática y pura, testeada) y los muestra uno a uno, letra a letra (`TEXT_SPEED`, en letras por segundo).
+  - Pulsar durante la escritura completa el mensaje; pulsar después pasa al siguiente. Un triángulo parpadeante indica que hay que pulsar.
+  - Las barras se animan (`BAR_TIME`) al mostrarse el mensaje que las cambia.
+  - El menú solo aparece sin mensajes pendientes, con "¿Qué hará el Adoc?".
+  - Con la Luz al tope, la victoria no anuncia "+1 Luz".
+- **Los Únicos son monstruos**:
+  - `UnicoArt.kind_for(seed, bosque_id)` elige uno de 5 tipos (cuadrúpedo, serpiente, cornudo, de muchos ojos, alado) con un hash propio (`SALT_KIND`). No depende de la silueta del árbol: un test comprueba que cada silueta aparece con los 5 tipos.
+  - Se dibuja por código con las hojas y el tronco de la combinación del Bosque, contorno, ojos, colmillos y el aura punteada.
+  - Nombre provisional: "Único <descriptor>" (por ejemplo, "Único serpiente").
+- **Números**: sin cambios. El Único sigue recuperando todos sus PV al huir; la regeneración con el tiempo espera al ciclo día/noche.
+
 ## Consecuencias
-- Los textos del menú y del combate son placeholder en constantes de `crossing.gd` y `battle.gd`, y los tiene que revisar `narrative-writer`.
-  - El nombre del Único usa `PlaceholderTileset.SHAPE_NAMES`, lo que da "Único de espinoso".
-- El Único se dibuja con `PlaceholderTileset.nujio_texture` más ojos y un aura punteada. Lo sustituirá el arte de `pixel-artist`.
+- Los textos del menú y del combate son placeholder en constantes de `crossing.gd` y `battle.gd`, y los tiene que revisar `narrative-writer`. Los descriptores de los Únicos (`UnicoArt.KIND_NAMES`) también.
+- El Único es un monstruo de placeholder (`UnicoArt`). Lo sustituirá el arte de `pixel-artist`; los tipos reales están por decidir (#22b, #119).
 - El HUD de depuración muestra "PV x/30   Luz x/10". Ya no avisa en los bordes de Bosques con Nujio (lo hace el menú); sí en el límite de la región.
-- `ui_accept` sigue significando "terminar día" en exploración (`main.gd`). Con los menús no choca porque el árbol está en pausa, pero conviene revisarlo cuando haya día y noche.
 - Las ofrendas, el inventario, las misiones y el riutash quedan fuera de esta iteración.

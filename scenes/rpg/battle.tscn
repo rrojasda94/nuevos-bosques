@@ -28,9 +28,9 @@ color = Color(0.243, 0.537, 0.282, 1)
 
 [node name="Unico" type="TextureRect" parent="."]
 offset_left = 196.0
-offset_top = 2.0
+offset_top = 4.0
 offset_right = 292.0
-offset_bottom = 98.0
+offset_bottom = 100.0
 stretch_mode = 2
 
 [node name="Adoc" type="TextureRect" parent="."]
@@ -120,6 +120,11 @@ offset_bottom = 50.0
 theme_override_font_sizes/font_size = 8
 theme_override_constants/line_spacing = -2
 autowrap_mode = 3
+
+[node name="More" type="Polygon2D" parent="TextBox"]
+visible = false
+position = Vector2(211, 44)
+polygon = PackedVector2Array(0, 0, 6, 0, 3, 4)
 
 [node name="MenuBox" type="Panel" parent="."]
 offset_left = 230.0

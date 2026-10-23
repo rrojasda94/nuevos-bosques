@@ -4,6 +4,10 @@ Todos los cambios que nota el jugador. Formato [Keep a Changelog](https://keepac
 
 ## [Sin publicar]
 
+### Cambiado
+- El combate se narra estilo Pokémon: letra a letra, un mensaje por acción, con barras de PV animadas.
+- Los Únicos son monstruos (cuadrúpedo, serpiente, cornudo, de muchos ojos, alado) con los colores de su Bosque.
+
 ## [0.1.0] - 2026-10-23
 Primer vertical slice del modo Aventura.
 

@@ -10,7 +10,7 @@ const BALANCE: Dictionary = {
 	"flee_chance": 0.75,
 	"victory_luz": 1,
 }
-const UNICO: Dictionary = { "name": "Único de conífera", "max_hp": 22, "atk": 5, "def": 1 }
+const UNICO: Dictionary = { "name": "Único serpiente", "max_hp": 22, "atk": 5, "def": 1 }
 
 
 func _logic(hp: int = 30, luz: int = 10, unico: Dictionary = UNICO, rng_seed: int = 7) -> BattleLogic:
