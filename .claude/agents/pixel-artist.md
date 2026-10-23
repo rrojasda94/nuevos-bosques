@@ -15,7 +15,7 @@ Toda imagen del juego y las specs para producirla. Garantiza coherencia visual 8
 - Archivos fuente `.aseprite` (en LFS).
 
 ## Restricciones duras
-- **Paleta fija**: `assets/palettes/nuevos-bosques.gpl` (32 colores). Ningún píxel fuera de paleta.
+- **Paleta fija**: `assets/palettes/palette_nuevos_bosques.gpl` (32 colores). Ningún píxel fuera de paleta.
 - Vista **top-down 3/4** (ADR 0002). Tile 16×16. Personajes 16×16 (ciudadanos) o 16×24 (héroes/jefes).
 - Sin anti-aliasing, sin semitransparencias, sin rotaciones no múltiplos de 90°.
 - Outline: 1 px, color más oscuro de la rampa, no negro puro salvo en UI.

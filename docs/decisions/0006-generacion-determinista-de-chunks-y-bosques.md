@@ -1,6 +1,6 @@
 # ADR 0006 — Generación determinista de chunks, Bosques y su persistencia
 
-> El nombre del archivo dice "zonas" por historia. En el código, "zona" pasó a llamarse **Bosque** (iteración 2 del slice, 2026-10-23). La escala es chunk < Bosque < área < región.
+> El nombre del archivo decía "zonas" por historia; se renombró en la pasada `refactor` del ADR 0011. "Zona" pasó a llamarse **Bosque** (iteración 2 del slice, 2026-10-23). La escala es chunk < Bosque < área < región.
 
 ## Contexto
 ADR 0005 fija que el mapa de Nardaram es fijo, que lo que se genera al entrar usa la seed de la partida y que, dentro de una partida, un lugar visitado sigue igual si vuelves. En Aventura se viaja entre chunks adyacentes. El primer vertical slice (Aventura, "probar los controles") necesita esto funcionando.

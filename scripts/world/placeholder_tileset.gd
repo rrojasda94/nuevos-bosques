@@ -1,6 +1,6 @@
 class_name PlaceholderTileset
 extends RefCounted
-## Tiles de placeholder generados por código. Solo usa colores de assets/palettes/nuevos-bosques.gpl.
+## Tiles de placeholder generados por código. Solo usa colores de assets/palettes/palette_nuevos_bosques.gpl.
 ## Cada Bosque tiene su propio atlas (forma de árbol, hojas, tronco y suelo según su estilo,
 ## ver BosqueMap.styles). Se sustituye por el arte de pixel-artist cuando exista.
 ## Atlas: columna = ChunkData.Tile, fila = variante (ver variant_for).

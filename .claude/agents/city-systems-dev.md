@@ -21,7 +21,7 @@ Implementar todo lo que hace el jugador como gestor del pueblo.
 | Edificios | Datos: coste, tamaño, producción/consumo por día, capacidad, requisitos. Construcción en N días. |
 | Recursos | Madera, piedra, comida, oro + los que defina `game-designer`. Almacén con capacidad. |
 | Ciudadanos | Entidades con trabajo asignado, necesidad de comida y vivienda. Llegan por expediciones RPG. |
-| Simulación | Escucha `EventBus.day_ended`. Orden fijo: producción → consumo → necesidades → eventos → chequeo de derrota (`EventBus.game_over`). Determinista. |
+| Simulación | Escucha `EventBus.day_ended`. Orden fijo: producción → consumo → necesidades → eventos → chequeo de derrota (`EventBus.game_ended`). Determinista. |
 | Eventos | Plagas, visitas, clima según región. Tabla en `data/` definida por `game-designer`. |
 | Grid inicial | Lo entrega `world-gen-dev` como parte del chunk; la ciudad no genera terreno. |
 

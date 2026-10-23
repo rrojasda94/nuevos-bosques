@@ -23,7 +23,7 @@ Implementar todo lo que hace el jugador como aventurero.
 | Inventario | Slots limitados; ítems apilables; equipo con slots arma/armadura/accesorio. |
 | Misiones | Estados: locked → available → active → complete. Objetivos como datos. |
 | Diálogo | Lector de `data/quests/*.json` y `data/npcs/*.json`. Texto es de `narrative-writer`. |
-| Exploración | Top-down sobre el chunk que entrega `world-gen-dev`. Una expedición consume 1–3 días (`DayManager.advance_days`) y devuelve loot vía `EventBus.expedition_completed(zone, loot, days_spent)`. |
+| Exploración | Top-down sobre el chunk que entrega `world-gen-dev`. Una expedición consume 1–3 días (`DayManager.advance_days`) y devuelve loot vía `EventBus.expedition_completed(bosque_id, loot, days_spent)`. |
 
 ## Reglas
 - Implementar solo mecánicas con ficha en `docs/design/mechanics/`. Si no existe, pedirla a `game-designer`.
