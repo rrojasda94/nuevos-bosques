@@ -56,6 +56,25 @@ Choques nuevos, sin resolver:
 - Ríos o límites (#97).
 - ¿El lago es Ungol? (#98)
 
+## Nota: respuestas del dueño sobre el mapa (2026-10-23)
+Palabras textuales:
+> "ya lo siento mejor al bosque. #95 cada color es un grupo de áreas. #94 las integraremos en un futuro, son grupos de áreas dentro de las regiones ya mencionadas. #97 la que cruza casie es el rio Sara y las demas que se unen a este son sus afluentes. #98 si el lago Ungol esta al sur de Naca y la cordillera de ungol es la que está al sur del lago, en esa cordillera no hay lenfi pero en el resto de las subregiones como ness y alciss si hay lenfi en varias locaciones.. #99 Cassie las "ss" se pronuncia como una S pero voiced."
+
+| # | Decisión |
+|---|---|
+| Playtest v3 | "ya lo siento mejor al bosque". |
+| #95 | Cada color del mapa es un **grupo de áreas**. La escala gana un nivel: **chunk < Bosque < área < subregión < región < Sur Lenfi**. El nombre "subregión" es propuesta (el dueño lo usa en la #98), a confirmar (#100). Corrige la nota anterior: Lean, Tossie, Alciss, Ness, etc. son **subregiones**, no áreas. |
+| #94 | Las regiones del glosario §8 son grupos de áreas dentro de las regiones del mapa. Se integrarán más adelante. |
+| #97 | La línea que cruza Cassie es el **río Sara**; las que se le unen son sus **afluentes**. |
+| #98 | El lago al sur de Naca es el **lago Ungol**. La **cordillera de Ungol** está al sur del lago y allí **no hay lenfi**. En el resto de subregiones, como Ness y Alciss, **sí hay lenfi** en varios lugares. Matiza la regla del glosario §8 ("al este de Ungol no hay lenfi"). |
+| #99 | Se escribe **"Cassie"** (la "ss" suena como una s sonora). |
+
+Choques nuevos, sin resolver:
+- El dueño usa "región", "área" y "subregión" para Alciss en distintos momentos (#100).
+- Safis, Dorias, Nosie, Naca, Balasu y Cabuta tienen un solo color: no está claro si son regiones o subregiones (#102).
+- #81 decía que el jugador elige su "área" de origen, pero las 7 opciones del Valle del Sara son subregiones (#92).
+- El glosario §8 dice "al este de Ungol no hay lenfi, solo kulvar", lo que choca con que haya lenfi en Ness y Alciss. El glosario no se edita; queda matizado aquí.
+
 ## Contradicciones registradas
 - ~~**ADR 0007** dice "puedes caminar entre los árboles". Ahora el dueño prefiere que no se pueda caminar entre ellos (#83).~~ Resuelta: los árboles bloquean, con más espacio (confirmaciones).
 - ~~**Alcuss y la escala** (#77).~~ Resuelta: Alcuss es una región y Alciss un área (confirmaciones).

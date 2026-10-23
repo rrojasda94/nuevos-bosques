@@ -11,6 +11,7 @@ Según el dueño: **probar los controles y que sea divertido** (ADR 0005). El sl
 |---|---|---|
 | v1 | "la velocidad está bien" (ADR 0007). | Mantener la velocidad. |
 | v2 (árboles transitables, riscos como paredes) | "el bosque está muy tupido y no hay mucho espacio para caminar entre los árboles"; "me gustaba más el tipo de bosque anterior del que no podías caminar entre los árboles"; "las paredes sí se notan muy falsas. No adecuadas." Le gustan los arroyos y los ríos (ADR 0008). | Árboles que bloquean, como en la v1, con más espacio para caminar entre ellos (confirmado por el dueño, ADR 0008). Rehacer los riscos (#84). Mantener los arroyos. Ríos continuos con pasos (#88). |
+| v3 | "ya lo siento mejor al bosque" (ADR 0008, nota de respuestas al mapa). | Mantener la dirección de la v3. Siguen abiertos los riscos (#84), los tipos de árbol (#86) y los pasos de río (#88). |
 
 ## Pilares
 - **Pilar 4** (cada partida es distinta, cada región se reconoce): los Bosques se generan con la seed de la partida; la región Valle del Sara mantiene su identidad.
@@ -26,7 +27,7 @@ Ninguna en este slice. Las presiones de Aventura (muerte = game over, Luz, Únic
 - Raza, oficio, stats y sprite: placeholder (ver #49 y #32).
 
 ### 2. Escala y Bosque inicial
-- Escala espacial (ADR 0007): **chunk < Bosque < área < región < Sur Lenfi**. (El nivel "Bosque" se llamaba antes "zona".)
+- Escala espacial (ADR 0007, 0008): **chunk < Bosque < área < subregión < región < Sur Lenfi**. El nivel "Bosque" se llamaba antes "zona"; "subregión" es nombre propuesto (#100).
 - Cada chunk mide **64×64 tiles** (ADR 0004). Un Bosque tiene **de 4 a 16 chunks** (ADR 0007). La **forma y el número** de chunks se generan **aleatoriamente** con la seed; no tiene por qué ser cuadrado (ADR 0008). Se asume que los chunks son contiguos.
 - Región: **Valle del Sara** (ADR 0007). El jugador elige el área de origen (ADR 0008), pero en el slice es un área fija sin pantalla de elección (#92). Las 7 áreas del mapa y sus vecinos están en [`../world/sur-lenfi.md`](../world/sur-lenfi.md).
 - Aspecto del Bosque inicial (con Nujio): **un solo tipo de árbol** y una **combinación de colores definida por su Nujio**, siempre con los **32 colores de la paleta del proyecto** (ADR 0008). Dentro del slice basta un tipo de árbol y una combinación, generados por seed (#86).
@@ -38,7 +39,7 @@ Ninguna en este slice. Las presiones de Aventura (muerte = game over, Luz, Únic
 - **Árboles**: **bloquean**, como en la v1, **con más espacio para caminar entre ellos** (ADR 0008, confirmado; sustituye lo dicho en ADR 0007).
 - **Otras barreras físicas**: agua, riscos y pendientes pronunciadas (ADR 0007). Los riscos de la v2 no sirven visualmente (#84).
 - **Ríos**: deben ser **continuos** y tener **zonas de paso** (ADR 0008). Los arroyos actuales le gustan al dueño. Los ríos grandes son navegables y los estrechos o de montaña no (ADR 0007), pero la navegación no entra en el slice (#74): se cruzan por las zonas de paso (#88).
-- Relieve del Valle del Sara: más agreste al norte y más plano, con claros ribereños, al sur. Norte arriba en la imagen del mapa (ADR 0007, 0008). Según el mapa (`docs/design/world/Sur-Lenfi_02.jpg`): Lean, Causie, Tossie y Alss al norte; Ostie y Vastie (muy montañosa) en el centro; Cassie al sur, en la costa. Si el área fija del slice es del norte, el terreno debería ser más agreste; si es Cassie, más llano y con claros ribereños.
+- Relieve del Valle del Sara: más agreste al norte y más plano, con claros ribereños, al sur. Norte arriba en la imagen del mapa (ADR 0007, 0008). Según el mapa (`docs/design/world/Sur-Lenfi_02.jpg`): subregiones Lean, Causie, Tossie y Alss al norte; Ostie y Vastie (muy montañosa) en el centro; Cassie al sur, en la costa, cruzada por el río Sara. Si el área fija del slice es de una subregión del norte, el terreno debería ser más agreste; si es de Cassie, más llano y con claros ribereños.
 
 ### 4. Movimiento dentro del Bosque
 - Movimiento **libre** entre los chunks del Bosque inicial (ADR 0007). Para el slice se propone el paso por el borde al chunk adyacente del mismo Bosque.
@@ -96,5 +97,5 @@ Propuesta de `game-designer`, a confirmar con el dueño:
 | Día y noche | Momento de Gietos y Momento de Riumna, con peligros distintos; hay Bosques donde no se puede andar de noche (ADR 0007). | #75, #60 |
 | Peligros de regiones desconocidas | Bosques agresivos, Únicos poderosos, etc. (ADR 0005). | #56, #58 |
 | Elección de origen | Región de origen elegida; da conocimiento de su área y sus Bosques; cuanto más lejos, más difícil el viaje (ADR 0005). MVP: Valle del Sara (ADR 0007); el área de origen también se elige (ADR 0008). | #66, #92, #56, #57 |
-| Nuevos Bosques | Frecuencia por área: alta en Lean, Tossie y Ostie; muy rara en la región Nosie; casi imposible en Alciss, el área más alejada (ADR 0007, 0008). | #70, #78 |
+| Nuevos Bosques | Frecuencia por subregión: alta en Lean, Tossie y Ostie; muy rara en Nosie; casi imposible en Alciss, la más alejada (ADR 0007, 0008). | #70, #78 |
 | Cambio con el tiempo | Lo orgánico crece o desaparece y la gente se mueve si pasa mucho tiempo (ADR 0005). | #65 |
