@@ -89,7 +89,8 @@ Iteración 4, versión 0.2.0 (plan "Primer encargo"): el dueño pide que no sea 
 - **Letreros hacia la villa natal** (`ChunkData.home_sign`, `home_direction`, `sign_kind(cell)` → `SignKind.BOSQUE_VILLA` / `HOME_VILLA`):
   - En los chunks de camino con 3 o más lados (cruces) y en los de `x + y` par. La paridad alterna entre chunks contiguos, así que en cualquier camino hay letrero al menos un chunk de cada dos.
   - Van junto al tramo recto del camino que lleva a casa (a 2–5 casillas de la puerta, en el lateral) y señalan el **siguiente tramo hacia casa** (`road_home_side`), no la línea recta: seguir las flechas lleva a la villa natal.
-  - `EventBus.signpost_read(direction, kind)`. El HUD dice "Letrero del camino: hacia tu villa natal, al este" o, en los letreros de siempre, "hacia la villa, al ...".
+  - `EventBus.signpost_read(direction, kind)`. El HUD dice "Hacia tu villa natal: este" o, en los letreros de siempre, "Hacia la villa de este Bosque: ..." (textos de `data/text/sistema.json`).
+  - Desviación de `navegacion.md` ("8 direcciones hacia la villa natal"): la flecha señala el siguiente tramo del camino (4 direcciones), porque la línea recta puede apuntar a un lado sin camino. Pendiente de confirmar por el dueño.
   - Los letreros hacia la villa del Bosque no cambian.
 - **Refugios** (`REFUGE`, no bloquea; `ChunkData.is_refuge(cell)`):
   - En los chunks de camino con `road_distance % 5` en {1, 3}: yendo hacia casa hay refugio cada 2 o 3 chunks (40 % de los chunks de camino). En la villa no hace falta: su plaza cuenta como refugio (`AdventureRules.is_villa_rest`, PR del reloj).

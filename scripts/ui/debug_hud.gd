@@ -5,8 +5,9 @@ extends CanvasLayer
 const NOTICE_TIME: float = 3.0
 const NOTICE_REST: String = "Descansas en la villa"
 const NOTICE_REGION_EDGE: String = "Límite de la región"
-const NOTICE_SIGN_BOSQUE: String = "Letrero de piedra: hacia la villa, al %s"
-const NOTICE_SIGN_HOME: String = "Letrero del camino: hacia tu villa natal, al %s"
+## Mismo texto que data/text/sistema.json (signpost_*); se cargará de ahí cuando haya cargador.
+const NOTICE_SIGN_BOSQUE: String = "Hacia la villa de este Bosque: %s"
+const NOTICE_SIGN_HOME: String = "Hacia tu villa natal: %s"
 
 var _bosque_id: int = -1
 var _bosque_size: int = 0
