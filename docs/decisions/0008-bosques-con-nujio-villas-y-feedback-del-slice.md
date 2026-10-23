@@ -42,6 +42,20 @@ Respuesta textual:
 | #77 Alcuss | **Alcuss es una región** y **Alciss es un área**. Adess, Istil, Sass y Ness son probablemente áreas de Alcuss, a confirmar. La frase de ADR 0007 "Alciss… la región más alejada" se lee como "el área más alejada". La escala chunk < Bosque < área < región < Sur Lenfi queda intacta. "Nosie" sigue sin ubicar. |
 | #85 Paleta | Solo se usan los **32 colores de la paleta del proyecto** (`assets/palettes/nuevos-bosques.gpl`). Lo "sin límite" son las **combinaciones** de esos colores entre Bosques. Ya no hay conflicto con `docs/STACK.md` ni con `docs/art/style-guide.md`. |
 
+## Nota: mapa del Sur Lenfi (2026-10-23)
+El dueño subió el mapa a `docs/design/world/Sur-Lenfi_02.jpg`; su descripción está en `docs/design/world/sur-lenfi.md`. Según el mapa:
+- Lo confirma: Alciss es un área de Alcuss, en el extremo este. Adess, Istil, Sass y Ness también son áreas de Alcuss.
+- Lo confirma: Nosie es una región propia, al este del Valle del Sara.
+- Áreas del Valle del Sara: al norte Lean, Causie, Tossie y Alss; en el centro Ostie y Vastie; al sur Cassie, en la costa. Agrupación por color, *lectura del mapa*.
+- El mapa escribe "Cassie" (el dueño escribió "Casie", #99).
+
+Choques nuevos, sin resolver:
+- La lista de regiones del mapa no coincide con la del glosario §8 (#94).
+- El Valle del Sara tiene 7 áreas frente a las "decenas o un centenar" de ADR 0007 (#95).
+- Marca azul en la desembocadura de Cassie (#96).
+- Ríos o límites (#97).
+- ¿El lago es Ungol? (#98)
+
 ## Contradicciones registradas
 - ~~**ADR 0007** dice "puedes caminar entre los árboles". Ahora el dueño prefiere que no se pueda caminar entre ellos (#83).~~ Resuelta: los árboles bloquean, con más espacio (confirmaciones).
 - ~~**Alcuss y la escala** (#77).~~ Resuelta: Alcuss es una región y Alciss un área (confirmaciones).

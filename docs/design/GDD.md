@@ -58,10 +58,10 @@ Antes de implementarse necesitan fuente, sumidero y qué pasa si se agotan:
 - Aventura: muerte permanente del personaje y riesgos de viaje por regiones desconocidas: peligros, bosques agresivos, quedarse sin Luz, Únicos poderosos (ADR 0005; #56, #58). También el peaje de Luz o los Únicos para entrar a Bosques con Nujio, el cansancio al viajar a pie y los peligros de la noche (ADR 0007; #71, #73, #75).
 
 ## Mundo (ADR 0003, 0004, 0005, 0007, 0008)
-- **Mapa mundial fijo** (ADR 0005): `data/world/world_map.json` + arte de referencia en `docs/design/world/`. El PNG del Sur Lenfi con regiones y áreas por colores (preliminar; norte arriba) **todavía no está en el repo** (#80).
+- **Mapa mundial fijo** (ADR 0005): `data/world/world_map.json` + arte de referencia en `docs/design/world/`. Mapa del Sur Lenfi (preliminar; norte arriba): `docs/design/world/Sur-Lenfi_02.jpg`, descrito en [`world/sur-lenfi.md`](world/sur-lenfi.md).
 - Región → bioma, clima, relieve, facción, recursos, peligro.
-- **Ámbito jugable:** solo la parte suroccidental de Nardaram. Regiones conocidas: Valle del Sara y Alcuss (lista completa: #64).
-- **Escala** (ADR 0007, 0008): chunk (64×64 tiles) < **Bosque** (4–16 chunks, forma y número aleatorios) < área (6–12 Bosques) < región (de decenas a un centenar de áreas) < Sur Lenfi.
+- **Ámbito jugable:** solo la parte suroccidental de Nardaram. Regiones del mapa, de oeste a este: Safis, Dorias, Valle del Sara, Nosie, Balasu, Naca (al norte del lago), Cabuta (costa sur) y Alcuss. Conciliación con el glosario: #94. Cuáles son jugables: #64.
+- **Escala** (ADR 0007, 0008): chunk (64×64 tiles) < **Bosque** (4–16 chunks, forma y número aleatorios) < área (6–12 Bosques) < región (de decenas a un centenar de áreas; choca con las 7 áreas que el mapa muestra en el Valle del Sara, #95) < Sur Lenfi.
 - **Tipos de Bosque** (ADR 0008):
   - Con Nujio: un solo tipo de árbol (coníferas, cactus, palmeras, espinosos, copas redondas…) y una combinación de colores definida por su Nujio. El Bosque contiguo puede ser totalmente distinto, incluso monocromo.
   - Nuevos Bosques: se parecen a los bosques de nuestro mundo.
@@ -79,9 +79,9 @@ Antes de implementarse necesitan fuente, sumidero y qué pasa si se agotan:
   - Otras barreras físicas: agua, riscos y pendientes pronunciadas (aspecto de los riscos: #84).
   - Ríos continuos con zonas de paso (#88); los grandes son navegables, los estrechos y de montaña no (#74).
 - **Día y noche** (ADR 0007): Momento de Gietos y Momento de Riumna, con peligros distintos; hay Bosques donde no se puede andar de noche (#75).
-- **Región Valle del Sara** (MVP): Lean, Tossie, Ostie, Casie, Vastie, Alss, Causie (áreas, probable, #77b). Más agreste al norte; el sur es más plano, con claros ribereños (#80). "Sara" es el río; la región es "Valle del Sara" (interpretado, ADR 0008).
-- **Región Alcuss**: Alciss es un área; Adess, Istil, Sass y Ness, probablemente también (#77b).
-- **Frecuencia de Nuevos Bosques**: alta en Lean, Tossie y Ostie (origen de la expansión); muy rara en Nosie (sin ubicar, #77b); casi imposible en Alciss, el área más alejada (#78, #79).
+- **Región Valle del Sara** (MVP): 7 áreas según el mapa. Al norte, Lean, Causie, Tossie y Alss; en el centro, Ostie y Vastie; al sur, Cassie (costa; grafía del mapa, el dueño escribió "Casie", #99). Más agreste al norte; el sur es más plano, con claros ribereños. Vecinos: Dorias al oeste, Nosie al este, Cabuta al sureste. "Sara" es el río; la región es "Valle del Sara" (interpretado, ADR 0008). Detalle y vecinos de cada área: [`world/sur-lenfi.md`](world/sur-lenfi.md).
+- **Región Alcuss**: áreas Adess, Istil, Sass, Ness y Alciss (la más oriental), según el mapa.
+- **Frecuencia de Nuevos Bosques**: alta en Lean, Tossie y Ostie (origen de la expansión, noroeste del Valle del Sara); muy rara en la región Nosie (al este del Valle del Sara); casi imposible en Alciss, el área más alejada (#78, #79).
 - Villa: edificios pequeños para dormir o almacenar; el resto de estructuras está al aire libre; cabe en un chunk. Tamaño interno: por definir (#14b). Hay contradicciones con el glosario (#47, #50).
 - Nujio: enorme, define la combinación de colores de su Bosque; está en el centro del Bosque (y de la villa, si la hay); ocupa "entre 6x6 y 8x8 de diámetro" (unidad: por confirmar, #40).
 
