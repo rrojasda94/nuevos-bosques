@@ -1,15 +1,22 @@
 # GDD — Nardaram: Los Nuevos Bosques
 
-> Dueño: `game-designer`. Estado: borrador v0.9 (incorpora ADR 0002 a 0005, ADR 0007, 0008 y 0010, y la conciliación con el glosario del dueño).
+> Dueño: `game-designer`. Estado: borrador v0.10 (incorpora ADR 0002 a 0005, ADR 0007, 0008, 0010 y 0012, y la conciliación con el glosario del dueño).
 >
 > **MVP = modo Aventura en la región Valle del Sara** (ADR 0005, 0007). Alcance del primer vertical slice: [`mechanics/aventura-mvp.md`](mechanics/aventura-mvp.md).
+>
+> **Versión 0.2.0 "Primer encargo"** (fichas con valores provisionales):
+> - [`mechanics/mision-ofomni.md`](mechanics/mision-ofomni.md): misión.
+> - [`mechanics/tiempo-y-riutash.md`](mechanics/tiempo-y-riutash.md): tiempo real con pausa y riutash (ADR 0012).
+> - [`mechanics/navegacion.md`](mechanics/navegacion.md): caminos, letreros, refugios, mapa y brújula.
+> - [`mechanics/progresion-adoc.md`](mechanics/progresion-adoc.md): XP, niveles y fama.
+> - [`mechanics/ofrendas-v1.md`](mechanics/ofrendas-v1.md): ofrendas.
 >
 > **Lore:** la fuente de verdad es [`docs/glosario_nuevos_bosques.md`](../glosario_nuevos_bosques.md), del dueño del proyecto. No se edita salvo petición explícita del dueño (única edición hasta ahora: "Sagra" → "Sara", ADR 0008). Este GDD no redefine lore: enlaza a ese archivo.
 
 ## Visión
 Cada partida ocurre en el mapa fijo de Nardaram. Los Bosques (de 4 a 16 chunks de 64×64 tiles) se generan con la seed de la partida al entrar y persisten durante esa partida. Cada partida tiene un **modo elegido al empezar** (Supervivencia, Garelino o Aventura) con su propia misión (ADR 0004). El conflicto gira en torno al [Nujio](../glosario_nuevos_bosques.md) y su Bosque frente a los garelinos, que quieren sembrar los Nuevos Bosques. Pixel art 8-bit top-down, sesiones cortas, progreso visible. Solo español.
 
-> La gestión de villa/ciudad por días (ADR 0002) corresponde sobre todo a Supervivencia (ADR 0005). Su papel en Aventura y Garelino está por definir (#60).
+> La gestión de villa/ciudad por días (ADR 0002) corresponde sobre todo a Supervivencia (ADR 0005). En **Aventura el tiempo corre en tiempo real con pausa** (ADR 0012), con día (Momento de Gietos), noche (Momento de Riumna) y un riutash en cada cambio. Garelino: por definir (#60).
 
 ## Pilares
 1. Dos capas, un mundo. (Encaje por modo: por definir, #29.)
@@ -37,7 +44,7 @@ El modo se elige al empezar, de forma similar a Project Zomboid. **Derrota = fal
 |---|---|---|---|
 | **Supervivencia** | Mantienes con vida al Nujio. Es un modo largo: debes evitar que los garelinos enloquezcan al Nujio o aniquilen el bosque. Juegas "en teoría" con el Nujio (choca con el glosario §9, #59). Es gestión de villa: pedir a los pobladores que mantengan o se esfuercen por más Luz, controlar el crecimiento de la población, mantenerlos contentos con el Nujio o amenazarlos con la fuerza de los Únicos, y evitar que los garelinos lleguen al Nujio (ADR 0005). | No hay. | Los garelinos enloquecen al Nujio o aniquilan el bosque (reglas: por definir, #39b). |
 | **Garelino** | Comandas un grupo de fanáticos que buscan destruir los bosques dominados por un Nujio. Mejoras tus tropas, aprendes habilidades y estrategias para acelerar la decadencia y reclutas nuevos individuos. Te enfrentas a los Humores del mundo, a los Únicos que envía el bosque y a la resistencia de la población de la villa. | Eliminar al Nujio y sembrar las primeras semillas de los Nuevos Bosques. | Quedarte sin individuos. |
-| **Aventura** (MVP) | Creas un personaje que viaja de lugar en lugar según las misiones que aparezcan (derrotar Únicos; las villas suelen llamar al adoc). Subes experiencia, aprendes habilidades, ganas objetos y fama. Viajas entre chunks y por el mapa de la región (ADR 0005). | Por definir (#31). | Muerte del personaje = game over. |
+| **Aventura** (MVP) | Creas un personaje que viaja de lugar en lugar según las misiones que aparezcan (derrotar Únicos; las villas suelen llamar al adoc). Subes experiencia, aprendes habilidades, ganas objetos y fama. Viajas entre chunks y por el mapa de la región (ADR 0005). Primera misión: interceptar al Ofomni ([`mechanics/mision-ofomni.md`](mechanics/mision-ofomni.md)); si falla, la villa queda dañada y la partida sigue. | Por definir (#31, #126). | Muerte del personaje = game over (en la versión de prueba, despiertas en la villa). |
 
 ### Reglas de no matar
 - **Aventura**: no se puede matar gente donde haya otras personas o seres con consciencia (qué ocurre si se intenta: por definir, #34).
@@ -45,7 +52,9 @@ El modo se elige al empezar, de forma similar a Project Zomboid. **Derrota = fal
 
 ### Recursos de juego sin definir
 Antes de implementarse necesitan fuente, sumidero y qué pasa si se agotan:
-- Fama (Aventura): por definir (#33).
+- Fama (Aventura): provisional, +1 por misión cobrada y sin efectos todavía ([`mechanics/progresion-adoc.md`](mechanics/progresion-adoc.md); #33).
+- XP y niveles (Aventura): XP = 4 + 3·d por victoria; niveles 1–10 ([`mechanics/progresion-adoc.md`](mechanics/progresion-adoc.md)).
+- Ofrendas: catálogo provisional de 5, con valores de 3 a 8 ([`mechanics/ofrendas-v1.md`](mechanics/ofrendas-v1.md)).
 - Reputación del grupo (Garelino): por definir (#35).
 - Individuos/tropas (Garelino): cuando llegan a 0, derrota. Reclutamiento y mejora: por definir (#37).
 - **Luz** (Aventura; ADR 0005, 0007, 0010):
@@ -55,7 +64,9 @@ Antes de implementarse necesitan fuente, sumidero y qué pasa si se agotan:
   - Que al principio sea difícil ir lejos es intencionado.
   - Valores provisionales en [`mechanics/cruce-y-combate-v1.md`](mechanics/cruce-y-combate-v1.md). Abiertas: #107–#109.
 - **Luz suelta** (ADR 0010): tiene un límite (ejemplo: 10). Por encima, la Luz requiere ofrendas. Las ofrendas también se pueden ofrecer en combate "para que el Único se vaya", y eso abre el paso igual que vencer (#112). Excedente sobre el límite: #115.
-- **Inventario**: sin decidir entre cuadrícula (Diablo), slots (Minecraft) o peso (Kingdom Come: Deliverance) (#113).
+- **Inventario**: provisionalmente, una lista sin límite (0.2.0). Sin decidir entre cuadrícula (Diablo), slots (Minecraft) o peso (Kingdom Come: Deliverance) (#113).
+- **Riutash** (ADR 0012): expuesto, −30% de los PV máx. (nunca mata); en refugio, +50% de los PV que faltan. Avisos 60 s y 15 s antes ([`mechanics/tiempo-y-riutash.md`](mechanics/tiempo-y-riutash.md)).
+- **Orientación** (0.2.0): caminos principales con letreros hacia la villa natal, refugios junto a los caminos, mapa (M) y brújula ([`mechanics/navegacion.md`](mechanics/navegacion.md)).
 - **Curación de PV** (Aventura, ADR 0010): en una villa (plaza o junto a su Nujio) o, en parte, tras un riutash (cambio entre día y noche). El riutash **no cura heridas graves**.
 - **Heridas graves** (Aventura, ADR 0010): perks o estados negativos que deja un combate complicado, aparte de los PV. Solo se curan en una villa con el oficiante adecuado, por ejemplo un dumno ([glosario §5](../glosario_nuevos_bosques.md)). Se puede pedir un dumno a otra villa, a cambio de quedarse más tiempo. Pendiente: #116–#118. Las villas solo están en 1 de cada 5 Bosques, pero **se empieza en la villa natal** y el Bosque inicial siempre tiene villa.
 - **Estamina** (Aventura): el viaje a pie cansa al personaje (ADR 0007) y el riutash la regenera (ADR 0010). Medida, gasto y efectos: por definir (#73).

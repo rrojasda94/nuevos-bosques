@@ -8,7 +8,7 @@ Respuestas del dueño del proyecto a las preguntas abiertas (2026-10-21).
 |---|---|
 | Nombre | **Nardaram: Los Nuevos Bosques** |
 | Combate | Por turnos, por menú (Atacar / Habilidad / Objeto / Huir). Sin grid táctico. |
-| Ciudad | Por **días (turnos)**. El jugador termina el día y la simulación avanza un paso. Sin tiempo real. |
+| Ciudad | Por **días (turnos)**. El jugador termina el día y la simulación avanza un paso. Sin tiempo real. **Acotado por ADR 0012**: vale para la gestión de villa (Supervivencia). En Aventura el tiempo corre en tiempo real con pausa. |
 | Vista | **Top-down** (estilo Zelda 2D) en exploración y ciudad. |
 | Arte | Artista humano + placeholders generados por specs mientras llega el arte final. |
 | Idioma | Solo **español**. Sin sistema de localización en MVP (strings en español directo; se centralizan en `data/` para poder traducir después). |
