@@ -24,7 +24,7 @@ Respuestas del dueño del proyecto (2026-10-23) tras probar el prototipo de movi
 ## Contradicciones registradas (sin resolver)
 - **"Nosie"** no aparece ni entre las áreas del Valle del Sara ni entre las de Alcuss (#77).
 - **Alciss**: el dueño la llama "la región más alejada", pero la lista como parte de la región de Alcuss. Puede ser región o área (#77).
-- **Glosario §8**: sus regiones del Sur (Safio, Nan, Dorias, Sagra (valle del Sara), Gumna, Calf, Ungol, Amuss, Hagat, Uta, Sanag, Sunasem, Ifa, Foss) no incluyen Alcuss ni ninguno de los nombres nuevos (Lean, Tossie, etc.). Probablemente "Valle del Sara" equivale a "Sagra (valle del Sara)", a confirmar (#77).
+- **Glosario §8**: sus regiones del Sur (Safio, Nan, Dorias, Sara (valle del Sara; antes "Sagra", renombrado en ADR 0008), Gumna, Calf, Ungol, Amuss, Hagat, Uta, Sanag, Sunasem, Ifa, Foss) no incluyen Alcuss ni ninguno de los nombres nuevos (Lean, Tossie, etc.). Probablemente "Valle del Sara" equivale a "Sara (valle del Sara)", a confirmar (#77, #93).
 - **Origen de la expansión de los Nuevos Bosques**: según el dueño, Lean, Tossie y Ostie. Según el glosario §7, Estrella Azul surgió en Dorias (Tarca de Trastas). No es necesariamente incompatible (origen del movimiento frente a origen de la expansión), pero hay que confirmarlo (#79).
 - **Peaje entre Bosques frente a viaje a pie**: pasar a otro Bosque con Nujio cuesta Luz o un enfrentamiento, y a la vez "puedes viajar por todo el mapa a pie". No está claro si ir a pie evita el peaje (#72).
 - **ADR 0004/0005**: "el chunk puede tener o no una villa" y "una zona nueva puede ser una villa, un bosque o una geografía" no cuadran con que la zona sea ahora un Bosque. El glosario §5 pone la villa dentro del Bosque (una por Bosque) (#61, #82).

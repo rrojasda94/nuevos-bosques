@@ -91,7 +91,7 @@ Nombres y dominios [Canon]: Marrub (orden), Parr (cosas de la Tierra), Tarr (geo
 ## 4. Pueblos
 
 **Lenfi** — Etnia humana del "Sur" de Nardaram, originaria del norte de la cordillera de Larr y exiliada al sur por designio divino, guiada por sus Originales. Piel trigueña, ojos verdes, cabello negro lacio largo con trenzas y peinados a menudo asociados a un oficio. Sin diferenciación de roles por sexo; poco pudorosos; respetan mucho el arte del oficio. Dieta directa del Bosque, sin gastronomía ni almacenamiento de comida. [Lenfi]
-Culturas [Mapas] [Canon]: **Safico** (Safio), **Dorico** (Nan, Dorias), **Limaco** (Sagra, Gumna), **Namco** (Ungol, Calf). Los Namco conservan el idioma más cercano al lenfi ancestral; Limaco, Dorico y Safico evolucionaron por conflictos, geografía y cercanía; Doricos y Safícos sincretizan costumbres kulvar. Los lenfi de Safis son casi todos híbridos con olviri. [Kulvar]
+Culturas [Mapas] [Canon]: **Safico** (Safio), **Dorico** (Nan, Dorias), **Limaco** (Sara, Gumna), **Namco** (Ungol, Calf). Los Namco conservan el idioma más cercano al lenfi ancestral; Limaco, Dorico y Safico evolucionaron por conflictos, geografía y cercanía; Doricos y Safícos sincretizan costumbres kulvar. Los lenfi de Safis son casi todos híbridos con olviri. [Kulvar]
 
 **Saruld** — Humanos. [Ueutrec]
 
@@ -189,7 +189,7 @@ Lugares del mapa cultural wertrak: Bectan, Sindare Mal, Cram, Wertrew, Clavac, A
 
 **Cordillera de Larr** — Divide el continente; los lenfi vinieron del norte.
 
-**Regiones del Sur:** Safio (Safis), Nan, Dorias, Sagra (valle del Sara), Gumna, Calf (= Naca), Ungol (lago), Amuss, Hagat, Uta, Sanag, Sunasem, Ifa, Foss.
+**Regiones del Sur:** Safio (Safis), Nan, Dorias, Sara (valle del Sara), Gumna, Calf (= Naca), Ungol (lago), Amuss, Hagat, Uta, Sanag, Sunasem, Ifa, Foss.
 **Regiones del Norte:** Kiln, Sanopil, Isera, Ignarel, Wacs-Prics, Wacs-Rutch, Wacs-Recuns, Ivi, Lopuni, Gorrn, Elenil.
 
 **Límites:** al este de Ungol no hay lenfi, solo kulvar; al este de Hagat y Uta no hay humanos. [Canon]
