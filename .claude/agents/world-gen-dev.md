@@ -24,7 +24,7 @@ Convertir `seed + region_id` en un chunk jugable, determinista y coherente con e
 | Capas de generación | 1) altura/relieve por ruido, 2) agua, 3) bosque por densidad del bioma, 4) claros y caminos, 5) recursos, 6) puntos de interés y spawns de enemigos. |
 
 ## Reglas
-- Determinismo absoluto: cada zona usa su propio RNG sembrado con hash(seed, chunk_x, chunk_y) (ADR 0006), nunca `GameState.rng` (dependería del orden de visita). Prohibido `randi()` global.
+- Determinismo absoluto: cada chunk usa su propio RNG sembrado con hash(seed, chunk_x, chunk_y) (ADR 0006), nunca `GameState.rng` (dependería del orden de visita). Prohibido `randi()` global.
 - Mismo input → mismo chunk, verificado por test en `tests/unit/world/`.
 - La región manda: el generador lee parámetros de `RegionData`, nunca hardcodea biomas.
 - Salida: `ChunkData` (tiles por capa + lista de spawns). `city-systems-dev` y `rpg-systems-dev` la consumen; no la modifican.
