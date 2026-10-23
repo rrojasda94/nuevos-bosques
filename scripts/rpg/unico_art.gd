@@ -6,8 +6,9 @@ extends RefCounted
 ## Lo sustituirá el arte de pixel-artist; los nombres reales son de narrative-writer.
 
 enum Kind { QUADRUPED, SERPENT, HORNED, EYES, BIRD }
-## Descriptor provisional del nombre: "Único <descriptor>" (índice = Kind).
-const KIND_NAMES: Array[String] = ["cuadrúpedo", "serpiente", "cornudo", "de muchos ojos", "alado"]
+## Nombre visible por tipo (índice = Kind). Aledra y Ofomni vienen del glosario §3; Iserald se reserva
+## para el Único que sale del propio Nujio. ponytail: "Ofomni <descriptor>" hasta que el dueño nombre cada tipo.
+const KIND_NAMES: Array[String] = ["Ofomni cuadrúpedo", "Aledra", "Ofomni cornudo", "Ofomni de muchos ojos", "Ofomni alado"]
 const SALT_KIND: int = 22
 const AURA := Color("fee761")
 
@@ -34,7 +35,7 @@ static func kind_for(seed_value: int, bosque_id: int) -> Kind:
 
 
 static func display_name(kind: Kind) -> String:
-	return "Único %s" % KIND_NAMES[kind]
+	return KIND_NAMES[kind]
 
 
 ## Monstruo de `px` x `px` píxeles: cuerpo con los colores del Bosque, contorno, ojos, colmillos y

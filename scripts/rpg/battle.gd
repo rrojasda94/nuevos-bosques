@@ -9,7 +9,7 @@ extends CanvasLayer
 signal finished(logic: BattleLogic)
 
 ## Textos de placeholder; los revisa narrative-writer.
-const TEXT_START: String = "¡El %s te cierra el paso!"
+const TEXT_START: String = "¡%s te cierra el paso!"
 const TEXT_PROMPT: String = "¿Qué hará el Adoc?"
 const TEXT_ATTACK: String = "Atacas: %d de daño."
 const TEXT_DEFEND: String = "Te pones en guardia."

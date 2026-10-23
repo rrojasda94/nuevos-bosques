@@ -81,7 +81,7 @@ func test_unico_kind_is_deterministic_per_bosque() -> void:
 		if UnicoArt.kind_for(1, id) != UnicoArt.kind_for(2, id):
 			differs = true
 	assert_true(differs, "depende de la seed")
-	assert_eq(UnicoArt.display_name(UnicoArt.Kind.SERPENT), "Único serpiente")
+	assert_eq(UnicoArt.display_name(UnicoArt.Kind.SERPENT), "Aledra")
 
 
 func test_unico_kind_does_not_follow_tree_shape() -> void:
