@@ -1,0 +1,37 @@
+{
+  "$comment": "Valores de combate y cruce entre Bosques (slice de Aventura). Estructura: rpg-systems-dev; valores: game-designer (docs/design/mechanics/cruce-y-combate-v1.md). d = distancia en saltos de adyacencia entre Bosques desde el Bosque inicial hasta el Bosque al que se intenta entrar.",
+  "adoc": {
+    "max_hp": 30,
+    "atk": 6,
+    "def": 3,
+    "start_luz": 10,
+    "luz_max": 10
+  },
+  "unico": {
+    "hp_base": 18,
+    "hp_per_d": 4,
+    "atk_base": 4,
+    "atk_per_d": 1,
+    "def_base": 1,
+    "def_per_d": 0.5,
+    "def_max": 4,
+    "d_max": 6
+  },
+  "attack": {
+    "roll_min": -1,
+    "roll_max": 2,
+    "min_damage": 1
+  },
+  "defend_factor": 0.5,
+  "offer_luz": {
+    "cost": 2,
+    "damage": 8
+  },
+  "flee_chance": 0.75,
+  "toll": {
+    "base": 3,
+    "per_d": 1
+  },
+  "victory_luz": 1,
+  "defeat_luz_factor": 0.5
+}

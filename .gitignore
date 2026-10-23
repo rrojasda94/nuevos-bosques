@@ -1,0 +1,23 @@
+# Godot
+.godot/
+export/
+*.translation
+
+# Addons pesados (se instalan localmente)
+addons/godotsteam/
+addons/gut/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+*.swp
+.vscode/
+.idea/
+
+# Builds
+builds/
+*.exe
+*.pck
+*.zip
+*.dmg
+*.x86_64

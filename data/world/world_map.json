@@ -1,0 +1,10 @@
+{
+  "$comment": "Mapa mundial de Nardaram. Estructura: world-gen-dev. Contenido: narrative-writer + game-designer. Grid de regiones; cada id apunta a regions/<id>.json.",
+  "name": "Nardaram",
+  "grid_size": [4, 3],
+  "start_region": "valle_del_sara",
+  "regions": [
+    { "id": "claro_inicial", "cell": [1, 1], "name": "El Claro", "biome": "bosque_templado", "climate": "templado", "faction": "ninguna", "danger": 1 },
+    { "id": "valle_del_sara", "cell": [1, 2], "name": "Valle del Sara" }
+  ]
+}
