@@ -5,7 +5,7 @@ El dueño del proyecto diseñará a mano un mapa general del mundo (Nardaram). L
 
 ## Decisión
 - **Mapa mundial** (`data/world/world_map.json` + imagen de referencia en `docs/design/world/`): grid de regiones. Cada región define bioma/clima, relieve dominante, facción/contexto político, recursos típicos y nivel de peligro.
-- **Chunk**: área jugable de una partida (ciudad + bosque explorable). Se genera con `seed + region_id`. La región fija las reglas (qué tiles, qué recursos, qué enemigos); la seed fija la disposición.
+- **Chunk**: área jugable de una partida (ciudad + bosque explorable), de 64×64 tiles (ADR 0004). Se genera con `seed + region_id`. La región fija las reglas (qué tiles, qué recursos, qué enemigos); la seed fija la disposición.
 - Generación determinista: mismo `seed + region` = mismo chunk. Toda aleatoriedad pasa por `GameState.rng`.
 - Nuevo agente **`world-gen-dev`** dueño de la generación; `narrative-writer` y `game-designer` son dueños del contenido del mapa mundial (regiones, facciones, clima).
 

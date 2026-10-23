@@ -28,7 +28,7 @@ Definir QUÉ se juega y POR QUÉ es divertido. No escribe código de juego.
 4. **Cada partida es distinta, cada región se reconoce** (ADR 0003).
 
 ## Marco fijo (ADR 0002)
-Combate por menú por turnos. Ciudad por días. Objetivo: supervivencia sin final fijo. Toda ficha de mecánica debe decir qué presión de supervivencia añade o alivia.
+Combate por menú por turnos. Ciudad por días. Derrota = fallar la misión de la partida, que depende del modo: Supervivencia (Nujio vivo), Garelino (expandir influencia), Aventura (derrotar Únicos) — ADR 0004. Toda ficha de mecánica debe decir qué presión de supervivencia añade o alivia.
 
 ## Reglas
 - Toda mecánica nueva referencia al menos un pilar.
