@@ -17,7 +17,22 @@ Respuestas del dueño del proyecto a las preguntas #27, #28, #29, #30 y #45 (202
 | Capas de ADR 0002 | La capa de ciudad por días corresponde sobre todo a Supervivencia. Cómo encajan las capas en Aventura y Garelino: por definir. |
 | MVP (#45) | **Modo Aventura.** Objetivo: probar los controles y que sea divertido. Alcance del primer vertical slice: `docs/design/mechanics/aventura-mvp.md`. |
 
+## Respuestas del dueño (2026-10-23): #54, #55, #9, #13
+Palabras textuales:
+> "#54 tal como lo dejé, pero si pasa mucho tiempo puede que haya elementos que hayan crecido o desaparecido por ejemplo si son organicos o si la gente ya se ha movido. #55 chunk < zona < área < región < Sur Lenfi esa es la escala. El mapa que tengo dibujado es el mapa de Nardaram pero solo vamos a jugar en la parte sur occidental de este. #9 puedes elegir de que región eres y eso te da conocimiento automatico del área y las zonas que tiene, mientras más alejado esten los lugares del punto inicial, más complicado el viaje. #13 lo eliges."
+
+| Tema | Decisión |
+|---|---|
+| Persistencia (#54) | Una zona visitada se mantiene **tal como el jugador la dejó**, con sus cambios. Si pasa mucho tiempo, los elementos orgánicos pueden haber crecido o desaparecido y la gente puede haberse movido. Reglas concretas: por definir (#65). |
+| Escala espacial (#55) | **chunk < zona < área < región < Sur Lenfi.** Zona y chunk **no** son lo mismo: una zona contiene varios chunks. Cantidades y forma de conexión: por definir (#62, #63). |
+| Ámbito jugable | El mapa dibujado es el de Nardaram entero, pero **solo se juega en la parte suroccidental**. Qué regiones la forman: por definir (#64). |
+| Región de origen (#9, #13) | El jugador **elige** su región de origen al empezar. Eso le da conocimiento automático del área y de sus zonas. Cuanto más lejos del punto inicial, más complicado es el viaje (#56, #57). |
+
+Corrección a la tabla de decisiones de arriba: donde dice "Zonas se generan al entrar", la unidad que se genera y persiste puede ser la zona o el chunk; queda abierto en #62. La generación debe identificar cada chunk dentro de su zona, área y región.
+
 ## Contradicciones registradas (sin resolver)
+- **ADR 0003** describe el mapa mundial como un "grid de regiones" del que se genera "el chunk" con `seed + region_id`. Ahora entre región y chunk hay dos niveles más (área, zona), y por encima está el Sur Lenfi. Además, solo se juega una parte del mapa. ADR 0003 no dice en qué nivel se fijan las reglas de bioma, recursos y enemigos (¿región, área o zona?).
+- **GDD, "Fuera de alcance del MVP"**: dejaba fuera "más de una región jugable", pero ahora el jugador elige su región de origen y viaja entre regiones (#68).
 - **Glosario §9** dice que el Nujio no es jugable (dato de la Mecánica v0.2, el diseño de rol de mesa). En cambio, el dueño dice que en Supervivencia se juega "en teoría" con el Nujio (#59).
 - **ADR 0003** decía un chunk por partida y que `GameState` guarda "el chunk generado". Ahora una partida tiene varios chunks persistentes (en Aventura y Garelino). ADR 0003 queda ampliado por este.
 

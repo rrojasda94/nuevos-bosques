@@ -59,8 +59,11 @@ Antes de implementarse necesitan fuente, sumidero y qué pasa si se agotan:
 ## Mundo (ADR 0003, 0004, 0005)
 - **Mapa mundial fijo** (ADR 0005): `data/world/world_map.json` + arte de referencia en `docs/design/world/`.
 - Región → bioma, clima, relieve, facción, recursos, peligro.
-- Zonas: se generan al entrar, con la seed de la partida. Una zona nueva puede ser una villa, un bosque o una geografía (qué lo decide: #61). Si vuelves dentro de la misma partida, la zona sigue tal cual (alcance de esa persistencia: #54). Otra partida genera zonas distintas.
-- Viaje: en Aventura y Garelino se pasa entre chunks y se usa el mapa de la región para distancias largas (#55, #56).
+- **Ámbito jugable:** solo la parte suroccidental de Nardaram (regiones concretas: #64).
+- **Escala:** chunk < zona < área < región < Sur Lenfi (cantidades: #62).
+- Generación: lo que se visita se genera al entrar, con la seed de la partida. Una zona nueva puede ser una villa, un bosque o una geografía (qué lo decide: #61). Si vuelves dentro de la misma partida, todo sigue como lo dejaste. Con mucho tiempo, lo orgánico puede crecer o desaparecer y la gente moverse (#65). Otra partida genera lugares distintos.
+- **Región de origen:** el jugador la elige al empezar. Le da conocimiento automático del área y sus zonas. Cuanto más lejos del punto inicial, más complicado el viaje (#56, #57, #66).
+- Viaje: en Aventura y Garelino se pasa entre chunks y se usa el mapa de la región para distancias largas (#63, #56).
 - Chunk: **64×64 tiles.** Puede tener o no una villa al generarse.
 - Villa en el chunk: edificios pequeños para dormir o almacenar; el resto de estructuras está al aire libre. Tamaño: por definir (#14b). Hay contradicciones con el glosario (#47, #50).
 - Nujio en el chunk: suele estar en el centro de la villa; ocupa "entre 6x6 y 8x8 de diámetro" (unidad: por confirmar, #40).
@@ -109,11 +112,11 @@ Material del glosario que puede alimentar mecánicas. **No son mecánicas decidi
 - **Personajes jugables** (§9): lenfi, ueutrec y kulvar, con el oficio o característica que se desee. No jugables: Únicos, Humores, Nujio, Mitahphol, Ojos (#49).
 - **Reliquias** (§9): se obtienen derrotando enemigos, no comprando. Posible regla de loot.
 - **Ecosistemas** (§8): sabana, pantano, bosque, pradera, desierto, montaña. Posibles biomas.
-- **Regiones del Sur** (§8): candidatas para la #9.
+- **Regiones del Sur** (§8): candidatas para la parte suroccidental jugable (#64).
 - **Situación inicial** (§9): era tardía de los Nuevos Bosques. Posible contexto de inicio.
 
 ## Fuera de alcance del MVP
-Multijugador, mods, más de una región jugable, localización (inglés en v1.x), **modos Supervivencia y Garelino** (el MVP es Aventura, ADR 0005).
+Multijugador, mods, más de una región jugable (choca con la elección de región de origen; ver #68), localización (inglés en v1.x), **modos Supervivencia y Garelino** (el MVP es Aventura, ADR 0005).
 
 ## Métricas de playtest
 - MVP (Aventura): ver los criterios de [`mechanics/aventura-mvp.md`](mechanics/aventura-mvp.md).
