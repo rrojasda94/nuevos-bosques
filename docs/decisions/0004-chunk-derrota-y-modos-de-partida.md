@@ -1,30 +1,53 @@
 # ADR 0004 — Tamaño de chunk, derrota y modos de partida
 
 ## Contexto
-Respuestas del dueño del proyecto a las preguntas abiertas #10 y #11 (2026-10-23). Palabras textuales:
+Respuestas del dueño del proyecto a las preguntas abiertas (2026-10-23), en dos rondas. Palabras textuales:
 
+**Ronda 1 (#10, #11):**
 > "chunk de 64x64 y derrota es fallar la misión de la partida. Vamos a poder jugar con modo supervivencia, manteniendo con vida al Nujio (gran arbol); modo garelino, que trata de expandir la influencia de los nuevo bosques a la región; modo aventura, que se generan misiones para derrotar Únicos (monstruos defensores de bosques que se han descarriado y entrado en modo berserk) hay muchos tipos de Únicos y las villas suele llamar al adoc para combatirlos."
+
+**Ronda 2 (#14, #15, #16):** (el "[...]" es una omisión que ya venía en el texto recibido)
+> "#14 el chunk puede tener o no tener una villa en su generación. Las villas son lugares de edificios pequeños que sirven como habitaciones para dormir o almacenar, el resto de estructuras de la villa son al aire libre. El Nujio esta por lo general en el centro de la vill y ocupa entre 6x6 y 8x8 de diametro, es un arbol gigantezco que tiene poder sobre el actuar de la villa. [...] #15 el modo se elige al empezar algo similar a project zomboid, pero el mapa se genera similar a minecraft o al juego enorme de enanos que demoro mucho tiempo en salir, no recuerdo el nombre. #16 para ganar en supervivencia no se puede, es un modo largo que debes evitar que los garelinos enloquezcan al nujio o que aniquilen el bosque. en modo aventura creas un personaje y este va viajando de lugar en lugar segun las misiones que aparezcan y debe ganar, si muere, es game over, pero sino va subiendo experiencia, aprendiendo habilidades, ganando objetos y fama, no puedes matar gente en lugares donde haya otras personas o seres que tengan consciencia. En modo garelino comandas un grupo de fanaticos que buscan destruir los bosques dominados por un nujio. Puedes mejorar tus tropas, aprender habilidades y estrategias para acelerar la decadencia, te enfrentas a los Humores del mundo que son climas agresivos que ocurren si delatas tu intension y ubicación, te enfrentas a los Únicos que evia el bosque y a la resistencia que ejerce la población de la villa, no se puede matar gente sino afecta grandemente la reputación de tu grupo y hace más dificil el trabajo o más agresivos y fuertes a los enemigos. Se vence eliminando al nujio y sembrando las primeras semillas de los nuevos bosques. En modo garelino pierdes si te quedas sin individuos. Puedes reclutar nuevos."
+
+El "juego enorme de enanos" es **probablemente Dwarf Fortress, a confirmar**.
 
 ## Decisiones
 | Tema | Decisión |
 |---|---|
-| Tamaño de chunk (#10) | **64×64 tiles.** La ubicación y tamaño de la ciudad dentro del chunk (propuesta anterior: centro, 24×16) **no se confirmó**; sigue abierta. |
-| Derrota (#11) | **Fallar la misión de la partida.** Cada partida tiene una misión, que depende del modo elegido. |
-| Modos de partida | Tres modos, cada uno con su misión (tabla siguiente). |
+| Tamaño de chunk (#10) | **64×64 tiles.** |
+| Villa en el chunk (#14) | El chunk **puede tener o no** una villa al generarse. La propuesta anterior de "ciudad central 24×16" no se confirmó. |
+| Villas | Lugares de edificios pequeños que sirven como habitaciones para dormir o almacenar; el resto de estructuras de la villa están al aire libre. |
+| Nujio | Árbol gigantesco. Por lo general está en el centro de la villa. Ocupa "entre 6x6 y 8x8 de diámetro" (unidad no dicha, previsiblemente tiles; ver #40). Tiene poder sobre el actuar de la villa. |
+| Derrota (#11) | **Fallar la misión de la partida.** Concretado por modo en la tabla siguiente. |
+| Elección de modo (#15) | El modo **se elige al empezar** la partida, de forma similar a Project Zomboid. |
+| Generación del mapa | "Similar a Minecraft o a Dwarf Fortress (a confirmar)". **Posible conflicto con ADR 0003, sin resolver**: ver pregunta #27. |
 
 ### Modos de partida
-| Modo | Misión (según el dueño) | Derrota |
-|---|---|---|
-| **Supervivencia** | Mantener con vida al **Nujio** (gran árbol). | Fallar la misión (por definir qué significa exactamente; previsiblemente, que el Nujio muera). |
-| **Garelino** | Expandir la influencia de los Nuevos Bosques a la región. | Fallar la misión (por definir). |
-| **Aventura** | Se generan misiones para derrotar **Únicos** (monstruos defensores de bosques que se han descarriado y entrado en modo berserk). Hay muchos tipos de Únicos; las villas suelen llamar al **adoc** para combatirlos. | Fallar la misión (por definir). |
+| Modo | Qué hace el jugador | Victoria | Derrota |
+|---|---|---|---|
+| **Supervivencia** | Mantener con vida al Nujio. Modo largo. Debe evitar que los garelinos enloquezcan al Nujio o aniquilen el bosque. | **No hay victoria.** | Los garelinos enloquecen al Nujio o aniquilan el bosque. |
+| **Garelino** | Comanda un grupo de fanáticos (garelinos) que buscan destruir los bosques dominados por un Nujio. Puede mejorar sus tropas, aprender habilidades y estrategias para acelerar la decadencia, y reclutar nuevos individuos. Se enfrenta a los Humores del mundo, a los Únicos que envía el bosque y a la resistencia de la población de la villa. | Eliminar al Nujio y sembrar las primeras semillas de los Nuevos Bosques. | Quedarse sin individuos. |
+| **Aventura** | Crea un personaje que viaja de lugar en lugar según las misiones que aparezcan (misiones para derrotar Únicos; las villas suelen llamar al adoc para combatirlos). Sube experiencia, aprende habilidades, gana objetos y fama. | Por definir ("debe ganar"; ver #31). | La muerte del personaje es game over. |
 
-Condiciones de victoria, métricas y reglas concretas de cada modo: por definir (ver `0000-preguntas-abiertas.md`).
+### Reglas de no matar
+- **Aventura**: no se puede matar gente en lugares donde haya otras personas o seres con consciencia.
+- **Garelino**: matar gente afecta mucho a la reputación del grupo y hace más difícil el trabajo, o vuelve a los enemigos más agresivos y fuertes.
+
+### Términos introducidos
+- **Garelinos**: fanáticos que buscan destruir los bosques dominados por un Nujio. "Expandir los Nuevos Bosques" (ronda 1) consiste en eliminar al Nujio y sembrar las primeras semillas de los Nuevos Bosques. En Supervivencia son el enemigo.
+- **Humores del mundo**: climas agresivos que ocurren si el grupo garelino delata su intención y su ubicación.
+- **Únicos**: monstruos defensores de bosques que se han descarriado y entrado en modo berserk; hay muchos tipos. En Garelino, el bosque los envía contra el jugador.
+
+Lo que no está en las citas se queda por definir (ver `0000-preguntas-abiertas.md`).
 
 ## Consecuencias
-- Modifica ADR 0002: el "Objetivo de partida" ya no es únicamente "sobrevivir mientras el pueblo sobreviva"; ahora lo fija el modo de partida. La condición de derrota de ejemplo de ADR 0002 (población 0 / hambruna) queda sustituida por "fallar la misión".
-- `GameState` deberá guardar el modo de partida y el estado de su misión (estructura: `engine-architect`).
-- El chequeo de fin de día pasa a ser "chequeo de misión" en lugar de un chequeo genérico de derrota.
-- `world-gen-dev` trabaja con chunks de 64×64 tiles; la reserva de espacio para la ciudad queda pendiente.
-- `game-designer` debe redactar una ficha por modo en `docs/design/mechanics/` cuando se resuelvan las preguntas nuevas.
-- `narrative-writer` es dueño del lore de Nujio, Garelino, Únicos y adoc; hasta que lo amplíe, solo vale lo citado arriba.
+- Modifica ADR 0002: el "Objetivo de partida" ya no es "sobrevivir mientras el pueblo sobreviva". Lo fija el modo, y la derrota de ejemplo (población 0 / hambruna) queda sustituida.
+- **Posible conflicto con ADR 0003** (mapa mundial hecho a mano + un chunk procedural por partida):
+  - "el mapa se genera similar a minecraft o dwarf fortress" puede implicar que el mundo entero se genera (#27).
+  - "viaja de lugar en lugar" en Aventura puede implicar varios chunks por partida (#30).
+  - Nada de esto está resuelto; ADR 0003 sigue vigente hasta que se decida.
+- **Posible tensión con el pilar 1 y ADR 0002** (ciudad por días + RPG): ninguno de los tres modos describe gestión de ciudad. Su relación con las dos capas está por definir (#29).
+- La ciudad del GDD (grid 16×16, hoguera en el centro) pasa a revisarse frente a villas y Nujio (#14b).
+- `GameState` deberá guardar el modo y el estado de la misión (estructura: `engine-architect`).
+- Hay recursos nuevos (fama, reputación, tropas/individuos) que necesitan fuente, sumidero y efecto al agotarse antes de implementarse (`game-designer`).
+- `narrative-writer` es dueño del lore de Nujio, garelinos, Únicos, Humores del mundo, villas y adoc. El dueño entregará un glosario propio; el glosario actual es provisional.
