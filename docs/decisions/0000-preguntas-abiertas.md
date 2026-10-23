@@ -2,19 +2,21 @@
 
 Las 8 preguntas iniciales están resueltas en `0002-decisiones-fundacionales.md` y `0003-mapa-mundial-y-chunks.md`. Las resueltas después se tachan y apuntan a su fuente: un ADR o una entrada de `docs/glosario_nuevos_bosques.md` (en adelante, "glosario"; es la fuente de verdad del lore).
 
-## Prioritarias: bloquean el vertical slice de Aventura (ADR 0005, `docs/design/mechanics/aventura-mvp.md`)
+> Terminología (ADR 0007): "zona" pasa a llamarse **Bosque**. En las preguntas antiguas, "zona" se lee como "Bosque".
+
+## Prioritarias: bloquean el vertical slice de Aventura (ADR 0005, ADR 0007, `docs/design/mechanics/aventura-mvp.md`)
 
 | # | Pregunta | Bloquea a |
 |---|---|---|
-| 62 | Escala (ADR 0005, respuestas): chunk < zona < área < región < Sur Lenfi. ¿Cuántos chunks tiene una zona, cuántas zonas un área y cuántas áreas una región? ¿Tienen forma de grid? ¿El tipo villa/bosque/geografía (#61) se decide por zona o por chunk? | world-gen-dev, engine-architect, game-designer |
-| 63 | ¿Cómo se pasa entre chunks dentro de una zona (¿por el borde?) frente al viaje entre zonas, áreas y regiones (¿por el mapa de la región?)? | world-gen-dev, engine-architect, game-designer, ui-ux-dev |
-| 68 | ¿Cuántas regiones de origen se pueden elegir en el MVP? El GDD dejaba "más de una región jugable" fuera del MVP, pero ahora el jugador elige su región de origen (#13). | game-designer, world-gen-dev |
+| 76 | Forma del Bosque: ¿sus 4–16 chunks son contiguos y en grid? ¿Qué decide cuántos tiene cada Bosque (seed, región, tipo)? ¿Se pasa entre chunks del mismo Bosque cruzando el borde? | world-gen-dev, engine-architect |
+| 69 | ¿El Bosque de la escala es el Bosque del glosario §3 (una entidad con un Nujio)? Probable, a confirmar. ¿Un Nuevo Bosque también es un Bosque de la escala? ¿Y las "geografías" sin bosque (desierto, montaña, riscos) qué nivel ocupan? | game-designer, world-gen-dev, narrative-writer |
+| 81 | MVP en el Valle del Sara: ¿el jugador elige el área de origen dentro de la región (Lean, Tossie, etc.) o el punto de partida es fijo? | game-designer, world-gen-dev, ui-ux-dev |
 
 ## Lista
 
 | # | Pregunta | Bloquea a |
 |---|---|---|
-| 9 | ~~¿Qué regiones son jugables?~~ **Resuelta en parte** en ADR 0005 (respuestas): solo se juega en la parte suroccidental de Nardaram; el jugador elige su región de origen, que le da conocimiento automático del área y sus zonas. Qué regiones exactamente: #64. Cuántas en el MVP: #68. | — |
+| 9 | ~~¿Qué regiones son jugables?~~ **Resuelta** en ADR 0005 (respuestas) y ADR 0007: se juega en la parte suroccidental de Nardaram y el MVP empieza en la región **Valle del Sara**. Lista completa de regiones: #64. | — |
 | 10 | ~~¿Tamaño de chunk?~~ **Resuelta** en ADR 0004: 64×64 tiles. | — |
 | 11 | ~~¿Condición de derrota?~~ **Resuelta** en ADR 0004: fallar la misión de la partida (concretada por modo). | — |
 | 12 | ¿Cuántos días dura una expedición típica? (propuesta: 1–3) | game-designer, rpg-systems-dev |
@@ -68,9 +70,23 @@ Las 8 preguntas iniciales están resueltas en `0002-decisiones-fundacionales.md`
 | 58 | ¿Qué son en reglas los "bosques agresivos" y los "Únicos poderosos" de las regiones desconocidas? | game-designer, world-gen-dev |
 | 59 | Supervivencia: el dueño dice que se juega "en teoría" con el Nujio; el glosario §9 dice que el Nujio no es jugable (dato de la Mecánica v0.2, de rol de mesa). ¿Se confirma el Nujio como avatar del jugador? ¿Cómo son en reglas las acciones: pedir Luz, controlar la población, el contento, amenazar con los Únicos y defenderse de los garelinos? | game-designer, city-systems-dev, narrative-writer |
 | 60 | Aventura y Garelino: ¿avanza el tiempo por días? ¿Hay alguna gestión de villa o ciudad en estos modos? | game-designer, rpg-systems-dev, city-systems-dev |
+| 62 | ~~¿Cuántos chunks por zona, zonas por área, áreas por región?~~ **Resuelta en parte** en ADR 0007: zona pasa a llamarse Bosque; un Bosque tiene 4–16 chunks, un área 6–12 Bosques, una región de decenas a un centenar de áreas. La forma pasa a #76 y el tipo a #61/#69. | — |
+| 63 | ~~¿Cómo se pasa entre chunks y entre zonas?~~ **Resuelta en parte** en ADR 0007: movimiento libre dentro del Bosque inicial; para entrar a otro Bosque con Nujio, pagar Luz o enfrentarse a los Únicos que envía; también se puede viajar a pie por todo el mapa (más lento, cansa). Lo que falta pasa a #70–#73 y #76. | — |
+| 68 | ~~¿Cuántas regiones de origen en el MVP?~~ **Resuelta en parte** en ADR 0007: el MVP empieza con la región Valle del Sara. Si se elige el área de origen dentro de ella: #81. | — |
 | 54 | ~~Persistencia: ¿se conservan los cambios del jugador?~~ **Resuelta** en ADR 0005 (respuestas): la zona se mantiene tal como el jugador la dejó. Con mucho tiempo, los elementos orgánicos pueden crecer o desaparecer y la gente puede haberse movido; ver #65. | — |
-| 55 | ~~¿Zona = chunk? ¿Cómo se conectan?~~ **Resuelta en parte** en ADR 0005 (respuestas): no son lo mismo; la escala es chunk < zona < área < región < Sur Lenfi. Lo que falta pasa a #62 y #63. | — |
-| 64 | ¿Qué regiones forman la parte suroccidental jugable / el "Sur Lenfi"? Candidatas sin decidir, glosario §8 (regiones del Sur): Safio (Safis), Nan, Dorias, Sagra (valle del Sara), Gumna, Calf (= Naca), Ungol, Amuss, Hagat, Uta, Sanag, Sunasem, Ifa, Foss. El glosario dice además que al este de Ungol no hay lenfi y que al este de Hagat y Uta no hay humanos. ¿"Región" en esta escala es lo mismo que "región" en la lista del glosario? | narrative-writer, world-gen-dev, game-designer |
+| 55 | ~~¿Zona = chunk? ¿Cómo se conectan?~~ **Resuelta** en ADR 0005 (respuestas) y ADR 0007: no son lo mismo. Escala: chunk < Bosque (antes "zona") < área < región < Sur Lenfi. | — |
+| 64 | ¿Qué regiones forman la parte suroccidental jugable / el "Sur Lenfi"? Conocidas por el dueño: Valle del Sara y Alcuss (ADR 0007). Candidatas del glosario §8, sin decidir: Safio (Safis), Nan, Dorias, Sagra (valle del Sara), Gumna, Calf (= Naca), Ungol, Amuss, Hagat, Uta, Sanag, Sunasem, Ifa, Foss. ¿"Región" en esta escala es lo mismo que en la lista del glosario? | narrative-writer, world-gen-dev, game-designer |
 | 65 | Cambio con el tiempo en zonas visitadas: ¿cuánto es "mucho tiempo"? ¿Qué elementos cuentan como orgánicos? ¿Qué crece y qué desaparece, a qué ritmo? ¿Cómo se mueve la gente? | game-designer, world-gen-dev, engine-architect |
 | 66 | ¿La región de origen influye en algo más que el conocimiento (raza, cultura del glosario §4, oficio, equipo inicial)? | game-designer, narrative-writer |
-| 61 | Zonas: ¿qué decide si una zona nueva es villa, bosque o "geografía"? ¿Depende de la región del mapa fijo? ¿En Supervivencia también se generan zonas nuevas o solo la villa del Nujio? | world-gen-dev, game-designer |
+| 61 | ADR 0005 decía que "una zona nueva puede ser una villa, un bosque o una geografía", pero ahora zona = Bosque (ADR 0007). ¿Qué tipos de Bosque hay (con villa, sin villa, Nuevo Bosque, desierto…) y qué decide el tipo? ¿Depende del área (como la frecuencia de Nuevos Bosques)? ¿En Supervivencia también se generan Bosques nuevos? | world-gen-dev, game-designer |
+| 70 | ¿Se puede entrar libremente en un Bosque sin Nujio (Nuevo Bosque, Bosque cuyo Nujio murió)? | game-designer |
+| 71 | Peaje para entrar en un Bosque con Nujio: ¿cuánta Luz cuesta? ¿Se paga una vez o cada vez que se entra? ¿Enfrentarse a los Únicos es un combate obligatorio por menú? ¿Qué pasa si pierdes o huyes? ¿El conocimiento de la región de origen lo abarata? | game-designer, rpg-systems-dev |
+| 72 | Viaje a pie por todo el mapa: ¿evita el peaje de Luz/Únicos? ¿Cuánto más lento es? ¿Cómo se representa (caminar chunk a chunk o viaje abstracto por el mapa de región)? | game-designer, world-gen-dev, ui-ux-dev |
+| 73 | Cansancio del personaje: ¿cómo se mide, qué efectos tiene y cómo se recupera (descanso, noche, villa)? ¿Qué pasa al agotarse? | game-designer, rpg-systems-dev |
+| 74 | Navegación: ¿cómo se navegan los ríos grandes (barca, coste, velocidad)? ¿Qué ríos del Valle del Sara son navegables? ¿Los ríos no navegables son barrera física o se pueden vadear? | game-designer, world-gen-dev |
+| 75 | Día y noche: ¿cuánto dura cada Momento? ¿Qué peligros tiene cada uno? ¿Qué Bosques prohíben andar de noche y qué pasa si se hace? ¿El riutash de las transiciones (glosario §2) tiene efecto de juego? ¿Cómo encaja con el "día" de ADR 0002? | game-designer, rpg-systems-dev, world-gen-dev |
+| 77 | Nombres geográficos: ¿Lean, Tossie, Ostie, Casie, Vastie, Alss, Causie y Adess, Istil, Sass, Ness, Alciss son áreas? ¿Dónde está "Nosie" (no aparece en ninguna lista)? ¿Alciss es región o área? ¿"Valle del Sara" es la "Sagra (valle del Sara)" del glosario §8? ¿Alcuss corresponde a alguna región del glosario? | narrative-writer, world-gen-dev, game-designer |
+| 78 | Frecuencia de Nuevos Bosques en las áreas no citadas (Casie, Vastie, Alss, Causie, Adess, Istil, Sass, Ness). ¿Qué valores de juego corresponden a "más frecuente", "muy raro" y "casi imposible"? | game-designer, world-gen-dev |
+| 79 | Origen de la expansión de los Nuevos Bosques: el dueño dice Lean, Tossie y Ostie; el glosario §7 sitúa el origen de Estrella Azul en Dorias (Tarca de Trastas). ¿Son compatibles (movimiento frente a expansión)? | narrative-writer |
+| 80 | Relieve del Valle del Sara: ¿qué áreas están al norte (agreste) y cuáles al sur (llano, claros ribereños)? ¿Dónde están los ríos grandes y los estrechos? Hace falta la referencia del mapa en `docs/design/world/`. | world-gen-dev, narrative-writer |
+| 82 | Villa y Bosque: según el glosario hay una villa por Bosque, dentro de él. ¿Todo Bosque con Nujio tiene villa? ¿Ocupa uno o varios de sus chunks? (ADR 0004 decía "el chunk puede tener o no una villa".) | world-gen-dev, game-designer |

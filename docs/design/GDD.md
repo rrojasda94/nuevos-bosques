@@ -1,13 +1,13 @@
 # GDD — Nardaram: Los Nuevos Bosques
 
-> Dueño: `game-designer`. Estado: borrador v0.6 (incorpora ADR 0002 a 0005 y la conciliación con el glosario del dueño).
+> Dueño: `game-designer`. Estado: borrador v0.7 (incorpora ADR 0002 a 0005, ADR 0007 y la conciliación con el glosario del dueño).
 >
-> **MVP = modo Aventura** (ADR 0005). Alcance del primer vertical slice: [`mechanics/aventura-mvp.md`](mechanics/aventura-mvp.md).
+> **MVP = modo Aventura en la región Valle del Sara** (ADR 0005, 0007). Alcance del primer vertical slice: [`mechanics/aventura-mvp.md`](mechanics/aventura-mvp.md).
 >
 > **Lore:** la fuente de verdad es [`docs/glosario_nuevos_bosques.md`](../glosario_nuevos_bosques.md), del dueño del proyecto, y no se edita. Este GDD no redefine lore: enlaza a ese archivo.
 
 ## Visión
-Cada partida ocurre en el mapa fijo de Nardaram. Las zonas (chunks de 64×64 tiles) se generan con la seed de la partida al entrar y persisten durante esa partida. Cada partida tiene un **modo elegido al empezar** (Supervivencia, Garelino o Aventura) con su propia misión (ADR 0004). El conflicto gira en torno al [Nujio](../glosario_nuevos_bosques.md) y su Bosque frente a los garelinos, que quieren sembrar los Nuevos Bosques. Pixel art 8-bit top-down, sesiones cortas, progreso visible. Solo español.
+Cada partida ocurre en el mapa fijo de Nardaram. Los Bosques (de 4 a 16 chunks de 64×64 tiles) se generan con la seed de la partida al entrar y persisten durante esa partida. Cada partida tiene un **modo elegido al empezar** (Supervivencia, Garelino o Aventura) con su propia misión (ADR 0004). El conflicto gira en torno al [Nujio](../glosario_nuevos_bosques.md) y su Bosque frente a los garelinos, que quieren sembrar los Nuevos Bosques. Pixel art 8-bit top-down, sesiones cortas, progreso visible. Solo español.
 
 > La gestión de villa/ciudad por días (ADR 0002) corresponde sobre todo a Supervivencia (ADR 0005). Su papel en Aventura y Garelino está por definir (#60).
 
@@ -48,23 +48,32 @@ Antes de implementarse necesitan fuente, sumidero y qué pasa si se agotan:
 - Fama (Aventura): por definir (#33).
 - Reputación del grupo (Garelino): por definir (#35).
 - Individuos/tropas (Garelino): cuando llegan a 0, derrota. Reclutamiento y mejora: por definir (#37).
-- Luz de viaje (Aventura y Garelino): quedarse sin ella es un riesgo del viaje (ADR 0005). Fuente, sumidero y efecto al agotarse: por definir (#57).
+- Luz de viaje (Aventura y Garelino): quedarse sin ella es un riesgo del viaje y sirve para pagar la entrada a Bosques con Nujio (ADR 0005, 0007). Fuente, sumidero y efecto al agotarse: por definir (#57, #71).
+- Cansancio (Aventura): el viaje a pie cansa al personaje (ADR 0007). Medida, efectos y recuperación: por definir (#73).
 - Luz en Supervivencia: se pide a los pobladores (ADR 0005). Reglas: por definir (#59).
 
 ### Presiones de supervivencia por modo
 - Supervivencia: los garelinos (sobre el Nujio y el bosque). Resto: por definir.
 - Garelino: Humores del mundo, Únicos, resistencia de la villa, pérdida de individuos, reputación, riesgos de viaje.
-- Aventura: muerte permanente del personaje y riesgos de viaje por regiones desconocidas: peligros, bosques agresivos, quedarse sin Luz, Únicos poderosos (ADR 0005; #56, #58).
+- Aventura: muerte permanente del personaje y riesgos de viaje por regiones desconocidas: peligros, bosques agresivos, quedarse sin Luz, Únicos poderosos (ADR 0005; #56, #58). También el peaje de Luz o los Únicos para entrar a Bosques con Nujio, el cansancio al viajar a pie y los peligros de la noche (ADR 0007; #71, #73, #75).
 
-## Mundo (ADR 0003, 0004, 0005)
+## Mundo (ADR 0003, 0004, 0005, 0007)
 - **Mapa mundial fijo** (ADR 0005): `data/world/world_map.json` + arte de referencia en `docs/design/world/`.
 - Región → bioma, clima, relieve, facción, recursos, peligro.
-- **Ámbito jugable:** solo la parte suroccidental de Nardaram (regiones concretas: #64).
-- **Escala:** chunk < zona < área < región < Sur Lenfi (cantidades: #62).
-- Generación: lo que se visita se genera al entrar, con la seed de la partida. Una zona nueva puede ser una villa, un bosque o una geografía (qué lo decide: #61). Si vuelves dentro de la misma partida, todo sigue como lo dejaste. Con mucho tiempo, lo orgánico puede crecer o desaparecer y la gente moverse (#65). Otra partida genera lugares distintos.
-- **Región de origen:** el jugador la elige al empezar. Le da conocimiento automático del área y sus zonas. Cuanto más lejos del punto inicial, más complicado el viaje (#56, #57, #66).
-- Viaje: en Aventura y Garelino se pasa entre chunks y se usa el mapa de la región para distancias largas (#63, #56).
-- Chunk: **64×64 tiles.** Puede tener o no una villa al generarse.
+- **Ámbito jugable:** solo la parte suroccidental de Nardaram. Regiones conocidas: Valle del Sara y Alcuss (lista completa: #64).
+- **Escala** (ADR 0007): chunk (64×64 tiles) < **Bosque** (4–16 chunks) < área (6–12 Bosques) < región (de decenas a un centenar de áreas) < Sur Lenfi. Que el Bosque de la escala sea el Bosque del glosario, con un Nujio: probable, a confirmar (#69).
+- Generación: lo que se visita se genera al entrar, con la seed de la partida. Tipos de Bosque y qué decide el tipo: #61. Si vuelves dentro de la misma partida, todo sigue como lo dejaste. Con mucho tiempo, lo orgánico puede crecer o desaparecer y la gente moverse (#65). Otra partida genera lugares distintos.
+- **Región de origen:** el jugador la elige al empezar. Le da conocimiento automático del área y sus Bosques. Cuanto más lejos del punto inicial, más complicado el viaje (#56, #57, #66, #81).
+- **Viaje** (ADR 0007):
+  - Movimiento libre dentro del Bosque inicial.
+  - Para entrar a otro Bosque que aún tenga Nujio: pagar Luz o enfrentarse a los Únicos que envía (#70, #71).
+  - Se puede recorrer todo el mapa a pie (más lento, cansa al personaje; #72, #73) y usar el mapa de la región para distancias largas (#56).
+- **Terreno** (ADR 0007): los bosques son tupidos y se camina entre los árboles. Barreras físicas: agua, riscos, pendientes pronunciadas. Ríos grandes navegables; estrechos y de montaña no (#74).
+- **Día y noche** (ADR 0007): Momento de Gietos y Momento de Riumna, con peligros distintos; hay Bosques donde no se puede andar de noche (#75).
+- **Región Valle del Sara** (MVP): Lean, Tossie, Ostie, Casie, Vastie, Alss, Causie (áreas, a confirmar, #77). Más agreste al norte; el sur es más plano, con claros ribereños (#80).
+- **Región de Alcuss**: Adess, Istil, Sass, Ness, Alciss (áreas, a confirmar, #77).
+- **Frecuencia de Nuevos Bosques**: alta en Lean, Tossie y Ostie (origen de la expansión); muy rara en Nosie; casi imposible en Alciss (#77, #78, #79).
+- Chunk: **64×64 tiles.** Puede tener o no una villa al generarse (relación villa–Bosque: #82).
 - Villa en el chunk: edificios pequeños para dormir o almacenar; el resto de estructuras está al aire libre. Tamaño: por definir (#14b). Hay contradicciones con el glosario (#47, #50).
 - Nujio en el chunk: suele estar en el centro de la villa; ocupa "entre 6x6 y 8x8 de diámetro" (unidad: por confirmar, #40).
 

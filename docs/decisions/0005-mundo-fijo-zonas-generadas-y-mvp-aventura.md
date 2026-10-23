@@ -1,5 +1,7 @@
 # ADR 0005 — Mapa fijo, zonas generadas persistentes, modos y MVP en Aventura
 
+> **Nota de terminología (ADR 0007):** el nivel "zona" pasa a llamarse **Bosque**. Donde este ADR dice "zona" en el sentido de la escala, se lee "Bosque". Escala vigente: chunk < Bosque < área < región < Sur Lenfi.
+
 ## Contexto
 Respuestas del dueño del proyecto a las preguntas #27, #28, #29, #30 y #45 (2026-10-23). Palabras textuales:
 
