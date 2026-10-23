@@ -14,7 +14,8 @@ signal chunk_entered(chunk_coord: Vector2i, bosque_id: int, bosque_size: int)
 ## bosque_id = -1 si el borde es el límite de la región.
 signal bosque_border_reached(bosque_id: int)
 ## El jugador lee un letrero de piedra. direction = "norte", "sureste"... hacia la villa.
-signal signpost_read(direction: String)
+## kind = ChunkData.SignKind: villa del Bosque actual o villa natal (camino principal).
+signal signpost_read(direction: String, kind: int)
 
 # --- Ciudad ---
 signal build_requested(building_id: StringName, cell: Vector2i)

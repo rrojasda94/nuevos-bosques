@@ -86,7 +86,9 @@ static func nujio_texture(style: Dictionary, n: int) -> Texture2D:
 
 
 ## Variante visual de la casilla `cell` del chunk. `sign_dir` = índice de dirección de los
-## letreros (orden de ChunkGenerator.direction_name).
+## letreros hacia la villa del Bosque (orden de ChunkGenerator.direction_name); el letrero hacia
+## la villa natal usa su propia dirección (ChunkData.home_direction). El refugio es cueva (1) si
+## toca roca y árbol hueco (0) si no.
 static func variant_for(chunk: ChunkData, cell: Vector2i, sign_dir: int) -> int:
 	var tile: int = chunk.get_tile(cell)
 	match tile:
@@ -100,7 +102,15 @@ static func variant_for(chunk: ChunkData, cell: Vector2i, sign_dir: int) -> int:
 			var below_b: Vector2i = cell + Vector2i.DOWN
 			return 1 if not ChunkData.in_bounds(below_b) or chunk.get_tile(below_b) != ChunkData.Tile.BUILDING else 0
 		ChunkData.Tile.SIGN:
+			if chunk.sign_kind(cell) == ChunkData.SignKind.HOME_VILLA:
+				return ChunkGenerator.direction_index(chunk.home_direction)
 			return sign_dir
+		ChunkData.Tile.REFUGE:
+			for d: Vector2i in ChunkData.SIDES:
+				var n: Vector2i = cell + d
+				if ChunkData.in_bounds(n) and (chunk.get_tile(n) == ChunkData.Tile.CLIFF or chunk.get_tile(n) == ChunkData.Tile.ROCKY):
+					return 1
+			return 0
 	var world: Vector2i = chunk.coord * ChunkData.SIZE + cell
 	return ChunkGenerator.hash_ints([world.x, world.y]) % 2
 
@@ -173,6 +183,21 @@ static func _paint(image: Image, tile: int, variant: int, o: Vector2i, style: Di
 			image.fill_rect(full, BROWN)
 			_specks(image, o, BROWN_LIGHT, 4, salt)
 			_paint_sign(image, o, variant)
+		ChunkData.Tile.ROAD:
+			# Tierra apisonada clara con rodadas y guijarros: se distingue del sendero (marrón).
+			image.fill_rect(full, SAND)
+			_specks(image, o, BROWN_LIGHT, 10, salt)
+			_specks(image, o, GREY_LIGHT, 3, salt + 100)
+			image.fill_rect(Rect2i(o.x + 4, o.y, 1, TILE), BROWN_LIGHT)
+			image.fill_rect(Rect2i(o.x + 11, o.y, 1, TILE), BROWN_LIGHT)
+			for y: int in range(v2 * 3, TILE, 6):
+				image.set_pixel(o.x + 4, o.y + y, BROWN)
+				image.set_pixel(o.x + 11, o.y + (y + 2) % TILE, BROWN)
+		ChunkData.Tile.REFUGE:
+			if v2 == 1:
+				_paint_cave(image, o, ground)
+			else:
+				_paint_hollow_tree(image, o, ground, style)
 
 
 ## Roca con cara de sombra al sur (bit 0) y borde iluminado al norte (bit 1). Los bordes de
@@ -198,6 +223,49 @@ static func _paint_cliff(image: Image, o: Vector2i, bits: int) -> void:
 			image.set_pixel(o.x + x, o.y + top, OUTLINE)
 			if x % 3 == 0:
 				image.fill_rect(Rect2i(o.x + x, o.y + top + 2, 1, TILE - top - 2), BLACKISH)
+
+
+## Árbol hueco: tronco ancho con la copa del Bosque y una boca oscura en arco al pie.
+static func _paint_hollow_tree(image: Image, o: Vector2i, ground: Array, style: Dictionary) -> void:
+	var leaf: Array = LEAVES[int(style.get("leaf", 0))]
+	var trunk: Color = TRUNKS[int(style.get("trunk", 0))]
+	image.fill_rect(Rect2i(o, Vector2i(TILE, TILE)), ground[0])
+	# Copa con contorno, sobresale por los lados del tronco.
+	for y: int in range(0, 8):
+		for x: int in TILE:
+			var d: float = Vector2(x - 7.5, (y - 3.5) * 1.5).length()
+			if d < 7.9:
+				var color: Color = OUTLINE if d > 6.9 else (leaf[1] if d < 3.8 and x < 8 else leaf[0])
+				image.set_pixel(o.x + x, o.y + y, color)
+	# Tronco ancho con contorno y raíces abiertas al pie.
+	image.fill_rect(Rect2i(o.x + 3, o.y + 6, 10, 10), OUTLINE)
+	image.fill_rect(Rect2i(o.x + 4, o.y + 6, 8, 10), trunk)
+	image.fill_rect(Rect2i(o.x + 1, o.y + 14, 14, 2), OUTLINE)
+	image.fill_rect(Rect2i(o.x + 2, o.y + 14, 12, 1), trunk)
+	image.fill_rect(Rect2i(o.x + 4, o.y + 7, 1, 7), BROWN_DARK)
+	# Boca del hueco: arco negro con borde oscuro.
+	for y: int in range(8, 16):
+		for x: int in range(5, 11):
+			var r: float = Vector2(x - 7.5, maxf(0.0, 11.0 - y) * 1.2).length()
+			if r < 3.2:
+				image.set_pixel(o.x + x, o.y + y, OUTLINE if r < 2.4 else DOOR)
+	image.set_pixel(o.x + 4, o.y + 9, BROWN_DARK)
+	image.set_pixel(o.x + 11, o.y + 12, BROWN_DARK)
+
+
+## Cueva: roca redondeada con una boca negra en arco.
+static func _paint_cave(image: Image, o: Vector2i, ground: Array) -> void:
+	image.fill_rect(Rect2i(o, Vector2i(TILE, TILE)), ground[0])
+	for y: int in TILE:
+		for x: int in TILE:
+			var d: float = Vector2(x - 7.5, (y - 10.0) * 1.1).length()
+			if d < 8.5 and y >= 1:
+				image.set_pixel(o.x + x, o.y + y, GREY_DARK if d > 7.2 else (GREY_LIGHT if y < 6 else GREY))
+	for y: int in range(7, 16):
+		for x: int in range(3, 13):
+			var r: float = Vector2(x - 7.5, maxf(0.0, 11.0 - y) * 1.1).length()
+			if r < 4.2:
+				image.set_pixel(o.x + x, o.y + y, OUTLINE if r < 3.3 else BLACKISH)
 
 
 static func _paint_sign(image: Image, o: Vector2i, dir_index: int) -> void:

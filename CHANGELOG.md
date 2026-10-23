@@ -4,6 +4,9 @@ Todos los cambios que nota el jugador. Formato [Keep a Changelog](https://keepac
 
 ## [Sin publicar]
 
+### Añadido
+- Caminos principales de tierra clara, de dos casillas de ancho, que unen las villas de todos los Bosques con la villa natal. En los cruces y cada pocos chunks hay letreros del camino que señalan hacia tu villa natal, y junto al camino hay refugios (árboles huecos o cuevas) cada 2 o 3 chunks.
+
 ### Cambiado
 - El combate se narra estilo Pokémon: letra a letra, un mensaje por acción, con barras de PV animadas.
 - Los Únicos son monstruos (cuadrúpedo, serpiente, cornudo, de muchos ojos, alado) con los colores de su Bosque. La serpiente es Aledra y el resto, Ofomni.

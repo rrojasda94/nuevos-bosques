@@ -70,7 +70,7 @@ func test_trees_block_and_leave_room_to_walk() -> void:
 func test_barriers_and_crossings() -> void:
 	for t in [ChunkData.Tile.CLIFF, ChunkData.Tile.RIVER_NARROW, ChunkData.Tile.RIVER_NAVIGABLE, ChunkData.Tile.BUILDING, ChunkData.Tile.NUJIO]:
 		assert_false(ChunkData.is_walkable_tile(t), "tile %d bloquea" % t)
-	for t in [ChunkData.Tile.BRIDGE, ChunkData.Tile.FORD, ChunkData.Tile.PLAZA, ChunkData.Tile.SIGN, ChunkData.Tile.PATH]:
+	for t in [ChunkData.Tile.BRIDGE, ChunkData.Tile.FORD, ChunkData.Tile.PLAZA, ChunkData.Tile.SIGN, ChunkData.Tile.PATH, ChunkData.Tile.ROAD, ChunkData.Tile.REFUGE]:
 		assert_true(ChunkData.is_walkable_tile(t), "tile %d se camina" % t)
 
 
@@ -136,7 +136,8 @@ func test_rivers_are_sampled_in_world_space() -> void:
 	# Cada casilla no tallada de un chunk coincide con el terreno base en esa posición del mundo,
 	# así que los ríos siguen al cruzar el borde entre chunks.
 	var carved: Array[int] = [ChunkData.Tile.PATH, ChunkData.Tile.BRIDGE, ChunkData.Tile.CLEARING,
-		ChunkData.Tile.PLAZA, ChunkData.Tile.BUILDING, ChunkData.Tile.NUJIO, ChunkData.Tile.SIGN]
+		ChunkData.Tile.PLAZA, ChunkData.Tile.BUILDING, ChunkData.Tile.NUJIO, ChunkData.Tile.SIGN,
+		ChunkData.Tile.ROAD, ChunkData.Tile.REFUGE]
 	for s in [1, 42]:
 		var terrain := ChunkGenerator.Terrain.new(s, _region)
 		for c in [Vector2i(6, 13), Vector2i(7, 13), Vector2i(3, 5)]:

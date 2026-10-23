@@ -157,15 +157,19 @@ func _sign_direction_index(coord: Vector2i, bosque_id: int) -> int:
 	return ChunkGenerator.direction_index(_bosques.nujio_chunk[bosque_id] - coord)
 
 
-## Al pisar un letrero de piedra o estar al lado, el HUD indica hacia dónde queda la villa.
+## Al pisar un letrero de piedra o estar al lado, el HUD indica hacia dónde queda la villa: la
+## del Bosque actual o, en los letreros del camino principal, la villa natal (siguiente tramo).
 func _check_sign(cell: Vector2i) -> void:
 	for d: Vector2i in [Vector2i.ZERO, Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]:
 		var c: Vector2i = cell + d
 		if ChunkData.in_bounds(c) and _chunk.get_tile(c) == ChunkData.Tile.SIGN:
 			if c != _last_sign:
 				_last_sign = c
-				var to_villa: Vector2i = _bosques.nujio_chunk[_bosques.bosque_at(_chunk.coord)] - _chunk.coord
-				EventBus.signpost_read.emit(ChunkGenerator.direction_name(to_villa))
+				var kind: int = _chunk.sign_kind(c)
+				var delta: Vector2i = _chunk.home_direction
+				if kind == ChunkData.SignKind.BOSQUE_VILLA:
+					delta = _bosques.nujio_chunk[_bosques.bosque_at(_chunk.coord)] - _chunk.coord
+				EventBus.signpost_read.emit(ChunkGenerator.direction_name(delta), kind)
 			return
 	_last_sign = Vector2i(-1, -1)
 

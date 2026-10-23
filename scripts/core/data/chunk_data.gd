@@ -7,10 +7,14 @@ extends Resource
 ## BUILDING (edificios de la villa) y NUJIO (el árbol enorme del Bosque).
 ## RIVER_NAVIGABLE = "rio_navegable" (bloquea a pie hasta que haya navegación);
 ## RIVER_NARROW = "rio_estrecho" (nunca navegable). FORD = vado; SIGN = letrero de piedra.
+## ROAD = camino principal (2 casillas de ancho, une las villas); REFUGE = refugio (árbol hueco o
+## cueva) junto al camino: no bloquea, el jugador se pone encima.
 enum Tile {
 	GRASS, CLEARING, PATH, TREE, ROCKY, CLIFF, RIVER_NARROW, RIVER_NAVIGABLE, BRIDGE, FORD,
-	PLAZA, BUILDING, SIGN, NUJIO,
+	PLAZA, BUILDING, SIGN, NUJIO, ROAD, REFUGE,
 }
+## Tipos de letrero: hacia la villa del Bosque actual o hacia la villa natal (por el camino).
+enum SignKind { BOSQUE_VILLA, HOME_VILLA }
 
 const SIZE: int = 64
 ## Bordes del chunk, como dirección hacia fuera.
@@ -27,6 +31,10 @@ const BLOCKING: Array[int] = [Tile.TREE, Tile.CLIFF, Tile.RIVER_NARROW, Tile.RIV
 @export var nujio_rect: Rect2i = Rect2i()
 ## Este chunk contiene la villa de su Bosque.
 @export var has_villa: bool = false
+## Letrero hacia la villa natal (-1, -1 si no hay) y lado del chunk por el que sigue el camino
+## hacia casa (dirección que señala).
+@export var home_sign: Vector2i = Vector2i(-1, -1)
+@export var home_direction: Vector2i = Vector2i.ZERO
 
 var _reachable: PackedByteArray = PackedByteArray()
 
@@ -67,6 +75,16 @@ func is_walkable(cell: Vector2i) -> bool:
 
 static func is_walkable_tile(tile: int) -> bool:
 	return not BLOCKING.has(tile)
+
+
+## Refugio para el riutash. La plaza de la villa también cuenta (AdventureRules.is_villa_rest).
+func is_refuge(cell: Vector2i) -> bool:
+	return in_bounds(cell) and get_tile(cell) == Tile.REFUGE
+
+
+## Tipo del letrero de la casilla (solo tiene sentido si es un SIGN).
+func sign_kind(cell: Vector2i) -> int:
+	return SignKind.HOME_VILLA if cell == home_sign else SignKind.BOSQUE_VILLA
 
 
 static func is_river(tile: int) -> bool:

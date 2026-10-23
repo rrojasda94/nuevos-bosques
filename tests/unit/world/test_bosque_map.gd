@@ -166,7 +166,8 @@ func test_signposts_appear_only_in_villa_bosques() -> void:
 		for id in map.count():
 			for c in map.chunks_of(id).slice(0, 3):
 				var chunk := ChunkGenerator.generate(s, c, _region, map)
-				var signs := chunk.tiles.count(ChunkData.Tile.SIGN)
+				# Solo los letreros hacia la villa del Bosque; los del camino principal van aparte.
+				var signs := chunk.tiles.count(ChunkData.Tile.SIGN) - (1 if chunk.home_sign != Vector2i(-1, -1) else 0)
 				if map.has_villa[id] and c != map.nujio_chunk[id]:
 					assert_eq(signs, 1, "seed %d chunk %s: letrero hacia la villa" % [s, c])
 				else:
