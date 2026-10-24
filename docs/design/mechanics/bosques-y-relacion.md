@@ -172,7 +172,7 @@ Palabras del dueño (2026-10-24): "salvar los bosques".
 |---|---|---|---|
 | `kind` | enum | `nujio`, `nuevo_bosque` | Generación (seed) |
 | `state` | enum | `sano`, `enojado`, `corrupto`, `muerto`, `necesita_ayuda` (solo `kind == nujio`) | Generación; cambia con eventos |
-| `sanity` | int | 0–100 (no aplica a `muerto` ni a `nuevo_bosque`) | Guardado |
+| `sanity` | int | 0–100 (no aplica a `muerto` ni a `nuevo_bosque`). Baja con cualquier cosa mala (robo −10, Botarramas vencido −5, dañar el Bosque −20, ataque de garelinos −10 por Momento, incendio no apagado −20). Con 0 se **desata el Iserald** (`monstruos.md`) | Guardado |
 | `hazard` | enum o nulo | `null`, `incendio`, `ataque` (garelinos u otros) | Guardado |
 | `relation` | int | −100 … +100 | Guardado por partida; se reinicia con un game over o una partida nueva |
 | `open_until` | int o `PERMANENT` | Número de riutash hasta el que el paso está abierto | Guardado |
@@ -196,7 +196,7 @@ N ≥ 1
 ## Casos límite
 - **Caduca el paso mientras el jugador está dentro del Bosque**: puede salir libremente hacia el Bosque por el que entró; para volver a entrar, paga otra vez.
 - **El Bosque cambia de estado con el jugador dentro** (por ejemplo, de sano a corrupto): aplica el nuevo estado desde ese momento.
-- **Iserald se lanza con el jugador en el Bosque corrupto**: combate fatal (#139).
+- **Iserald se desata con el jugador en el Bosque**: aparece el Iserald (fatal) y el estado Miedo. Lo sensato es huir; solo un grupo de adoc puede vencerlo (`monstruos.md`, "Iserald"). Se desata con la cordura a 0, por daño al Bosque, por garelinos o porque el Nujio ya tenía la cordura al mínimo (dueño; #139).
 - **Salvoconducto por un Bosque que se vuelve enojado**: sale de la ruta. Se recalcula una ruta buena, si existe.
 - **Dormir de día sin Luz suficiente**: la opción aparece desactivada, con el coste a la vista.
 - **Dormir con la misión del Ofomni activa**: el salto de tiempo puede acercarlo a la villa. El diálogo de "Dormir" debería avisarlo (propuesta).

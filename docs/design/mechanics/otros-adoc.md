@@ -19,6 +19,17 @@ Palabras del dueño (2026-10-24): "encontrarte con otros adoc, ayudarles a lucha
 
 ## Reglas
 
+### Siempre aliados, con afinidad (dueño, 0.4)
+> "los adoc son aliados siempre, pero algunos pueden no querer trabajar contigo si tienen sendas distintas. No hacen daño."
+
+- **Los adoc nunca son enemigos ni hacen daño** al jugador. No hay adoc rivales.
+- Cada adoc NPC tiene su propia **Senda** (por seed, de −80 a +80).
+- **Afinidad**: si la diferencia entre tu Senda y la suya es **≥ 60**, **no quiere trabajar contigo**:
+  - no acepta tu ayuda en combate (el menú muestra "El adoc rechaza tu ayuda" y solo "Seguir tu camino");
+  - no propone encargos compartidos.
+- La skill de Confianza **C2 "Rostro conocido"** sube ese umbral a **≥ 100**: los adoc de afinidad dudosa aceptan.
+- El jugador no ve el número; el adoc lo dice en su diálogo (textos de `narrative-writer`).
+
 ### Dónde aparecen
 - **En las villas**: según la lista de oficiantes (`npcs-y-villas.md`, Adoc 30%). En la villa natal están "en otras misiones" al empezar (`mision-ofomni.md`) y vuelven tras completar la misión del Ofomni (propuesta).
 - **En el mundo** (evento): un adoc NPC **luchando contra un Único o un grupo de reparep** cerca de un camino.
@@ -43,7 +54,7 @@ Palabras del dueño (2026-10-24): "encontrarte con otros adoc, ayudarles a lucha
 - Los combates con aliado contra **Botarramas** ayudan a abrir un paso, pero **también suben la hostilidad** del Bosque (vencer es vencer; ADR 0013).
 
 ### Encargos compartidos (0.4)
-- Un adoc de una villa puede proponer un **encargo compartido**: ir juntos a por un Único descarriado o defender un Bosque en necesidad de ayuda (`bosques-y-relacion.md`, "Salvar los Bosques").
+- Un adoc de una villa puede proponer un **encargo compartido**: ir juntos a por un Único descarriado, defender un Bosque en necesidad de ayuda (`bosques-y-relacion.md`, "Salvar los Bosques") o, con 2 o más adoc, enfrentarse a un **Iserald** desatado.
 - El adoc NPC te acompaña (te sigue por el mundo) hasta terminar el encargo.
 - Recompensa repartida: tú recibes la mitad de la Luz y toda la XP.
 
@@ -55,12 +66,13 @@ Palabras del dueño (2026-10-24): "encontrarte con otros adoc, ayudarles a lucha
 - **Ayudar a un adoc contra un Único de un Bosque pagado**: el Único es pasivo; no hay combate (el evento no se genera ahí).
 - **Huir de un combate con aliado**: huyes tú; el aliado se retira.
 - **Derrota con aliado**: regla normal (fatal o no según el monstruo). El aliado se retira.
-- **Senda muy violenta**: los adoc NPC no proponen encargos compartidos (`moralidad-y-progresion.md`).
+- **Senda distinta**: el adoc no quiere trabajar contigo (afinidad, arriba). No te ataca.
+- **Iserald** (`monstruos.md`): solo lo vence un grupo de adoc. Los encargos compartidos con 2 o más adoc aliados son la forma de enfrentarlo.
 
 ## Criterios de éxito para playtest
 - El jugador ayuda a otro adoc al menos una vez y nota que el combate es más fácil.
 - El dueño siente que el mundo tiene "más vida" (pregunta directa).
 
 ## Preguntas abiertas
-- ¿Hay adoc rivales (de Senda violenta) que te atacan o compiten por los encargos? (#153)
+- ~~¿Hay adoc rivales?~~ Resuelta (#153): siempre aliados, nunca hacen daño. Algunos no quieren trabajar contigo si sus Sendas son distintas. Los enemigos humanos son los **garelinos** (`monstruos.md`).
 - ¿Existe relación con las villas, además de con los Bosques? (#155)

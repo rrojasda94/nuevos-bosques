@@ -17,7 +17,7 @@
 | 9 | **Tileset de terreno con arte real** | pixel-artist (spec), world-gen-dev (integración) | spec en `docs/art/` | — (en paralelo) | Pendiente |
 | 10 | ~~Personalización del adoc~~ | — | — | — | **Movido a la 0.4** (`roadmap-0.4.md`) |
 
-> **Ronda de jugabilidad del dueño** ("más npc", otros adoc, Senda, puntos y skills, sarua y artesanos, salvar los Bosques): en la 0.3 solo entra lo que reutiliza el combate en grupo, es decir, otros adoc como **aliados** en el PR 7. El resto va a la **0.4 "Los otros adoc"** (`roadmap-0.4.md`).
+> **Ronda de jugabilidad del dueño** ("más npc", otros adoc, Senda, puntos y skills, sarua y artesanos, salvar los Bosques): en la 0.3 solo entra lo que reutiliza el combate en grupo, es decir, otros adoc como **aliados** en el PR 7. El resto va a la **0.4 "Los otros adoc"** (`roadmap-0.4.md`). **Reparto confirmado por el dueño.** En el PR 7, el adoc aliado puede rechazar tu ayuda si vuestras Sendas son muy distintas (afinidad, `otros-adoc.md`); hasta que exista la Senda (0.4), todos aceptan.
 
 ### Dependencias en resumen
 ```

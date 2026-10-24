@@ -4,10 +4,11 @@
 >
 > **MVP = modo Aventura en la región Valle del Sara** (ADR 0005, 0007). Alcance del primer vertical slice: [`mechanics/aventura-mvp.md`](mechanics/aventura-mvp.md).
 >
-> **Versión 0.4 "Los otros adoc"** (propuesta): hoja de ruta en [`roadmap-0.4.md`](roadmap-0.4.md).
-> - Más NPC en las villas, por oficio: [`mechanics/npcs-y-villas.md`](mechanics/npcs-y-villas.md). Los Sarua dan ofrendas a cambio de favores; los artesanos hacen equipo de adoc.
-> - Otros adoc a los que ayudar: [`mechanics/otros-adoc.md`](mechanics/otros-adoc.md). Como aliados en combate ya en la 0.3, PR 7.
-> - **Senda** (de violenta a respetuosa) y puntos de stats y skills: [`mechanics/moralidad-y-progresion.md`](mechanics/moralidad-y-progresion.md).
+> **Versión 0.4 "Los otros adoc"** (reparto confirmado): hoja de ruta en [`roadmap-0.4.md`](roadmap-0.4.md).
+> - Más NPC en las villas, por oficio: [`mechanics/npcs-y-villas.md`](mechanics/npcs-y-villas.md). Los Sarua dan ofrendas a cambio de favores y hacen máscaras y talismanes; los Paruas hacen armas.
+> - Otros adoc, **siempre aliados** (no hacen daño), con afinidad según la Senda: [`mechanics/otros-adoc.md`](mechanics/otros-adoc.md). Como aliados en combate ya en la 0.3, PR 7.
+> - **Senda** (icono violenta / neutral / respetuosa) que desbloquea las ramas de skills **Sombra** (sigilo, poder, recursos) y **Confianza** (favores, habilidades blandas). Al subir de nivel, +3 PV y +1 ATQ/DEF automáticos más 3 puntos a mano: [`mechanics/moralidad-y-progresion.md`](mechanics/moralidad-y-progresion.md).
+> - **Garelinos**: enemigos humanos, combate no letal. **Iserald**: se desata al dañar el Bosque o sin cordura; solo lo vence un grupo de adoc; causa Miedo ([`mechanics/monstruos.md`](mechanics/monstruos.md)).
 > - Salvar los Bosques (incendios, ataques, cordura): [`mechanics/bosques-y-relacion.md`](mechanics/bosques-y-relacion.md).
 >
 > **Versión 0.3 "El Bosque recuerda"** (en curso): hoja de ruta en [`roadmap-0.3.md`](roadmap-0.3.md).

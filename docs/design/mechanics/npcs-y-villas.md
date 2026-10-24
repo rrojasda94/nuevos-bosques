@@ -26,8 +26,8 @@ Palabras del dueño (2026-10-24): "Deberia haber más npc. [...] Algunas villas 
 
 | Oficio (glosario §5) | Función en el glosario | Servicio en el juego (propuesta) | Probabilidad |
 |---|---|---|---|
-| **Sarua** | Artesanos rituales: objetos para entregar Luz, talismanes de viaje | Favores a cambio de ofrendas. Fabrica **talismanes** y **máscaras** (a confirmar) | 50% |
-| **Paruas** | Hacer funcional: utensilios de todo tipo | **Artesano de equipo**: armas para la mano principal y su mejora (a confirmar) | 35% |
+| **Sarua** | Artesanos rituales: objetos para entregar Luz, talismanes de viaje | Favores a cambio de ofrendas. Fabrica **talismanes** y **máscaras** (confirmado) | 50% |
+| **Paruas** | Hacer funcional: utensilios de todo tipo | **Artesano de equipo**: armas para la mano principal y su mejora (confirmado) | 35% |
 | **Dumno** | Estudioso del cuerpo, cura personas y seres | Cura las **heridas graves** (ADR 0010) | 40% |
 | **Rogoc** | Viajeros designados: piden ayuda, llevan información, comercian | Informa de Bosques cercanos (estado, misiones) y vende alguna ofrenda | 40% |
 | **Pholua** | Recolectores y repartidores de la comida del Bosque | Explica las reglas del fruto (1 por Momento, no sacarlo) | 50% |
@@ -50,10 +50,10 @@ Palabras del dueño (2026-10-24): "Deberia haber más npc. [...] Algunas villas 
 | **Apaciguar un Único cercano** | Pagar el paso o hacer que se vaya un Único apaciguable de un Bosque vecino, **sin vencerlo** | Ofrenda de 5–6, Senda +3 |
 
 - Robar o vencer para cumplir el favor no cuenta, o reduce la recompensa (decisión: no cuenta).
-- **Precio de favor según la Senda** (`moralidad-y-progresion.md`): con Senda ≤ −30, el Sarua da solo favores de "llevar algo"; con Senda ≥ 30, las recompensas suben +1.
+- **Favores según la Senda** (`moralidad-y-progresion.md`): con el icono **violenta**, el Sarua solo da favores de "llevar algo". La skill de Confianza C2 "Rostro conocido" permite 2 favores activos y sube las recompensas +1.
 
-### Artesanos de equipo (a confirmar)
-- **Paruas** (armas) y **Sarua** (máscaras y talismanes): oficio de cada objeto **a confirmar**. El glosario no nombra artesanos de armas; los adoc son "únicos especialistas en armas" y los paruas hacen "utensilios de todo tipo".
+### Artesanos de equipo (confirmado)
+- **Paruas** hacen las **armas** y **Sarua** las **máscaras y los talismanes** (dueño: "asi es").
 - **Fabricar** un objeto: cuesta Luz u ofrendas. **Mejorar**: +1 de nivel al objeto (máx. 3).
 
 | Objeto (ranura) | Efecto base (propuesta) | Fabricar | Mejorar (+1) |
@@ -62,7 +62,9 @@ Palabras del dueño (2026-10-24): "Deberia haber más npc. [...] Algunas villas 
 | Máscara (cara) | Reduce el `vision_radius` de los Únicos un 25% por nivel (1–3) (`sigilo-y-robo.md`) | 8 | 10 / 12 |
 | Talismán | Por tipo: +2 de Luz máx., +3 PV máx. o −1 al peaje (mín. 1) | 6 | 8 / 10 |
 
-- **Materiales**: en la 0.4 solo Luz y ofrendas. Si habrá materiales (madera de árboles muertos con permiso, piedra…) queda pendiente.
+- **Coste** (propuesta; el dueño no habló de materiales):
+  - **Luz u ofrendas**, más, para la mejora a nivel 3, un **objeto de hallazgo** (algo encontrado en refugios o dejado por Únicos vencidos con la skill Botín).
+  - Materiales propiamente dichos (madera de árboles muertos con permiso, piedra…): pregunta abierta (#159).
 - Precios × multiplicador del Ista de la villa, si lo hay (−5…+5 → ×0,5…×1,5).
 
 ### Diálogos y servicios básicos
@@ -85,5 +87,6 @@ Palabras del dueño (2026-10-24): "Deberia haber más npc. [...] Algunas villas 
 - El jugador completa un favor de Sarua y entiende que robar no vale para cumplirlo.
 
 ## Preguntas abiertas
-- ¿Qué oficio fabrica armas y cuál máscaras (Paruas y Sarua, a confirmar)? ¿Hay materiales? (#154)
+- ~~¿Qué oficio fabrica qué?~~ Confirmado: Paruas, armas; Sarua, máscaras y talismanes (#154).
+- ¿Hay materiales además de Luz, ofrendas y objetos de hallazgo? (#159)
 - Efectos de la villa dañada en los servicios (#124).

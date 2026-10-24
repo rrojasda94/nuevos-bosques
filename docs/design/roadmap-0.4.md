@@ -1,6 +1,6 @@
-# Hoja de ruta 0.4 "Los otros adoc" (propuesta)
+# Hoja de ruta 0.4 "Los otros adoc"
 
-> Dueño: `game-designer`. **Propuesta**: recoge la ronda de jugabilidad del dueño que no cabe en la 0.3.
+> Dueño: `game-designer`. **Reparto confirmado por el dueño** ("1. si"): recoge la ronda de jugabilidad del dueño que no cabe en la 0.3.
 > Palabras del dueño: "quiero mejorar la jugabilidad y el interes del juego. Deberia haber más npc. encontrarte con otros adoc, ayudarles a luchar contra 'Unicos. salvar los bosques, poder ser un adoc malo y poderoso o uno que se apega a las reglas y avanza con calma. podemos incluir puntos de stats o skills. Algunas villas tienes saruas a los que les puedes pedir ofrendas a cambio de favores, otras villas pueden tener artesanos que hacen equipamiento más para uso de un adoc."
 > Parte de la 0.3 terminada: combate en grupo y aliados (PR 7), estados de Bosque (PR 4), inventario y equipo (PR 5).
 
@@ -26,10 +26,22 @@
 7: independiente
 ```
 
+## Resueltas (dueño, 0.4)
+- **#156**: 3 puntos de stat a mano por nivel, más +3 PV y +1 ATQ/DEF automáticos (decisión del coordinador). Ajuste de coste en #162.
+- **#151**: la Senda se ve como icono (3 estados) y desbloquea las ramas **Sombra** y **Confianza** del árbol de skills.
+- **#154**: Paruas, armas; Sarua, máscaras y talismanes.
+- **#153**: los adoc son siempre aliados, con afinidad según la Senda. Los garelinos son el enemigo humano (no letal).
+- **#152**: el Iserald se desata al dañar el Bosque, por los garelinos o con el Nujio sin cordura. Solo lo vence un grupo de adoc. Estado Miedo.
+
+## PR nuevos que salen de las respuestas
+| # | PR | Ficha | Depende de |
+|---|---|---|---|
+| 8 | **Garelinos**: enemigo humano, combate no letal, ataques a Bosques | `monstruos.md` ("Garelinos") | 0.3 PR 4 y PR 7; 6 |
+| 9 | **Iserald y estado Miedo** (requiere grupos de adoc) | `monstruos.md` ("Iserald") | 5, 8 |
+
 ## Decisiones del dueño que bloquean
-- **#156**: ¿sistema de puntos pequeño (1 de stat por nivel y 1 de skill cada 2 niveles) o más grande? Bloquea el PR 2.
-- **#151**: ¿la Senda se ve o es oculta? Bloquea el PR 2 (UI).
-- **#154**: ¿qué oficio fabrica armas (¿Paruas?) y cuál máscaras y talismanes (¿Sarua?)? ¿Hay materiales? Bloquea el PR 4.
-- **#153**: ¿hay adoc rivales u hostiles? Bloquea el PR 5.
-- **#152**: ¿la Senda violenta atrae a Iserald? Bloquea parte del PR 2.
-- **#157**: ¿cómo se resuelve un combate contra atacantes humanos sin matarlos? Bloquea el PR 6.
+- **#162**: confirmar el coste de los puntos (ATQ y DEF a 3 puntos) y el Ofomni a PV ×0,85. Bloquea el PR 2.
+- **#158**: qué pasa al ganar o perder contra los garelinos. Bloquea el PR 8.
+- **#160**: qué pasa al desatarse un Iserald, cuántos adoc hacen falta y si se confirma Miedo. Bloquea el PR 9.
+- **#159**: materiales. Bloquea parte del PR 4.
+- **#157**: lo cubre en parte la regla "no matan, no mueren" de los garelinos (#158).
