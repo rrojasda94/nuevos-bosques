@@ -110,6 +110,9 @@ func _respawn() -> void:
 	var coord: Vector2i = _bosques.nujio_chunk[target]
 	_enter_chunk(coord, AdventureRules.respawn_cell(_get_chunk(coord)))
 	EventBus.notice_requested.emit(AdventureRules.respawn_notice(_bosques, target))
+	# Despertar en una villa cura del todo, sin tener que salir y volver a entrar (dueño, 0.3).
+	if AdventureRules.is_villa_rest(_chunk, GameState.player_cell):
+		AdventureRules.rest()
 
 
 func _on_player_stepped(cell: Vector2i) -> void:

@@ -259,3 +259,16 @@ func test_migration_from_v12_takes_the_latest_open_payment() -> void:
 	data.open_until = {}
 	GameState.from_dict(data)
 	assert_eq(GameState.last_paid_bosque, -1, "nada pagado: ninguno")
+
+
+func test_waking_in_a_villa_heals_fully() -> void:
+	var expl: Node = load(EXPLORATION).instantiate()
+	add_child_autofree(expl)
+	expl.start()
+	var villa_chunk: Vector2i = _nujio(_home)
+	var other: Vector2i = _map.chunks_of(_home).filter(func(c: Vector2i) -> bool: return c != villa_chunk)[0]
+	GameState.chunk_coord = other
+	expl.start()
+	EventBus.quest_battle_resolved.emit(Q, &"defeat")
+	assert_eq(GameState.chunk_coord, villa_chunk)
+	assert_eq(GameState.hp, AdventureRules.max_hp(), "despertar en la villa cura del todo")
