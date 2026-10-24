@@ -10,7 +10,7 @@ Palabras del dueño: "manejalo como dungeon keeper. Solo recuerda que entre dia 
 
 ## Pilares
 - **Pilar 2 (sesiones cortas con progreso visible)**: un ciclo día + noche dura 13 min, y cada riutash es un hito.
-- **Pilar 3 (legibilidad 8-bit)**: un aviso parpadeante y un tinte azul de noche.
+- **Pilar 3 (legibilidad 8-bit)**: un aviso parpadeante y un tono plateado de noche.
 - **Pilar 4**: el riutash es un rasgo propio del mundo (glosario §2).
 
 ## Presión de supervivencia
@@ -51,7 +51,12 @@ Al llegar el riutash se comprueba dónde está el jugador:
 - El HUD muestra siempre el Momento actual y el tiempo que falta para el próximo riutash.
 
 ### Noche (Momento de Riumna)
-- Tinte azul (Riumna, "luz plateada", glosario §1) con una transición suave.
+- ~~Tinte azul.~~ Sustituido (dueño, 2026-10-24: "la noche o momento de riumna tiene un hue plateado y los colores del mundo resaltan de otro modo"):
+  - **Tono plateado** (Riumna, "luz plateada", glosario §1).
+  - Es **luz de luna, no oscuridad**: los colores del mundo resaltan de otra forma, sin apagarse.
+  - Transición suave.
+- Se implementa como **post-proceso de iluminación**, una excepción a la paleta de 32 colores que anota `engine-architect` en el ADR 0012. Los assets siguen dentro de la paleta.
+- Criterio: de noche se tiene que seguir leyendo el terreno (caminos, agua, refugios y bordes de Bosque) tan bien como de día.
 - En la 0.2.0 la noche no tiene peligros propios ni Bosques que impidan andar. Siguen pendientes (#75).
 
 ## Inputs / outputs
@@ -79,6 +84,13 @@ Propuestas, a confirmar con el dueño:
 - Ningún riutash pilla al jugador por sorpresa (pregunta directa: "¿supiste que venía?").
 - El dueño considera que 8 + 5 minutos dan buen ritmo y que la noche se distingue del día a simple vista.
 - El daño del riutash se percibe como un riesgo real pero no injusto, porque nunca mata.
+- El dueño reconoce el tono plateado de la noche como "colores que resaltan de otro modo", no como oscuridad (pregunta directa).
+
+## Feedback del dueño
+| Fecha | Feedback | Acción |
+|---|---|---|
+| 2026-10-24 | "la noche o momento de riumna tiene un hue plateado y los colores del mundo resaltan de otro modo" | El tinte azul pasa a ser un tono plateado de luz de luna, como post-proceso (excepción a la paleta, ADR 0012). |
+| 2026-10-24 | Aledra es fatal de noche (`monstruos.md`). | La noche añade riesgo de muerte donde haya Aledras (cuando existan). |
 
 ## Decisiones a confirmar con el dueño
 - El refugio cura el 50% de lo que falta y la exposición quita el 30% de los PV máximos, sin matar nunca (#122).

@@ -27,9 +27,22 @@ Palabras del dueño: "mejorar los sistemas de caminos y generación de lugares c
 - Los caminos **no anulan los bordes**: cruzar a otro Bosque sigue pidiendo peaje o combate (`cruce-y-combate-v1.md`).
 
 ### Letreros
-- En cada **cruce de caminos** hay un letrero de piedra que apunta siempre a la **villa natal** (8 direcciones).
+- En cada **cruce de caminos** hay un letrero de piedra que apunta siempre a la **villa natal**. Señala el siguiente tramo del camino hacia casa (4 direcciones, ADR 0006), no la línea recta. Confirmado por el dueño el 2026-10-24.
 - Se mantienen los letreros que apuntan a la villa del propio Bosque (ADR 0008).
-- Se leen con **E** mirando al letrero. Ya no se leen al pisarlos. Ejemplo de texto: "Villa natal: al noreste" (`narrative-writer`).
+- **Interacción** (dueño, 2026-10-24: "prefiero, que el letrero sea interactuable con el jugador y presionando E salga una ventana de dialogo que apunte en la dirección y de indicaciones de cuanto tomara llegar y el nombre de la villa 'tentativo'"):
+  - Al pulsar **E** mirando al letrero se abre una **ventana de diálogo** (el `DialogueBox` del PR 5).
+  - El diálogo muestra:
+    - una **flecha** con la dirección;
+    - el **tiempo estimado** hasta llegar;
+    - el **nombre de la villa**, tentativo, sacado de una lista generada (`data/text/nombres_villas.json`, de `narrative-writer`; el glosario §5 dice que las villas se nombran normalmente por su Original fundador).
+  - Ya no se leen al pisarlos.
+- **La flecha sigue el camino**, no la línea recta: apunta hacia la salida del cruce por la que se llega antes a la villa siguiendo la red de caminos (decisión del dueño, establecida desde ahora).
+- **Tiempo estimado** (provisional, propuesta de `game-designer`):
+  - Se calcula con la longitud del recorrido por camino hasta la villa, en casillas, dividida entre la velocidad de paso del adoc.
+  - Se redondea hacia arriba a minutos de reloj.
+  - Se muestra como "unos N minutos". Si llegar lleva más que lo que falta para el próximo riutash, se añade "pasarás un riutash por el camino".
+  - No cuenta peajes ni combates.
+- Ejemplo de texto (provisional, `narrative-writer`): "↗ Villa <nombre> (natal): unos 4 minutos por el camino."
 
 ### Refugios
 - Tile nuevo **`REFUGE`** (árbol hueco o cueva), junto a los caminos, **cada 2–3 chunks** de camino, de forma determinista.
@@ -80,7 +93,13 @@ Propuestas, a confirmar con el dueño:
 - El jugador usa el mapa (M) al menos una vez por sesión y sigue un camino al menos una vez sin que se le indique.
 - Ningún tester se queda atrapado: todos los chunks de camino son alcanzables (test automático en el PR 2).
 
+## Feedback del dueño
+| Fecha | Feedback | Acción |
+|---|---|---|
+| 2026-10-24 | Letrero con E que abre un diálogo con la dirección, el tiempo hasta llegar y el nombre tentativo de la villa. | Hecho en esta ficha. La flecha sigue el camino. |
+
 ## Decisiones a confirmar con el dueño
+- Fórmula del tiempo estimado (casillas de camino ÷ velocidad, en minutos, con aviso de riutash).
 - La brújula apunta primero al sfida (misión ofrecida), luego al Ofomni (activa) y si no a la villa natal.
 - Refugios cada 2–3 chunks de camino.
 - El mapa muestra solo lo explorado, con niebla en el resto.

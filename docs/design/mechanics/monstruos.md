@@ -1,0 +1,108 @@
+# Ficha: Monstruos (Únicos y otros)
+
+> Dueño: `game-designer`. Fuentes: palabras del dueño (citadas en cada monstruo), glosario §3 ("Únicos", "Iserald", "Aledra", "Ofomni"), ADR 0004 (nota "Derrota en Aventura"), ADR 0009 (Únicos de placeholder), `mision-ofomni.md`, `cruce-y-combate-v1.md`.
+> El lore lo fija el glosario; aquí solo hay reglas de juego. **Valores PROVISIONALES**.
+
+## Objetivo
+Reunir en un sitio qué monstruos hay, qué se sabe de cada uno y qué regla de derrota (fatal o no) aplica. Incluye una propuesta de combate contra grupos para los reparep.
+
+## Pilares
+- **Pilar 3 (legibilidad 8-bit)**: cada monstruo se reconoce por su silueta y se explica en una línea.
+- **Pilar 4**: qué monstruos hay y cuándo son fatales cambia según el lugar y el Momento (día o noche).
+
+## Presión de supervivencia
+- **Añade**: los monstruos **fatales** convierten una derrota en **game over** (ADR 0004). Aledra lo es de noche, lo que hace la noche más peligrosa. Los grupos de reparep castigan pelear con la DEF baja o sin Luz.
+- **Alivia**: los Únicos comunes y el Ofomni de la primera misión no son fatales; perder contra ellos te devuelve a la villa.
+
+## Regla general: fatal según el Momento
+- Palabras del dueño: "es un survival, deberia ser game over dependiendo del monstruo que te ataque, un iserald es fatal" y "Aledras son fatales en las noches".
+- Cada tipo de monstruo tiene un campo **`fatal_at`**: la lista de Momentos en los que perder contra él es game over.
+  - `[]`: nunca es fatal.
+  - `["gietos", "riumna"]`: siempre es fatal.
+  - `["riumna"]`: solo de noche.
+- Se mira el Momento en que **empieza** el combate. El reloj está parado durante el combate (ADR 0012), así que no cambia a mitad de pelea.
+- Perder contra un monstruo fatal en ese Momento → **game over** (texto `defeat_fatal_game_over`). Si no → despiertas en la villa natal (regla de v1).
+- Sustituye a la regla anterior `fatal: bool` (ADR 0004).
+
+## Catálogo
+| Monstruo | Qué dijo el dueño | Glosario §3 | `fatal_at` | Estado en el juego |
+|---|---|---|---|---|
+| **Únicos comunes de borde** | "los únicos no son arboles, son monstruos"; "pueden regenerarse con el tiempo" | Agentes del Bosque que se activan como anticuerpos; nacen de un árbol, animal o sustancia del Bosque | `[]` (provisional) | En el juego desde la 0.1.0: 5 tipos de placeholder (ADR 0009). |
+| **Ofomni** | "un ojo con tentáculos"; "ataca con latigos y cada 3 turnos usa varios latigos"; "es no fatal en la primera mision" | Subtipo de Únicos | `[]` en la primera misión (**confirmado**). Fuera de ella: por definir (#127) | 0.2.0, misión "Primer encargo" (`mision-ofomni.md`). |
+| **Aledra** | "Aledras son fatales en las noches" | Aparece cuando la villa crece en población sin permiso y causa enfermedades. Serpiente roja gigante con aura rojiza, cabeza de calavera reptiliana, ojos negros que se comen la luz física y colmillos carmesí | `["riumna"]` | No existe todavía. Dónde y cuándo aparece en Aventura: #128. |
+| **Iserald** | "un iserald es fatal" | El Único más poderoso y último recurso; sale del propio Nujio. Teorías: inmolación para que el Bosque no sea profanado, o pérdida de cordura | `["gietos", "riumna"]` | No existe todavía (#103). |
+| **Reparep** | "son como cangrejos fantasmales y tacan en grupos de 2 hasta 4 individuos. Son debiles solos pero en grupo el ataque conjunto suma daños" | No aparece en el glosario | `[]` (provisional) | **0.3.0** (fuera de la 0.2.0). Propuesta de combate de grupo abajo. Si son Únicos o no: #128. |
+
+"Aun no tenemos más monstruos" (dueño, 2026-10-24).
+
+## Propuesta: combate contra grupos (reparep), 0.3.0
+> Propuesta de `game-designer` con números **provisionales**. Requiere que el combate pase de 1 contra 1 a 1 contra varios.
+
+### Reglas
+- **Grupo**: de 2 a 4 reparep (por seed). Cada uno tiene sus PV.
+- **Atacar** y **Ofrecer Luz**: el jugador **elige un objetivo** de entre los reparep vivos. El cursor salta por defecto al de menos PV.
+- **Ataque conjunto** (una sola acción del grupo por turno):
+  - **Daño = max(1, (suma del ATQ de los reparep vivos) − DEF del adoc + aleatorio de −1 a +2)**.
+  - La DEF del adoc se resta **una sola vez**, así que el grupo "suma daños", como pidió el dueño.
+  - Cada reparep que cae baja mucho el daño del grupo.
+  - Un mensaje por turno, por ejemplo "Los reparep atacan juntos: %d de daño" (texto de `narrative-writer`).
+- **Defender** reduce a la mitad **todo** el ataque conjunto de ese turno.
+- **Huir**: 75%, contra el grupo entero.
+- **Ofrenda** (si el grupo guarda un borde): una ofrenda que llegue a N hace que **todo el grupo** se vaya.
+- **Victoria**: cuando caen todos. XP = **(2 + d) por reparep** (un grupo de 3 a d = 2 da 12, frente a los 10 de un Único de d = 2). Luz de victoria: +1 por grupo.
+
+### Stats individuales (provisionales)
+| Stat | Fórmula | d = 1 | d = 2 | d = 3 |
+|---|---|---|---|---|
+| PV | 6 + 2·d | 8 | 10 | 12 |
+| ATQ | 2 + ⌊d/2⌋ | 2 | 3 | 3 |
+| DEF | 1 | 1 | 1 | 1 |
+
+### Referencia (valores medios, a d = 2: cada reparep 10/3/1)
+| Adoc | Grupo de 2 | Grupo de 3 | Grupo de 4 |
+|---|---|---|---|
+| Nivel 1 (30/6/3) | gana (~6 de daño) | gana (~16) | pierde por poco (~32 de 30) |
+| Nivel 2 (34/7/3) | gana (~6) | gana (~16) | justo (~32 de 34) |
+| Nivel 3 (38/7/4) | gana (~4) | gana (~12) | gana (~27 de 38) |
+
+- Solo, un reparep apenas hace daño (1–2 por turno contra DEF 3–4). Un grupo de 4 pega como un Único de d = 4.
+- "Ofrecer Luz" (8 de daño) mata un reparep de un golpe a d ≤ 1 y casi a d = 2, así que es la mejor respuesta contra grupos.
+- La DEF alta es más valiosa contra grupos que contra Únicos, porque se resta del daño total.
+
+## Inputs / outputs
+- **Inputs:** tipo de monstruo, d, Momento al empezar el combate, tamaño del grupo (reparep), acciones del jugador.
+- **Outputs:** resultado del combate; si es derrota, game over (fatal) o despertar en la villa (no fatal); XP y Luz.
+
+## Interacción con otros sistemas
+- **Combate** (`cruce-y-combate-v1.md`): fórmulas base. El grupo exige selección de objetivo y un ataque conjunto.
+- **Tiempo** (`tiempo-y-riutash.md`): `fatal_at` depende del Momento.
+- **Misión del Ofomni**: no fatal.
+- **Guardado**: game over borra o cierra la partida (decisión técnica de `engine-architect`).
+- **Arte** (`pixel-artist`): siluetas de Ofomni (ojo con tentáculos), Aledra (según el glosario), reparep (cangrejos fantasmales) e Iserald.
+
+## Casos límite
+- **Combate contra Aledra que empieza de día y se alarga**: sigue siendo no fatal, porque cuenta el Momento del inicio y el reloj está parado.
+- **Derrota contra un fatal con la misión del Ofomni activa**: game over; la partida termina.
+- **Grupo de reparep al que solo le queda uno**: el ataque conjunto es el de uno solo (casi siempre 1 de daño).
+- **"Ofrecer Luz" sobre un reparep con menos de 8 PV**: muere; el daño sobrante no pasa a otro.
+- **Grupo de 4 contra un adoc de nivel 1**: puede perder, pero los reparep no son fatales (provisional).
+
+## Criterios de éxito para playtest
+Propuestas, a confirmar con el dueño:
+- El jugador reconoce cada monstruo por su silueta (pregunta: "¿qué era eso?").
+- Antes de pelear contra un fatal, el jugador sabe que lo es (si se aprueba el aviso, #127).
+- Contra reparep, el jugador elige objetivo y nota que matar uno reduce el daño del grupo.
+- El dueño considera que los reparep "son débiles solos pero en grupo suman daños" (pregunta directa).
+
+## Decisiones a confirmar con el dueño
+- `fatal_at` por Momento, mirando el Momento del inicio del combate.
+- Fórmula del ataque conjunto (suma de ATQ, DEF restada una vez), selección de objetivo y Defender sobre todo el ataque.
+- Stats y XP de los reparep.
+- Reparep en la 0.3.0, no en la 0.2.0.
+- Aviso de "enemigo fatal" antes del combate (propuesta, #127).
+
+## Preguntas abiertas
+- Otros monstruos fatales, aviso previo, huir de un fatal, qué pasa tras un game over (#127).
+- Dónde y cuándo aparecen Aledra y los reparep en Aventura. ¿Los reparep son Únicos? ¿Guardan bordes, vagan por el Bosque o salen de noche? (#128)
+- Iserald en el juego (#103).
+- Aspecto y nombres de los Únicos comunes (#119).
