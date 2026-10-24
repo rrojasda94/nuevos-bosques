@@ -31,7 +31,7 @@ Si el Ofomni llega a la villa: "la misión falla y la villa queda dañada; la pa
 
 | Estado | Cuándo |
 |---|---|
-| `offered` | Al empezar la partida: el sfida espera en la plaza de la villa natal. La brújula apunta a él (`navegacion.md`). |
+| `offered` | Al empezar la partida: el sfida espera en la plaza de la villa natal. La brújula apunta a él (`navegacion.md`). **Confinamiento** (ver abajo): no se puede salir del Bosque natal hasta aceptar. |
 | `active` | Al hablar con el sfida (E) y aceptar. El Ofomni empieza a moverse. |
 | `completed` | Al vencer al Ofomni. |
 | `rewarded` | Al volver a hablar con el sfida (E) después de `completed`. Recompensa, una sola vez. |
@@ -127,6 +127,10 @@ Lectura de la 0.2.0 (dificultad **confirmada por el dueño**, "2 ok"): con nivel
 
 ## Casos límite
 - **El jugador no acepta la misión**: el Ofomni no se mueve. La brújula apunta al sfida.
+- **Confinamiento en la primera misión** (dueño, tras jugar: "en tu primera misión no puedes salir de tu bosque si no haz activado la mision los ofomni de tu bosque te capturan y te llevan hasta tu villa central nuevamente"; implementado, PR #39):
+  - Con la misión en `offered`, si el jugador se acerca a **3 casillas o menos** de la frontera de su Bosque natal, **2 Ofomni** del Bosque lo capturan y lo llevan a la **plaza de la villa**.
+  - Sin combate ni pérdidas.
+  - Al aceptar la misión, el confinamiento termina.
 - **El Ofomni entra en el Bosque donde está el jugador**: aparece en su chunk de entrada. Si el jugador está en otro chunk de ese Bosque, lo verá al entrar.
 - **El Ofomni pasa por Bosques ya abiertos o cerrados**: él no paga peajes ni abre bordes.
 - **El jugador está en el Bosque natal cuando entra el Ofomni**: `failed`. Aparece en el chunk de la villa y se puede pelear.
