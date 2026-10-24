@@ -42,7 +42,7 @@
     "per_d": 1
   },
   "bosque_memory": {
-    "$comment": "El Bosque recuerda (reglas del dueño 0.3): cada Botarramas vencido suma 1 de hostilidad a su Bosque. Peaje = 3 + d + hostility_toll x hostilidad, como mucho toll_max. vision_radius de sus Botarramas + hostility_vision x hostilidad, como mucho + vision_max_bonus. Relación (-relation_max .. relation_max): relation_per_kill por victoria, relation_per_payment al pagar (Luz, ofrenda o Ofrecer Luz en combate). Robo (p. ej. un fruto sin derecho, FruitRules): hostility_per_theft a la hostilidad y relation_per_theft a la relación. relation_per_fruit_taken_out: por cada fruto guardado que sacas de su Bosque de origen (una vez por salida). Provisionales: game-designer.",
+    "$comment": "El Bosque recuerda (reglas del dueño 0.3): cada Botarramas vencido suma 1 de hostilidad a su Bosque. Peaje = 3 + d + hostility_toll x hostilidad, como mucho toll_max. vision_radius de sus Botarramas + hostility_vision x hostilidad, como mucho + vision_max_bonus. Relación (-relation_max .. relation_max): relation_per_kill por victoria, relation_per_payment al pagar con Luz (o Ofrecer Luz en combate; con una ofrenda suma su valor, bloque bosque_relation). Robo (p. ej. un fruto sin derecho, FruitRules): hostility_per_theft a la hostilidad y relation_per_theft a la relación. relation_per_fruit_taken_out: por cada fruto guardado que sacas de su Bosque de origen (una vez por salida). Provisionales: game-designer.",
     "hostility_toll": 2,
     "toll_max": 10,
     "hostility_vision": 2,
@@ -53,6 +53,21 @@
     "relation_per_theft": -20,
     "relation_per_fruit_taken_out": -5,
     "relation_max": 100
+  },
+  "bosque_relation": {
+    "$comment": "Relación con cada Bosque (bosques-y-relacion.md, #134 y #135 confirmadas por el dueño). paid_riutash: pagar abre el paso hasta el riutash número actual + paid_riutash (2 = hasta el segundo riutash siguiente). permanent_at: con relación >= permanent_at el paso pagado es permanente. toll_factors: multiplicadores del peaje (con hostilidad y su tope) por relación, el primero que cumple min (>=) o max (<=); el peaje queda en 1 como mínimo. angry_candidate_at: con relación <= este valor el Bosque queda marcado como candidato a enojarse (lo usa el PR de estados). Suben la relación: per_mission (misión para el Bosque), per_defense (defenderlo de un incendio o un ataque) y per_nujio_rest (pasar el riutash refugiado a <= nujio_rest_radius casillas, Chebyshev, de su Nujio, o en la plaza de su villa). Dejar una ofrenda (ante el Nujio o como peaje) suma su valor en Luz. Provisionales: game-designer.",
+    "paid_riutash": 2,
+    "permanent_at": 60,
+    "toll_factors": [
+      { "min": 60, "factor": 0.5 },
+      { "min": 30, "factor": 0.75 },
+      { "max": -30, "factor": 1.5 }
+    ],
+    "angry_candidate_at": -50,
+    "per_mission": 25,
+    "per_defense": 15,
+    "per_nujio_rest": 5,
+    "nujio_rest_radius": 6
   },
   "victory_luz": 1,
   "defeat_luz_factor": 0.5,

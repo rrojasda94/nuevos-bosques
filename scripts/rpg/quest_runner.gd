@@ -91,7 +91,8 @@ func _on_npc_talked(npc_id: StringName) -> void:
 			if not AdventureRules.can_take_reward(data.get("reward", {})):
 				EventBus.notice_requested.emit(Texts.get_text("bag_full"))
 				return
-			AdventureRules.apply_quest_reward(QuestLogic.claim_reward(q, QUEST))
+			# La misión del sfida es para la villa natal: la relación con el Bosque natal sube.
+			AdventureRules.apply_quest_reward(QuestLogic.claim_reward(q, QUEST), _home)
 			QuestLogic.commit(QUEST, q, QuestLogic.COMPLETED)
 			EventBus.notice_requested.emit(Texts.get_text("fama_gained"))
 			_set_objective(Vector2i(-1, -1), "")

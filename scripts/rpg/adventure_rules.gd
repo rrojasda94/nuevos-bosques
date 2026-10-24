@@ -2,7 +2,10 @@ class_name AdventureRules
 extends RefCounted
 ## Reglas del Adoc fuera del combate (ADR 0009): Luz, PV, nivel y XP (progresion-adoc.md), peaje
 ## entre Bosques (con Luz o con una ofrenda, ofrendas-v1.md), memoria del Bosque (hostilidad y
-## relación: vencer a un Botarramas fuerza el Bosque sin abrirlo y encarece su peaje), Únicos (los Botarramas de borde),
+## relación: vencer a un Botarramas fuerza el Bosque sin abrirlo y encarece su peaje), relación con
+## cada Bosque (bosques-y-relacion.md: el pago caduca al segundo riutash salvo con amistad alta, la
+## relación multiplica el peaje y sube con ofrendas ante el Nujio, misiones, defensa y descansos junto
+## al Nujio), Únicos (los Botarramas de borde),
 ## combate de misión (Ofomni descarriado), resultado de un combate (con monstruos fatales según el Momento,
 ## monstruos.md), recompensa de misión, hallazgos en refugios, bolsa y equipo (el arma equipada
 ## suma ATQ), villa dañada, descanso en una villa y efecto del riutash (ADR 0012). Escribe en GameState y avisa por EventBus. Los
@@ -13,6 +16,8 @@ const SALT_BATTLE: int = 21
 const SALT_QUEST_BATTLE: int = 23
 const SALT_REFUGE_LOOT: int = 29
 const ADOC_ID: StringName = &"adoc"
+## Valor de GameState.open_until para un paso pagado que no caduca (amistad alta).
+const OPEN_PERMANENT: int = -1
 
 static var _balance: Dictionary = {}
 
@@ -175,17 +180,188 @@ static func relation_max() -> int:
 	return int(_memory().relation_max)
 
 
-## Suma `delta` a la relación con el Bosque, dentro de -relation_max .. relation_max.
+## Suma `delta` a la relación con el Bosque, dentro de -relation_max .. relation_max. Si el paso
+## está pagado, la amistad alta lo vuelve permanente y perderla le devuelve la caducidad (desde
+## ahora). Con la relación en angry_candidate_at o menos, el Bosque queda marcado como candidato a
+## enojarse (la marca no se borra).
 static func change_relation(bosque_id: int, delta: int) -> void:
-	GameState.bosque_relation[str(bosque_id)] = clampi(relation(bosque_id) + delta, -relation_max(), relation_max())
+	var value: int = clampi(relation(bosque_id) + delta, -relation_max(), relation_max())
+	GameState.bosque_relation[str(bosque_id)] = value
+	if is_open(bosque_id):
+		if value >= permanent_at():
+			GameState.open_until[str(bosque_id)] = OPEN_PERMANENT
+		elif is_open_permanent(bosque_id):
+			GameState.open_until[str(bosque_id)] = GameState.riutash_count + paid_riutash()
+	if value <= angry_candidate_at() and not GameState.angry_candidate.has(bosque_id):
+		GameState.angry_candidate.append(bosque_id)
+	EventBus.bosque_relation_changed.emit(bosque_id, value)
 
 
-## Peaje del Bosque a distancia d con su hostilidad: 3 + d + hostility_toll × hostilidad. La
-## hostilidad no lo sube por encima de toll_max (si la distancia ya lo supera, se queda en el de d).
+# --- Relación con cada Bosque (bosques-y-relacion.md, #134 y #135) ------------------------------
+
+static func _relation_cfg() -> Dictionary:
+	return balance().bosque_relation
+
+
+## Relación desde la que el paso pagado es permanente y el peaje más barato (amistad alta).
+static func permanent_at() -> int:
+	return int(_relation_cfg().permanent_at)
+
+
+## Riutash que dura un pago: abre hasta el riutash número actual + este.
+static func paid_riutash() -> int:
+	return int(_relation_cfg().paid_riutash)
+
+
+## Relación desde la que (hacia abajo) el Bosque queda marcado como candidato a enojarse.
+static func angry_candidate_at() -> int:
+	return int(_relation_cfg().angry_candidate_at)
+
+
+static func is_angry_candidate(bosque_id: int) -> bool:
+	return GameState.angry_candidate.has(bosque_id)
+
+
+## Multiplicador del peaje por la relación: el primero de toll_factors que cumple (1 si ninguno).
+static func relation_toll_factor(bosque_id: int) -> float:
+	var r: int = relation(bosque_id)
+	for f: Dictionary in _relation_cfg().toll_factors:
+		if (f.has("min") and r >= int(f.min)) or (f.has("max") and r <= int(f.max)):
+			return float(f.factor)
+	return 1.0
+
+
+## Peaje del Bosque a distancia d: 3 + d + hostility_toll × hostilidad (la hostilidad no lo sube por
+## encima de toll_max; si la distancia ya lo supera, se queda en el de d) y, sobre eso, el
+## multiplicador de la relación (redondeado, 1 como mínimo).
 static func toll_for(bosque_id: int, d: int) -> int:
 	var base: int = toll_cost(d)
 	var raised: int = base + int(_memory().hostility_toll) * hostility(bosque_id)
-	return maxi(base, mini(raised, int(_memory().toll_max)))
+	var with_hostility: int = maxi(base, mini(raised, int(_memory().toll_max)))
+	return maxi(1, roundi(with_hostility * relation_toll_factor(bosque_id)))
+
+
+## El paso pagado del Bosque sigue abierto (no cuenta el Bosque inicial, que siempre lo está).
+static func is_open(bosque_id: int) -> bool:
+	var key: String = str(bosque_id)
+	if bosque_id < 0 or not GameState.open_until.has(key):
+		return false
+	var until: int = int(GameState.open_until[key])
+	return until == OPEN_PERMANENT or GameState.riutash_count < until
+
+
+static func is_open_permanent(bosque_id: int) -> bool:
+	return GameState.open_until.has(str(bosque_id)) and int(GameState.open_until[str(bosque_id)]) == OPEN_PERMANENT
+
+
+## Riutash que faltan para que caduque el paso: 2 = hasta el segundo riutash, 1 = hasta el
+## próximo, OPEN_PERMANENT si no caduca y 0 si no está abierto.
+static func open_riutash_left(bosque_id: int) -> int:
+	if not is_open(bosque_id):
+		return 0
+	if is_open_permanent(bosque_id):
+		return OPEN_PERMANENT
+	return int(GameState.open_until[str(bosque_id)]) - GameState.riutash_count
+
+
+## Ids de los Bosques con el paso pagado y abierto ahora (sin el inicial).
+static func paid_bosques() -> Array[int]:
+	var out: Array[int] = []
+	for key: String in GameState.open_until:
+		if is_open(int(key)):
+			out.append(int(key))
+	return out
+
+
+## Borra los pasos caducados (tras un riutash): cada Bosque vuelve a cerrado, o a forzado si lo
+## estaba, y sus Botarramas vuelven a estar activos. Avisa con bosque_toll_expired. Devuelve sus ids.
+static func expire_tolls() -> Array[int]:
+	var expired: Array[int] = []
+	for key: String in GameState.open_until.keys():
+		if not is_open(int(key)):
+			GameState.open_until.erase(key)
+			expired.append(int(key))
+	for id: int in expired:
+		EventBus.bosque_toll_expired.emit(id)
+	return expired
+
+
+## Deja una ofrenda de la bolsa ante el Nujio del Bosque, sin pagar nada con ella: sale de la
+## bolsa, la relación sube su valor en Luz y la hostilidad baja 1 (sin bajar de 0), como al pagar
+## con una ofrenda ("el bosque olvida con ofrendas"). false si no es una ofrenda de la bolsa.
+static func leave_ofrenda(bosque_id: int, item_id: StringName) -> bool:
+	if bosque_id < 0 or not Ofrendas.is_ofrenda(item_id) or InventoryLogic.count(GameState.bag, item_id) <= 0:
+		return false
+	InventoryLogic.remove(GameState.bag, item_id)
+	_ofrenda_given(bosque_id, Items.luz_of(item_id))
+	EventBus.bosque_ofrenda_left.emit(bosque_id, item_id)
+	return true
+
+
+## Tipos de ofrenda de la bolsa, uno por id, en el orden de las casillas (submenú del Nujio).
+static func bag_ofrenda_ids() -> Array[StringName]:
+	var out: Array[StringName] = []
+	for item: Dictionary in bag_ofrendas():
+		var id: StringName = StringName(str(item.id))
+		if not out.has(id):
+			out.append(id)
+	return out
+
+
+## Opción del submenú del Nujio: "<ofrenda> (<valor> Luz) ×<cantidad>".
+static func nujio_ofrenda_option(item_id: StringName) -> String:
+	var text: String = Texts.get_text("nujio_ofrenda_option") % [Ofrendas.display_name(item_id), Items.luz_of(item_id)]
+	var qty: int = InventoryLogic.count(GameState.bag, item_id)
+	if qty > 1:
+		text += Texts.get_text("nujio_ofrenda_qty") % qty
+	return text
+
+
+static func _ofrenda_given(bosque_id: int, value: int) -> void:
+	change_relation(bosque_id, value)
+	if hostility(bosque_id) > 0:
+		GameState.bosque_hostility[str(bosque_id)] = hostility(bosque_id) - 1
+
+
+## Misión cumplida para el Bosque: relación + per_mission. Hoy, la del sfida (Bosque natal).
+static func reward_bosque_mission(bosque_id: int) -> void:
+	change_relation(bosque_id, int(_relation_cfg().per_mission))
+
+
+## Defender el Bosque de un incendio o un ataque: relación + per_defense. Llegará con los estados.
+static func reward_bosque_defense(bosque_id: int) -> void:
+	change_relation(bosque_id, int(_relation_cfg().per_defense))
+
+
+## Distancia (Chebyshev) de una casilla a la huella del Nujio del chunk (-1 si no hay Nujio).
+static func distance_to_nujio(chunk: ChunkData, cell: Vector2i) -> int:
+	var rect: Rect2i = chunk.nujio_rect
+	if rect.size.x <= 0:
+		return -1
+	var dx: int = maxi(0, maxi(rect.position.x - cell.x, cell.x - (rect.end.x - 1)))
+	var dy: int = maxi(0, maxi(rect.position.y - cell.y, cell.y - (rect.end.y - 1)))
+	return maxi(dx, dy)
+
+
+## Lugar de descanso junto al Nujio: a nujio_rest_radius casillas o menos de su huella, o la plaza
+## de su villa (en un chunk con Nujio).
+static func is_near_nujio(chunk: ChunkData, cell: Vector2i) -> bool:
+	if chunk == null or not ChunkData.in_bounds(cell):
+		return false
+	var d: int = distance_to_nujio(chunk, cell)
+	if d < 0:
+		return false
+	return d <= int(_relation_cfg().nujio_rest_radius) or (chunk.has_villa and chunk.get_tile(cell) == ChunkData.Tile.PLAZA)
+
+
+## El riutash pasa con el Adoc en (chunk, cell) del Bosque `bosque_id`: si estaba refugiado junto
+## a su Nujio, relación + per_nujio_rest (una vez por riutash: se llama una vez en cada uno).
+## Devuelve si sumó.
+static func riutash_near_nujio(chunk: ChunkData, cell: Vector2i, bosque_id: int, sheltered: bool) -> bool:
+	if not sheltered or bosque_id < 0 or not is_near_nujio(chunk, cell):
+		return false
+	change_relation(bosque_id, int(_relation_cfg().per_nujio_rest))
+	return true
 
 
 ## Radio de visión de un Botarramas del Bosque: el de sus datos + hostility_vision × hostilidad,
@@ -263,37 +439,42 @@ static func is_passable(bosque_id: int, home: int) -> bool:
 	return is_paid(bosque_id, home) or is_forced(bosque_id)
 
 
-## El Bosque inicial o uno con el peaje pagado: sus Botarramas quedan pasivos.
+## El Bosque inicial o uno con el peaje pagado y sin caducar: sus Botarramas quedan pasivos.
 static func is_paid(bosque_id: int, home: int) -> bool:
-	return bosque_id >= 0 and (bosque_id == home or GameState.open_bosques.has(bosque_id))
+	return bosque_id >= 0 and (bosque_id == home or is_open(bosque_id))
 
 
-## Forzado: se venció a alguno de sus Botarramas sin pagar. Se cruza, pero los demás siguen activos.
+## Forzado: se venció a alguno de sus Botarramas sin pagar (o el pago ha caducado). Se cruza, pero
+## los demás siguen activos.
 static func is_forced(bosque_id: int) -> bool:
-	return bosque_id >= 0 and GameState.forced_bosques.has(bosque_id)
+	return bosque_id >= 0 and GameState.forced_bosques.has(bosque_id) and not is_open(bosque_id)
 
 
-## Marca el Bosque como pagado (deja de estar forzado).
+## Abre el paso del Bosque: hasta el riutash número actual + paid_riutash, o para siempre con
+## amistad alta (relación >= permanent_at). La marca de forzado se queda para cuando caduque.
 static func open_bosque(bosque_id: int) -> void:
-	if not GameState.open_bosques.has(bosque_id):
-		GameState.open_bosques.append(bosque_id)
-	GameState.forced_bosques.erase(bosque_id)
+	if relation(bosque_id) >= permanent_at():
+		GameState.open_until[str(bosque_id)] = OPEN_PERMANENT
+	else:
+		GameState.open_until[str(bosque_id)] = GameState.riutash_count + paid_riutash()
 
 
-## Pago del peaje (Luz, ofrenda u Ofrecer Luz en combate): abre el Bosque y mejora la relación.
-## "El bosque olvida con ofrendas" (dueño, #147): pagar con una ofrenda baja además 1 la hostilidad
-## (sin bajar de 0); pagar con Luz no la borra.
-static func _paid(bosque_id: int, with_ofrenda: bool) -> void:
+## Pago del peaje (Luz, ofrenda u Ofrecer Luz en combate): mejora la relación y abre el Bosque
+## (después: si la relación llega a la amistad alta, el paso es permanente). Con Luz, la relación
+## sube relation_per_payment. Con una ofrenda (`ofrenda_value` >= 0) sube su valor y la hostilidad
+## baja 1, sin bajar de 0 ("el bosque olvida con ofrendas", dueño, #147).
+static func _paid(bosque_id: int, ofrenda_value: int = -1) -> void:
+	if ofrenda_value >= 0:
+		_ofrenda_given(bosque_id, ofrenda_value)
+	else:
+		change_relation(bosque_id, int(_memory().relation_per_payment))
 	open_bosque(bosque_id)
-	change_relation(bosque_id, int(_memory().relation_per_payment))
-	if with_ofrenda and hostility(bosque_id) > 0:
-		GameState.bosque_hostility[str(bosque_id)] = hostility(bosque_id) - 1
 
 
 ## Un Botarramas del Bosque ha sido vencido: el Bosque queda forzado (si no estaba pagado), lo
 ## recuerda (+1 de hostilidad) y la relación baja.
 static func guardian_defeated(bosque_id: int) -> void:
-	if not GameState.open_bosques.has(bosque_id) and not GameState.forced_bosques.has(bosque_id):
+	if not is_open(bosque_id) and not GameState.forced_bosques.has(bosque_id):
 		GameState.forced_bosques.append(bosque_id)
 	GameState.bosque_hostility[str(bosque_id)] = hostility(bosque_id) + 1
 	change_relation(bosque_id, int(_memory().relation_per_kill))
@@ -314,7 +495,7 @@ static func pay_toll(bosque_id: int, cost: int) -> bool:
 	if GameState.luz < cost:
 		return false
 	set_luz(GameState.luz - cost)
-	_paid(bosque_id, false)
+	_paid(bosque_id)
 	return true
 
 
@@ -330,7 +511,7 @@ static func pay_toll_with_ofrenda(bosque_id: int, cost: int, index: int) -> bool
 		return false
 	InventoryLogic.remove(GameState.bag, StringName(str(ofrendas[index].id)))
 	set_luz(GameState.luz - Ofrendas.luz_needed(value, cost))
-	_paid(bosque_id, true)
+	_paid(bosque_id, value)
 	return true
 
 
@@ -356,7 +537,10 @@ static func start_battle(bosque_id: int, d: int, monster_id: StringName = &"bota
 static func finish_battle(logic: BattleLogic, bosque_id: int) -> StringName:
 	var outcome: StringName = _apply_result(logic)
 	if outcome == &"appeased":
-		_paid(bosque_id, logic.ofrenda_index >= 0)
+		var value: int = -1
+		if logic.ofrenda_index >= 0 and logic.ofrenda_index < logic.ofrendas.size():
+			value = int(logic.ofrendas[logic.ofrenda_index].luz)
+		_paid(bosque_id, value)
 	elif outcome == &"victory":
 		guardian_defeated(bosque_id)
 	EventBus.battle_ended.emit(bosque_id, outcome)
@@ -439,8 +623,12 @@ static func can_take_reward(reward: Dictionary) -> bool:
 
 ## Recompensa de una misión (mision-ofomni.md): Luz al tope, una ofrenda a la bolsa, XP y fama.
 ## `reward` es el bloque "reward" del JSON de la misión (el valor en Luz sale del catálogo). Si la
-## XP sube de nivel, lo anuncia en el HUD (fuera del combate no hay narración).
-static func apply_quest_reward(reward: Dictionary) -> void:
+## XP sube de nivel, lo anuncia en el HUD (fuera del combate no hay narración). `bosque_id`: el
+## Bosque para el que era la misión (la del sfida, el natal), que sube la relación con él
+## (reward_bosque_mission); -1 = ninguno.
+static func apply_quest_reward(reward: Dictionary, bosque_id: int = -1) -> void:
+	if bosque_id >= 0:
+		reward_bosque_mission(bosque_id)
 	if bool(reward.get("refill_luz_to_max", false)):
 		set_luz(luz_max())
 	if reward.has("ofrenda"):

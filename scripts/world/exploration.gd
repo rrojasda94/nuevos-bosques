@@ -5,8 +5,9 @@ extends Node2D
 ## el paso abierto; en el borde de uno cerrado se emite bosque_border_reached y el menú del borde
 ## (scenes/rpg/crossing.tscn, ADR 0009) decide si se cruza. Los chunks se regeneran desde la seed;
 ## la caché es solo para no recalcular durante la sesión.
-## Con interact (E) se habla con los NPC, se leen letreros, se examinan refugios y se toma el
-## fruto de los frutales (Interaction, FruitRules).
+## Con interact (E) se habla con los NPC, se leen letreros, se examinan refugios, se toma el
+## fruto de los frutales (Interaction, FruitRules) y se dejan ofrendas ante el Nujio (relación con
+## el Bosque, bosques-y-relacion.md). En cada riutash: descanso junto al Nujio y caducidad del peaje.
 ## Monstruos (MonsterField): los Botarramas de los tramos de frontera interceptan al jugador y su
 ## encuentro abre el menú del borde; el borde cerrado lo abre igual si nadie le persigue (red de
 ## seguridad). El Ofomni de la misión (QuestRunner) aparece en su chunk y su encuentro es el
@@ -19,6 +20,9 @@ const TRANSITION_TIME: float = 0.2
 const NEIGHBOUR_MARGIN: int = 12
 ## Dónde espera el Ofomni en la villa natal tras llegar: casillas al sur del hub.
 const OFOMNI_VILLA_OFFSET := Vector2i(0, 12)
+## Espera del aviso de relación y peaje tras el riutash: después del cambio de Momento y del aviso
+## del Nujio que oye al Ofomni (QuestRunner), para no taparlos.
+const RIUTASH_RELATION_NOTICE_DELAY: float = 6.4
 
 var _chunk: ChunkData
 var _cache: Dictionary = {}
@@ -258,6 +262,40 @@ func _interact() -> void:
 			_dialogue.show_lines(_refuge_lines())
 		Interaction.Kind.FRUIT_TREE:
 			_interact_fruit_tree(target.cell)
+		Interaction.Kind.NUJIO:
+			_interact_nujio()
+
+
+## Nujio (bosques-y-relacion.md): "Dejar una ofrenda" abre un submenú con las ofrendas de la bolsa
+## (una opción por tipo). Sin ofrendas, solo lo dice.
+func _interact_nujio() -> void:
+	if AdventureRules.bag_ofrenda_ids().is_empty():
+		_dialogue.show_lines([Texts.get_text("nujio_no_ofrendas")])
+		return
+	_dialogue.choice.connect(_on_nujio_choice, CONNECT_ONE_SHOT)
+	_dialogue.ask(Texts.get_text("nujio_prompt"), [Texts.get_text("nujio_leave_ofrenda"), Texts.get_text("nujio_back")])
+
+
+func _on_nujio_choice(index: int) -> void:
+	if index != 0:
+		return
+	var ids: Array[StringName] = AdventureRules.bag_ofrenda_ids()
+	var options: Array = ids.map(func(id: StringName) -> String: return AdventureRules.nujio_ofrenda_option(id))
+	options.append(Texts.get_text("nujio_back"))
+	_dialogue.choice.connect(_on_nujio_ofrenda_choice.bind(ids), CONNECT_ONE_SHOT)
+	_dialogue.ask(Texts.get_text("nujio_ofrenda_prompt"), options)
+
+
+func _on_nujio_ofrenda_choice(index: int, ids: Array[StringName]) -> void:
+	if index < 0 or index >= ids.size():
+		return
+	var bosque_id: int = _bosques.bosque_at(_chunk.coord)
+	if not AdventureRules.leave_ofrenda(bosque_id, ids[index]):
+		return
+	_dialogue.show_lines([
+		Texts.get_text("nujio_ofrenda_left") % Ofrendas.display_name(ids[index]),
+		Texts.get_text("nujio_relation_now") % AdventureRules.relation(bosque_id),
+	])
 
 
 ## Frutal (FruitRules): sin fruto, avisa; con fruto, pregunta "Comerlo", "Guardarlo" (solo si
@@ -514,11 +552,33 @@ func _set_moonlight(value: float) -> void:
 
 func _on_riutash_passed(sheltered: bool) -> void:
 	AdventureRules.apply_riutash(sheltered)
+	_riutash_relation(sheltered)
 	FruitRules.regrow()
 	_refresh_fruit_trees()
 	var tween: Tween = create_tween()
 	tween.tween_property(_flash, "color:a", FLASH_ALPHA, FLASH_IN_TIME)
 	tween.tween_property(_flash, "color:a", 0.0, FLASH_OUT_TIME)
+
+
+## Relación y peaje en el riutash: refugiado junto al Nujio del Bosque, la relación sube; los pasos
+## pagados que caducan se cierran (sus Botarramas vuelven a vigilar). Lo avisa en el HUD.
+func _riutash_relation(sheltered: bool) -> void:
+	if _chunk == null or _bosques == null:
+		return
+	var bosque_id: int = _bosques.bosque_at(_chunk.coord)
+	var lines: PackedStringArray = []
+	if AdventureRules.riutash_near_nujio(_chunk, _player.cell, bosque_id, sheltered):
+		lines.append(Texts.get_text("nujio_rest_relation"))
+	var expired: Array[int] = AdventureRules.expire_tolls()
+	if expired.has(bosque_id):
+		lines.append(Texts.get_text("toll_expired_here"))
+	elif not expired.is_empty():
+		lines.append(Texts.get_text("toll_expired"))
+	if lines.is_empty():
+		return
+	# Sin await: si la escena se libera antes (cambio de partida, tests), el aviso no la necesita.
+	get_tree().create_timer(RIUTASH_RELATION_NOTICE_DELAY).timeout.connect(
+		Callable(EventBus, &"emit_signal").bind(&"notice_requested", "\n".join(lines)))
 
 
 func _on_momento_changed(momento: StringName) -> void:

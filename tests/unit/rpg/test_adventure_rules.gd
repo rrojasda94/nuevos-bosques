@@ -28,7 +28,7 @@ func after_all() -> void:
 func test_new_game_starts_with_balance_values() -> void:
 	assert_eq(GameState.hp, int(_b.levels.table[0].max_hp))
 	assert_eq(GameState.luz, int(_b.adoc.start_luz))
-	assert_eq(GameState.open_bosques, [] as Array[int])
+	assert_eq(GameState.open_until, {})
 
 
 func test_spec_values_in_balance_json() -> void:
@@ -92,7 +92,7 @@ func test_victory_restores_luz_bonus_keeps_hp_and_forces() -> void:
 	assert_eq(AdventureRules.finish_battle(logic, target), &"victory")
 	assert_eq(GameState.hp, 17, "los PV se mantienen entre combates")
 	assert_eq(GameState.luz, 4 + int(_b.victory_luz))
-	assert_false(GameState.open_bosques.has(target), "vencer no paga el Bosque")
+	assert_false(AdventureRules.is_open(target), "vencer no paga el Bosque")
 	assert_true(GameState.forced_bosques.has(target), "queda forzado")
 	assert_true(AdventureRules.is_passable(target, _home))
 
@@ -119,7 +119,7 @@ func test_defeat_restores_hp_halves_luz_and_keeps_closed() -> void:
 	assert_eq(AdventureRules.finish_battle(logic, target), &"defeat")
 	assert_eq(GameState.hp, AdventureRules.max_hp())
 	assert_eq(GameState.luz, 3, "mitad de 7, redondeando hacia abajo")
-	assert_false(GameState.open_bosques.has(target))
+	assert_false(AdventureRules.is_open(target))
 
 
 func test_fled_keeps_damage_taken_and_unico_returns_at_full_hp() -> void:
@@ -130,7 +130,7 @@ func test_fled_keeps_damage_taken_and_unico_returns_at_full_hp() -> void:
 	first.result = BattleLogic.Result.FLED
 	assert_eq(AdventureRules.finish_battle(first, target), &"fled")
 	assert_eq(GameState.hp, 12)
-	assert_false(GameState.open_bosques.has(target), "el paso sigue cerrado")
+	assert_false(AdventureRules.is_open(target), "el paso sigue cerrado")
 	var second: BattleLogic = AdventureRules.start_battle(target, 2)
 	assert_eq(second.unico_hp, second.unico_max_hp, "huir no conserva el daño hecho al Único")
 	assert_eq(second.adoc_hp, 12)
@@ -152,7 +152,7 @@ func test_open_passage_luz_and_hp_survive_save_and_load() -> void:
 	assert_eq(SaveManager.save_game(SAVE_SLOT), OK)
 	GameState.new_game(1)
 	assert_eq(SaveManager.load_game(SAVE_SLOT), OK)
-	assert_eq(GameState.open_bosques, [target] as Array[int])
+	assert_eq(AdventureRules.paid_bosques(), [target] as Array[int])
 	assert_eq(GameState.luz, 6)
 	assert_eq(GameState.hp, 21)
 	assert_eq(GameState.battle_attempts, { "5": 2 })
@@ -168,7 +168,7 @@ func test_v2_save_loads_with_adventure_defaults() -> void:
 	GameState.from_dict(old)
 	assert_eq(GameState.luz, AdventureRules.start_luz())
 	assert_eq(GameState.hp, AdventureRules.max_hp())
-	assert_eq(GameState.open_bosques, [] as Array[int])
+	assert_eq(GameState.open_until, {})
 
 
 func _nujio_chunk_of(with_villa: bool) -> ChunkData:

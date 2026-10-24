@@ -225,7 +225,7 @@ func test_save_v11_round_trip() -> void:
 	assert_eq(GameState.bag, bag)
 	assert_eq(GameState.equipped, equipped)
 	assert_false(AdventureRules.is_armed(), "la lanza sigue guardada")
-	assert_eq(int(GameState.to_dict().save_version), 11)
+	assert_eq(int(GameState.to_dict().save_version), GameState.SAVE_VERSION)
 
 
 func test_load_sanitizes_bag_and_equipment() -> void:

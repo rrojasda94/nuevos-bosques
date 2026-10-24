@@ -192,11 +192,11 @@ func test_quest_battle_uses_its_own_attempts_and_completes_on_victory() -> void:
 	assert_eq(logic.special_every, 3)
 	assert_eq(int(GameState.quests[Q].battle_attempts), 1)
 	assert_eq(GameState.battle_attempts, {}, "no usa los intentos por Bosque")
-	var opened: Array[int] = GameState.open_bosques.duplicate()
+	var opened: Dictionary = GameState.open_until.duplicate()
 	logic.result = BattleLogic.Result.VICTORY
 	assert_eq(AdventureRules.finish_quest_battle(logic, Q), &"victory")
 	assert_eq(QuestLogic.state_of(GameState.quests[Q]), QuestLogic.COMPLETED)
-	assert_eq(GameState.open_bosques, opened, "no abre Bosques")
+	assert_eq(GameState.open_until, opened, "no abre Bosques")
 	assert_eq(GameState.xp, 4 + 3 * d, "XP de la victoria")
 
 

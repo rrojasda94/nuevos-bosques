@@ -150,7 +150,7 @@ func _on_canvas_draw() -> void:
 		PixelIcons.draw(_canvas, PixelIcons.REFUGE, _cell_rect(c).position + Vector2(CELL - 6, CELL - 5), REFUGE_COLOR)
 	for c: Vector2i in MapLogic.visible_villas(_bosques, explored):
 		PixelIcons.draw_centered(_canvas, PixelIcons.HOUSE, _cell_center(c), VILLA_COLOR)
-	for m: Dictionary in MapLogic.visible_monsters(_bosques, GameState.seen_monsters, GameState.open_bosques):
+	for m: Dictionary in MapLogic.visible_monsters(_bosques, GameState.seen_monsters, AdventureRules.paid_bosques()):
 		PixelIcons.draw(_canvas, PixelIcons.MONSTER, _cell_rect(m.chunk).position,
 				MONSTER_PASSIVE_COLOR if m.passive else MONSTER_COLOR)
 	var home: Vector2i = MapLogic.home_villa(_bosques)
