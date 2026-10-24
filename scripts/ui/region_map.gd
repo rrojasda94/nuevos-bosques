@@ -1,8 +1,9 @@
 extends CanvasLayer
 ## Mapa de la región (tecla M, navegacion.md). Pausa el árbol (y con él WorldClock) y muestra la
 ## rejilla de chunks: los explorados con el color de hoja de su Bosque y el resto en niebla. Encima,
-## los caminos principales vistos, la villa natal, las villas y refugios vistos, el objetivo (si lo
-## hay) y el jugador, que parpadea. Se cierra con M o Esc. Este nodo sigue activo en pausa
+## los caminos principales vistos, la villa natal, las villas y refugios vistos, los Botarramas
+## vistos (en su última posición; grises si su Bosque está abierto), el objetivo (si lo hay) y el
+## jugador, que parpadea. Se cierra con M o Esc. Este nodo sigue activo en pausa
 ## (process_mode ALWAYS). Solo lee GameState; qué se ve lo decide MapLogic.
 
 ## Lado de cada celda (un chunk) en píxeles. La región de 12×16 chunks ocupa 120×160.
@@ -18,6 +19,8 @@ const VILLA_COLOR := Color("c0cbdc")
 const REFUGE_COLOR := Color("b86f50")
 const PLAYER_COLOR := Color("e43b44")
 const OBJECTIVE_COLOR := Color("f6757a")
+const MONSTER_COLOR := Color("b55088")
+const MONSTER_PASSIVE_COLOR := Color("8b9bb4")
 
 var _bosques: BosqueMap
 var _blink_on: bool = true
@@ -102,6 +105,8 @@ func _build_legend() -> void:
 		{ "icon": PixelIcons.PLAYER, "color": PLAYER_COLOR, "text": Texts.get_text("map_legend_player") },
 		{ "icon": [] as Array[String], "color": FOG_COLOR, "text": Texts.get_text("map_legend_fog") },
 	]
+	if not GameState.seen_monsters.is_empty():
+		_legend.append({ "icon": PixelIcons.MONSTER, "color": MONSTER_COLOR, "text": Texts.get_text("map_legend_botarramas") })
 	if GameState.has_objective():
 		var label: String = GameState.objective_label
 		_legend.append({ "icon": PixelIcons.OBJECTIVE, "color": OBJECTIVE_COLOR,
@@ -145,6 +150,9 @@ func _on_canvas_draw() -> void:
 		PixelIcons.draw(_canvas, PixelIcons.REFUGE, _cell_rect(c).position + Vector2(CELL - 6, CELL - 5), REFUGE_COLOR)
 	for c: Vector2i in MapLogic.visible_villas(_bosques, explored):
 		PixelIcons.draw_centered(_canvas, PixelIcons.HOUSE, _cell_center(c), VILLA_COLOR)
+	for m: Dictionary in MapLogic.visible_monsters(_bosques, GameState.seen_monsters, GameState.open_bosques):
+		PixelIcons.draw(_canvas, PixelIcons.MONSTER, _cell_rect(m.chunk).position,
+				MONSTER_PASSIVE_COLOR if m.passive else MONSTER_COLOR)
 	var home: Vector2i = MapLogic.home_villa(_bosques)
 	if home.x >= 0:
 		PixelIcons.draw_centered(_canvas, PixelIcons.HOUSE, _cell_center(home), HOME_COLOR)

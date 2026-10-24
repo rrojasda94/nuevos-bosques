@@ -79,6 +79,25 @@ static func visible_villas(bosques: BosqueMap, explored: Array[Vector2i]) -> Arr
 	return out
 
 
+## Botarramas vistos (GameState.seen_monsters), en su última posición vista: lista de
+## { "chunk": Vector2i, "passive": bool } (passive = su Bosque ya está abierto). Varios en el mismo
+## chunk se dibujan una vez; si alguno sigue activo, la marca es activa.
+static func visible_monsters(bosques: BosqueMap, seen: Dictionary, open_bosques: Array[int]) -> Array[Dictionary]:
+	var by_chunk: Dictionary = {}
+	for key: Variant in seen:
+		var e: Dictionary = seen[key]
+		var c: Vector2i = GameState._to_vector2i(e.get("chunk", []), Vector2i(-1, -1))
+		if bosques.bosque_at(c) < 0:
+			continue
+		var bosque_id: int = int(e.get("bosque_id", -1))
+		var passive: bool = bosque_id == bosques.home_bosque or open_bosques.has(bosque_id)
+		by_chunk[c] = bool(by_chunk.get(c, true)) and passive
+	var out: Array[Dictionary] = []
+	for c: Vector2i in by_chunk:
+		out.append({ "chunk": c, "passive": by_chunk[c] })
+	return out
+
+
 ## Chunk de la villa natal (siempre se muestra en el mapa), o (-1, -1) si no hay.
 static func home_villa(bosques: BosqueMap) -> Vector2i:
 	if bosques.home_bosque < 0:

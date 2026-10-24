@@ -111,3 +111,56 @@ func test_flee_is_deterministic_and_about_75_percent() -> void:
 			assert_eq(ea[0].kind, &"flee_fail")
 			assert_eq(ea[1].kind, &"unico_attack", "si fallas, el Único ataca")
 	assert_between(fled, 700, 800)
+
+
+# --- Ataque especial cada N ataques (Latigazo múltiple del Ofomni, mision-ofomni.md) ---
+
+func _whipper(rng_seed: int) -> BattleLogic:
+	var unico: Dictionary = { "name": "Ofomni", "max_hp": 999, "atk": 8, "def": 3, "special_every": 3, "special_factor": 3.0 }
+	var logic := BattleLogic.new(BALANCE, 30, 10, unico, rng_seed)
+	logic.adoc_hp = 999
+	return logic
+
+
+## Tirada del 3.er ataque del rival: antes van 2 turnos de 2 tiradas y, si el Adoc ataca en el
+## tercero, la suya.
+func _third_hit_raw(rng_seed: int, adoc_attacks_third: bool) -> int:
+	var mirror := RandomNumberGenerator.new()
+	mirror.seed = rng_seed
+	for i in 4 + (1 if adoc_attacks_third else 0):
+		mirror.randi_range(-1, 2)
+	return BattleLogic.attack_damage(8, 3, mirror.randi_range(-1, 2), 1)
+
+
+func test_special_attack_every_third_attack_with_warning_before() -> void:
+	assert_true(BattleLogic.is_special_attack(3, 3))
+	assert_false(BattleLogic.is_special_attack(2, 3))
+	assert_false(BattleLogic.is_special_attack(3, 0), "0 = sin especial")
+	var a := _whipper(5)
+	var kinds: Array = []
+	for turn in 6:
+		var events: Array[Dictionary] = a.play_turn(BattleLogic.Action.ATTACK)
+		kinds.append(events.map(func(e: Dictionary) -> StringName: return e.kind))
+	assert_eq(kinds[0], [&"attack", &"unico_attack"])
+	assert_eq(kinds[1], [&"attack", &"unico_attack", &"special_warning"], "se anuncia en el turno anterior")
+	assert_eq(kinds[2], [&"attack", &"unico_special"])
+	assert_eq(kinds[3], [&"attack", &"unico_attack"])
+	assert_eq(kinds[4], [&"attack", &"unico_attack", &"special_warning"])
+	assert_eq(kinds[5], [&"attack", &"unico_special"])
+
+
+func test_special_attack_triples_damage_and_defend_halves_it() -> void:
+	for s in 40:
+		var a := _whipper(s)
+		a.play_turn(BattleLogic.Action.ATTACK)
+		a.play_turn(BattleLogic.Action.ATTACK)
+		var hit: Dictionary = a.play_turn(BattleLogic.Action.ATTACK)[1]
+		assert_eq(hit.kind, &"unico_special")
+		assert_eq(hit.amount, _third_hit_raw(s, true) * 3, "x3 de daño")
+		assert_false(hit.defended)
+		var b := _whipper(s)
+		b.play_turn(BattleLogic.Action.ATTACK)
+		b.play_turn(BattleLogic.Action.ATTACK)
+		var guarded: Dictionary = b.play_turn(BattleLogic.Action.DEFEND)[1]
+		assert_eq(guarded.amount, ceili(_third_hit_raw(s, false) * 3 * 0.5), "Defender lo deja en la mitad (x1,5)")
+		assert_true(guarded.defended)

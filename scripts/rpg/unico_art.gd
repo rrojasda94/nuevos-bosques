@@ -1,15 +1,12 @@
 class_name UnicoArt
 extends RefCounted
-## Placeholder de los Únicos (ADR 0009, v1.1): monstruos dibujados por código con la combinación de
-## colores de su Bosque (hojas y tronco) y un aura. El tipo de monstruo se elige de forma
-## determinista por seed + id del Bosque, sin depender de la silueta del árbol.
+## Placeholder de los monstruos (ADR 0009, v1.1): dibujados por código con la combinación de
+## colores de su Bosque (hojas y tronco) y un aura. Los guardianes de borde son siempre Botarramas
+## (monstruos.md: ave sin plumas que renquea) y el Ofomni de la misión es el ojo con tentáculos
+## (EYES). El resto de siluetas quedan para monstruos futuros.
 ## Lo sustituirá el arte de pixel-artist; los nombres reales son de narrative-writer.
 
-enum Kind { QUADRUPED, SERPENT, HORNED, EYES, BIRD }
-## Nombre visible por tipo (índice = Kind). Aledra y Ofomni vienen del glosario §3; Iserald se reserva
-## para el Único que sale del propio Nujio. ponytail: "Ofomni <descriptor>" hasta que el dueño nombre cada tipo.
-const KIND_NAMES: Array[String] = ["Ofomni cuadrúpedo", "Aledra", "Ofomni cornudo", "Ofomni de muchos ojos", "Ofomni alado"]
-const SALT_KIND: int = 22
+enum Kind { QUADRUPED, SERPENT, HORNED, EYES, BIRD, BOTARRAMAS }
 const AURA := Color("fee761")
 
 ## Ojos por tipo: [u, v, radio], en fracciones del tamaño.
@@ -19,6 +16,7 @@ const EYES: Array = [
 	[[0.45, 0.22, 0.035], [0.55, 0.22, 0.035]],
 	[[0.38, 0.38, 0.06], [0.6, 0.36, 0.075], [0.48, 0.53, 0.05], [0.67, 0.53, 0.04], [0.31, 0.55, 0.04], [0.5, 0.24, 0.04]],
 	[[0.46, 0.28, 0.03], [0.54, 0.28, 0.03]],
+	[[0.3, 0.19, 0.035]],
 ]
 ## Colmillos por tipo: [u, v] (punta hacia abajo). La boca es una línea que los une.
 const FANGS: Array = [
@@ -27,15 +25,8 @@ const FANGS: Array = [
 	[[0.46, 0.29], [0.54, 0.29]],
 	[[0.41, 0.67], [0.5, 0.68], [0.59, 0.67]],
 	[],
+	[],
 ]
-
-
-static func kind_for(seed_value: int, bosque_id: int) -> Kind:
-	return (ChunkGenerator.hash_ints([seed_value, bosque_id, SALT_KIND]) % Kind.size()) as Kind
-
-
-static func display_name(kind: Kind) -> String:
-	return KIND_NAMES[kind]
 
 
 ## Monstruo de `px` x `px` píxeles: cuerpo con los colores del Bosque, contorno, ojos, colmillos y
@@ -135,6 +126,19 @@ static func _body(kind: Kind, p: Vector2) -> int:
 					return 2 if p.y < top + 0.05 else 1
 			if p.y > 0.72 and p.y < 0.82 and w < 0.03 + (p.y - 0.72) * 0.8:
 				return 2
+		Kind.BOTARRAMAS:
+			# Pico, patas (la derecha doblada: renquea) y muñón de cola en color tronco.
+			if _seg(p, Vector2(0.24, 0.21), Vector2(0.08, 0.26)) < 0.03 					or _seg(p, Vector2(0.44, 0.7), Vector2(0.44, 0.92)) < 0.025 					or _seg(p, Vector2(0.38, 0.92), Vector2(0.5, 0.92)) < 0.02 					or _seg(p, Vector2(0.6, 0.7), Vector2(0.7, 0.8)) < 0.025 					or _seg(p, Vector2(0.7, 0.8), Vector2(0.64, 0.87)) < 0.025 					or _seg(p, Vector2(0.72, 0.5), Vector2(0.84, 0.4)) < 0.03:
+				return 3
+			# Cabeza y cuello pelados, en el color claro del Bosque.
+			if _ellipse(p, Vector2(0.31, 0.2), Vector2(0.09, 0.08)) or _seg(p, Vector2(0.38, 0.48), Vector2(0.31, 0.25)) < 0.045:
+				return 2
+			# Muñón de ala, oscuro.
+			if _ellipse(p, Vector2(0.56, 0.5), Vector2(0.11, 0.06)):
+				return 1
+			# Cuerpo desplumado: piel clara con granos oscuros.
+			if _ellipse(p, Vector2(0.52, 0.56), Vector2(0.22, 0.16)):
+				return 1 if fmod(p.x * 17.0, 1.0) < 0.25 and fmod(p.y * 17.0, 1.0) < 0.25 else 2
 	return 0
 
 

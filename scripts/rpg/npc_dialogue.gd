@@ -26,9 +26,20 @@ static func display_name(npc_id: StringName) -> String:
 	return str(data(npc_id).get("name", npc_id))
 
 
-## Líneas de la próxima charla con el NPC. Sin misiones: su saludo y una frase de ambiente.
+## Líneas de la próxima charla con el NPC. Si da una misión, el texto de la misión según su estado
+## (QuestLogic.giver_block; tras un "Aún no", solo el saludo antes de volver a preguntar). Sin
+## misiones: su saludo y una frase de ambiente. Los efectos (recompensa, pregunta) los aplica
+## QuestRunner al oír EventBus.npc_talked.
 static func lines_for(npc_id: StringName) -> Array[Dictionary]:
 	var d: Dictionary = data(npc_id)
+	for quest_id: StringName in GameState.quests:
+		if StringName(str(QuestLogic.data(quest_id).get("giver", ""))) != npc_id:
+			continue
+		var q: Dictionary = GameState.quests[quest_id]
+		var block: String = QuestLogic.giver_block(q)
+		if block == "offer" and bool(q.declined):
+			return _block_lines(d.get("greeting", {}))
+		return _block_lines(QuestLogic.data(quest_id).texts.get(block, {}))
 	var talk: int = int(_talks.get(npc_id, 0))
 	_talks[npc_id] = talk + 1
 	var out: Array[Dictionary] = []

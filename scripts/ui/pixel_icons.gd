@@ -63,6 +63,14 @@ const PLAYER: Array[String] = [
 	"o###o",
 	".ooo.",
 ]
+## Botarramas visto: cabecita de ave con pico.
+const MONSTER: Array[String] = [
+	".oo..",
+	"o#+o.",
+	"o##oo",
+	".o##o",
+	"..oo.",
+]
 const OBJECTIVE: Array[String] = [
 	"oo.oo",
 	"o#o#o",

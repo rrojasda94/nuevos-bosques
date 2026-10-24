@@ -34,6 +34,7 @@ func _ready() -> void:
 	EventBus.riutash_warning.connect(_on_riutash_warning)
 	EventBus.riutash_passed.connect(_on_riutash_passed)
 	EventBus.momento_changed.connect(_on_momento_changed)
+	EventBus.notice_requested.connect(_show_notice)
 	_blink = Timer.new()
 	_blink.wait_time = BLINK_TIME
 	_blink.timeout.connect(_on_blink)

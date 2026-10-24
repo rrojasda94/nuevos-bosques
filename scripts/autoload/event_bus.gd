@@ -16,7 +16,9 @@ signal momento_changed(momento: StringName)
 signal chunk_generated(region_id: StringName, seed_value: int)
 ## El jugador entra en un chunk (al empezar, al cruzar un borde o al cambiar de seed).
 signal chunk_entered(chunk_coord: Vector2i, bosque_id: int, bosque_size: int)
-## El jugador empuja contra el borde de un Bosque cerrado (abre el menú del borde, ADR 0009).
+## Un Botarramas de un Bosque cerrado alcanza al jugador o, como red de seguridad, el jugador
+## empuja contra el borde de un Bosque cerrado sin nadie que le persiga (abre el menú del borde,
+## ADR 0009, monstruos.md).
 ## bosque_id = -1 si el borde es el límite de la región.
 signal bosque_border_reached(bosque_id: int)
 ## El jugador lee un letrero de piedra. direction = "norte", "sureste"... hacia la villa.
@@ -37,7 +39,8 @@ signal expedition_completed(bosque_id: int, loot: Dictionary, days_spent: int)
 signal battle_started(bosque_id: int)
 signal battle_ended(bosque_id: int, result: StringName)
 ## Fin del menú del borde de un Bosque. outcome: &"paid" o &"won" (paso abierto: se cruza),
-## &"retreated" o &"fled" (se vuelve atrás), &"defeated" (se despierta en el Nujio inicial).
+## &"retreated" o &"fled" (se vuelve atrás), &"defeated" (se despierta en el Nujio inicial),
+## &"game_over" (derrota contra un monstruo fatal: partida nueva).
 signal crossing_resolved(bosque_id: int, outcome: StringName)
 signal luz_changed(luz: int)
 signal hp_changed(hp: int, max_hp: int)
@@ -46,6 +49,12 @@ signal rested_in_villa
 ## El jugador empieza a hablar con un NPC (E). Las misiones lo escuchan (PR 6).
 signal npc_talked(npc_id: StringName)
 signal quest_state_changed(quest_id: StringName, state: StringName)
+## El jugador alcanza (o es alcanzado por) el monstruo de una misión: empieza su combate.
+signal quest_battle_requested(quest_id: StringName)
+## Fin del combate de misión. outcome: &"victory", &"defeat", &"fled" o &"game_over".
+signal quest_battle_resolved(quest_id: StringName, outcome: StringName)
+## Aviso temporal en el HUD (p. ej. "El Nujio vuelve a oír al Ofomni").
+signal notice_requested(text: String)
 signal character_leveled_up(character_id: StringName, level: int)
 signal game_ended(reason: StringName)
 
