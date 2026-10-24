@@ -1,7 +1,7 @@
 extends GutTest
 ## Ofrendas v1 (ofrendas-v1.md): peaje con una ofrenda entera (con Luz suelta si no llega, sin
 ## cambio), ofrenda en combate contra un Botarramas (abre el paso, sin XP), bloqueo contra el
-## Ofomni y hallazgos deterministas en refugios, una sola vez.
+## Ofomni descarriado y hallazgos deterministas en refugios, una sola vez.
 
 const Battle = preload("res://scripts/rpg/battle.gd")
 const Crossing = preload("res://scripts/rpg/crossing.gd")
@@ -108,11 +108,11 @@ func test_battle_ofrenda_blocked_against_ofomni() -> void:
 	q.ofomni_d = 3
 	GameState.quests[&"primera_mision"] = q
 	var logic: BattleLogic = AdventureRules.start_quest_battle(&"primera_mision", 3)
-	assert_false(logic.accepts_ofrenda)
+	assert_false(logic.accepts_payment)
 	assert_false(logic.can_offer_ofrenda())
 	assert_eq(logic.payable_ofrendas(), [] as Array[int])
 	assert_eq(logic.offer_ofrenda(0), [] as Array[Dictionary])
-	assert_eq(Texts.get_text("battle_ofrenda_blocked_ofomni"), "El Ofomni no acepta ofrendas.")
+	assert_eq(Battle.blocked_text(logic, BattleLogic.Action.OFRENDA), "El Ofomni descarriado no acepta ofrendas.")
 
 
 func test_battle_submenu_option_text() -> void:

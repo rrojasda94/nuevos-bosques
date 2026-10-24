@@ -1,7 +1,8 @@
 extends CanvasLayer
 ## Pantalla de estado e inventario (tecla I, acción open_inventory; ofrendas-v1.md y
 ## progresion-adoc.md). Solo lectura: nivel, XP hasta el siguiente nivel, PV, ATQ, DEF, Luz suelta,
-## fama y la lista de ofrendas con su valor. Pausa el árbol (y con él WorldClock) mientras está
+## fama, la relación con el Bosque en el que está (bosques-y-relacion.md) y la lista de ofrendas
+## con su valor. Pausa el árbol (y con él WorldClock) mientras está
 ## abierta y se cierra con I o Esc. Sigue activa en pausa (process_mode ALWAYS). Solo lee GameState.
 
 ## Textos de placeholder; los revisa narrative-writer.
@@ -18,6 +19,11 @@ const TEXT_NO_OFRENDAS: String = "Ninguna"
 const TEXT_OFRENDA: String = "%s (%d)"
 const TEXT_OFRENDA_COUNT: String = "%s (%d) x%d"
 const TEXT_HINT: String = "I / Esc: cerrar"
+
+## Reparto en Bosques de la partida (para saber en qué Bosque está el Adoc), recalculado si
+## cambian la seed o la región.
+var _map: BosqueMap
+var _map_key: String = ""
 
 @onready var _title: Label = $Root/Title
 @onready var _stats: Label = $Root/Stats
@@ -52,6 +58,24 @@ static func stat_lines() -> Array[String]:
 	return lines
 
 
+## Línea de la relación con un Bosque ("" fuera de la región).
+static func relation_line(bosque_id: int) -> String:
+	if bosque_id < 0:
+		return ""
+	return Texts.get_text("inventory_bosque_relation") % AdventureRules.relation(bosque_id)
+
+
+## Bosque del chunk actual (-1 si no se conoce).
+func _current_bosque() -> int:
+	if GameState.chunk_coord.x < 0:
+		return -1
+	var key: String = "%d:%s" % [GameState.seed_value, GameState.region_id]
+	if key != _map_key:
+		_map = BosqueMap.for_region(GameState.seed_value, ChunkGenerator.load_region(GameState.region_id))
+		_map_key = key
+	return _map.bosque_at(GameState.chunk_coord)
+
+
 ## Una línea por id de ofrenda (con cuántas hay), de menor a mayor valor.
 static func ofrenda_lines(inventory: Array) -> Array[String]:
 	var ids: Array[String] = []
@@ -74,7 +98,11 @@ static func ofrenda_lines(inventory: Array) -> Array[String]:
 func open() -> void:
 	if visible or get_tree().paused:
 		return
-	_stats.text = "\n".join(stat_lines())
+	var lines: Array[String] = stat_lines()
+	var relation: String = relation_line(_current_bosque())
+	if relation != "":
+		lines.append(relation)
+	_stats.text = "\n".join(lines)
 	_ofrendas.text = "\n".join(ofrenda_lines(GameState.inventory))
 	visible = true
 	get_tree().paused = true

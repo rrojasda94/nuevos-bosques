@@ -83,7 +83,7 @@ func test_pay_toll_opens_passage_or_refuses() -> void:
 	assert_false(AdventureRules.is_passable(-1, _home), "límite de la región")
 
 
-func test_victory_restores_luz_bonus_keeps_hp_and_opens() -> void:
+func test_victory_restores_luz_bonus_keeps_hp_and_forces() -> void:
 	var target: int = _map.neighbours_of(_home)[0]
 	var logic: BattleLogic = AdventureRules.start_battle(target, 1)
 	logic.adoc_hp = 17
@@ -92,7 +92,9 @@ func test_victory_restores_luz_bonus_keeps_hp_and_opens() -> void:
 	assert_eq(AdventureRules.finish_battle(logic, target), &"victory")
 	assert_eq(GameState.hp, 17, "los PV se mantienen entre combates")
 	assert_eq(GameState.luz, 4 + int(_b.victory_luz))
-	assert_true(GameState.open_bosques.has(target))
+	assert_false(GameState.open_bosques.has(target), "vencer no paga el Bosque")
+	assert_true(GameState.forced_bosques.has(target), "queda forzado")
+	assert_true(AdventureRules.is_passable(target, _home))
 
 
 func test_victory_at_luz_cap_does_not_exceed_max() -> void:

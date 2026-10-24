@@ -10,7 +10,7 @@ extends Node2D
 const SWAY: float = 0.18
 const STEP_BOB: float = 1.5
 
-## Id de datos (balance.json, monsters.<id>): &"botarramas" u &"ofomni".
+## Id de datos (balance.json, monsters.<id>): &"botarramas", &"ofomni" u &"ofomni_descarriado".
 var monster_id: StringName = &""
 ## Id del puesto (Botarramas) o de la misión (Ofomni): clave en GameState.seen_monsters.
 var key: String = ""

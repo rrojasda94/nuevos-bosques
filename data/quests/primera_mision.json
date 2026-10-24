@@ -1,10 +1,10 @@
 {
   "id": "primera_mision",
   "title": "Primer encargo",
-  "objective": "Intercepta al Ofomni",
-  "map_description": "Un Ofomni avanza hacia tu villa. Sal a su paso y véncelo.",
+  "objective": "Intercepta al Ofomni descarriado",
+  "map_description": "Un Ofomni descarriado avanza hacia tu villa. Sal a su paso y véncelo.",
   "giver": "sfida_natal",
-  "target": "ofomni",
+  "target": "ofomni_descarriado",
   "ofomni": {
     "$comment": "Valores PROVISIONALES (mision-ofomni.md). Nace a spawn_hops_min..max saltos del Bosque natal y avanza un Bosque cada advance_seconds de reloj de Aventura. Al fallar se pierde failed_luz_factor de la Luz suelta.",
     "spawn_hops_min": 3,
@@ -25,7 +25,7 @@
       "lines": [
         { "speaker": "Sfida", "text": "Adoc, espera. Te estaba buscando." },
         { "speaker": "Sfida", "text": "El Nujio ha oído algo en Pensamiento." },
-        { "speaker": "Sfida", "text": "Un Ofomni. Un ojo enorme, con tentáculos." },
+        { "speaker": "Sfida", "text": "Un Ofomni descarriado. Un ojo enorme, con tentáculos." },
         { "speaker": "Sfida", "text": "Ya ha cruzado varios Bosques. Viene hacia nuestra villa." },
         { "speaker": "Sfida", "text": "Hay que salirle al paso y vencerlo antes de que llegue." },
         { "speaker": "Sfida", "text": "Será difícil. Es tu primera misión, lo sé." },
@@ -59,19 +59,19 @@
     "reminder": {
       "id": "primera_mision_reminder",
       "lines": [
-        { "speaker": "Sfida", "text": "El Ofomni sigue avanzando. No te demores." },
+        { "speaker": "Sfida", "text": "El Ofomni descarriado sigue avanzando. No te demores." },
         { "speaker": "Sfida", "text": "Sigue tu brújula. El Nujio lo oye en cada riutash." }
       ]
     },
     "nujio_hears": {
       "id": "primera_mision_nujio_hears",
-      "text": "El Nujio vuelve a oír al Ofomni: %s."
+      "text": "El Nujio vuelve a oír al Ofomni descarriado: %s."
     },
     "victory_battle": {
       "id": "primera_mision_victory_battle",
       "lines": [
         { "speaker": "", "text": "El ojo se cierra. Los tentáculos se aflojan." },
-        { "speaker": "", "text": "El Ofomni vuelve a la Luz del Bosque." },
+        { "speaker": "", "text": "El Ofomni descarriado vuelve a la Luz del Bosque." },
         { "speaker": "", "text": "Vuelve con el sfida de tu villa." }
       ]
     },
@@ -90,7 +90,7 @@
     "failed": {
       "id": "primera_mision_failed",
       "lines": [
-        { "speaker": "", "text": "El Ofomni ha llegado a tu villa." },
+        { "speaker": "", "text": "El Ofomni descarriado ha llegado a tu villa." },
         { "speaker": "", "text": "La villa queda dañada. Pierdes Luz." },
         { "speaker": "Sfida", "text": "Llegó antes que tú, adoc." },
         { "speaker": "Sfida", "text": "Era tu primera misión. Aun así, nos ha costado." },
@@ -100,7 +100,7 @@
     "failed_reminder": {
       "id": "primera_mision_failed_reminder",
       "lines": [
-        { "speaker": "Sfida", "text": "El Ofomni sigue en la villa. No podemos esperar." }
+        { "speaker": "Sfida", "text": "El Ofomni descarriado sigue en la villa. No podemos esperar." }
       ]
     },
     "failed_victory_return": {

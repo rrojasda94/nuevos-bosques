@@ -60,7 +60,7 @@ func _process(delta: float) -> void:
 	QuestLogic.commit(QUEST, q, QuestLogic.ACTIVE)
 	if QuestLogic.state_of(q) == QuestLogic.FAILED:
 		AdventureRules.damage_villa(float(QuestLogic.data(QUEST).ofomni.failed_luz_factor))
-		_set_objective(QuestLogic.ofomni_chunk(_bosques, _home, _home), Texts.get_text("compass_ofomni"))
+		_set_objective(QuestLogic.ofomni_chunk(_bosques, _home, _home), Texts.get_text("compass_ofomni_descarriado"))
 		EventBus.notice_requested.emit(Texts.get_text("villa_damaged"))
 	if moves > 0:
 		ofomni_changed.emit()
@@ -71,7 +71,7 @@ func _on_riutash_passed(_sheltered: bool) -> void:
 	if QuestLogic.state_of(quest()) != QuestLogic.ACTIVE:
 		return
 	var chunk: Vector2i = ofomni_chunk()
-	_set_objective(chunk, Texts.get_text("compass_ofomni"))
+	_set_objective(chunk, Texts.get_text("compass_ofomni_descarriado"))
 	var text: String = str(QuestLogic.data(QUEST).texts.nujio_hears.text) % ChunkGenerator.direction_name(chunk - GameState.chunk_coord)
 	await get_tree().create_timer(HEARS_NOTICE_DELAY).timeout
 	EventBus.notice_requested.emit(text)
@@ -112,7 +112,7 @@ func _on_accept_choice(index: int) -> void:
 	var q: Dictionary = quest()
 	if index == 0 and QuestLogic.accept(q, _bosques, GameState.seed_value, _home):
 		QuestLogic.commit(QUEST, q, QuestLogic.OFFERED)
-		_set_objective(ofomni_chunk(), Texts.get_text("compass_ofomni"))
+		_set_objective(ofomni_chunk(), Texts.get_text("compass_ofomni_descarriado"))
 		ofomni_changed.emit()
 		_dialogue.show_lines(data.texts.accepted.lines)
 		return

@@ -6,7 +6,6 @@ const BALANCE: Dictionary = {
 	"adoc": { "max_hp": 30, "atk": 6, "def": 3, "start_luz": 10, "luz_max": 10 },
 	"attack": { "roll_min": -1, "roll_max": 2, "min_damage": 1 },
 	"defend_factor": 0.5,
-	"offer_luz": { "cost": 2, "damage": 8 },
 	"flee_chance": 0.75,
 	"victory_luz": 1,
 }
@@ -48,17 +47,17 @@ func test_defend_and_flee_fail_sequences() -> void:
 
 func test_victory_messages_and_luz_cap() -> void:
 	var weak: Dictionary = UNICO.duplicate()
-	weak.max_hp = 8
-	var logic := _logic(4, weak)
-	var msgs: Array[Dictionary] = Battle.messages_for(logic.play_turn(BattleLogic.Action.OFFER_LUZ), BALANCE)
+	weak.max_hp = 1
+	var logic := _logic(3, weak)
+	var events: Array[Dictionary] = logic.play_turn(BattleLogic.Action.ATTACK)
+	var msgs: Array[Dictionary] = Battle.messages_for(events, BALANCE)
 	assert_eq(msgs.size(), 2, "no hay mensaje de ataque del Único tras vencer")
-	assert_eq(msgs[0].text, "Ofreces Luz: 8 de daño.")
+	assert_eq(msgs[0].text, "Atacas: %d de daño." % events[0].amount)
 	assert_eq(msgs[0].unico_hp, 0)
 	assert_eq(msgs[1].text, "El Único vuelve a la Luz del Bosque. (+1 Luz)")
-	assert_eq(msgs[1].luz, 3)
+	assert_eq(msgs[1].luz, 4)
 	var capped := BattleLogic.new(BALANCE, BALANCE.adoc, 30, 10, weak, 7)
-	capped.luz = 12  # Luz al tope tras pagar 2: simulado para comprobar el texto.
-	var at_cap: Array[Dictionary] = Battle.messages_for(capped.play_turn(BattleLogic.Action.OFFER_LUZ), BALANCE)
+	var at_cap: Array[Dictionary] = Battle.messages_for(capped.play_turn(BattleLogic.Action.ATTACK), BALANCE)
 	assert_eq(at_cap[1].text, "El Único vuelve a la Luz del Bosque.", "al tope no se anuncia +1")
 	assert_eq(at_cap[1].luz, 10)
 
