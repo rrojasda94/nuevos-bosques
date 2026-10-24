@@ -151,6 +151,22 @@ El letrero y el mapa (M) podrían indicar el estado con texto o color (`navegaci
   - **Sacarlo de su Bosque** baja la relación con él: **−5 por fruto y por salida** (provisional). El fruto no se pierde al salir.
   - Tomarlo para guardar cuenta igual para el límite de 1 por Momento y por Bosque.
 
+## Salvar los Bosques (0.4, propuesta)
+Palabras del dueño (2026-10-24): "salvar los bosques".
+- **Bosque en necesidad de ayuda con incendio**:
+  - Encargo "Apagar el incendio": hay **3–5 focos** (casillas de fuego) en un chunk del Bosque y se apagan con **E**, uno por uno.
+  - El fuego se extiende 1 casilla por minuto de reloj. Si en **6 minutos** quedan focos, el Bosque pierde cordura (−20).
+  - Recompensa: relación **+15**, Senda **+5**, **+1 de fama**, y el Bosque pasa a **sano**.
+- **Bosque en necesidad de ayuda bajo ataque** (garelinos u otros):
+  - Combate en grupo contra los atacantes, con **Únicos del Bosque como aliados** (y otros adoc, `otros-adoc.md`).
+  - Mismas recompensas.
+  - Si los atacantes son personas, la regla de no matar (ADR 0004) obliga a una resolución que no los mate (¿se retiran al perder?) (#157).
+- **Bosque corrupto**:
+  - Se puede **recuperar cordura** dejando ofrendas junto a su Nujio (+2 de cordura por cada punto de valor de la ofrenda) y descansando el riutash cerca de él (+5).
+  - Si la cordura vuelve a ≥ 20, el Bosque deja de estar a punto de lanzar a su Iserald.
+  - Recompensa al pasar a sano: relación +25, Senda +5.
+- **Origen de estos encargos**: el Sfida de una villa, otros adoc (encargos compartidos), o una visión al dormir (Pensamiento) para Bosques lejanos, que da salvoconducto.
+
 ## Modelo de datos actualizado (por Bosque)
 | Campo | Tipo | Valores | Persistencia |
 |---|---|---|---|

@@ -91,6 +91,7 @@ Propuestas, a confirmar con el dueño:
 |---|---|---|
 | 2026-10-24 | "la noche o momento de riumna tiene un hue plateado y los colores del mundo resaltan de otro modo" | El tinte azul pasa a ser un tono plateado de luz de luna, como post-proceso (excepción a la paleta, ADR 0012). |
 | 2026-10-24 | Aledra es fatal de noche (`monstruos.md`). | La noche añade riesgo de muerte donde haya Aledras (cuando existan). |
+| 0.3 | Cambiar el indicador del riutash por un **reloj tipo Minecraft**. | Lo implementa `ui-ux-dev`: un disco que gira con Gietos (día) y Riumna (noche) y marca el riutash en los cambios. Las reglas y los avisos de 60 s y 15 s no cambian. |
 
 ## Decisiones a confirmar con el dueño
 - El refugio cura el 50% de lo que falta y la exposición quita el 30% de los PV máximos, sin matar nunca (#122).

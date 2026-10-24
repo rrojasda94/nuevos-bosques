@@ -12,10 +12,12 @@
 | 4 | **Estados de Bosque**: sano, enojado, corrupto, muerto y necesita ayuda; su generación por seed y área; señales visuales; peaje según el estado | world-gen-dev, rpg-systems-dev, pixel-artist | `bosques-y-relacion.md` | 3 (la relación ≤ −50 vuelve el Bosque enojado; los factores del peaje) | Pendiente |
 | 5 | **Inventario y equipo**: bolsa + ranuras de equipo (mano principal, máscara, talismán); equipar y desequipar el arma; **frutos guardables** (comer o guardar; solo se comen en su Bosque; sacarlos baja la relación −5) | rpg-systems-dev, ui-ux-dev | `ofrendas-v1.md`, `sigilo-y-robo.md` | — (en paralelo con 3 y 4) | Pendiente; **desbloqueado** (#113 confirmado: 12 casillas + 3 ranuras) |
 | 6 | **Sigilo y robo**: las máscaras y los artefactos de camuflaje reducen la visión de los Únicos; el arma equipada cierra el paso; el robo despierta a `ofomni` apaciguables que persiguen hasta la frontera | rpg-systems-dev, world-gen-dev | `sigilo-y-robo.md`, `monstruos.md` | 1, 2 (robo de fruto), 5 (equipo) | Pendiente |
-| 7 | **Combate en grupo**: reparep (2–4, ataque conjunto, elegir objetivo); Únicos aliados en Bosques que necesitan ayuda; Aledra fatal de noche | rpg-systems-dev, pixel-artist | `monstruos.md` | 1; 4 (para los aliados y los Bosques) | Pendiente |
+| 7 | **Combate en grupo**: reparep (2–4, ataque conjunto, elegir objetivo); **aliados** (Únicos en Bosques que necesitan ayuda y **otros adoc** en eventos del mundo: "Ayudar / Seguir tu camino"); Aledra fatal de noche | rpg-systems-dev, pixel-artist | `monstruos.md`, `otros-adoc.md` ("Ayudar en combate") | 1; 4 (para los aliados de Bosque) | Pendiente |
 | 8 | **Dormir, Pensamiento y misiones lejanas con salvoconducto** | rpg-systems-dev, narrative-writer | `bosques-y-relacion.md`, `tiempo-y-riutash.md` | 3 y 4 (Bosques "buenos" para la ruta), misiones (0.2) | Pendiente |
 | 9 | **Tileset de terreno con arte real** | pixel-artist (spec), world-gen-dev (integración) | spec en `docs/art/` | — (en paralelo) | Pendiente |
-| 10 | **Personalización del adoc** (si cabe) | ui-ux-dev, pixel-artist | por escribir | — | Opcional |
+| 10 | ~~Personalización del adoc~~ | — | — | — | **Movido a la 0.4** (`roadmap-0.4.md`) |
+
+> **Ronda de jugabilidad del dueño** ("más npc", otros adoc, Senda, puntos y skills, sarua y artesanos, salvar los Bosques): en la 0.3 solo entra lo que reutiliza el combate en grupo, es decir, otros adoc como **aliados** en el PR 7. El resto va a la **0.4 "Los otros adoc"** (`roadmap-0.4.md`).
 
 ### Dependencias en resumen
 ```
