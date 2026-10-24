@@ -105,6 +105,8 @@ func test_npc_blocks_walking_in_exploration() -> void:
 
 
 func test_sfida_lines_greeting_then_rotating_ambient() -> void:
+	# Sin misiones (con la misión ofrecida habla de ella: test_quest_logic).
+	GameState.quests = {}
 	NpcDialogue.reset_talks()
 	var first: Array[Dictionary] = NpcDialogue.lines_for(&"sfida_natal")
 	assert_eq(first.size(), 2)

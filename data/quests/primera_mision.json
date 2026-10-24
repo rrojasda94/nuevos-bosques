@@ -5,6 +5,13 @@
   "map_description": "Un Ofomni avanza hacia tu villa. Sal a su paso y véncelo.",
   "giver": "sfida_natal",
   "target": "ofomni",
+  "ofomni": {
+    "$comment": "Valores PROVISIONALES (mision-ofomni.md). Nace a spawn_hops_min..max saltos del Bosque natal y avanza un Bosque cada advance_seconds de reloj de Aventura. Al fallar se pierde failed_luz_factor de la Luz suelta.",
+    "spawn_hops_min": 3,
+    "spawn_hops_max": 4,
+    "advance_seconds": 360.0,
+    "failed_luz_factor": 0.5
+  },
   "reward": {
     "refill_luz_to_max": true,
     "ofrenda": "cuenco_ritual",

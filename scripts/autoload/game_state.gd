@@ -3,9 +3,10 @@ extends Node
 
 ## v2: chunk_coord y player_cell (ADR 0006). v3: luz, hp, open_bosques y battle_attempts
 ## (ADR 0009). v4: reloj de Aventura, clock_momento y clock_elapsed (ADR 0012). v5: chunks
-## explorados y objetivo de la brújula (navegacion.md). Las versiones anteriores se cargan con
-## valores por defecto.
-const SAVE_VERSION: int = 5
+## explorados y objetivo de la brújula (navegacion.md). v6: misiones (mision-ofomni.md), inventario
+## como lista de ofrendas, villa dañada, XP, fama y Botarramas vistos. Las versiones anteriores se
+## cargan con valores por defecto.
+const SAVE_VERSION: int = 6
 
 var rng := RandomNumberGenerator.new()
 var seed_value: int = 0
@@ -49,10 +50,18 @@ var buildings: Array = []
 var citizens: Array = []
 ## Party RPG: [ { "id": "hero", "level": 1, "xp": 0, "hp": 10 } ]
 var party: Array = []
-## Inventario: { "item_id": cantidad }
-var inventory: Dictionary = {}
-## Misiones: { "quest_id": "active" }
+## Inventario (ofrendas-v1.md): lista de ofrendas [ { "id": "cuenco_ritual", "luz": 6 } ].
+var inventory: Array = []
+## Misiones: { &"quest_id": estado de QuestLogic.new_quest() }.
 var quests: Dictionary = {}
+## La villa natal quedó dañada (misión del Ofomni fallida). En la 0.2.0 solo es una marca.
+var villa_damaged: bool = false
+## XP acumulada y fama del Adoc (progresion-adoc.md; los niveles llegan en el PR 7).
+var xp: int = 0
+var fama: int = 0
+## Última posición vista de cada Botarramas, para el mapa:
+## { "id del puesto": { "monster", "bosque_id", "chunk": [x, y] } }.
+var seen_monsters: Dictionary = {}
 
 
 func new_game(new_seed: int = 0, new_region: StringName = &"valle_del_sara") -> void:
@@ -75,8 +84,12 @@ func new_game(new_seed: int = 0, new_region: StringName = &"valle_del_sara") -> 
 	buildings = []
 	citizens = []
 	party = []
-	inventory = {}
+	inventory = []
 	quests = {}
+	villa_damaged = false
+	xp = 0
+	fama = 0
+	seen_monsters = {}
 
 
 func to_dict() -> Dictionary:
@@ -105,6 +118,10 @@ func to_dict() -> Dictionary:
 		"party": party,
 		"inventory": inventory,
 		"quests": quests,
+		"villa_damaged": villa_damaged,
+		"xp": xp,
+		"fama": fama,
+		"seen_monsters": seen_monsters,
 	}
 
 
@@ -147,8 +164,29 @@ func from_dict(data: Dictionary) -> void:
 	buildings = data.get("buildings", [])
 	citizens = data.get("citizens", [])
 	party = data.get("party", [])
-	inventory = data.get("inventory", {})
-	quests = data.get("quests", {})
+	# v5 o anterior: el inventario era un diccionario vacío y las misiones no existían.
+	inventory = []
+	var items: Variant = data.get("inventory", [])
+	if items is Array:
+		for item: Variant in items:
+			if item is Dictionary and item.has("id"):
+				inventory.append({ "id": str(item.id), "luz": int(item.get("luz", 0)) })
+	quests = {}
+	var saved_quests: Variant = data.get("quests", {})
+	if saved_quests is Dictionary:
+		for id: Variant in saved_quests:
+			quests[StringName(str(id))] = QuestLogic.sanitize(saved_quests[id])
+	villa_damaged = bool(data.get("villa_damaged", false))
+	xp = maxi(0, int(data.get("xp", 0)))
+	fama = maxi(0, int(data.get("fama", 0)))
+	seen_monsters = {}
+	var seen: Variant = data.get("seen_monsters", {})
+	if seen is Dictionary:
+		for id: Variant in seen:
+			var e: Variant = seen[id]
+			if e is Dictionary:
+				var c: Vector2i = _to_vector2i(e.get("chunk", [-1, -1]), Vector2i(-1, -1))
+				seen_monsters[str(id)] = { "monster": str(e.get("monster", "")), "bosque_id": int(e.get("bosque_id", -1)), "chunk": [c.x, c.y] }
 
 
 ## Fija el objetivo de la brújula y del mapa. `label`: texto corto ya traducido ("Ofomni").

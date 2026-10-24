@@ -72,34 +72,36 @@ func test_defeat_message_is_last() -> void:
 	assert_eq(msgs[1].adoc_hp, 0)
 
 
-func test_unico_kind_is_deterministic_per_bosque() -> void:
-	for s in [1, 42, 777]:
-		for id in 30:
-			assert_eq(UnicoArt.kind_for(s, id), UnicoArt.kind_for(s, id))
-	var differs := false
-	for id in 30:
-		if UnicoArt.kind_for(1, id) != UnicoArt.kind_for(2, id):
-			differs = true
-	assert_true(differs, "depende de la seed")
-	assert_eq(UnicoArt.display_name(UnicoArt.Kind.SERPENT), "Aledra")
+func test_border_guardians_are_always_botarramas() -> void:
+	GameState.new_game(42)
+	var logic: BattleLogic = AdventureRules.start_battle(3, 2)
+	assert_eq(logic.unico_name, "Botarramas", "los bordes ya no usan Aledra ni Ofomni")
+	assert_eq(logic.special_every, 0, "sin ataque especial")
 
 
-func test_unico_kind_does_not_follow_tree_shape() -> void:
-	var region := ChunkGenerator.load_region(&"valle_del_sara")
-	var kinds_by_shape := {}
-	var all_kinds := {}
-	for s in range(1, 61):
-		var map := BosqueMap.for_region(s, region)
-		for id in map.count():
-			var shape: int = map.styles[id].shape
-			var kind: int = UnicoArt.kind_for(s, id)
-			if not kinds_by_shape.has(shape):
-				kinds_by_shape[shape] = {}
-			kinds_by_shape[shape][kind] = true
-			all_kinds[kind] = true
-	assert_eq(all_kinds.size(), UnicoArt.Kind.size(), "aparecen todos los tipos de monstruo")
-	for shape in kinds_by_shape:
-		assert_eq(kinds_by_shape[shape].size(), UnicoArt.Kind.size(), "árbol %d: todos los monstruos posibles" % shape)
+func test_whip_texts_for_ofomni() -> void:
+	var unico: Dictionary = UNICO.duplicate()
+	unico.texts = AdventureRules.monster_config(&"ofomni").texts
+	var texts: Dictionary = Battle.texts_for(_logic(10, unico))
+	var events: Array[Dictionary] = [
+		{ "kind": &"unico_attack", "amount": 4, "unico_hp": 22, "adoc_hp": 26, "luz": 10 },
+		{ "kind": &"special_warning", "amount": 0, "unico_hp": 22, "adoc_hp": 26, "luz": 10 },
+		{ "kind": &"unico_special", "amount": 12, "defended": false, "unico_hp": 22, "adoc_hp": 14, "luz": 10 },
+		{ "kind": &"unico_special", "amount": 6, "defended": true, "unico_hp": 22, "adoc_hp": 8, "luz": 10 },
+	]
+	var msgs: Array[Dictionary] = Battle.messages_for(events, BALANCE, texts)
+	assert_eq(msgs[0].text, "El Ofomni te azota con un látigo: 4 de daño.")
+	assert_eq(msgs[1].text, "El Ofomni alza todos sus látigos...")
+	assert_eq(msgs[2].text, "¡Latigazo múltiple! Los látigos caen: 12 de daño.")
+	assert_eq(msgs[3].text, "Resistes los látigos: 6 de daño.")
+
+
+func test_fatal_defeat_message_is_game_over() -> void:
+	var logic := _logic()
+	logic.fatal = true
+	var texts: Dictionary = Battle.texts_for(logic)
+	var events: Array[Dictionary] = [{ "kind": &"defeat", "amount": 0, "unico_hp": 22, "adoc_hp": 0, "luz": 10 }]
+	assert_eq(Battle.messages_for(events, BALANCE, texts)[0].text, "Has caído ante Único serpiente. Tu viaje termina aquí.")
 
 
 func test_unico_texture_uses_bosque_colors_and_aura() -> void:

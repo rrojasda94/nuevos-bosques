@@ -42,5 +42,8 @@
   "map_legend_road": "Camino",
   "map_legend_player": "Tú",
   "map_legend_fog": "Sin explorar",
-  "map_legend_objective": "Objetivo"
+  "map_legend_objective": "Objetivo",
+  "monster_botarramas": "Botarramas",
+  "monster_ofomni": "Ofomni",
+  "map_legend_botarramas": "Botarramas"
 }

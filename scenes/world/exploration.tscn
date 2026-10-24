@@ -1,4 +1,4 @@
-[gd_scene load_steps=8 format=3]
+[gd_scene load_steps=10 format=3]
 
 [ext_resource type="Script" path="res://scripts/world/exploration.gd" id="1_expl"]
 [ext_resource type="Script" path="res://scripts/rpg/player_walker.gd" id="2_player"]
@@ -7,6 +7,8 @@
 [ext_resource type="PackedScene" path="res://scenes/ui/dialogue_box.tscn" id="5_dialogue"]
 [ext_resource type="PackedScene" path="res://scenes/ui/compass.tscn" id="6_compass"]
 [ext_resource type="PackedScene" path="res://scenes/ui/region_map.tscn" id="7_map"]
+[ext_resource type="Script" path="res://scripts/rpg/monster_field.gd" id="8_monsters"]
+[ext_resource type="Script" path="res://scripts/rpg/quest_runner.gd" id="9_quest"]
 
 [node name="Exploration" type="Node2D"]
 script = ExtResource("1_expl")
@@ -16,6 +18,12 @@ script = ExtResource("1_expl")
 [node name="Nujios" type="Node2D" parent="."]
 
 [node name="Npcs" type="Node2D" parent="."]
+
+[node name="Monsters" type="Node2D" parent="."]
+script = ExtResource("8_monsters")
+
+[node name="QuestRunner" type="Node" parent="."]
+script = ExtResource("9_quest")
 
 [node name="Player" type="Node2D" parent="."]
 script = ExtResource("2_player")

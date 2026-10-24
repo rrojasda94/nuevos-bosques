@@ -17,6 +17,7 @@ const TEXT_OFFER_LUZ: String = "Ofreces Luz: %d de daño."
 const TEXT_FLEE_FAIL: String = "No logras huir."
 const TEXT_FLEE_OK: String = "Huyes a tu lado del Bosque."
 const TEXT_UNICO_ATTACK: String = "El Único te golpea: %d de daño."
+const TEXT_SPECIAL_WARNING: String = "El Único se prepara para un golpe terrible..."
 const TEXT_VICTORY: String = "El Único vuelve a la Luz del Bosque."
 const TEXT_VICTORY_LUZ: String = " (+%d Luz)"
 const TEXT_DEFEAT: String = "Caes. Despertarás junto al Nujio de tu villa."
@@ -63,9 +64,21 @@ func begin(logic: BattleLogic, style: Dictionary, kind: UnicoArt.Kind) -> void:
 	_show_messages([{ "text": TEXT_START % logic.unico_name }])
 
 
+## Textos propios del rival, ya leídos de data/text/sistema.json (ver messages_for). Un combate
+## fatal cambia el mensaje de derrota por el de game over.
+static func texts_for(logic: BattleLogic) -> Dictionary:
+	var out: Dictionary = {}
+	for key: String in logic.unico_texts:
+		out[key] = Texts.get_text(str(logic.unico_texts[key]))
+	if logic.fatal:
+		out.defeat = Texts.get_text("defeat_fatal_game_over") % logic.unico_name
+	return out
+
+
 ## Mensajes de un turno, uno por evento y en orden, con el estado que muestran las barras.
-## Pura: la usan la escena y los tests.
-static func messages_for(events: Array[Dictionary], balance: Dictionary) -> Array[Dictionary]:
+## `texts`: textos propios del rival (attack, warning, special, special_defended, defeat) que
+## sustituyen a los genéricos. Pura: la usan la escena y los tests.
+static func messages_for(events: Array[Dictionary], balance: Dictionary, texts: Dictionary = {}) -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
 	for e: Dictionary in events:
 		var m: Dictionary = { "unico_hp": e.unico_hp, "adoc_hp": e.adoc_hp, "luz": e.luz }
@@ -83,8 +96,14 @@ static func messages_for(events: Array[Dictionary], balance: Dictionary) -> Arra
 			&"flee_ok":
 				m.text = TEXT_FLEE_OK
 			&"unico_attack":
-				m.text = TEXT_UNICO_ATTACK % e.amount
+				m.text = str(texts.get("attack", TEXT_UNICO_ATTACK)) % e.amount
 				m.flash = &"adoc"
+			&"unico_special":
+				var key: String = "special_defended" if e.get("defended", false) else "special"
+				m.text = str(texts.get(key, TEXT_UNICO_ATTACK)) % e.amount
+				m.flash = &"adoc"
+			&"special_warning":
+				m.text = str(texts.get("warning", TEXT_SPECIAL_WARNING))
 			&"victory":
 				# La Luz suelta tiene tope: con la Luz al máximo no se anuncia el +1.
 				var gained: int = mini(int(balance.victory_luz), int(balance.adoc.luz_max) - int(e.luz))
@@ -92,7 +111,7 @@ static func messages_for(events: Array[Dictionary], balance: Dictionary) -> Arra
 				m.luz = int(e.luz) + maxi(0, gained)
 				m.flash = &"vanish"
 			&"defeat":
-				m.text = TEXT_DEFEAT
+				m.text = str(texts.get("defeat", TEXT_DEFEAT))
 		out.append(m)
 	return out
 
@@ -106,7 +125,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		if choice >= 0:
 			var events: Array[Dictionary] = _logic.play_turn(choice as BattleLogic.Action)
 			if not events.is_empty():
-				_show_messages(messages_for(events, _logic.balance))
+				_show_messages(messages_for(events, _logic.balance, texts_for(_logic)))
 		return
 	_text_box.handle(event)
 

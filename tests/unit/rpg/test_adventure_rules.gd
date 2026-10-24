@@ -85,7 +85,7 @@ func test_pay_toll_opens_passage_or_refuses() -> void:
 
 func test_victory_restores_luz_bonus_keeps_hp_and_opens() -> void:
 	var target: int = _map.neighbours_of(_home)[0]
-	var logic: BattleLogic = AdventureRules.start_battle(target, 1, "Único serpiente")
+	var logic: BattleLogic = AdventureRules.start_battle(target, 1)
 	logic.adoc_hp = 17
 	logic.luz = 4
 	logic.result = BattleLogic.Result.VICTORY
@@ -97,7 +97,7 @@ func test_victory_restores_luz_bonus_keeps_hp_and_opens() -> void:
 
 func test_victory_at_luz_cap_does_not_exceed_max() -> void:
 	var target: int = _map.neighbours_of(_home)[0]
-	var logic: BattleLogic = AdventureRules.start_battle(target, 1, "Único serpiente")
+	var logic: BattleLogic = AdventureRules.start_battle(target, 1)
 	logic.luz = AdventureRules.luz_max()
 	logic.result = BattleLogic.Result.VICTORY
 	AdventureRules.finish_battle(logic, target)
@@ -111,7 +111,7 @@ func test_victory_at_luz_cap_does_not_exceed_max() -> void:
 func test_defeat_restores_hp_halves_luz_and_keeps_closed() -> void:
 	var target: int = _map.neighbours_of(_home)[0]
 	GameState.luz = 7
-	var logic: BattleLogic = AdventureRules.start_battle(target, 1, "Único serpiente")
+	var logic: BattleLogic = AdventureRules.start_battle(target, 1)
 	logic.adoc_hp = 0
 	logic.result = BattleLogic.Result.DEFEAT
 	assert_eq(AdventureRules.finish_battle(logic, target), &"defeat")
@@ -122,14 +122,14 @@ func test_defeat_restores_hp_halves_luz_and_keeps_closed() -> void:
 
 func test_fled_keeps_damage_taken_and_unico_returns_at_full_hp() -> void:
 	var target: int = _map.neighbours_of(_home)[0]
-	var first: BattleLogic = AdventureRules.start_battle(target, 2, "Único alado")
+	var first: BattleLogic = AdventureRules.start_battle(target, 2)
 	first.unico_hp = 3
 	first.adoc_hp = 12
 	first.result = BattleLogic.Result.FLED
 	assert_eq(AdventureRules.finish_battle(first, target), &"fled")
 	assert_eq(GameState.hp, 12)
 	assert_false(GameState.open_bosques.has(target), "el paso sigue cerrado")
-	var second: BattleLogic = AdventureRules.start_battle(target, 2, "Único alado")
+	var second: BattleLogic = AdventureRules.start_battle(target, 2)
 	assert_eq(second.unico_hp, second.unico_max_hp, "huir no conserva el daño hecho al Único")
 	assert_eq(second.adoc_hp, 12)
 	assert_eq(GameState.battle_attempts[str(target)], 2)

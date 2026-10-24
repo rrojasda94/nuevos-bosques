@@ -6,12 +6,18 @@ extends Node2D
 ## (scenes/rpg/crossing.tscn, ADR 0009) decide si se cruza. Los chunks se regeneran desde la seed;
 ## la caché es solo para no recalcular durante la sesión.
 ## Con interact (E) se habla con los NPC, se leen letreros y se examinan refugios (Interaction).
+## Monstruos (MonsterField): los Botarramas de los tramos de frontera interceptan al jugador y su
+## encuentro abre el menú del borde; el borde cerrado lo abre igual si nadie le persigue (red de
+## seguridad). El Ofomni de la misión (QuestRunner) aparece en su chunk y su encuentro es el
+## combate de misión.
 
 const TILE_SIZE: int = 16
 ## Duración del fundido al cambiar de chunk.
 const TRANSITION_TIME: float = 0.2
 ## Casillas de cada chunk vecino que se dibujan alrededor del actual.
 const NEIGHBOUR_MARGIN: int = 12
+## Dónde espera el Ofomni en la villa natal tras llegar: casillas al sur del hub.
+const OFOMNI_VILLA_OFFSET := Vector2i(0, 12)
 
 var _chunk: ChunkData
 var _cache: Dictionary = {}
@@ -26,10 +32,15 @@ var _npcs: Dictionary = {}
 ## Dirección del último borde cerrado contra el que se empujó (la usa crossing_resolved).
 var _pending_dir: Vector2i = Vector2i.ZERO
 var _resting: bool = false
+## Monstruo cuyo encuentro abrió el menú o el combate en curso (null = se empujó el borde).
+var _pending_monster: OverworldMonster
 
 @onready var _terrain: TileMapLayer = $Terrain
 @onready var _nujios: Node2D = $Nujios
 @onready var _npc_layer: Node2D = $Npcs
+@onready var _field: MonsterField = $Monsters
+@onready var _quest: QuestRunner = $QuestRunner
+@onready var _region_map: Node = $RegionMap
 @onready var _dialogue: DialogueBox = $Dialogue/DialogueBox
 @onready var _player: PlayerWalker = $Player
 @onready var _camera: Camera2D = $Player/Camera2D
@@ -37,10 +48,18 @@ var _resting: bool = false
 
 
 func _ready() -> void:
-	_player.is_walkable = func(c: Vector2i) -> bool: return _chunk != null and _chunk.is_walkable(c) and not _npcs.has(c)
+	_player.is_walkable = func(c: Vector2i) -> bool:
+		return _chunk != null and _chunk.is_walkable(c) and not _npcs.has(c) and not _field.occupied(c)
 	_player.edge_reached.connect(_on_edge_reached)
 	_player.stepped.connect(_on_player_stepped)
 	EventBus.crossing_resolved.connect(_on_crossing_resolved)
+	EventBus.quest_battle_resolved.connect(_on_quest_battle_resolved)
+	_field.player = _player
+	_field.area_walkable = _area_walkable
+	_field.can_engage = func() -> bool: return _fade.color.a <= 0.0
+	_field.engaged.connect(_on_monster_engaged)
+	_quest.setup(_dialogue, _region_map)
+	_quest.ofomni_changed.connect(_sync_ofomni)
 	_setup_riutash()
 
 
@@ -52,6 +71,8 @@ func start() -> void:
 	_terrain.tile_set = PlaceholderTileset.make_tile_set()
 	_bosques = BosqueMap.for_region(GameState.seed_value, _region)
 	_home_bosque = AdventureRules.home_bosque(_bosques, _region)
+	_chunk = null
+	_quest.start(_bosques, _home_bosque, _get_chunk(_bosques.nujio_chunk[_home_bosque]))
 	var coord: Vector2i = GameState.chunk_coord
 	if not AdventureRules.is_passable(_bosques.bosque_at(coord), _home_bosque):
 		_enter_home_villa()
@@ -85,10 +106,12 @@ func _enter_chunk(coord: Vector2i, cell: Vector2i) -> void:
 	MapLogic.mark_explored(GameState.explored_chunks, coord)
 	_draw_area()
 	_place_npcs()
+	_field.populate(_bosques, _home_bosque, coord, _get_chunk)
 	if not _player.is_walkable.call(cell):
 		cell = _chunk.hub
 	GameState.player_cell = cell
 	_player.place_at(cell)
+	_sync_ofomni()
 	# Aparecer en el lugar de descanso no repite el aviso; cuenta como ya dentro.
 	_resting = AdventureRules.is_villa_rest(_chunk, cell)
 	_camera.reset_smoothing()
@@ -198,8 +221,9 @@ func _interact() -> void:
 	var target: Dictionary = Interaction.find(_chunk, _player.cell, _player.facing, _npcs)
 	match target.kind:
 		Interaction.Kind.NPC:
-			EventBus.npc_talked.emit(target.npc_id)
+			# Primero las líneas (según el estado de la misión) y luego el aviso, que aplica sus efectos.
 			_dialogue.show_lines(NpcDialogue.lines_for(target.npc_id))
+			EventBus.npc_talked.emit(target.npc_id)
 		Interaction.Kind.SIGN:
 			_dialogue.show_lines([_sign_line(target.cell)])
 		Interaction.Kind.REFUGE:
@@ -210,9 +234,11 @@ func _on_edge_reached(direction: Vector2i) -> void:
 	var next_coord: Vector2i = GameState.chunk_coord + direction
 	var next_bosque: int = _bosques.bosque_at(next_coord)
 	if not AdventureRules.is_passable(next_bosque, _home_bosque):
-		if direction != _blocked_dir:
+		# Si un Botarramas ya viene a por el jugador, el menú lo abrirá su encuentro.
+		if direction != _blocked_dir and not _field.has_chaser():
 			_blocked_dir = direction
 			_pending_dir = direction
+			_pending_monster = null
 			EventBus.bosque_border_reached.emit(next_bosque)
 		return
 	_cross(direction)
@@ -225,20 +251,108 @@ func _cross(direction: Vector2i) -> void:
 	_enter_chunk(next_coord, entry)
 
 
-## Resultado del menú del borde (ADR 0009).
+## Resultado del menú del borde (ADR 0009). Si lo abrió un Botarramas, pagar o vencer no cruza
+## (el Bosque queda abierto y sus Botarramas, pasivos); si se empujó el borde, se cruza.
 func _on_crossing_resolved(_bosque_id: int, outcome: StringName) -> void:
+	var monster: OverworldMonster = _pending_monster
+	_pending_monster = null
 	match outcome:
 		&"paid", &"won":
-			_cross(_pending_dir)
+			if monster == null:
+				_cross(_pending_dir)
 		&"defeated":
 			_enter_home_villa()
+		&"game_over":
+			_game_over()
 		_:
-			# Retroceder o huir: un paso atrás, hacia dentro del Bosque.
-			var back: Vector2i = _player.cell - _pending_dir
-			if _chunk.is_walkable(back):
-				_player.place_at(back)
-				GameState.player_cell = back
-			_blocked_dir = Vector2i.ZERO
+			_retreat_from(monster)
+
+
+func _on_quest_battle_resolved(_quest_id: StringName, outcome: StringName) -> void:
+	var monster: OverworldMonster = _pending_monster
+	_pending_monster = null
+	match outcome:
+		&"victory":
+			_field.remove_ofomni()
+		&"defeat":
+			_enter_home_villa()
+		&"game_over":
+			_game_over()
+		_:
+			_retreat_from(monster)
+
+
+## Encuentro con un monstruo: el Ofomni empieza el combate de misión; un Botarramas, el menú del
+## borde del Bosque que guarda.
+func _on_monster_engaged(monster: OverworldMonster) -> void:
+	_pending_monster = monster
+	if monster.monster_id == MonsterField.OFOMNI:
+		EventBus.quest_battle_requested.emit(QuestRunner.QUEST)
+	else:
+		EventBus.bosque_border_reached.emit(monster.bosque_id)
+
+
+## Retroceder o huir: retroceder retreat_cells casillas (alejándose del monstruo o, si se empujó
+## el borde, hacia dentro del Bosque) y el monstruo deja de ver al jugador un rato.
+func _retreat_from(monster: OverworldMonster) -> void:
+	_blocked_dir = Vector2i.ZERO
+	var cfg: Dictionary = monster.cfg if monster != null else AdventureRules.monster_config(MonsterField.BOTARRAMAS)
+	var dirs: Array[Vector2i] = [-_pending_dir]
+	if monster != null:
+		monster.calm(float(cfg.engage_cooldown))
+		var away: Vector2i = _player.cell - monster.cell
+		var main := Vector2i(signi(away.x), 0) if absi(away.x) >= absi(away.y) else Vector2i(0, signi(away.y))
+		var other := Vector2i(0, signi(away.y)) if main.x != 0 else Vector2i(signi(away.x), 0)
+		dirs = [main, other, -_player.facing]
+	for dir: Vector2i in dirs:
+		if dir == Vector2i.ZERO:
+			continue
+		var reached: Vector2i = _player.cell
+		for i: int in int(cfg.retreat_cells):
+			if not _player.is_walkable.call(reached + dir):
+				break
+			reached += dir
+		if reached != _player.cell:
+			_player.place_at(reached)
+			GameState.player_cell = reached
+			return
+
+
+## Derrota contra un monstruo fatal (monstruos.md): la partida termina y empieza otra.
+func _game_over() -> void:
+	GameState.new_game(0, GameState.region_id)
+	start()
+
+
+## Casilla de área (relativa al chunk actual; puede caer en la franja de un vecino) transitable
+## para los monstruos: dentro de lo dibujado, en la región y sin NPC.
+func _area_walkable(c: Vector2i) -> bool:
+	var m: int = NEIGHBOUR_MARGIN
+	if _chunk == null or c.x < -m or c.y < -m or c.x >= ChunkData.SIZE + m or c.y >= ChunkData.SIZE + m:
+		return false
+	var off := Vector2i(floori(c.x / float(ChunkData.SIZE)), floori(c.y / float(ChunkData.SIZE)))
+	var coord: Vector2i = _chunk.coord + off
+	if _bosques.bosque_at(coord) < 0:
+		return false
+	var local: Vector2i = c - off * ChunkData.SIZE
+	if off == Vector2i.ZERO and _npcs.has(local):
+		return false
+	return _get_chunk(coord).is_walkable(local)
+
+
+## Pone o quita al Ofomni según su chunk (QuestRunner). Al verlo, el objetivo pasa a su casilla.
+func _sync_ofomni() -> void:
+	if _chunk == null:
+		return
+	if _quest.ofomni_chunk() != _chunk.coord:
+		_field.remove_ofomni()
+		return
+	if _field.ofomni() != null:
+		return
+	# En la villa espera al sur de la plaza; en otro chunk, en su claro central.
+	var near: Vector2i = _chunk.hub + (OFOMNI_VILLA_OFFSET if _chunk.has_villa else Vector2i.ZERO)
+	_field.spawn_ofomni(String(QuestRunner.QUEST), near, _chunk, _bosques.styles[_bosques.bosque_at(_chunk.coord)])
+	_region_map.set_objective(_chunk.coord, Texts.get_text("compass_ofomni"), _field.ofomni().cell)
 
 
 ## En la plaza de una villa o junto a su Nujio el Adoc descansa: PV al máximo y aviso en el HUD
