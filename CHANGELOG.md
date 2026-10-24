@@ -13,7 +13,12 @@ Todos los cambios que nota el jugador. Formato [Keep a Changelog](https://keepac
 - Primera misión, "Primer encargo": al empezar, la brújula señala al sfida. Si hablas con él (E) te cuenta que un Ofomni viene hacia la villa y puedes aceptar o decir "Aún no". Al aceptar, el Ofomni (un ojo enorme con tentáculos) aparece a 3 o 4 Bosques y avanza un Bosque cada 6 minutos de juego. En cada riutash el Nujio vuelve a oírlo: la brújula y el mapa marcan su última posición. En su chunk se le ve y sale a por ti. Si lo vences, vuelve con el sfida: tu Luz se llena y recibes un Cuenco ritual, experiencia y fama. Si llega a tu villa, la misión falla, la villa queda dañada, pierdes la mitad de tu Luz y el Ofomni se queda allí esperando. Perder contra él no es el final: despiertas en la villa y él sigue avanzando.
 - Combate contra el Ofomni: ataca con latigazos y cada tercer ataque usa el Latigazo múltiple (triple de daño). Lo anuncia un turno antes, y Defender lo deja en la mitad.
 - Botarramas: aves sin plumas que renquean con los colores de su Bosque. Guardan cada tramo de frontera de un Bosque cerrado, junto a su puerta o camino. Te ven a 10 casillas, salen a por ti hasta 4 casillas fuera de su Bosque y, al alcanzarte, abren el menú del borde (pagar Luz, enfrentarlos o retroceder). Si retrocedes o huyes, te apartas dos casillas y te dejan en paz unos segundos. Pagar o vencer abre el Bosque y sus Botarramas se quedan quietos. En el mapa (M) aparecen donde los viste por última vez.
-- Las victorias dan experiencia (4 + 3 por cada salto de distancia). Los niveles llegan más adelante.
+- Las victorias dan experiencia (4 + 3 por cada salto de distancia).
+- Niveles del 1 al 10: cada nivel da +4 PV máximos y +1 de ataque (o +1 de defensa en los niveles 3, 6 y 9). Al subir, tus PV actuales suben también 4. El combate lo anuncia tras la victoria ("¡Subes a nivel N!") y el HUD muestra "Nv N". La recompensa de la misión también puede subirte de nivel.
+- Ofrendas: en el menú del borde, "Ofrecer una ofrenda" abre la lista de las que alcanzan el peaje, con su valor y el coste del paso. Se dejan enteras: si valen más que el peaje, el resto se pierde; si valen menos, se completan con Luz suelta. No se combinan varias.
+- Acción "Ofrenda" en el combate contra un Botarramas: si la ofrenda (más tu Luz suelta) llega al peaje, el Botarramas se aparta y el paso queda abierto, sin experiencia. El Ofomni no acepta ofrendas.
+- Hallazgos: uno de cada tres refugios guarda una ofrenda pequeña (Cuenta de barro o Trenza votiva). Se recoge con E una sola vez por partida; después, "No queda nada".
+- Pantalla de estado con I (botón Y del mando): nivel, experiencia hasta el siguiente nivel, PV, ataque, defensa, Luz suelta, fama y tus ofrendas. Pausa el juego y se cierra con I o Esc.
 - Primeros sprites de pixel art y efectos de sonido: el Adoc (lenfi de trenza negra y ropa de protector) anda con dos fotogramas por dirección, el sfida respira con su túnica de oficiante y una pizca de Luz entre las manos, los Botarramas renquean y el Ofomni mueve los tentáculos, los dos con los colores de su Bosque, también en el combate. Suenan los pasos, las letras de los diálogos, el menú, los golpes y latigazos del combate, los avisos del riutash y su destello.
 
 ### Cambiado
@@ -21,7 +26,8 @@ Todos los cambios que nota el jugador. Formato [Keep a Changelog](https://keepac
 - El combate se narra estilo Pokémon: letra a letra, un mensaje por acción, con barras de PV animadas.
 - Los guardianes de los bordes son siempre Botarramas: ya no aparecen Aledra ni Ofomni en los cruces. El borde de un Bosque cerrado sigue sin dejarte pasar sin pagar o vencer.
 - Retroceder en el menú del borde te aparta dos casillas en vez de una.
-- El guardado pasa a la versión 6 (misiones, ofrendas, villa dañada, experiencia y fama). Las partidas anteriores se cargan y la misión vuelve a estar ofrecida.
+- El guardado pasa a la versión 7 (misiones, ofrendas, villa dañada, experiencia, nivel, fama y refugios saqueados). Las partidas anteriores se cargan: la misión vuelve a estar ofrecida y el nivel es el que corresponde a la experiencia guardada.
+- El menú del combate tiene cinco acciones: Atacar, Defender, Ofrecer Luz, Ofrenda y Huir. Las que no se pueden usar salen en gris, pero el cursor ya no las salta.
 
 ## [0.1.0] - 2026-10-23
 Primer vertical slice del modo Aventura.

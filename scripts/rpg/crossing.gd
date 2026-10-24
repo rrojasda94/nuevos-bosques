@@ -1,6 +1,7 @@
 extends CanvasLayer
-## Menú del borde de un Bosque cerrado (ADR 0009): pagar Luz al Nujio, enfrentar a su Botarramas o
-## retroceder. Lo abre el encuentro con un Botarramas o, como red de seguridad, empujar el borde.
+## Menú del borde de un Bosque cerrado (ADR 0009): pagar Luz al Nujio, dejarle una ofrenda
+## (submenú con las que alcanzan el peaje, completadas con Luz suelta; ofrendas-v1.md), enfrentar a
+## su Botarramas o retroceder. Lo abre el encuentro con un Botarramas o, como red de seguridad, empujar el borde.
 ## También lleva el combate de misión (Ofomni, EventBus.quest_battle_requested).
 ## Mientras está abierto (o dura el combate) el árbol se pausa; este nodo y el combate siguen
 ## activos (process_mode ALWAYS). Al terminar emite EventBus.crossing_resolved (o
@@ -8,8 +9,13 @@ extends CanvasLayer
 ## Solo escucha EventBus y lee GameState: no conoce la escena de exploración.
 
 const BATTLE_SCENE: PackedScene = preload("res://scenes/rpg/battle.tscn")
-## Texto de placeholder; lo revisa narrative-writer.
+## Textos de placeholder; los revisa narrative-writer.
 const TITLE: String = "El Bosque te observa. Su Nujio exige Luz."
+const TEXT_OFRENDA_MENU: String = "Ofrecer una ofrenda"
+const TEXT_OFRENDA_PLUS_LUZ: String = " (+%d Luz)"
+const TEXT_BACK: String = "Volver"
+## Opciones del menú principal, en orden.
+enum Option { PAY_LUZ, OFRENDA, FIGHT, RETREAT }
 
 var _bosque_id: int = -1
 var _cost: int = 0
@@ -19,6 +25,9 @@ var _map_key: String = ""
 var _battle: Node
 ## Misión del combate en curso (&"" = combate de borde).
 var _quest_id: StringName = &""
+## Submenú de ofrendas abierto: índices de GameState.inventory de cada opción (sin la de volver).
+var _ofrenda_choices: Array[int] = []
+var _in_submenu: bool = false
 
 @onready var _panel: Control = $Panel
 @onready var _title: Label = $Panel/Title
@@ -42,16 +51,47 @@ func _on_bosque_border_reached(bosque_id: int) -> void:
 	_bosque_id = bosque_id
 	_distance = maxi(1, _map.distance(home, bosque_id))
 	_cost = AdventureRules.toll_cost(_distance)
+	_open_main_menu()
+	_panel.visible = true
+	get_tree().paused = true
+
+
+func _open_main_menu() -> void:
+	_in_submenu = false
 	_title.text = TITLE
 	var texts: Array[String] = [
 		"Ofrecer %d Luz (tienes %d)" % [_cost, GameState.luz],
+		TEXT_OFRENDA_MENU,
 		"Enfrentar al Botarramas",
 		"Retroceder",
 	]
-	var enabled: Array[bool] = [GameState.luz >= _cost, true, true]
+	var has_ofrenda: bool = not Ofrendas.payable(GameState.inventory, GameState.luz, _cost).is_empty()
+	var enabled: Array[bool] = [GameState.luz >= _cost, has_ofrenda, true, true]
 	_options.set_options(texts, enabled)
-	_panel.visible = true
-	get_tree().paused = true
+
+
+## Una opción del submenú: "Ofrecer <ofrenda> (<valor>) por un paso de <N>", con la Luz suelta
+## que la completa si no llega.
+static func ofrenda_option(item: Dictionary, cost: int) -> String:
+	var value: int = int(item.luz)
+	var text: String = Texts.get_text("crossing_ofrenda_option") % [Ofrendas.display_name(StringName(str(item.id))), value, cost]
+	var luz: int = Ofrendas.luz_needed(value, cost)
+	if luz > 0:
+		text += TEXT_OFRENDA_PLUS_LUZ % luz
+	return text
+
+
+func _open_submenu() -> void:
+	_in_submenu = true
+	_ofrenda_choices = Ofrendas.payable(GameState.inventory, GameState.luz, _cost)
+	var texts: Array[String] = []
+	var enabled: Array[bool] = []
+	for i: int in _ofrenda_choices:
+		texts.append(ofrenda_option(GameState.inventory[i], _cost))
+		enabled.append(true)
+	texts.append(TEXT_BACK)
+	enabled.append(true)
+	_options.set_options(texts, enabled)
 
 
 ## El reparto en Bosques se deriva de seed + región; se recalcula solo si cambian.
@@ -66,13 +106,22 @@ func _unhandled_input(event: InputEvent) -> void:
 	if not _panel.visible:
 		return
 	get_viewport().set_input_as_handled()
-	match _options.handle(event):
-		0:
+	var choice: int = _options.handle(event)
+	if _in_submenu:
+		if choice == OptionMenu.CANCEL or choice == _ofrenda_choices.size():
+			_open_main_menu()
+		elif choice >= 0 and AdventureRules.pay_toll_with_ofrenda(_bosque_id, _cost, _ofrenda_choices[choice]):
+			_close(&"paid")
+		return
+	match choice:
+		Option.PAY_LUZ:
 			if AdventureRules.pay_toll(_bosque_id, _cost):
 				_close(&"paid")
-		1:
+		Option.OFRENDA:
+			_open_submenu()
+		Option.FIGHT:
 			_start_battle()
-		2, OptionMenu.CANCEL:
+		Option.RETREAT, OptionMenu.CANCEL:
 			_close(&"retreated")
 
 
@@ -112,7 +161,8 @@ func _on_battle_finished(logic: BattleLogic) -> void:
 		_quest_id = &""
 		return
 	var outcome: StringName = AdventureRules.finish_battle(logic, _bosque_id)
-	var resolved: StringName = { &"victory": &"won", &"defeat": &"defeated", &"game_over": &"game_over" }.get(outcome, &"fled")
+	# La ofrenda en combate abre el paso como pagar (ADR 0010).
+	var resolved: StringName = { &"victory": &"won", &"appeased": &"paid", &"defeat": &"defeated", &"game_over": &"game_over" }.get(outcome, &"fled")
 	_close(resolved)
 
 

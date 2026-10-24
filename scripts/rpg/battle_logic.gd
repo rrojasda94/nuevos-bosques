@@ -5,9 +5,12 @@ extends RefCounted
 ## Números en data/combat/balance.json. RNG propio sembrado (nunca randi() global ni GameState.rng).
 ## Ataque especial configurable por monstruo: cada `special_every` ataques el rival multiplica su daño
 ## por `special_factor` y lo anuncia en el turno anterior (Latigazo múltiple del Ofomni).
+## Ofrenda (ofrendas-v1.md): una ofrenda del inventario, completada con Luz suelta hasta el peaje
+## del Bosque, hace que el Único se vaya (APPEASED) y el paso se abre. No da XP. El Ofomni no la
+## acepta (accepts_ofrenda = false).
 
-enum Action { ATTACK, DEFEND, OFFER_LUZ, FLEE }
-enum Result { ONGOING, VICTORY, DEFEAT, FLED }
+enum Action { ATTACK, DEFEND, OFFER_LUZ, FLEE, OFRENDA }
+enum Result { ONGOING, VICTORY, DEFEAT, FLED, APPEASED }
 
 var balance: Dictionary
 var rng := RandomNumberGenerator.new()
@@ -38,14 +41,23 @@ var unico_texts: Dictionary = {}
 var fatal: bool = false
 ## XP que da vencer (la fija AdventureRules según d).
 var victory_xp: int = 0
+## Niveles que alcanza el Adoc si vence, en orden (los calcula AdventureRules al empezar), para
+## anunciarlos en el combate tras la victoria.
+var level_ups: Array[int] = []
+## Ofrendas: peaje del Bosque (N), si el rival las acepta, copia del inventario ([{ id, luz }]) y
+## la ofrenda entregada (índice en `ofrendas`, -1 = ninguna).
+var toll: int = 0
+var accepts_ofrenda: bool = true
+var ofrendas: Array = []
+var ofrenda_index: int = -1
 
 
-## `unico` = { name, max_hp, atk, def } (ver AdventureRules.make_unico) y, opcionalmente,
-## special_every, special_factor y texts.
-func _init(balance_data: Dictionary, hp: int, luz_amount: int, unico: Dictionary, rng_seed: int) -> void:
+## `adoc` = { max_hp, atk, def } del nivel del Adoc (AdventureRules.adoc_stats). `unico` =
+## { name, max_hp, atk, def } (ver AdventureRules.make_unico) y, opcionalmente, special_every,
+## special_factor y texts.
+func _init(balance_data: Dictionary, adoc: Dictionary, hp: int, luz_amount: int, unico: Dictionary, rng_seed: int) -> void:
 	balance = balance_data
 	rng.seed = rng_seed
-	var adoc: Dictionary = balance.adoc
 	adoc_max_hp = int(adoc.max_hp)
 	adoc_hp = clampi(hp, 1, adoc_max_hp)
 	adoc_atk = int(adoc.atk)
@@ -88,15 +100,47 @@ func is_over() -> bool:
 	return result != Result.ONGOING
 
 
+## Índices de `ofrendas` con los que se puede pagar el peaje ahora (uno por id, de menor a mayor
+## valor). Vacío si el rival no acepta ofrendas.
+func payable_ofrendas() -> Array[int]:
+	if not accepts_ofrenda:
+		return []
+	return Ofrendas.payable(ofrendas, luz, toll)
+
+
+func can_offer_ofrenda() -> bool:
+	return not is_over() and not payable_ofrendas().is_empty()
+
+
+## Entrega la ofrenda `index` de `ofrendas` (entera, completada con Luz suelta si hace falta): el
+## Único se va y el combate acaba (APPEASED). Eventos: ofrenda ("amount" = valor, "id"; "luz" ya
+## descontada) y unico_leaves. Si no se puede, devuelve [] y no consume turno.
+func offer_ofrenda(index: int) -> Array[Dictionary]:
+	var events: Array[Dictionary] = []
+	if is_over() or not payable_ofrendas().has(index):
+		return events
+	var item: Dictionary = ofrendas[index]
+	var value: int = int(item.luz)
+	luz -= Ofrendas.luz_needed(value, toll)
+	ofrenda_index = index
+	result = Result.APPEASED
+	var e: Dictionary = _event(&"ofrenda", value)
+	e.id = str(item.id)
+	events.append(e)
+	events.append(_event(&"unico_leaves"))
+	return events
+
+
 ## Juega un turno completo (primero el Adoc, luego el Único si sigue en pie).
 ## Devuelve eventos para narrar, en orden: { "kind": StringName, "amount": int, y el estado justo
 ## después del evento: "unico_hp", "adoc_hp", "luz" } (la UI actualiza las barras con cada uno).
 ## kind: attack, defend, offer_luz, flee_ok, flee_fail, unico_attack, unico_special (lleva además
 ## "defended": bool), special_warning (aviso del especial del turno siguiente), victory, defeat.
 ## Una acción no válida (Ofrecer Luz sin Luz, combate acabado) devuelve [] y no consume turno.
+## La ofrenda no se juega aquí: va por offer_ofrenda. La victoria lleva además "xp" y "level_ups".
 func play_turn(action: Action) -> Array[Dictionary]:
 	var events: Array[Dictionary] = []
-	if is_over() or (action == Action.OFFER_LUZ and not can_offer_luz()):
+	if is_over() or (action == Action.OFFER_LUZ and not can_offer_luz()) or action == Action.OFRENDA:
 		return events
 	match action:
 		Action.ATTACK:
@@ -119,7 +163,10 @@ func play_turn(action: Action) -> Array[Dictionary]:
 			events.append(_event(&"flee_fail"))
 	if unico_hp <= 0:
 		result = Result.VICTORY
-		events.append(_event(&"victory"))
+		var v: Dictionary = _event(&"victory")
+		v.xp = victory_xp
+		v.level_ups = level_ups.duplicate()
+		events.append(v)
 		return events
 	unico_attacks += 1
 	var special: bool = is_special_attack(unico_attacks, special_every)

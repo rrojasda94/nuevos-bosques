@@ -1,14 +1,17 @@
 class_name AdventureRules
 extends RefCounted
-## Reglas del Adoc fuera del combate (ADR 0009): Luz, PV, peaje entre Bosques, Únicos (los
-## Botarramas de borde), combate de misión (Ofomni), resultado de un combate (con monstruos fatales
-## según el Momento, monstruos.md), XP de victoria, recompensa de misión, villa dañada, descanso en
-## una villa y efecto del riutash (ADR 0012). Escribe en GameState y avisa por EventBus. Los
+## Reglas del Adoc fuera del combate (ADR 0009): Luz, PV, nivel y XP (progresion-adoc.md), peaje
+## entre Bosques (con Luz o con una ofrenda, ofrendas-v1.md), Únicos (los Botarramas de borde),
+## combate de misión (Ofomni), resultado de un combate (con monstruos fatales según el Momento,
+## monstruos.md), recompensa de misión, hallazgos en refugios, villa dañada, descanso en una villa
+## y efecto del riutash (ADR 0012). Escribe en GameState y avisa por EventBus. Los
 ## números viven en data/combat/balance.json y, los del riutash, en data/world/time.json.
 
 const BALANCE_PATH: String = "res://data/combat/balance.json"
 const SALT_BATTLE: int = 21
 const SALT_QUEST_BATTLE: int = 23
+const SALT_REFUGE_LOOT: int = 29
+const ADOC_ID: StringName = &"adoc"
 
 static var _balance: Dictionary = {}
 
@@ -21,8 +24,67 @@ static func balance() -> Dictionary:
 	return _balance
 
 
+## PV máximos del Adoc en su nivel actual.
 static func max_hp() -> int:
-	return int(balance().adoc.max_hp)
+	return int(adoc_stats(GameState.level).max_hp)
+
+
+# --- Niveles (progresion-adoc.md) ---------------------------------------------------------------
+
+static func _level_table() -> Array:
+	return balance().levels.table
+
+
+## Nivel tope (el último de la tabla).
+static func max_level() -> int:
+	return _level_table().size()
+
+
+## XP acumulada para alcanzar un nivel (1 = 0).
+static func xp_for_level(level: int) -> int:
+	return int(_level_table()[clampi(level, 1, max_level()) - 1].xp)
+
+
+## Nivel que corresponde a una XP acumulada (umbral inclusivo, con el tope).
+static func level_for_xp(xp: int) -> int:
+	var level: int = 1
+	while level < max_level() and xp >= xp_for_level(level + 1):
+		level += 1
+	return level
+
+
+## XP que falta para el siguiente nivel desde `xp`, o -1 en el tope.
+static func xp_to_next(xp: int) -> int:
+	var level: int = level_for_xp(xp)
+	return -1 if level >= max_level() else xp_for_level(level + 1) - xp
+
+
+## Stats del Adoc en un nivel: { max_hp, atk, def }.
+static func adoc_stats(level: int) -> Dictionary:
+	var row: Dictionary = _level_table()[clampi(level, 1, max_level()) - 1]
+	return { "max_hp": int(row.max_hp), "atk": int(row.atk), "def": int(row.def) }
+
+
+## Niveles que se alcanzan al pasar de `xp` a `xp + gained`, en orden (vacío si ninguno).
+static func levels_gained(xp: int, gained: int) -> Array[int]:
+	var out: Array[int] = []
+	for level: int in range(level_for_xp(xp) + 1, level_for_xp(xp + gained) + 1):
+		out.append(level)
+	return out
+
+
+## Suma XP al Adoc y aplica cada nivel nuevo: los PV actuales suben lo mismo que los máximos y se
+## emite character_leveled_up por nivel. Devuelve los niveles alcanzados.
+static func gain_xp(amount: int) -> Array[int]:
+	var gained: int = maxi(0, amount)
+	var levels: Array[int] = levels_gained(GameState.xp, gained)
+	GameState.xp += gained
+	for level: int in levels:
+		var before: int = max_hp()
+		GameState.level = level
+		set_hp(GameState.hp + max_hp() - before)
+		EventBus.character_leveled_up.emit(ADOC_ID, level)
+	return levels
 
 
 static func start_luz() -> int:
@@ -125,24 +187,41 @@ static func pay_toll(bosque_id: int, cost: int) -> bool:
 	return true
 
 
+## Paga el peaje con la ofrenda `index` del inventario (ofrendas-v1.md): se deja entera, se
+## completa con Luz suelta si no llega y el excedente se pierde. Abre el paso. false si no alcanza.
+static func pay_toll_with_ofrenda(bosque_id: int, cost: int, index: int) -> bool:
+	if index < 0 or index >= GameState.inventory.size():
+		return false
+	var value: int = int(GameState.inventory[index].get("luz", 0))
+	if not Ofrendas.can_pay(value, GameState.luz, cost):
+		return false
+	GameState.inventory.remove_at(index)
+	set_luz(GameState.luz - Ofrendas.luz_needed(value, cost))
+	open_bosque(bosque_id)
+	return true
+
+
 ## Prepara un combate nuevo contra el Botarramas que guarda el Bosque. Cuenta el intento (cambia la
 ## semilla) y el rival empieza siempre con todos sus PV: huir o retroceder no conserva el daño hecho.
 static func start_battle(bosque_id: int, d: int, monster_id: StringName = &"botarramas") -> BattleLogic:
 	var key: String = str(bosque_id)
 	var attempt: int = int(GameState.battle_attempts.get(key, 0))
 	GameState.battle_attempts[key] = attempt + 1
-	var logic := BattleLogic.new(balance(), GameState.hp, GameState.luz, make_monster(monster_id, d),
-		battle_seed(GameState.seed_value, bosque_id, attempt))
+	var logic := BattleLogic.new(balance(), adoc_stats(GameState.level), GameState.hp, GameState.luz,
+		make_monster(monster_id, d), battle_seed(GameState.seed_value, bosque_id, attempt))
 	_prepare(logic, monster_config(monster_id), d)
+	logic.toll = toll_cost(d)
+	logic.ofrendas = GameState.inventory.duplicate(true)
 	EventBus.battle_started.emit(bosque_id)
 	return logic
 
 
 ## Aplica a GameState el final de un combate de borde. Devuelve el resultado como StringName
-## (&"victory", &"defeat", &"fled" o &"game_over" si el rival era fatal).
+## (&"victory", &"defeat", &"fled", &"appeased" si el Único se fue con una ofrenda o &"game_over"
+## si el rival era fatal). Vencer o la ofrenda abren el paso.
 static func finish_battle(logic: BattleLogic, bosque_id: int) -> StringName:
 	var outcome: StringName = _apply_result(logic)
-	if outcome == &"victory":
+	if outcome == &"victory" or outcome == &"appeased":
 		open_bosque(bosque_id)
 	EventBus.battle_ended.emit(bosque_id, outcome)
 	return outcome
@@ -157,8 +236,11 @@ static func start_quest_battle(quest_id: StringName, d: int) -> BattleLogic:
 	GameState.quests[quest_id] = q
 	var target: StringName = StringName(str(QuestLogic.data(quest_id).get("target", "")))
 	var rng_seed: int = ChunkGenerator.hash_ints([GameState.seed_value, String(quest_id).hash(), attempt, SALT_QUEST_BATTLE])
-	var logic := BattleLogic.new(balance(), GameState.hp, GameState.luz, make_monster(target, d), rng_seed)
+	var logic := BattleLogic.new(balance(), adoc_stats(GameState.level), GameState.hp, GameState.luz,
+		make_monster(target, d), rng_seed)
 	_prepare(logic, monster_config(target), d)
+	# La misión es vencerlo: no acepta ofrendas (mision-ofomni.md).
+	logic.accepts_ofrenda = false
 	return logic
 
 
@@ -177,6 +259,7 @@ static func finish_quest_battle(logic: BattleLogic, quest_id: StringName) -> Str
 static func _prepare(logic: BattleLogic, cfg: Dictionary, d: int) -> void:
 	logic.fatal = is_fatal(cfg.get("fatal_at", []), GameState.clock_momento)
 	logic.victory_xp = victory_xp(d)
+	logic.level_ups = levels_gained(GameState.xp, logic.victory_xp)
 
 
 static func _apply_result(logic: BattleLogic) -> StringName:
@@ -185,8 +268,13 @@ static func _apply_result(logic: BattleLogic) -> StringName:
 		BattleLogic.Result.VICTORY:
 			set_hp(logic.adoc_hp)
 			set_luz(logic.luz + int(b.victory_luz))
-			GameState.xp += logic.victory_xp
+			gain_xp(logic.victory_xp)
 			return &"victory"
+		BattleLogic.Result.APPEASED:
+			set_hp(logic.adoc_hp)
+			set_luz(logic.luz)
+			_remove_offered(logic)
+			return &"appeased"
 		BattleLogic.Result.DEFEAT:
 			if logic.fatal:
 				EventBus.game_ended.emit(&"fatal_defeat")
@@ -199,15 +287,66 @@ static func _apply_result(logic: BattleLogic) -> StringName:
 	return &"fled"
 
 
+## Quita del inventario la ofrenda entregada en combate (la misma posición si sigue ahí; si no,
+## la primera con su id).
+static func _remove_offered(logic: BattleLogic) -> void:
+	if logic.ofrenda_index < 0 or logic.ofrenda_index >= logic.ofrendas.size():
+		return
+	var id: String = str(logic.ofrendas[logic.ofrenda_index].id)
+	var inv: Array = GameState.inventory
+	if logic.ofrenda_index < inv.size() and str(inv[logic.ofrenda_index].get("id", "")) == id:
+		inv.remove_at(logic.ofrenda_index)
+		return
+	for i: int in inv.size():
+		if str(inv[i].get("id", "")) == id:
+			inv.remove_at(i)
+			return
+
+
 ## Recompensa de una misión (mision-ofomni.md): Luz al tope, una ofrenda al inventario como
-## { id, luz }, XP y fama. `reward` es el bloque "reward" del JSON de la misión.
+## { id, luz }, XP y fama. `reward` es el bloque "reward" del JSON de la misión. Si la XP sube de
+## nivel, lo anuncia en el HUD (fuera del combate no hay narración).
 static func apply_quest_reward(reward: Dictionary) -> void:
 	if bool(reward.get("refill_luz_to_max", false)):
 		set_luz(luz_max())
 	if reward.has("ofrenda"):
 		GameState.inventory.append({ "id": str(reward.ofrenda), "luz": int(reward.get("ofrenda_luz", 0)) })
-	GameState.xp += int(reward.get("xp", 0))
 	GameState.fama += int(reward.get("fama", 0))
+	var lines: PackedStringArray = []
+	for level: int in gain_xp(int(reward.get("xp", 0))):
+		lines.append(Texts.get_text("level_up") % level)
+	if not lines.is_empty():
+		EventBus.notice_requested.emit("\n".join(lines))
+
+
+# --- Hallazgos en refugios (ofrendas-v1.md) -----------------------------------------------------
+
+## Ofrenda que guarda el refugio del chunk (&"" = ninguna). Determinista por seed y chunk: uno de
+## cada `one_in` refugios, repartidos a partes iguales entre las ofrendas de origen "refuge".
+static func refuge_ofrenda(seed_value: int, coord: Vector2i) -> StringName:
+	var cfg: Dictionary = balance().refuge_loot
+	var ids: Array[StringName] = Ofrendas.ids_from(str(cfg.source))
+	var one_in: int = maxi(1, int(cfg.one_in))
+	var h: int = ChunkGenerator.hash_ints([seed_value, coord.x, coord.y, SALT_REFUGE_LOOT])
+	if ids.is_empty() or h % one_in != 0:
+		return &""
+	return ids[(h / one_in) % ids.size()]
+
+
+static func is_refuge_looted(coord: Vector2i) -> bool:
+	return GameState.looted_refuges.has(coord)
+
+
+## Recoge el hallazgo del refugio del chunk: lo añade al inventario y lo marca, una sola vez por
+## partida. Devuelve el elemento { id, luz } o {} si no había nada o ya se recogió.
+static func loot_refuge(coord: Vector2i) -> Dictionary:
+	var id: StringName = refuge_ofrenda(GameState.seed_value, coord)
+	if id == &"" or is_refuge_looted(coord):
+		return {}
+	var item: Dictionary = Ofrendas.make_item(id)
+	GameState.inventory.append(item)
+	GameState.looted_refuges.append(coord)
+	return item
 
 
 ## Villa natal dañada (misión fallida): pierde Luz suelta (redondeo hacia abajo) y queda marcada.

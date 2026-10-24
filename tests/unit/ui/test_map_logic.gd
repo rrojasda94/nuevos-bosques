@@ -61,9 +61,9 @@ func test_migration_v4_without_position_has_nothing_explored() -> void:
 	assert_true(GameState.explored_chunks.is_empty(), "(-1, -1): se marcará al entrar en el chunk")
 
 
-func test_save_version_is_6() -> void:
-	assert_eq(GameState.SAVE_VERSION, 6)
-	assert_eq(int(GameState.to_dict()["save_version"]), 6)
+func test_save_version_is_7() -> void:
+	assert_eq(GameState.SAVE_VERSION, 7)
+	assert_eq(int(GameState.to_dict()["save_version"]), 7)
 
 
 func test_map_reveals_only_explored_chunks() -> void:

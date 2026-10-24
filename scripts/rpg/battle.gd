@@ -5,6 +5,9 @@ extends CanvasLayer
 ## durante la escritura lo completa y pulsar después pasa al siguiente. Las barras cambian al
 ## mostrarse el mensaje que las cambia. El menú solo aparece cuando no queda ningún mensaje.
 ## No aplica nada a GameState: al terminar emite `finished` y Crossing aplica el resultado.
+## "Ofrenda" abre un submenú con las ofrendas que alcanzan el peaje (ofrendas-v1.md); contra un
+## rival que no las acepta (el Ofomni) sale en gris y, al elegirla, explica por qué. Tras la
+## victoria se anuncian la XP y cada nivel nuevo (progresion-adoc.md).
 
 signal finished(logic: BattleLogic)
 
@@ -21,7 +24,18 @@ const TEXT_SPECIAL_WARNING: String = "El Único se prepara para un golpe terribl
 const TEXT_VICTORY: String = "El Único vuelve a la Luz del Bosque."
 const TEXT_VICTORY_LUZ: String = " (+%d Luz)"
 const TEXT_DEFEAT: String = "Caes. Despertarás junto al Nujio de tu villa."
-const OPTIONS: Array[String] = ["Atacar", "Defender", "Ofrecer Luz", "Huir"]
+const OPTIONS: Array[String] = ["Atacar", "Defender", "Ofrecer Luz", "Ofrenda", "Huir"]
+## Acción de cada opción del menú, en el mismo orden.
+const MENU_ACTIONS: Array[BattleLogic.Action] = [
+	BattleLogic.Action.ATTACK, BattleLogic.Action.DEFEND, BattleLogic.Action.OFFER_LUZ,
+	BattleLogic.Action.OFRENDA, BattleLogic.Action.FLEE,
+]
+const TEXT_OFRENDA_ITEM: String = "%s (%d)"
+const TEXT_OFRENDA_PLUS_LUZ: String = " + %d Luz"
+const TEXT_OFRENDA_COUNT: String = " x%d"
+const TEXT_BACK: String = "Volver"
+## Submenú de ofrendas: caja ancha (sobre la del texto) a la izquierda.
+const SUBMENU_LEFT: float = 4.0
 
 ## Segundos que tarda una barra de PV en llegar a su nuevo valor.
 const BAR_TIME: float = 0.35
@@ -31,6 +45,11 @@ const BAR_WIDTH: float = 100.0
 
 var _logic: BattleLogic
 var _kind: UnicoArt.Kind = UnicoArt.Kind.BOTARRAMAS
+## Submenú de ofrendas abierto: índices de _logic.ofrendas de cada opción (sin la de volver).
+var _ofrenda_choices: Array[int] = []
+var _in_submenu: bool = false
+var _menu_left: float = 0.0
+var _options_right: float = 0.0
 
 @onready var _ground: ColorRect = $Ground
 @onready var _unico: TextureRect = $Unico
@@ -47,6 +66,9 @@ var _kind: UnicoArt.Kind = UnicoArt.Kind.BOTARRAMAS
 
 
 func _ready() -> void:
+	_menu_left = _menu_box.offset_left
+	_options_right = _menu.offset_right
+	_menu.skip_disabled = false
 	_text_box.line_started.connect(_on_message_started)
 	_text_box.finished.connect(_on_messages_finished)
 
@@ -112,6 +134,18 @@ static func messages_for(events: Array[Dictionary], balance: Dictionary, texts: 
 				m.text = TEXT_VICTORY + (TEXT_VICTORY_LUZ % gained if gained > 0 else "")
 				m.luz = int(e.luz) + maxi(0, gained)
 				m.flash = &"vanish"
+				out.append(m)
+				# Después de la victoria: la XP y un mensaje por nivel nuevo (sin tocar las barras).
+				if int(e.get("xp", 0)) > 0:
+					out.append({ "text": Texts.get_text("xp_gained") % int(e.xp) })
+				for level: Variant in e.get("level_ups", []):
+					out.append({ "text": Texts.get_text("level_up") % int(level) })
+				continue
+			&"ofrenda":
+				m.text = Texts.get_text("battle_ofrenda_used") % Ofrendas.display_name(StringName(str(e.get("id", ""))))
+			&"unico_leaves":
+				m.text = Texts.get_text("battle_ofrenda_unico_leaves")
+				m.flash = &"vanish"
 			&"defeat":
 				m.text = str(texts.get("defeat", TEXT_DEFEAT))
 		out.append(m)
@@ -123,13 +157,66 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	get_viewport().set_input_as_handled()
 	if _menu_box.visible:
+		if _in_submenu:
+			_handle_submenu(_menu.handle(event))
+			return
 		var choice: int = _menu.handle(event)
-		if choice >= 0:
-			var events: Array[Dictionary] = _logic.play_turn(choice as BattleLogic.Action)
-			if not events.is_empty():
-				_show_messages(messages_for(events, _logic.balance, texts_for(_logic)))
+		if choice == OptionMenu.DISABLED and MENU_ACTIONS[_menu.index] == BattleLogic.Action.OFRENDA \
+				and not _logic.accepts_ofrenda:
+			_show_messages([{ "text": Texts.get_text("battle_ofrenda_blocked_ofomni") }])
+		elif choice >= 0 and MENU_ACTIONS[choice] == BattleLogic.Action.OFRENDA:
+			_open_submenu()
+		elif choice >= 0:
+			_play(_logic.play_turn(MENU_ACTIONS[choice]))
 		return
 	_text_box.handle(event)
+
+
+func _play(events: Array[Dictionary]) -> void:
+	if not events.is_empty():
+		_show_messages(messages_for(events, _logic.balance, texts_for(_logic)))
+
+
+## Texto de una ofrenda en el submenú: nombre y valor, cuántas hay y la Luz suelta que la completa.
+static func ofrenda_option(item: Dictionary, count: int, toll: int) -> String:
+	var text: String = TEXT_OFRENDA_ITEM % [Ofrendas.display_name(StringName(str(item.id))), int(item.luz)]
+	if count > 1:
+		text += TEXT_OFRENDA_COUNT % count
+	var luz: int = Ofrendas.luz_needed(int(item.luz), toll)
+	if luz > 0:
+		text += TEXT_OFRENDA_PLUS_LUZ % luz
+	return text
+
+
+func _open_submenu() -> void:
+	_ofrenda_choices = _logic.payable_ofrendas()
+	var texts: Array[String] = []
+	var enabled: Array[bool] = []
+	for i: int in _ofrenda_choices:
+		var item: Dictionary = _logic.ofrendas[i]
+		texts.append(ofrenda_option(item, Ofrendas.count_of(_logic.ofrendas, str(item.id)), _logic.toll))
+		enabled.append(true)
+	texts.append(TEXT_BACK)
+	enabled.append(true)
+	_in_submenu = true
+	_menu_box.offset_left = SUBMENU_LEFT
+	_menu.offset_right = _options_right + _menu_left - SUBMENU_LEFT
+	_menu.set_options(texts, enabled)
+
+
+func _close_submenu() -> void:
+	_in_submenu = false
+	_menu_box.offset_left = _menu_left
+	_menu.offset_right = _options_right
+
+
+func _handle_submenu(choice: int) -> void:
+	if choice == OptionMenu.CANCEL or choice == _ofrenda_choices.size():
+		_close_submenu()
+		_open_menu()
+	elif choice >= 0:
+		_close_submenu()
+		_play(_logic.offer_ofrenda(_ofrenda_choices[choice]))
 
 
 func _show_messages(messages: Array[Dictionary]) -> void:
@@ -163,7 +250,7 @@ func _on_messages_finished() -> void:
 
 func _open_menu() -> void:
 	_text_box.show_static(TEXT_PROMPT)
-	var enabled: Array[bool] = [true, true, _logic.can_offer_luz(), true]
+	var enabled: Array[bool] = [true, true, _logic.can_offer_luz(), _logic.can_offer_ofrenda(), true]
 	_menu.set_options(OPTIONS, enabled, true)
 	_menu_box.visible = true
 

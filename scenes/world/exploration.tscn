@@ -1,4 +1,4 @@
-[gd_scene load_steps=10 format=3]
+[gd_scene load_steps=11 format=3]
 
 [ext_resource type="Script" path="res://scripts/world/exploration.gd" id="1_expl"]
 [ext_resource type="Script" path="res://scripts/rpg/player_walker.gd" id="2_player"]
@@ -9,6 +9,7 @@
 [ext_resource type="PackedScene" path="res://scenes/ui/region_map.tscn" id="7_map"]
 [ext_resource type="Script" path="res://scripts/rpg/monster_field.gd" id="8_monsters"]
 [ext_resource type="Script" path="res://scripts/rpg/quest_runner.gd" id="9_quest"]
+[ext_resource type="PackedScene" path="res://scenes/rpg/inventory_screen.tscn" id="10_inventory"]
 
 [node name="Exploration" type="Node2D"]
 script = ExtResource("1_expl")
@@ -87,3 +88,5 @@ pause_tree = true
 [node name="Compass" parent="." instance=ExtResource("6_compass")]
 
 [node name="RegionMap" parent="." instance=ExtResource("7_map")]
+
+[node name="InventoryScreen" parent="." instance=ExtResource("10_inventory")]

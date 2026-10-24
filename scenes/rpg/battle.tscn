@@ -126,5 +126,5 @@ offset_left = 4.0
 offset_top = 1.0
 offset_right = 84.0
 offset_bottom = 51.0
-theme_override_constants/separation = 0
+theme_override_constants/separation = -2
 script = ExtResource("2_menu")

@@ -217,7 +217,7 @@ func test_fatal_at_by_momento() -> void:
 	assert_true(AdventureRules.is_fatal(["riumna"], &"riumna"))
 	assert_false(AdventureRules.is_fatal(["riumna"], &"gietos"))
 	assert_true(AdventureRules.is_fatal(["gietos", "riumna"], &"gietos"))
-	var logic := BattleLogic.new(AdventureRules.balance(), 30, 6, AdventureRules.make_unico(2, "Aledra"), 1)
+	var logic := BattleLogic.new(AdventureRules.balance(), AdventureRules.adoc_stats(1), 30, 6, AdventureRules.make_unico(2, "Aledra"), 1)
 	logic.fatal = true
 	logic.result = BattleLogic.Result.DEFEAT
 	watch_signals(EventBus)

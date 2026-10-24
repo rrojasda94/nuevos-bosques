@@ -14,7 +14,7 @@ const UNICO: Dictionary = { "name": "Único serpiente", "max_hp": 22, "atk": 5, 
 
 
 func _logic(hp: int = 30, luz: int = 10, unico: Dictionary = UNICO, rng_seed: int = 7) -> BattleLogic:
-	return BattleLogic.new(BALANCE, hp, luz, unico, rng_seed)
+	return BattleLogic.new(BALANCE, BALANCE.adoc, hp, luz, unico, rng_seed)
 
 
 func test_attack_formula() -> void:
@@ -117,7 +117,7 @@ func test_flee_is_deterministic_and_about_75_percent() -> void:
 
 func _whipper(rng_seed: int) -> BattleLogic:
 	var unico: Dictionary = { "name": "Ofomni", "max_hp": 999, "atk": 8, "def": 3, "special_every": 3, "special_factor": 3.0 }
-	var logic := BattleLogic.new(BALANCE, 30, 10, unico, rng_seed)
+	var logic := BattleLogic.new(BALANCE, BALANCE.adoc, 30, 10, unico, rng_seed)
 	logic.adoc_hp = 999
 	return logic
 
