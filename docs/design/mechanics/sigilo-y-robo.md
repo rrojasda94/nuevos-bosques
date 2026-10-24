@@ -1,4 +1,6 @@
-# Ficha: Sigilo, armas y robo en los Bosques (0.3.0)
+# Ficha: Sigilo, armas y robo en los Bosques (0.3)
+
+> **En la hoja de ruta de la 0.3** (`docs/design/roadmap-0.3.md`), después de inventario y equipo.
 
 > Dueño: `game-designer`. **Versión 0.3.0, fuera de la 0.2.0** (alcance elegido por el dueño: "Botarramas en la 0.2.0; sigilo en la 0.3.0").
 > Esta ficha recoge lo dicho por el dueño y deja las reglas que faltan como preguntas o como propuestas marcadas. Se completará con números antes de implementarse.
@@ -26,6 +28,9 @@ Palabras del dueño:
 2. **Armas equipadas**: si el jugador las lleva, el Bosque **no le deja pasar** y tiene que **vencer a los enemigos constantemente**. Precisión (2026-10-24): "Las armas deberían poder estar o equipadas o desequipadas de la mano principal". **Desequipada, no cierra el paso.**
 3. **Percepción de los Únicos**: tienen radio de visión, velocidad y distancia de encuentro (`monstruos.md`, regla general). Las máscaras y los artefactos de camuflaje actúan sobre esa percepción.
 4. **Robo**: dentro de un Bosque, **robar un objeto** estando **sin protección** o **a la vista de otro Único** **despierta a los Ofomni**.
+   - **Primer caso definido** (dueño, 0.3: "solo puedes tomar 1 fruto por Momento, sino es un robo al boque"): **tomar un segundo fruto en el mismo Momento es robo**. Ya implementado: hostilidad +1 y relación −20 con ese Bosque (`bosques-y-relacion.md`, "Fruto").
+   - En este PR se añade que despierte a los Ofomni que persiguen.
+   - Los perseguidores son `ofomni` **apaciguables** (`monstruos.md`), no el `ofomni_descarriado` de la misión.
 5. **Persecución**: los Ofomni **persiguen al jugador por el Bosque hasta la frontera**.
 
 ## Propuestas de `game-designer` (a confirmar; sin números todavía)
@@ -73,7 +78,7 @@ Palabras del dueño:
 - La persecución de los Ofomni se siente tensa pero escapable (pregunta directa).
 
 ## Preguntas abiertas
-- **#130**: qué cuenta como robar (¿frutos, objetos de refugios, ofrendas dejadas por otros?) y qué es "estar sin protección".
+- **#130** (en parte: el fruto extra del mismo Momento es robo): qué más cuenta como robar (¿frutos, objetos de refugios, ofrendas dejadas por otros?) y qué es "estar sin protección".
 - **#131** (en parte): el arma se equipa o se desequipa de la mano principal, y desequipada no cierra el paso. Falta saber cuánto cuesta equipar o desequipar y su efecto en combate.
 - **#132**: duración y efecto de las máscaras y los artefactos que camuflan la Luz. ¿Se gastan? ¿Cada forma de máscara sirve para ciertos Bosques? ¿De dónde salen (villas, sarua)?
 - Inventario y equipo (#113).

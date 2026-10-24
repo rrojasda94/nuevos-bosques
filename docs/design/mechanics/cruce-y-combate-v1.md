@@ -1,5 +1,7 @@
 # Ficha: Cruce de Bosques y combate v1 (modo Aventura, versión de prueba)
 
+> **SUSTITUIDA en la 0.3 por [`cruce-y-combate-v2.md`](cruce-y-combate-v2.md) (ADR 0013).** Cambia que vencer ya no abre el Bosque entero (lo deja "forzado"), que se añade la hostilidad y que "Ofrecer Luz" paga el peaje y termina la pelea (se elimina el "8 de daño"). Esta ficha queda como historial: feedback, propuestas de ajuste y tablas de v1.
+
 > Dueño: `game-designer`. Estado: v1, **versión de prueba**. Lo implementa `rpg-systems-dev` en paralelo.
 > **Todos los números son PROVISIONALES**: los fijó el coordinador y se registran tal cual. Los posibles problemas de balance van como "propuesta de ajuste" y **no cambian los números de esta versión**.
 > Fuentes: ADR 0002 (combate por menú y por turnos), ADR 0007 (para pasar a otro Bosque con Nujio: pagar Luz o enfrentarse a sus Únicos; más lejos, más difícil), ADR 0008 (Nujio en el centro del Bosque), **ADR 0010 (economía de Luz, ofrendas y curación)** y el glosario (§3 Únicos, §5 Adoc).

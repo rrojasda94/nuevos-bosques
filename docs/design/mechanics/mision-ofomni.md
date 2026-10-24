@@ -55,9 +55,13 @@ Si el Ofomni llega a la villa: "la misión falla y la villa queda dañada; la pa
   - Entre riutash, la brújula apunta a la última posición conocida.
 
 ### Combate contra el Ofomni
+- **Es un Ofomni descarriado** (`ofomni_descarriado`; 0.3). El dueño señaló: "el ofomni de la mision y el de los bosques con nujio no estan diferenciados".
+  - El de la misión está en modo berserk y tiene **`appeasable: false`**: no acepta Luz ni ofrendas y hay que vencerlo.
+  - El `ofomni` normal de un Bosque con Nujio sí se apacigua y será el perseguidor por robo (`monstruos.md`).
 - **Distancia fija**: d_ofomni = (saltos del Bosque de aparición al Bosque natal) + 1, es decir, **4 o 5**, con las fórmulas de Único de v1.
   - Se fija al aparecer y **no cambia** aunque el Ofomni se acerque. Así no compensa esperar a que esté cerca, y se evita un exploit.
-  - d = 4: PV 34, ATQ 8, DEF 3. d = 5: PV 38, ATQ 9, DEF 3.
+  - Hasta la 0.2.0: d = 4: PV 34, ATQ 8, DEF 3; d = 5: PV 38, ATQ 9, DEF 3.
+  - **Desde la 0.3** (ADR 0013): PV reducidos (factor `hp_factor` en `balance.json`), ATQ y DEF iguales. Recomendación de `game-designer`: **×0,7** → d = 4: **PV 24**; d = 5: **PV 27**. Ver "Balance 0.3".
 - **Látigos** (confirmado por el dueño: "el ofomni ataca con latigos y cada 3 turnos usa varios latigos"):
   - El **ataque normal** del Ofomni es un **latigazo** (uno de sus tentáculos), con la fórmula de daño normal. Texto: `ofomni_whip_hit`.
   - **Latigazo múltiple**: cada **3.er ataque** usa **varios látigos** y hace **×3 de daño**.
@@ -67,12 +71,26 @@ Si el Ofomni llega a la villa: "la misión falla y la villa queda dañada; la pa
   - Las claves de texto `ofomni_gaze_*` pasan a llamarse `ofomni_whips_*`, y se añade `ofomni_whip_hit`. El código tiene que usar las claves nuevas.
 - **No guarda bordes**: los guardianes del paso son los Botarramas (`monstruos.md`). En la 0.3.0 los Ofomni también serán perseguidores tras un robo (`sigilo-y-robo.md`).
 - **No es fatal en la primera misión** (confirmado por el dueño, 2026-10-24: "El ofomni es no fatal en la primera mision"): perder contra él no es game over. `fatal_at: []` (`monstruos.md`).
-- **Acciones**: Atacar, Defender, Ofrecer Luz (2 de Luz, 8 de daño) y Huir (75%). **"Ofrecer ofrenda" no está disponible**: la misión es vencerlo.
+- **Acciones** (0.3): **Atacar, Defender y Huir** (75%). **"Ofrecer Luz" y "Ofrecer ofrenda" están desactivadas** porque es `appeasable: false`: desde la 0.3 esas acciones sirven para pagar y que el Único se vaya (ADR 0013), y la misión es vencerlo. Hasta la 0.2.0, Ofrecer Luz hacía 8 de daño.
 - **No abre Bosques** ni usa `battle_attempts` por Bosque (tiene su propia semilla de combate).
 - Al **huir**, el Ofomni recupera todos sus PV (como los Únicos) y sigue su ruta.
 - **Derrota**: el Ofomni es **no fatal** en esta misión (confirmado; ADR 0004). Despiertas en la villa natal (regla de v1: PV completos, mitad de la Luz suelta). El Ofomni **sigue avanzando**.
 
-### Balance (valores medios; Latigazo múltiple incluido; daño recibido frente a PV del adoc)
+### Balance 0.3 (sin "Ofrecer Luz"; valores medios con el Latigazo múltiple; daño recibido frente a los PV del adoc)
+Estrategia: solo atacar. Defender ante el Latigazo múltiple no cambia la media (alarga la pelea un turno), pero evita picos mortales.
+
+| Adoc | d = 4, PV ×0,85 (29/8/3) | d = 4, **PV ×0,7 (24/8/3)** | d = 5, PV ×0,85 (32/9/3) | d = 5, **PV ×0,7 (27/9/3)** |
+|---|---|---|---|---|
+| Nivel 1 (30/6/3) | pierde (~66) | pierde (~55) | pierde | pierde |
+| Nivel 2 (34/7/3) | pierde (~55) | pierde por poco (~39 de 34) | pierde (~72) | pierde (~46) |
+| Nivel 3 (38/7/4) | **pierde** (~45 de 38) | **gana** (~32 de 38) | pierde (~61) | justo (~39 de 38) |
+| Nivel 4 (42/8/4) | gana (~32 de 42) | gana (~27 de 42) | justo (~39 de 42) | gana (~33 de 42) |
+
+- **Con −15%** (propuesta del coordinador), el Ofomni de d = 4 **ya no se puede ganar en nivel 3**: hace falta nivel 4. Rompe la dificultad que confirmó el dueño ("ganable desde nivel 3").
+- **Con −30% (recomendado)**, el nivel 3 contra d = 4 queda igual que en la 0.2.0 con Luz (~32 de 38), y d = 5 en nivel 3 es justo (antes exigía la Luz llena).
+- **Alternativa**: −15% de PV y −1 de ATQ (d = 4: 29/7/3). Con nivel 3, ~35 de 38, más justo.
+
+### Balance 0.2.0 (historial, con "Ofrecer Luz" de 8 de daño)
 Estrategia: primero todas las "Ofrecer Luz" disponibles, luego atacar.
 
 | Adoc | Ofomni d = 4 (34/8/3), 0 Luz | d = 4, 4 Luz | d = 4, 10 Luz | Ofomni d = 5 (38/9/3), 4 Luz | d = 5, 10 Luz |
@@ -82,7 +100,7 @@ Estrategia: primero todas las "Ofrecer Luz" disponibles, luego atacar.
 | Nivel 3 (38/7/4) | pierde (~50) | **gana** (~32 de 38) | **gana** (~27 de 38) | pierde | **gana** (~33 de 38) |
 | Nivel 4 (42/8/4) | pierde por poco (~45 de 42) | gana (~32 de 42) | gana (~27 de 42) | justo (~39 de 42) | gana (~33 de 42) |
 
-Lectura (dificultad **confirmada por el dueño**, "2 ok"): con nivel 3 y al menos 4 de Luz, el Ofomni de d = 4 es difícil pero ganable. El de d = 5 exige nivel 3 con la Luz llena, o nivel 4. Defender ante el Latigazo múltiple no cambia mucho el daño medio, pero evita picos mortales cuando quedan pocos PV. Sin el Latigazo múltiple, la pelea sería más o menos un nivel más fácil.
+Lectura de la 0.2.0 (dificultad **confirmada por el dueño**, "2 ok"): con nivel 3 y al menos 4 de Luz, el Ofomni de d = 4 es difícil pero ganable. El de d = 5 exige nivel 3 con la Luz llena, o nivel 4. Defender ante el Latigazo múltiple no cambia mucho el daño medio, pero evita picos mortales cuando quedan pocos PV. Sin el Latigazo múltiple, la pelea sería más o menos un nivel más fácil.
 
 ### Resultados
 | Resultado | Efecto |

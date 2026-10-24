@@ -4,7 +4,7 @@
 > **Valores PROVISIONALES**, en `data/combat/balance.json` (estructura: `rpg-systems-dev`). Implementación: PR 7.
 
 ## Objetivo
-Que vencer Únicos haga más fuerte al adoc y que el progreso se vea en cada sesión. La curva está pensada para que el **Ofomni** de la primera misión (`mision-ofomni.md`) sea **difícil pero ganable** para un adoc de nivel 2–3 que use bien "Ofrecer Luz" y "Defender".
+Que vencer Únicos haga más fuerte al adoc y que el progreso se vea en cada sesión. La curva está pensada para que el **Ofomni** de la primera misión (`mision-ofomni.md`) sea **difícil pero ganable** para un adoc de nivel 3 que use bien "Defender". En la 0.3, "Ofrecer Luz" ya no hace daño (ADR 0013), y el Ofomni se reajustó (`mision-ofomni.md`, "Balance 0.3").
 
 ## Pilares
 - **Pilar 2 (progreso visible)**: el nivel 2 llega tras 2 victorias, y el mensaje "¡Subes a nivel N!" aparece en el combate.
@@ -12,7 +12,8 @@ Que vencer Únicos haga más fuerte al adoc y que el progreso se vea en cada ses
 
 ## Presión de supervivencia
 - **Alivia**: más PV, ATQ y DEF hacen viables los Bosques lejanos.
-- **Añade**: la XP solo se gana **venciendo**. Pagar el peaje (con Luz u ofrendas), huir o hacer que el Único se vaya con una ofrenda no da XP. Cada cruce obliga a elegir entre gastar Luz y arriesgar PV para ganar fuerza.
+- **Añade**: la XP solo se gana **venciendo**. Pagar el peaje (con Luz u ofrendas, en el borde o en combate), huir o retroceder no dan XP. Cada cruce obliga a elegir entre gastar Luz y arriesgar PV para ganar fuerza.
+- **Desde la 0.3** (ADR 0013), vencer también tiene un coste: cada Botarramas vencido sube la **hostilidad** de su Bosque (peaje +2, visión +2) y baja la relación 10. Ganar XP vuelve los Bosques más caros (`cruce-y-combate-v2.md`).
 
 ## Reglas
 
@@ -65,7 +66,7 @@ Valores medios: daño del adoc = ATQ − DEF del Único + 0,5; daño del Único 
 | 5 | 38/9/3 | pierde | pierde | pierde (~44 de 38) | gana (~33 de 42) | gana (~28 de 46) |
 | 6 | 42/10/4 | pierde | pierde | pierde | pierde (~58 de 42) | justo (~46 de 46) |
 
-Cada "Ofrecer Luz" (2 de Luz) quita 8 PV y acorta la pelea, así que con Luz el umbral baja más o menos un nivel.
+~~Cada "Ofrecer Luz" (2 de Luz) quita 8 PV y acorta la pelea.~~ Desde la 0.3, "Ofrecer Luz" paga el peaje y termina la pelea sin XP (ADR 0013). La tabla, que es solo con Atacar, sigue valiendo.
 
 ### Camino típico hasta el Ofomni
 El Ofomni aparece a 3–4 saltos (`mision-ofomni.md`). Si el jugador vence a los Únicos de d = 1, 2 y 3 por el camino, suma 7 + 10 + 13 = **30 XP → nivel 3**. Si paga uno de los peajes, llega a nivel 2 pero con menos Luz. Esa es la decisión central de la misión.

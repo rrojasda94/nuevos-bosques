@@ -28,6 +28,12 @@ Todo Único que se mueva por el mundo tiene tres parámetros (en datos, por tipo
 - Las máscaras y los artefactos que camuflan la Luz (0.3.0) actuarán sobre la visión (`sigilo-y-robo.md`).
 - Los valores del Ofomni que no figuran aquí son los del PR 6; deben copiarse a esta tabla cuando estén fijados.
 
+## Regla general: apaciguable o no
+- Cada tipo de monstruo tiene **`appeasable: bool`** (0.3, coordinador sobre las palabras del dueño).
+  - `true`: en combate se puede pagar con "Ofrecer Luz" u "Ofrecer ofrenda" para que se vaya (ADR 0013). Ejemplos: Botarramas, `ofomni`.
+  - `false`: esas acciones están desactivadas y hay que vencerlo o huir. Ejemplo: `ofomni_descarriado` (berserk, el de la misión).
+- Encaja con el glosario §5: el adoc es especialista "para apaciguar Únicos descarriados". Que uno descarriado no se apacigüe con Luz, sino que haya que vencerlo, es la regla de juego actual.
+
 ## Regla general: fatal según el Momento
 - Palabras del dueño: "es un survival, deberia ser game over dependiendo del monstruo que te ataque, un iserald es fatal" y "Aledras son fatales en las noches".
 - Cada tipo de monstruo tiene un campo **`fatal_at`**: la lista de Momentos en los que perder contra él es game over.
@@ -42,7 +48,8 @@ Todo Único que se mueva por el mundo tiene tres parámetros (en datos, por tipo
 | Monstruo | Qué dijo el dueño | Glosario §3 | `fatal_at` | Estado en el juego |
 |---|---|---|---|---|
 | **Botarramas** (nombre provisional; sustituyen a los "Únicos comunes de borde") | "Los Únicos que restringen el paso se llamaran Botarramas (por ahora) son aver sin plumas que renquean por los bosques cuando sienten la presencia de alguien acercandose." Antes: "los únicos no son arboles, son monstruos"; "pueden regenerarse con el tiempo" | Agentes del Bosque que se activan como anticuerpos; nacen de un árbol, animal o sustancia del Bosque | `[]` (provisional) | **0.2.0** (sección siguiente). Sustituyen a los 5 tipos de placeholder de borde (ADR 0009). |
-| **Ofomni** | "un ojo con tentáculos"; "ataca con latigos y cada 3 turnos usa varios latigos"; "es no fatal en la primera mision"; "si robas algun objeto [...] despiertas a los ofomni que te persiguen por el bosque hasta la frontera" | Subtipo de Únicos | `[]` en la primera misión (**confirmado**). Fuera de ella: por definir (#127) | 0.2.0: misión "Primer encargo" (`mision-ofomni.md`). 0.3.0: perseguidores tras un robo (`sigilo-y-robo.md`). **Ya no guarda bordes.** |
+| **Ofomni descarriado** (`ofomni_descarriado`, el de la misión) | "el ofomni de la mision y el de los bosques con nujio no estan diferenciados" (dueño, 0.3). Es el de "Primer encargo": berserk (glosario §5: los adoc apaciguan Únicos "descarriados"; ronda 1: Únicos "en modo berserk") | Subtipo de Únicos | `[]` en la primera misión | **`appeasable: false`**: no acepta Luz ni ofrendas; hay que vencerlo. Latigazo múltiple. 0.2.0, `mision-ofomni.md`. |
+| **Ofomni** (`ofomni`, el de un Bosque con Nujio) | "un ojo con tentáculos"; "ataca con latigos y cada 3 turnos usa varios latigos"; "es no fatal en la primera mision"; "si robas algun objeto [...] despiertas a los ofomni que te persiguen por el bosque hasta la frontera" | Subtipo de Únicos | Por definir (#127) | **`appeasable: true`**: se puede apaciguar con Luz u ofrendas. 0.3: perseguidor tras un robo (`sigilo-y-robo.md`). No guarda bordes. |
 | **Aledra** | "Aledras son fatales en las noches" | Aparece cuando la villa crece en población sin permiso y causa enfermedades. Serpiente roja gigante con aura rojiza, cabeza de calavera reptiliana, ojos negros que se comen la luz física y colmillos carmesí | `["riumna"]` | No existe todavía. **No guarda bordes**: queda para su evento de villa (glosario). Dónde y cuándo aparece en Aventura: #128. |
 | **Iserald** | "un iserald es fatal" | El Único más poderoso y último recurso; sale del propio Nujio. Teorías: inmolación para que el Bosque no sea profanado, o pérdida de cordura | `["gietos", "riumna"]` | No existe todavía (#103). |
 | **Reparep** | "son como cangrejos fantasmales y tacan en grupos de 2 hasta 4 individuos. Son debiles solos pero en grupo el ataque conjunto suma daños" | No aparece en el glosario | `[]` (provisional) | **0.3.0** (fuera de la 0.2.0). Propuesta de combate de grupo abajo. Si son Únicos o no: #128. |
@@ -82,7 +89,9 @@ Que los guardianes del paso entre Bosques se vean en el mundo y salgan al encuen
   - Correa: no se aleja más de **14 casillas** de su puesto. Si el jugador sale de un radio de **14**, vuelve a su puesto.
 - **Encuentro** (a `engage_distance` = 1, es decir, casilla adyacente, también en diagonal): se pausa el juego y se abre el **menú del borde** actual: "Ofrecer N Luz", "Ofrecer una ofrenda" (`ofrendas-v1.md`), "Enfrentar a sus Únicos" y "Retroceder". Las reglas, N y d son las de `cruce-y-combate-v1.md`.
 - **Resultado**:
-  - **Pagar o vencer** abre el Bosque entero (`open_bosques`, como en v1). Todos los Botarramas de ese Bosque quedan **pasivos**: se ven y no interceptan.
+  - ~~Pagar o vencer abre el Bosque entero.~~ **0.3 (ADR 0013, "el Bosque recuerda")**:
+    - **Pagar** (en el borde, o en combate con Ofrecer Luz u ofrenda) deja el Bosque **pagado**: todos sus Botarramas, **pasivos**.
+    - **Vencer** disuelve **solo a ese** Botarramas. El Bosque queda **forzado**: los demás siguen activos y exigen pago. La **hostilidad** del Bosque sube 1 (peaje +2; `vision_radius` de sus Botarramas +2 por nivel, tope +6) y la relación baja 10 (`cruce-y-combate-v2.md`).
   - **Retroceder o huir**: el jugador vuelve 2 casillas hacia su Bosque y ese Botarramas queda **sin detectar durante 3 s**, para no repetir el menú en bucle.
   - **Derrota**: regla de v1 (no fatal: despiertas en la villa natal).
 - **Sin colarse** (dueño, 2026-10-24: "sneak puede darse usando una mascara solamente o algun otro artefacto que camufle la Luz del jugador"):
@@ -131,7 +140,8 @@ Propuestas, a confirmar con el dueño:
 
 ### Reglas
 - **Grupo**: de 2 a 4 reparep (por seed). Cada uno tiene sus PV.
-- **Atacar** y **Ofrecer Luz**: el jugador **elige un objetivo** de entre los reparep vivos. El cursor salta por defecto al de menos PV.
+- **Atacar**: el jugador **elige un objetivo** de entre los reparep vivos. El cursor salta por defecto al de menos PV.
+- **Ofrecer Luz u ofrenda** (0.3, ADR 0013): paga y **todo el grupo** se va, sin XP. Si los reparep no guardan un borde, ¿qué se paga? (#128)
 - **Ataque conjunto** (una sola acción del grupo por turno):
   - **Daño = max(1, (suma del ATQ de los reparep vivos) − DEF del adoc + aleatorio de −1 a +2)**.
   - La DEF del adoc se resta **una sola vez**, así que el grupo "suma daños", como pidió el dueño.
@@ -157,7 +167,7 @@ Propuestas, a confirmar con el dueño:
 | Nivel 3 (38/7/4) | gana (~4) | gana (~12) | gana (~27 de 38) |
 
 - Solo, un reparep apenas hace daño (1–2 por turno contra DEF 3–4). Un grupo de 4 pega como un Único de d = 4.
-- "Ofrecer Luz" (8 de daño) mata un reparep de un golpe a d ≤ 1 y casi a d = 2, así que es la mejor respuesta contra grupos.
+- ~~"Ofrecer Luz" (8 de daño) mata un reparep de un golpe.~~ Desde la 0.3, Ofrecer Luz ya no hace daño (ADR 0013). Contra grupos, la mejor respuesta pasa a ser una DEF alta y concentrar los ataques en un objetivo. Los números de la tabla de arriba son solo con Atacar y no cambian.
 - La DEF alta es más valiosa contra grupos que contra Únicos, porque se resta del daño total.
 
 ## Inputs / outputs
@@ -175,7 +185,7 @@ Propuestas, a confirmar con el dueño:
 - **Combate contra Aledra que empieza de día y se alarga**: sigue siendo no fatal, porque cuenta el Momento del inicio y el reloj está parado.
 - **Derrota contra un fatal con la misión del Ofomni activa**: game over; la partida termina.
 - **Grupo de reparep al que solo le queda uno**: el ataque conjunto es el de uno solo (casi siempre 1 de daño).
-- **"Ofrecer Luz" sobre un reparep con menos de 8 PV**: muere; el daño sobrante no pasa a otro.
+- **Matar al reparep elegido con un ataque que le sobra**: el daño sobrante no pasa a otro.
 - **Grupo de 4 contra un adoc de nivel 1**: puede perder, pero los reparep no son fatales (provisional).
 
 ## Criterios de éxito para playtest
