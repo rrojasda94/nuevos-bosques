@@ -4,6 +4,12 @@
 >
 > **MVP = modo Aventura en la región Valle del Sara** (ADR 0005, 0007). Alcance del primer vertical slice: [`mechanics/aventura-mvp.md`](mechanics/aventura-mvp.md).
 >
+> **Versión 0.4 "Los otros adoc"** (propuesta): hoja de ruta en [`roadmap-0.4.md`](roadmap-0.4.md).
+> - Más NPC en las villas, por oficio: [`mechanics/npcs-y-villas.md`](mechanics/npcs-y-villas.md). Los Sarua dan ofrendas a cambio de favores; los artesanos hacen equipo de adoc.
+> - Otros adoc a los que ayudar: [`mechanics/otros-adoc.md`](mechanics/otros-adoc.md). Como aliados en combate ya en la 0.3, PR 7.
+> - **Senda** (de violenta a respetuosa) y puntos de stats y skills: [`mechanics/moralidad-y-progresion.md`](mechanics/moralidad-y-progresion.md).
+> - Salvar los Bosques (incendios, ataques, cordura): [`mechanics/bosques-y-relacion.md`](mechanics/bosques-y-relacion.md).
+>
 > **Versión 0.3 "El Bosque recuerda"** (en curso): hoja de ruta en [`roadmap-0.3.md`](roadmap-0.3.md).
 > - Combate y cruce vigentes en [`mechanics/cruce-y-combate-v2.md`](mechanics/cruce-y-combate-v2.md) (ADR 0013):
 >   - vencer a un Botarramas deja el Bosque "forzado" y sube su hostilidad;
