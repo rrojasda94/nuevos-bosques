@@ -83,8 +83,12 @@ func ask(line: Variant, options: Array) -> void:
 		texts.append(str(o))
 		enabled.append(true)
 	_menu.set_options(texts, enabled)
-	_choices.size = Vector2(CHOICE_WIDTH, CHOICE_ROW * texts.size() + 4.0)
-	_choices.position = Vector2(size.x - CHOICE_WIDTH, -_choices.size.y - 2.0)
+	# Ancho mínimo CHOICE_WIDTH; más si alguna opción no cabe (p. ej. "Tomarlo igualmente").
+	var width: float = CHOICE_WIDTH
+	for label: Node in _menu.get_children():
+		width = maxf(width, (label as Label).get_minimum_size().x + 8.0)
+	_choices.size = Vector2(width, CHOICE_ROW * texts.size() + 4.0)
+	_choices.position = Vector2(size.x - width, -_choices.size.y - 2.0)
 	_choices.visible = true
 	_asking = true
 

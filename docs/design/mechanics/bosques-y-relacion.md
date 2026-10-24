@@ -141,6 +141,7 @@ El letrero y el mapa (M) podrían indicar el estado con texto o color (`navegaci
     - Efecto: **hostilidad +1** y **relación −20** con ese Bosque. Más adelante, también despierta a los Ofomni (`sigilo-y-robo.md`).
   - El árbol del que se toma el fruto **queda vacío** hasta el riutash.
 - Esto cierra la pregunta del fruto como robo (#144) y la #149.
+- **Implementado** (PR de frutos, 0.3): 3–6 frutales por chunk junto a claros y senderos, alcanzables desde una casilla vecina; valores en `balance.json` (`fruit.heal_pct`, `bosque_memory.hostility_per_theft` y `relation_per_theft`). Antes de robar, el juego avisa y deja elegir "Tomarlo igualmente" o "Dejarlo". El robo emite `EventBus.bosque_robbed`, donde se engancharán los Ofomni.
 
 ## Modelo de datos actualizado (por Bosque)
 | Campo | Tipo | Valores | Persistencia |

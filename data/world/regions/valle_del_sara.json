@@ -34,5 +34,12 @@
     "stream_until": 0.65,
     "riverside_clearing_from": 0.5,
     "riverside_band": 3.0
+  },
+  "fruit": {
+    "$comment": "Frutales (bosques-y-relacion.md, sección Fruto; ADR 0006). bosque_state: estado provisional de todos los Bosques con Nujio hasta que haya estados por Bosque. states: estados que dan fruto. per_chunk: [mín, máx] frutales por chunk. min_spacing: casillas mínimas (Chebyshev) entre dos frutales del mismo chunk. Valores provisionales de game-designer.",
+    "bosque_state": "sano",
+    "states": ["sano", "necesita_ayuda"],
+    "per_chunk": [3, 6],
+    "min_spacing": 5
   }
 }

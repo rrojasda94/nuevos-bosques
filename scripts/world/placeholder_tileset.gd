@@ -32,6 +32,19 @@ const BLACKISH := Color("262b44")
 const ROOF := Color("be4a2f")
 const DOOR := Color("3e2731")
 
+## Frutos: [color, sombra] candidatos (de la paleta), en orden de preferencia: rojo, amarillo,
+## naranja, magenta, blanco y azul. Ver fruit_color.
+const FRUIT_COLORS: Array = [
+	[Color("e43b44"), Color("a22633")], [Color("fee761"), Color("feae34")], [Color("f77622"), Color("be4a2f")],
+	[Color("b55088"), Color("68386c")], [Color("ffffff"), Color("c0cbdc")], [Color("0099db"), Color("124e89")],
+]
+## Frutos por árbol y separación mínima entre ellos (píxeles).
+const FRUIT_CONTRAST: float = 0.5
+const FRUITS_PER_TREE: int = 4
+const FRUIT_SPACING: int = 4
+## Las filas 0-1 del frutal tienen fruto; sumando esto (filas 2-3) se dibuja vaciado.
+const FRUIT_EMPTY_VARIANT: int = 2
+
 enum Shape { ROUND, CONIFER, PALM, CACTUS, THORNY, WILLOW }
 const SHAPE_COUNT: int = 6
 const SHAPE_NAMES: Array[String] = ["copa redonda", "conífera", "palmera", "cactus", "espinoso", "sauce"]
@@ -138,6 +151,10 @@ static func _paint(image: Image, tile: int, variant: int, o: Vector2i, style: Di
 			_specks(image, o, ground[1], 3, salt)
 			var tree: Image = _tree_image(style, TILE, v2 == 1)
 			image.blend_rect(tree, Rect2i(0, 0, TILE, TILE), o)
+		ChunkData.Tile.FRUIT_TREE:
+			image.fill_rect(full, ground[0])
+			_specks(image, o, ground[1], 3, salt)
+			image.blend_rect(_fruit_tree_image(style, v2 == 1, variant < FRUIT_EMPTY_VARIANT), Rect2i(0, 0, TILE, TILE), o)
 		ChunkData.Tile.ROCKY:
 			image.fill_rect(full, ground[0])
 			_specks(image, o, GREY, 8, salt)
@@ -332,6 +349,86 @@ static func _tree_image(style: Dictionary, px: int, mirror: bool) -> Image:
 					img.set_pixel(x, y, OUTLINE)
 					break
 	return img
+
+
+## Colores de fruto del Bosque ([color, sombra]): el primer par de FRUIT_COLORS (en orden de
+## preferencia) que se aleja al menos FRUIT_CONTRAST (RGB) de sus dos colores de hoja; si ninguno
+## llega, el que más se aleja.
+static func fruit_color(style: Dictionary) -> Array:
+	var leaf: Array = LEAVES[int(style.get("leaf", 0))]
+	var best: Array = FRUIT_COLORS[0]
+	var best_d: float = -1.0
+	for pair: Array in FRUIT_COLORS:
+		var d: float = minf(_rgb_distance(pair[0], leaf[0]), _rgb_distance(pair[0], leaf[1]))
+		if d >= FRUIT_CONTRAST:
+			return pair
+		if d > best_d:
+			best_d = d
+			best = pair
+	return best
+
+
+static func _rgb_distance(a: Color, b: Color) -> float:
+	return Vector3(a.r - b.r, a.g - b.g, a.b - b.b).length()
+
+
+## Frutal: el árbol del Bosque (misma silueta y colores) con frutos de 2x2 sobre las hojas.
+## Sin fruto (`ripe` = false) quedan solo los rabillos, para que se reconozca como frutal.
+static func _fruit_tree_image(style: Dictionary, mirror: bool, ripe: bool) -> Image:
+	var img: Image = _tree_image(style, TILE, mirror)
+	var leaf: Array = LEAVES[int(style.get("leaf", 0))]
+	var fruit: Array = fruit_color(style)
+	for p: Vector2i in fruit_spots(img, leaf):
+		img.set_pixelv(p + Vector2i(0, -1), BROWN_DARK)
+		if ripe:
+			img.fill_rect(Rect2i(p, Vector2i(2, 2)), fruit[0])
+			img.set_pixelv(p + Vector2i(1, 1), fruit[1])
+	return img
+
+
+## Hasta FRUITS_PER_TREE esquinas de bloques 2x2 de hoja (con hoja también encima, para el
+## rabillo), separados FRUIT_SPACING píxeles. Orden fijo por hash: determinista. Las siluetas de
+## hojas finas (palmera) no tienen bloques así: entonces vale cualquier 2x2 opaco que toque hoja
+## en la mitad alta del árbol (frutos colgando de la copa).
+static func fruit_spots(img: Image, leaf: Array) -> Array[Vector2i]:
+	var candidates: Array[Vector2i] = _fruit_candidates(img, leaf, true)
+	if candidates.size() < 2:
+		candidates = _fruit_candidates(img, leaf, false)
+	candidates.sort_custom(func(a: Vector2i, b: Vector2i) -> bool:
+		return ChunkGenerator.hash_ints([a.x, a.y, 41]) < ChunkGenerator.hash_ints([b.x, b.y, 41]))
+	var spots: Array[Vector2i] = []
+	for c: Vector2i in candidates:
+		if spots.size() >= FRUITS_PER_TREE:
+			break
+		var far: bool = true
+		for s: Vector2i in spots:
+			if maxi(absi(s.x - c.x), absi(s.y - c.y)) < FRUIT_SPACING:
+				far = false
+				break
+		if far:
+			spots.append(c)
+	return spots
+
+
+static func _fruit_candidates(img: Image, leaf: Array, strict: bool) -> Array[Vector2i]:
+	var size: Vector2i = img.get_size()
+	var out: Array[Vector2i] = []
+	for y: int in range(1, size.y - 1):
+		for x: int in range(0, size.x - 1):
+			if not strict and y > size.y * 0.6:
+				continue
+			var leaves: int = 0
+			var ok: bool = true
+			for k: Vector2i in [Vector2i(0, -1), Vector2i(0, 0), Vector2i(1, 0), Vector2i(0, 1), Vector2i(1, 1)]:
+				var c: Color = img.get_pixelv(Vector2i(x, y) + k)
+				var is_leaf: bool = c == leaf[0] or c == leaf[1]
+				leaves += 1 if is_leaf else 0
+				if (strict and not is_leaf) or c.a == 0.0:
+					ok = false
+					break
+			if ok and leaves > 0:
+				out.append(Vector2i(x, y))
+	return out
 
 
 ## 0 = vacío, 1 = hoja oscura, 2 = hoja clara, 3 = tronco. (u, v) en [0, 1], v hacia abajo.

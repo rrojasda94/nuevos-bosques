@@ -9,9 +9,11 @@ extends Resource
 ## RIVER_NARROW = "rio_estrecho" (nunca navegable). FORD = vado; SIGN = letrero de piedra.
 ## ROAD = camino principal (2 casillas de ancho, une las villas); REFUGE = refugio (árbol hueco o
 ## cueva) junto al camino: no bloquea, el jugador se pone encima.
+## FRUIT_TREE = frutal: un árbol del Bosque con frutos (0.3.0). Bloquea como TREE; se toma su
+## fruto con E desde una casilla adyacente (FruitRules). Va al final para no mover los índices.
 enum Tile {
 	GRASS, CLEARING, PATH, TREE, ROCKY, CLIFF, RIVER_NARROW, RIVER_NAVIGABLE, BRIDGE, FORD,
-	PLAZA, BUILDING, SIGN, NUJIO, ROAD, REFUGE,
+	PLAZA, BUILDING, SIGN, NUJIO, ROAD, REFUGE, FRUIT_TREE,
 }
 ## Tipos de letrero: hacia la villa del Bosque actual o hacia la villa natal (por el camino).
 enum SignKind { BOSQUE_VILLA, HOME_VILLA }
@@ -19,7 +21,7 @@ enum SignKind { BOSQUE_VILLA, HOME_VILLA }
 const SIZE: int = 64
 ## Bordes del chunk, como dirección hacia fuera.
 const SIDES: Array[Vector2i] = [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]
-const BLOCKING: Array[int] = [Tile.TREE, Tile.CLIFF, Tile.RIVER_NARROW, Tile.RIVER_NAVIGABLE, Tile.BUILDING, Tile.NUJIO]
+const BLOCKING: Array[int] = [Tile.TREE, Tile.FRUIT_TREE, Tile.CLIFF, Tile.RIVER_NARROW, Tile.RIVER_NAVIGABLE, Tile.BUILDING, Tile.NUJIO]
 
 @export var seed_value: int = 0
 @export var coord: Vector2i = Vector2i.ZERO
@@ -35,6 +37,8 @@ const BLOCKING: Array[int] = [Tile.TREE, Tile.CLIFF, Tile.RIVER_NARROW, Tile.RIV
 ## hacia casa (dirección que señala).
 @export var home_sign: Vector2i = Vector2i(-1, -1)
 @export var home_direction: Vector2i = Vector2i.ZERO
+## Frutales del chunk (casillas FRUIT_TREE), en el orden en que se colocaron.
+@export var fruit_trees: Array[Vector2i] = []
 
 var _reachable: PackedByteArray = PackedByteArray()
 
@@ -80,6 +84,10 @@ static func is_walkable_tile(tile: int) -> bool:
 ## Refugio para el riutash. La plaza de la villa también cuenta (AdventureRules.is_villa_rest).
 func is_refuge(cell: Vector2i) -> bool:
 	return in_bounds(cell) and get_tile(cell) == Tile.REFUGE
+
+
+func is_fruit_tree(cell: Vector2i) -> bool:
+	return in_bounds(cell) and get_tile(cell) == Tile.FRUIT_TREE
 
 
 ## Tipo del letrero de la casilla (solo tiene sentido si es un SIGN).

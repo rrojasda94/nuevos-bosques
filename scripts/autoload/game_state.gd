@@ -7,8 +7,9 @@ extends Node
 ## como lista de ofrendas, villa dañada, XP, fama y Botarramas vistos. v7: nivel del Adoc y
 ## refugios saqueados (progresion-adoc.md, ofrendas-v1.md). v8: monstruos vencidos. v9: el Bosque
 ## recuerda (0.3): Bosques forzados, hostilidad y relación por Bosque; el Ofomni de la misión pasa a
-## ofomni_descarriado. Las versiones anteriores se cargan con valores por defecto.
-const SAVE_VERSION: int = 9
+## ofomni_descarriado. v10: frutales vaciados y frutos tomados en el Momento por Bosque
+## (FruitRules). Las versiones anteriores se cargan con valores por defecto.
+const SAVE_VERSION: int = 10
 ## Migración a v9: el Ofomni de la misión pasó de "ofomni" a "ofomni_descarriado" (y su etiqueta
 ## de brújula, de "Ofomni" a "Ofomni descarriado").
 const LEGACY_OFOMNI_ID: String = "ofomni"
@@ -83,6 +84,12 @@ var looted_refuges: Array[Vector2i] = []
 var seen_monsters: Dictionary = {}
 ## Monstruos del mundo vencidos que han vuelto a la Luz del Bosque (no reaparecen en la partida).
 var defeated_monsters: Array[String] = []
+## Frutales sin fruto hasta el próximo riutash (FruitRules): Vector4i(chunk x, chunk y, casilla x,
+## casilla y).
+var emptied_fruit_trees: Array[Vector4i] = []
+## Frutos tomados en el Momento actual por Bosque: { "id del Bosque": n }. Se vacía en cada
+## riutash. Con n > 0, el siguiente fruto de ese Bosque es un robo.
+var fruit_taken: Dictionary = {}
 
 
 func new_game(new_seed: int = 0, new_region: StringName = &"valle_del_sara") -> void:
@@ -117,6 +124,8 @@ func new_game(new_seed: int = 0, new_region: StringName = &"valle_del_sara") -> 
 	looted_refuges = []
 	seen_monsters = {}
 	defeated_monsters = []
+	emptied_fruit_trees = []
+	fruit_taken = {}
 
 
 func to_dict() -> Dictionary:
@@ -155,6 +164,8 @@ func to_dict() -> Dictionary:
 		"looted_refuges": looted_refuges.map(func(c: Vector2i) -> Array: return [c.x, c.y]),
 		"seen_monsters": seen_monsters,
 		"defeated_monsters": defeated_monsters,
+		"emptied_fruit_trees": emptied_fruit_trees.map(func(k: Vector4i) -> Array: return [k.x, k.y, k.z, k.w]),
+		"fruit_taken": fruit_taken,
 	}
 
 
@@ -234,6 +245,19 @@ func from_dict(data: Dictionary) -> void:
 	for value: Variant in data.get("defeated_monsters", []):
 		if not defeated_monsters.has(str(value)):
 			defeated_monsters.append(str(value))
+	# v9 o anterior: todos los frutales con fruto y ninguno tomado en el Momento.
+	emptied_fruit_trees = []
+	for value: Variant in data.get("emptied_fruit_trees", []):
+		if value is Array and value.size() == 4:
+			var k := Vector4i(int(value[0]), int(value[1]), int(value[2]), int(value[3]))
+			if not emptied_fruit_trees.has(k):
+				emptied_fruit_trees.append(k)
+	fruit_taken = {}
+	var taken: Variant = data.get("fruit_taken", {})
+	if taken is Dictionary:
+		for id: Variant in taken:
+			if int(taken[id]) > 0:
+				fruit_taken[str(id)] = int(taken[id])
 	seen_monsters = {}
 	var seen: Variant = data.get("seen_monsters", {})
 	if seen is Dictionary:

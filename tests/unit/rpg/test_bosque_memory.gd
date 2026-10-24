@@ -227,7 +227,7 @@ func test_save_v9_round_trip() -> void:
 	var other: int = _map.neighbours_of(_home)[1] if _map.neighbours_of(_home).size() > 1 else _target
 	GameState.forced_bosques.append(other)
 	var data: Dictionary = JSON.parse_string(JSON.stringify(GameState.to_dict()))
-	assert_eq(int(data.save_version), 9)
+	assert_eq(int(data.save_version), GameState.SAVE_VERSION)
 	GameState.new_game(1)
 	GameState.from_dict(data)
 	assert_true(GameState.forced_bosques.has(_target))

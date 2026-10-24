@@ -32,12 +32,14 @@ func load_game(slot: int) -> Error:
 	var version: int = int(data.get("save_version", 0))
 	if version < 1 or version > GameState.SAVE_VERSION:
 		return ERR_INVALID_DATA
-	# Migraciones: de v1 a v8 solo se añadieron campos; GameState.from_dict les da su valor por
+	# Migraciones: de v1 a v10 se añadieron campos; GameState.from_dict les da su valor por
 	# defecto (v3: Luz y PV iniciales, ningún Bosque abierto; v4: reloj al inicio del Momento de
 	# Gietos; v5: solo el chunk actual explorado y sin objetivo; v6: inventario vacío (antes era
 	# un diccionario), sin misiones (la exploración la vuelve a ofrecer), villa sana, 0 XP y fama
 	# y ningún Botarramas visto; v7: el nivel que corresponde a la XP guardada y ningún refugio
-	# saqueado).
+	# saqueado; v9: ningún Bosque forzado, hostilidad y relación a 0, y el Ofomni de la misión
+	# pasa a ofomni_descarriado; v10: todos los frutales con fruto y ningún fruto tomado en el
+	# Momento en ningún Bosque).
 	GameState.from_dict(data)
 	EventBus.game_loaded.emit(slot)
 	return OK
