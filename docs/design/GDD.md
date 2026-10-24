@@ -4,7 +4,15 @@
 >
 > **MVP = modo Aventura en la región Valle del Sara** (ADR 0005, 0007). Alcance del primer vertical slice: [`mechanics/aventura-mvp.md`](mechanics/aventura-mvp.md).
 >
-> **Versión 0.2.0 "Primer encargo"** (fichas con valores provisionales):
+> **Versión 0.3 "El Bosque recuerda"** (en curso): hoja de ruta en [`roadmap-0.3.md`](roadmap-0.3.md).
+> - Combate y cruce vigentes en [`mechanics/cruce-y-combate-v2.md`](mechanics/cruce-y-combate-v2.md) (ADR 0013):
+>   - vencer a un Botarramas deja el Bosque "forzado" y sube su hostilidad;
+>   - pagar lo deja "pagado";
+>   - "Ofrecer Luz" paga el peaje y termina la pelea.
+> - Frutos: 1 por Momento; el segundo es robo.
+> - Ofomni descarriado (misión, no apaciguable) frente a Ofomni normal (apaciguable).
+>
+> **Versión 0.2.0 "Primer encargo"** (publicada; fichas con valores provisionales):
 > - [`mechanics/mision-ofomni.md`](mechanics/mision-ofomni.md): misión.
 > - [`mechanics/tiempo-y-riutash.md`](mechanics/tiempo-y-riutash.md): tiempo real con pausa y riutash (ADR 0012).
 > - [`mechanics/navegacion.md`](mechanics/navegacion.md): caminos, letreros, refugios, mapa y brújula.
@@ -62,7 +70,7 @@ Antes de implementarse necesitan fuente, sumidero y qué pasa si se agotan:
   - **Sumideros**: pagar la entrada a Bosques con Nujio y la acción "Ofrecer Luz" en combate. Las ofrendas se usan **enteras**: se deja el artefacto completo en el Bosque y se pierde todo su valor aunque el coste fuera menor. Es gestión de recursos intencionada.
   - **Al agotarse**: hay que cruzar combatiendo o retroceder.
   - Que al principio sea difícil ir lejos es intencionado.
-  - Valores provisionales en [`mechanics/cruce-y-combate-v1.md`](mechanics/cruce-y-combate-v1.md). Abiertas: #107–#109.
+  - Valores provisionales en [`mechanics/cruce-y-combate-v2.md`](mechanics/cruce-y-combate-v2.md) (peaje N = 3 + d + 2 × hostilidad). Abiertas: #107–#109.
 - **Luz suelta** (ADR 0010): tiene un límite (ejemplo: 10). Por encima, la Luz requiere ofrendas. Las ofrendas también se pueden ofrecer en combate "para que el Único se vaya", y eso abre el paso igual que vencer (#112). Excedente sobre el límite: #115.
 - **Inventario**: provisionalmente, una lista sin límite (0.2.0). Sin decidir entre cuadrícula (Diablo), slots (Minecraft) o peso (Kingdom Come: Deliverance) (#113).
 - **Riutash** (ADR 0012): expuesto, −30% de los PV máx. (nunca mata); en refugio, +50% de los PV que faltan. Avisos 60 s y 15 s antes ([`mechanics/tiempo-y-riutash.md`](mechanics/tiempo-y-riutash.md)).
@@ -111,7 +119,7 @@ Antes de implementarse necesitan fuente, sumidero y qué pasa si se agotan:
 - **Origen:** el jugador elige región y área de origen al empezar (ADR 0005, 0008). Le da conocimiento automático del área y sus Bosques. Cuanto más lejos del punto inicial, más complicado el viaje (#56, #57, #66).
 - **Viaje** (ADR 0007):
   - Movimiento libre dentro del Bosque inicial.
-  - Para entrar a otro Bosque que aún tenga Nujio: pagar Luz o enfrentarse a los Únicos que envía (#70, #71). Desde la 0.2.0, el aviso lo da un **Botarramas** visible que intercepta al jugador ([`mechanics/monstruos.md`](mechanics/monstruos.md)). Versión de prueba con números provisionales: [`mechanics/cruce-y-combate-v1.md`](mechanics/cruce-y-combate-v1.md).
+  - Para entrar a otro Bosque que aún tenga Nujio: pagar Luz o enfrentarse a los Únicos que envía (#70, #71). Desde la 0.2.0, el aviso lo da un **Botarramas** visible que intercepta al jugador ([`mechanics/monstruos.md`](mechanics/monstruos.md)). Reglas vigentes: [`mechanics/cruce-y-combate-v2.md`](mechanics/cruce-y-combate-v2.md) (ADR 0013; la v1 queda como historial).
   - Se puede recorrer todo el mapa a pie: es más lento, cansa al personaje y **también cuesta**, pero da más control sobre el gasto y el riesgo (ADR 0008; #73, #91). También se puede usar el mapa de la región para distancias largas (#56).
 - **Terreno** (ADR 0007, 0008):
   - Árboles: bloquean, con espacio para caminar entre ellos (ADR 0008, confirmado).
@@ -137,7 +145,7 @@ Antes de implementarse necesitan fuente, sumidero y qué pasa si se agotan:
 ## Capa RPG (MVP)
 > Por revisar: en Aventura se crea un solo personaje y en Garelino se comandan tropas (#32, #49). Combates contra animales: #51.
 >
-> **Versión de prueba en curso** (Aventura): un solo personaje, un Adoc (30 PV, ATQ 6, DEF 3, 10 de Luz), en combate por menú contra Únicos con las acciones Atacar, Defender, Ofrecer Luz y Huir. Números provisionales en [`mechanics/cruce-y-combate-v1.md`](mechanics/cruce-y-combate-v1.md). Tras el playtest de v1, el dueño da por buenos **de momento** la dificultad y el coste en Luz. La narración del combate va mensaje a mensaje, **estilo Pokémon**. Los **Únicos son monstruos, no árboles** (aspecto, tipos y nombres: #119) y **se regeneran con el tiempo** (#120). El Ofomni de la primera misión ataca con **látigos** y cada 3 turnos lanza un **Latigazo múltiple** anunciado (×3; Defender lo reduce a la mitad) ([`mechanics/mision-ofomni.md`](mechanics/mision-ofomni.md)). Cada tipo de monstruo es **fatal o no según el Momento** (ADR 0004, `mechanics/monstruos.md`). La lista siguiente es previa y por revisar.
+> **Versión de prueba en curso** (Aventura): un solo personaje, un Adoc (30 PV, ATQ 6, DEF 3, 10 de Luz), con niveles 1–10, en combate por menú contra Únicos con las acciones Atacar, Defender, Ofrecer Luz u ofrenda (pagan el peaje y terminan la pelea, solo contra Únicos apaciguables) y Huir. Números provisionales en [`mechanics/cruce-y-combate-v2.md`](mechanics/cruce-y-combate-v2.md). Tras el playtest de v1, el dueño da por buenos **de momento** la dificultad y el coste en Luz. La narración del combate va mensaje a mensaje, **estilo Pokémon**. Los **Únicos son monstruos, no árboles** (aspecto, tipos y nombres: #119) y **se regeneran con el tiempo** (#120). El Ofomni de la primera misión ataca con **látigos** y cada 3 turnos lanza un **Latigazo múltiple** anunciado (×3; Defender lo reduce a la mitad) ([`mechanics/mision-ofomni.md`](mechanics/mision-ofomni.md)). Cada tipo de monstruo es **fatal o no según el Momento** (ADR 0004, `mechanics/monstruos.md`). La lista siguiente es previa y por revisar.
 - Party de hasta 3. Stats: HP, ATK, DEF, SPD.
 - Combate por turnos, menú: Atacar / Habilidad / Objeto / Huir.
 - Exploración top-down del chunk; encuentros según bioma de la región.

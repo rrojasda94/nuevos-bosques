@@ -1,6 +1,13 @@
 # Ficha (backlog): Estados de Bosque, relación, peaje temporal, salvoconducto y dormir
 
-> Dueño: `game-designer`. **Backlog, después de la 0.2.0.** Sin números cerrados: los valores son **propuestas** que hay que confirmar.
+> Dueño: `game-designer`. **Entra en la versión 0.3 "El Bosque recuerda"** (PR 2: relación; PR 3: estados; PR 7: dormir; PR 8: fruto; ver `docs/design/roadmap-0.3.md`). Sin números cerrados: los valores son **propuestas** que hay que confirmar.
+>
+> **Ya implementado en el PR 1 (ADR 0013)**:
+> - hostilidad por Bosque (+1 por Botarramas vencido; peaje +2 y visión +2 por nivel);
+> - relación por Bosque de −100 a 100 (−10 por victoria, +1 al pagar);
+> - Bosque **forzado** (vencido) frente a **pagado**.
+>
+> Esta ficha amplía esa base. La regla de **−5 por vencer a sus Botarramas** que proponía la tabla de relación queda sustituida por **−10** (ADR 0013).
 > Fuentes: palabras del dueño (abajo); glosario §1 ("Pensamiento"), §3 ("Nujio", "Bosque", "Fruto", "Iserald"), §6 ("Salvoconducto", multiplicador del Ista) y §7 ("Nuevos Bosques"); ADR 0004 (garelinos, fatales), ADR 0010 (ofrendas); `cruce-y-combate-v1.md`, `monstruos.md`, `tiempo-y-riutash.md`, `ofrendas-v1.md`.
 
 ## Objetivo
@@ -82,8 +89,8 @@ El letrero y el mapa (M) podrían indicar el estado con texto o color (`navegaci
 | Defenderlo de un incendio o un ataque | +15 |
 | Descansar el riutash junto a su Nujio (refugio a ≤ 3 casillas del Nujio, o la plaza de su villa) | +5, una vez por riutash |
 | Pagar el peaje con Luz suelta | +1 (propuesta; el dueño no lo nombró) |
-| Vencer a sus Botarramas | −5 (propuesta) |
-| Robar en él (0.3.0) | −20 (propuesta) |
+| Vencer a sus Botarramas | **−10** (ADR 0013, implementado), además de +1 de hostilidad |
+| Robar en él: por ahora, tomar un segundo fruto en el mismo Momento | **−20** y hostilidad +1 (implementado en el PR "frutos") |
 
 | Umbral (propuesta) | Efecto |
 |---|---|
@@ -121,7 +128,14 @@ El letrero y el mapa (M) podrían indicar el estado con texto o color (`navegaci
 
 ## Fruto
 - **Regla del dueño**: los Bosques **sanos** y los **en necesidad de ayuda** dan fruto. Glosario §3: el fruto es "solo alimento [...] contiene lo necesario para mantener vivo y sano a un ser".
-- **Propuesta**: se recoge con E de algunos árboles y cura el 25% de los PV máximos. Rebrota tras un riutash. **No cuenta como robo** (el Bosque lo da).
+- **Adelantado al principio de la 0.3** (PR 2 "frutos", en implementación por `world-gen-dev`). Palabras del dueño: "Debemos incorporar los frutos, porque ya que no es facil recuperarse, los bosques normales deben dar frutos y con eso poder recuperar algo de vida. solo puedes tomar 1 fruto por Momento, sino es un robo al boque."
+- **Reglas (valores provisionales)**:
+  - **Árboles frutales** (tile `FRUIT_TREE`) en los Bosques normales (sanos; más adelante, también los que necesitan ayuda).
+  - Con **E** se toma un fruto, que cura el **25% de los PV máximos**.
+  - **1 fruto por Momento**, en total (implementado así; pregunta abierta: ¿en total o por Bosque? #149).
+  - **Tomar otro en el mismo Momento es robo** al Bosque donde está el frutal: **hostilidad +1** y **relación −20**. Más adelante, también despierta a los Ofomni (`sigilo-y-robo.md`).
+  - El frutal vaciado **rebrota tras el riutash**.
+- El fruto **dado** (el primero del Momento) no es robo; el extra sí. Esto cierra en parte la pregunta del fruto como robo (#144).
 
 ## Modelo de datos actualizado (por Bosque)
 | Campo | Tipo | Valores | Persistencia |
@@ -133,6 +147,8 @@ El letrero y el mapa (M) podrían indicar el estado con texto o color (`navegaci
 | `relation` | int | −100 … +100 | Guardado por partida; se reinicia con un game over o una partida nueva |
 | `open_until` | int o `PERMANENT` | Número de riutash hasta el que el paso está abierto | Guardado |
 | `fruit_ready` | por árbol o por chunk | bool + riutash de rebrote | Guardado |
+| `hostility` | int ≥ 0, con tope | +1 por Botarramas vencido (ADR 0013) | Guardado |
+| `access` | enum | `cerrado`, `forzado`, `pagado` (ADR 0013; más `open_until` cuando caduque el pago) | Guardado |
 
 ### Peaje combinado (forma propuesta)
 ```
@@ -140,7 +156,7 @@ si kind == nuevo_bosque or state in [necesita_ayuda, muerto] -> 0
    (en muerto, un Único puede pedir 1–2 de Luz por su cuenta)
 si salvoconducto activo y el Bosque está en la ruta -> 0
 si state == enojado -> no se puede pagar (solo Enfrentar o Retroceder)
-si no: N = (3 + d) × f_state × f_relation
+si no: N = (3 + d + 2 × hostilidad) × f_state × f_relation   (hostilidad: ADR 0013)
    f_state: sano 1, corrupto 1,5
    f_relation: ×0,5 (≥ 60), ×0,75 (≥ 30), ×1 (entre −29 y 29), ×1,5 (≤ −30)
 N ≥ 1
