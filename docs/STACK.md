@@ -40,7 +40,9 @@ Nombres y estilo completos en [`CONVENCIONES.md`](CONVENCIONES.md); proceso de r
 - Un script por escena; lógica compartida en `scripts/core/`.
 - Comunicación entre sistemas por señales vía `EventBus`, nunca referencias directas cruzadas.
 - Estado global solo en `GameState`; guardado solo por `SaveManager`.
-- Simulación por días (`EventBus.day_ended`), nunca por `_process` ni tiempo real.
+- Gestión de villa por días (`EventBus.day_ended`, ADR 0002). En Aventura, tiempo real con pausa (ADR 0012): solo el autoload `WorldClock` avanza en `_process`, se detiene con `get_tree().paused` y guarda su estado en `GameState` (`clock_momento`, `clock_elapsed`); el resto reacciona a sus señales (`riutash_warning`, `riutash_passed`, `momento_changed`). Autoloads, en orden: `EventBus` → `GameState` → `WorldClock` → `SaveManager`.
+- Noche de Riumna: post-proceso de luz de luna (`assets/shaders/moonlight.gdshader`) en la `CanvasLayer` 1; la UI va en la capa 2 o más. Sus colores intermedios son la única excepción a la paleta (ADR 0012).
+- Textos visibles de sistema: `Texts.get_text(clave)` lee `data/text/sistema.json`.
 - Aleatoriedad de la simulación por `GameState.rng`. La generación de chunks usa ruido y RNG locales derivados de `hash(seed, coordenadas)` (ADR 0006). Nunca `randi()`/`randf()` globales.
 - Input siempre por acciones del Input Map (`move_up/down/left/right`, `run`, `new_seed`), nunca teclas hardcodeadas.
 

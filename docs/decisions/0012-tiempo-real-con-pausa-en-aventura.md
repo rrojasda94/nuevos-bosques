@@ -25,3 +25,9 @@ Lectura: **tiempo real con pausa**, como Dungeon Keeper. Lectura del coordinador
   - avance del Ofomni (`mision-ofomni.md`).
   - Quedan para después: regeneración de Únicos (#120), estamina (#73) y peligros de la noche (#75).
 - ADR 0002 se anota con este cambio.
+
+## Anotación (PR 4 de la 0.2.0): luz de luna fuera de la paleta
+El dueño precisó: "la noche o momento de riumna tiene un hue plateado y los colores del mundo resaltan de otro modo". Un `CanvasModulate` solo oscurece, así que la noche es un **post-proceso de luz de luna** (`assets/shaders/moonlight.gdshader`). Es un `ColorRect` con shader en una `CanvasLayer` propia (capa 1), encima del mundo y debajo de toda la UI. Por eso la UI va en la capa 2 o superior.
+- Desplaza el tono hacia un plateado frío (8b9bb4), baja la saturación de los tonos medios, conserva o realza los claros (agua, caminos, plazas, hojas claras) y oscurece un poco las sombras.
+- La transición entre Momentos dura unos 3 s y se hace animando el uniform `intensity`. Los parámetros están en `data/world/time.json` (`moonlight`).
+- **Excepción aceptada a la paleta de 32 colores** (`docs/art/style-guide.md`): el post-proceso genera colores intermedios. Es iluminación, no arte. Los assets siguen dibujándose solo con la paleta.
