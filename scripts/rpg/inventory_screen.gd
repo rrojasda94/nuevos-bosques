@@ -3,7 +3,7 @@ extends CanvasLayer
 ## ofrendas-v1.md, progresion-adoc.md). Rejilla de COLUMNS × ROWS casillas de la bolsa, las 3
 ## ranuras de equipo (mano principal, máscara, talismán), la descripción del objeto marcado y la
 ## ficha del Adoc: nivel, XP, PV, ATQ (con el arma equipada), DEF, Luz suelta, fama y la relación
-## con el Bosque en el que está (bosques-y-relacion.md).
+## con el Bosque en el que está y hasta cuándo dura su paso pagado (bosques-y-relacion.md).
 ## Cursor con flechas, WASD o cruceta. Aceptar (ui_accept o E) equipa el objeto de la bolsa o
 ## desequipa la ranura, o come un fruto guardado (solo en su Bosque de origen: fuera, su casilla
 ## se ve apagada y lo explica); las ofrendas no se usan aquí (se dejan en un Bosque). Cancelar o
@@ -123,6 +123,19 @@ static func relation_line(bosque_id: int) -> String:
 	return Texts.get_text("inventory_bosque_relation") % AdventureRules.relation(bosque_id)
 
 
+## Línea del paso pagado del Bosque: hasta qué riutash dura o si es permanente ("" si no está
+## pagado o fuera de la región).
+static func toll_line(bosque_id: int) -> String:
+	var left: int = AdventureRules.open_riutash_left(bosque_id)
+	if bosque_id < 0 or left == 0:
+		return ""
+	if left == AdventureRules.OPEN_PERMANENT:
+		return Texts.get_text("inventory_toll_permanent")
+	if left == 1:
+		return Texts.get_text("inventory_toll_next")
+	return Texts.get_text("inventory_toll_until") % left
+
+
 ## Una línea por ranura de equipo: "Mano: Lanza de adoc", "Máscara: —".
 static func equipment_lines(equipped: Dictionary) -> Array[String]:
 	var lines: Array[String] = []
@@ -219,6 +232,9 @@ func open() -> void:
 		return
 	_bosque_id = _current_bosque()
 	_relation = relation_line(_bosque_id)
+	var toll: String = toll_line(_bosque_id)
+	if toll != "":
+		_relation += "\n" + toll
 	_cursor = 0
 	_message = ""
 	visible = true

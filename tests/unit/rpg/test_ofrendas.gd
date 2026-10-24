@@ -47,7 +47,7 @@ func test_toll_with_ofrenda_loses_it_whole_without_change() -> void:
 	assert_true(AdventureRules.pay_toll_with_ofrenda(5, 4, 1))
 	assert_eq(AdventureRules.bag_ofrendas(), [{ "id": "cuenta_de_barro", "luz": 3 }], "la figura se deja entera")
 	assert_eq(GameState.luz, 2, "el excedente (4) se pierde: no hay cambio")
-	assert_true(GameState.open_bosques.has(5), "abre el paso")
+	assert_true(AdventureRules.is_open(5), "abre el paso")
 
 
 func test_toll_with_ofrenda_completed_with_luz() -> void:
@@ -55,7 +55,7 @@ func test_toll_with_ofrenda_completed_with_luz() -> void:
 	GameState.luz = 0
 	assert_false(AdventureRules.pay_toll_with_ofrenda(5, 4, 0), "3 sin Luz no basta")
 	assert_eq(AdventureRules.bag_ofrendas().size(), 1)
-	assert_false(GameState.open_bosques.has(5))
+	assert_false(AdventureRules.is_open(5))
 	GameState.luz = 1
 	assert_true(AdventureRules.pay_toll_with_ofrenda(5, 4, 0))
 	assert_eq(GameState.luz, 0, "3 + 1 de Luz suelta")
@@ -85,7 +85,7 @@ func test_battle_ofrenda_appeases_botarramas_and_opens_path() -> void:
 	assert_eq(msgs[0].text, "Dejas Trenza votiva en el Bosque.")
 	assert_eq(msgs[1].text, "El Único se aparta. El paso queda abierto.")
 	assert_eq(AdventureRules.finish_battle(logic, 3), &"appeased")
-	assert_true(GameState.open_bosques.has(3), "el paso queda abierto")
+	assert_true(AdventureRules.is_open(3), "el paso queda abierto")
 	assert_eq(AdventureRules.bag_ofrendas(), [{ "id": "cuenco_ritual", "luz": 6 }])
 	assert_eq(GameState.luz, 4)
 	assert_eq(GameState.xp, 0, "no da XP")

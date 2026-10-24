@@ -1,11 +1,12 @@
 class_name Interaction
 extends RefCounted
 ## Qué hay al pulsar interact (E) en exploración (navegacion.md, mision-ofomni.md): un NPC, un
-## letrero, un refugio o un frutal (FruitRules; bloquea, así que solo se toma desde delante). Mira primero la casilla de delante (cell + facing) y luego la propia,
+## letrero, un refugio, un frutal (FruitRules; bloquea, así que solo se toma desde delante) o el
+## Nujio (bloquea: se le dejan ofrendas desde delante, bosques-y-relacion.md). Mira primero la casilla de delante (cell + facing) y luego la propia,
 ## porque sobre los letreros y los refugios también se puede estar de pie.
 ## Lógica pura: no dibuja ni abre diálogos; la usa la exploración y los tests.
 
-enum Kind { NONE, NPC, SIGN, REFUGE, FRUIT_TREE }
+enum Kind { NONE, NPC, SIGN, REFUGE, FRUIT_TREE, NUJIO }
 
 
 static func target_cell(cell: Vector2i, facing: Vector2i) -> Vector2i:
@@ -28,4 +29,6 @@ static func find(chunk: ChunkData, cell: Vector2i, facing: Vector2i, npcs: Dicti
 				return { "kind": Kind.REFUGE, "cell": c, "npc_id": &"" }
 			ChunkData.Tile.FRUIT_TREE:
 				return { "kind": Kind.FRUIT_TREE, "cell": c, "npc_id": &"" }
+			ChunkData.Tile.NUJIO:
+				return { "kind": Kind.NUJIO, "cell": c, "npc_id": &"" }
 	return { "kind": Kind.NONE, "cell": ahead, "npc_id": &"" }

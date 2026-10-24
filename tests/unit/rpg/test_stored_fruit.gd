@@ -14,7 +14,7 @@ const COORD := Vector2i(6, 13)
 
 func before_each() -> void:
 	GameState.new_game(42)
-	GameState.open_bosques = [PAID]
+	AdventureRules.open_bosque(PAID)
 
 
 func after_all() -> void:

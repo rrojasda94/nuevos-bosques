@@ -2,7 +2,8 @@ extends CanvasLayer
 ## Menú del borde de un Bosque sin pagar (ADR 0009; cerrado o forzado): pagar Luz al Nujio, dejarle una ofrenda
 ## (submenú con las que alcanzan el peaje, completadas con Luz suelta; ofrendas-v1.md), enfrentar a
 ## su Botarramas o retroceder. Lo abre el encuentro con un Botarramas o, como red de seguridad, empujar el borde.
-## Si el Bosque recuerda Botarramas vencidos, el peaje sube y el título lo avisa con una línea más.
+## Si el Bosque recuerda Botarramas vencidos, el peaje sube y el título lo avisa con una línea más;
+## si la relación con el Bosque cambia el peaje (bosques-y-relacion.md), otra con su multiplicador.
 ## También lleva el combate de misión (Ofomni descarriado, EventBus.quest_battle_requested).
 ## Mientras está abierto (o dura el combate) el árbol se pausa; este nodo y el combate siguen
 ## activos (process_mode ALWAYS). Al terminar emite EventBus.crossing_resolved (o
@@ -15,8 +16,10 @@ const TITLE: String = "El Bosque te observa. Su Nujio exige Luz."
 const TEXT_OFRENDA_MENU: String = "Ofrecer una ofrenda"
 const TEXT_OFRENDA_PLUS_LUZ: String = " (+%d Luz)"
 const TEXT_BACK: String = "Volver"
-## Alto de la línea extra del título (hostilidad).
+## Hueco que se abre para la primera línea extra del título (aprovecha el margen bajo el título) y
+## para cada una de las siguientes (alto de línea del título): hostilidad, relación.
 const EXTRA_LINE: float = 10.0
+const NEXT_EXTRA_LINE: float = 15.0
 ## Opciones del menú principal, en orden.
 enum Option { PAY_LUZ, OFRENDA, FIGHT, RETREAT }
 
@@ -68,7 +71,8 @@ func _on_bosque_border_reached(bosque_id: int) -> void:
 func _open_main_menu() -> void:
 	_in_submenu = false
 	_title.text = title_for(_bosque_id)
-	var extra: float = EXTRA_LINE if AdventureRules.hostility(_bosque_id) > 0 else 0.0
+	var lines: int = _title.text.count("\n")
+	var extra: float = 0.0 if lines == 0 else EXTRA_LINE + NEXT_EXTRA_LINE * (lines - 1)
 	_options.offset_top = _options_top + extra
 	# El panel crece hacia arriba: abajo no cabe.
 	_panel.offset_top = _panel_top - extra
@@ -83,11 +87,32 @@ func _open_main_menu() -> void:
 	_options.set_options(texts, enabled)
 
 
-## Título del menú: el de siempre y, si el Bosque recuerda Botarramas vencidos, su aviso.
+## Título del menú: el de siempre; si el Bosque recuerda Botarramas vencidos, su aviso; y si la
+## relación multiplica el peaje, cuánto (con amistad alta, que el paso será permanente).
 static func title_for(bosque_id: int) -> String:
+	var lines: PackedStringArray = [TITLE]
 	if AdventureRules.hostility(bosque_id) > 0:
-		return TITLE + "\n" + Texts.get_text("crossing_bosque_remembers")
-	return TITLE
+		lines.append(Texts.get_text("crossing_bosque_remembers"))
+	var relation_text: String = relation_line_for(bosque_id)
+	if relation_text != "":
+		lines.append(relation_text)
+	return "\n".join(lines)
+
+
+## Línea del multiplicador de la relación ("" si no cambia el peaje).
+static func relation_line_for(bosque_id: int) -> String:
+	var factor: float = AdventureRules.relation_toll_factor(bosque_id)
+	if is_equal_approx(factor, 1.0):
+		return ""
+	var key: String = "crossing_relation_surcharge"
+	if factor < 1.0:
+		key = "crossing_relation_friend" if AdventureRules.relation(bosque_id) >= AdventureRules.permanent_at() else "crossing_relation_discount"
+	return Texts.get_text(key) % format_factor(factor)
+
+
+## Multiplicador en español: 0.75 -> "×0,75", 1.5 -> "×1,5".
+static func format_factor(factor: float) -> String:
+	return "×" + String.num(factor, 2).replace(".", ",")
 
 
 ## Una opción del submenú: "Ofrecer <ofrenda> (<valor>) por un paso de <N>", con la Luz suelta

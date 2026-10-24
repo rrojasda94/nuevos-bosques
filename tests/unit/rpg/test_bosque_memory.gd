@@ -89,6 +89,8 @@ func test_toll_rises_with_hostility_up_to_the_cap() -> void:
 	for i in 5:
 		_win(_target)
 	assert_eq(AdventureRules.hostility(_target), 7, "la hostilidad sigue contando")
+	# Sin el multiplicador de la relación (7 victorias la dejan en -70): solo la hostilidad.
+	GameState.bosque_relation[str(_target)] = 0
 	assert_eq(AdventureRules.toll_for(_target, 1), int(m.toll_max), "tope del peaje")
 	assert_eq(AdventureRules.toll_for(_home, 1), 4, "cada Bosque recuerda lo suyo")
 	GameState.bosque_hostility[str(_target)] = 3
@@ -160,7 +162,7 @@ func test_relation_drops_on_kill_and_rises_on_payment() -> void:
 	assert_eq(AdventureRules.relation(_target), int(m.relation_per_kill) + int(m.relation_per_payment))
 	InventoryLogic.add(GameState.bag, &"figura_sarua")
 	AdventureRules.pay_toll_with_ofrenda(_home, 4, 0)
-	assert_eq(AdventureRules.relation(_home), int(m.relation_per_payment), "la ofrenda también suma")
+	assert_eq(AdventureRules.relation(_home), Items.luz_of(&"figura_sarua"), "la ofrenda suma su valor")
 	for i in 20:
 		AdventureRules.change_relation(_target, -10)
 	assert_eq(AdventureRules.relation(_target), -AdventureRules.relation_max(), "tope inferior")
@@ -255,6 +257,8 @@ func test_migration_from_v8() -> void:
 
 func test_load_sanitizes_memory() -> void:
 	var data: Dictionary = GameState.to_dict()
+	data.save_version = 11
+	data.erase("open_until")
 	data.open_bosques = [_target]
 	data.forced_bosques = [_target, 7, 7]
 	data.bosque_relation = { "3": 500, "4": -500 }

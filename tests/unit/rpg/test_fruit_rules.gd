@@ -16,7 +16,7 @@ const EXPLORATION_SCENE: PackedScene = preload("res://scenes/world/exploration.t
 func before_each() -> void:
 	WorldClock.set_process(false)
 	GameState.new_game(42)
-	GameState.open_bosques = [PAID]
+	AdventureRules.open_bosque(PAID)
 
 
 func after_each() -> void:

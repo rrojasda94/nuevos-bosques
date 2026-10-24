@@ -57,20 +57,20 @@ layout_mode = 0
 offset_left = 104.0
 offset_top = 18.0
 offset_right = 300.0
-offset_bottom = 90.0
+offset_bottom = 100.0
 
 [node name="ItemName" type="Label" parent="Root"]
 layout_mode = 0
 offset_left = 104.0
-offset_top = 94.0
+offset_top = 102.0
 offset_right = 300.0
-offset_bottom = 106.0
+offset_bottom = 114.0
 theme_type_variation = &"TitleLabel"
 
 [node name="ItemDesc" type="Label" parent="Root"]
 layout_mode = 0
 offset_left = 104.0
-offset_top = 107.0
+offset_top = 115.0
 offset_right = 300.0
 offset_bottom = 152.0
 autowrap_mode = 3

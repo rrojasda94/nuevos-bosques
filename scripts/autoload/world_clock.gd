@@ -5,7 +5,8 @@ extends Node
 ## Alterna el Momento de Gietos (día) y el de Riumna (noche); entre uno y otro pasa el riutash.
 ## El estado vive en GameState (clock_momento, clock_elapsed) para que se guarde con la partida;
 ## aquí solo está la lógica de avance y las señales. No aplica efectos: la exploración decide si
-## el jugador está refugiado (shelter_check) y aplica el riutash; DayManager sube el día.
+## el jugador está refugiado (shelter_check) y aplica el riutash; DayManager sube el día. Cuenta los
+## riutash pasados en GameState.riutash_count (la caducidad del peaje, AdventureRules).
 
 ## Devuelve true si el jugador está en un refugio en el instante del riutash. La asigna la escena
 ## que conoce la posición del jugador (exploración). Sin asignar = expuesto.
@@ -49,6 +50,8 @@ func advance(seconds: float) -> void:
 
 func _pass_riutash() -> void:
 	var sheltered: bool = shelter_check.is_valid() and bool(shelter_check.call())
+	# Antes de avisar: quien escucha riutash_passed ya ve el riutash contado (caducidad del peaje).
+	GameState.riutash_count += 1
 	EventBus.riutash_passed.emit(sheltered)
 	GameState.clock_momento = TimeConfig.next_momento(GameState.clock_momento)
 	GameState.clock_elapsed = 0.0

@@ -55,6 +55,14 @@ signal rested_in_villa
 ## en el Momento, FruitRules). Aquí se
 ## engancha la persecución de los Ofomni por robo (otro PR).
 signal bosque_robbed(bosque_id: int)
+## La relación con un Bosque ha cambiado (bosques-y-relacion.md). relation: el valor nuevo
+## (-100 .. 100).
+signal bosque_relation_changed(bosque_id: int, relation: int)
+## El paso pagado de un Bosque ha caducado tras un riutash: vuelve a cerrado (o a forzado) y sus
+## Botarramas vuelven a exigir el pago.
+signal bosque_toll_expired(bosque_id: int)
+## El Adoc deja una ofrenda ante el Nujio de un Bosque (sin pagar peaje con ella).
+signal bosque_ofrenda_left(bosque_id: int, item_id: StringName)
 ## El jugador empieza a hablar con un NPC (E). Las misiones lo escuchan (PR 6).
 signal npc_talked(npc_id: StringName)
 signal quest_state_changed(quest_id: StringName, state: StringName)

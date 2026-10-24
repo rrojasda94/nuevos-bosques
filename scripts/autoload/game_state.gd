@@ -9,9 +9,12 @@ extends Node
 ## recuerda (0.3): Bosques forzados, hostilidad y relación por Bosque; el Ofomni de la misión pasa a
 ## ofomni_descarriado. v10: frutales vaciados y frutos tomados en el Momento por Bosque
 ## (FruitRules). v11: bolsa de casillas y equipo (roadmap-0.3.md #113) en lugar de la lista de
-## ofrendas; al migrar, las ofrendas pasan a la bolsa y el arma inicial va equipada. Las versiones
-## anteriores se cargan con valores por defecto.
-const SAVE_VERSION: int = 11
+## ofrendas; al migrar, las ofrendas pasan a la bolsa y el arma inicial va equipada. v12: el pago
+## caduca (bosques-y-relacion.md, #134): open_until por Bosque en lugar de la lista permanente
+## open_bosques, contador de riutash y Bosques candidatos a enojarse (angry_candidate); al migrar,
+## lo pagado queda abierto hasta el segundo riutash desde la carga (o para siempre con amistad
+## alta). Las versiones anteriores se cargan con valores por defecto.
+const SAVE_VERSION: int = 12
 ## Migración a v9: el Ofomni de la misión pasó de "ofomni" a "ofomni_descarriado" (y su etiqueta
 ## de brújula, de "Ofomni" a "Ofomni descarriado").
 const LEGACY_OFOMNI_ID: String = "ofomni"
@@ -38,12 +41,19 @@ var player_cell: Vector2i = Vector2i(-1, -1)
 ## Adoc (ADR 0009): Luz y PV actuales. Valores iniciales en data/combat/balance.json.
 var luz: int = 0
 var hp: int = 0
-## Ids de los Bosques con el paso pagado (Luz, ofrenda o Ofrecer Luz en combate), además del
-## inicial: se cruzan y sus Botarramas quedan pasivos.
-var open_bosques: Array[int] = []
+## Riutash pasados en la partida (WorldClock los cuenta). Mide la caducidad del peaje.
+var riutash_count: int = 0
+## Paso pagado (Luz, ofrenda u Ofrecer Luz en combate) por Bosque: { "id": riutash } = abierto
+## mientras riutash_count < riutash; AdventureRules.OPEN_PERMANENT (-1) = para siempre (amistad
+## alta). Mientras dura, se cruza y sus Botarramas quedan pasivos. Lo gestiona AdventureRules.
+var open_until: Dictionary = {}
 ## Ids de los Bosques forzados (se ha vencido a alguno de sus Botarramas sin pagar): se cruzan, pero
-## sus demás Botarramas siguen activos y vuelven a exigir el pago. Pagar lo pasa a open_bosques.
+## sus demás Botarramas siguen activos y vuelven a exigir el pago. Pagar no borra la marca: si el
+## paso caduca, el Bosque vuelve a estar forzado (AdventureRules.is_forced).
 var forced_bosques: Array[int] = []
+## Bosques que han llegado a una relación muy baja (bosque_relation.angry_candidate_at): candidatos
+## a volverse enojados en el PR de estados. La marca se queda aunque la relación mejore.
+var angry_candidate: Array[int] = []
 ## El Bosque recuerda: Botarramas vencidos por Bosque { "id": n }. Sube su peaje y su visión.
 var bosque_hostility: Dictionary = {}
 ## Relación con cada Bosque { "id": -100 .. 100 } (bosques-y-relacion.md). Empieza en 0.
@@ -110,8 +120,10 @@ func new_game(new_seed: int = 0, new_region: StringName = &"valle_del_sara") -> 
 	level = 1
 	luz = AdventureRules.start_luz()
 	hp = AdventureRules.max_hp()
-	open_bosques = []
+	riutash_count = 0
+	open_until = {}
 	forced_bosques = []
+	angry_candidate = []
 	bosque_hostility = {}
 	bosque_relation = {}
 	battle_attempts = {}
@@ -148,8 +160,10 @@ func to_dict() -> Dictionary:
 		"player_cell": [player_cell.x, player_cell.y],
 		"luz": luz,
 		"hp": hp,
-		"open_bosques": open_bosques,
+		"riutash_count": riutash_count,
+		"open_until": open_until,
 		"forced_bosques": forced_bosques,
+		"angry_candidate": angry_candidate,
 		"bosque_hostility": bosque_hostility,
 		"bosque_relation": bosque_relation,
 		"battle_attempts": battle_attempts,
@@ -194,16 +208,39 @@ func from_dict(data: Dictionary) -> void:
 	xp = maxi(0, int(data.get("xp", 0)))
 	level = clampi(int(data.get("level", AdventureRules.level_for_xp(xp))), 1, AdventureRules.max_level())
 	hp = clampi(int(data.get("hp", AdventureRules.max_hp())), 1, AdventureRules.max_hp())
-	open_bosques = []
-	for id: Variant in data.get("open_bosques", []):
-		open_bosques.append(int(id))
+	riutash_count = maxi(0, int(data.get("riutash_count", 0)))
+	bosque_hostility = _int_dict(data.get("bosque_hostility", {}), 0, 1 << 30)
+	bosque_relation = _int_dict(data.get("bosque_relation", {}), -AdventureRules.relation_max(), AdventureRules.relation_max())
+	# v11 o anterior: el pago era permanente (lista open_bosques) y pagar borraba la marca de forzado.
+	var legacy: bool = int(data.get("save_version", 1)) < 12
+	var legacy_open: Array[int] = []
+	if legacy:
+		for id: Variant in data.get("open_bosques", []):
+			legacy_open.append(int(id))
 	# v8 o anterior: no había Bosques forzados ni memoria (vencer abría el Bosque como pagar).
 	forced_bosques = []
 	for id: Variant in data.get("forced_bosques", []):
-		if not open_bosques.has(int(id)) and not forced_bosques.has(int(id)):
+		if not legacy_open.has(int(id)) and not forced_bosques.has(int(id)):
 			forced_bosques.append(int(id))
-	bosque_hostility = _int_dict(data.get("bosque_hostility", {}), 0, 1 << 30)
-	bosque_relation = _int_dict(data.get("bosque_relation", {}), -AdventureRules.relation_max(), AdventureRules.relation_max())
+	open_until = {}
+	var saved: Variant = data.get("open_until", {})
+	if not legacy and saved is Dictionary:
+		for key: Variant in saved:
+			var until: int = int(saved[key])
+			open_until[str(key)] = until if until >= 0 else AdventureRules.OPEN_PERMANENT
+	# Lo pagado en la v11 queda abierto hasta el segundo riutash desde la carga, o para siempre con
+	# amistad alta.
+	for id: int in legacy_open:
+		AdventureRules.open_bosque(id)
+	angry_candidate = []
+	for id: Variant in data.get("angry_candidate", []):
+		if not angry_candidate.has(int(id)):
+			angry_candidate.append(int(id))
+	# v11 o anterior: sin marca; la tienen los Bosques que ya estaban en la relación del umbral.
+	if legacy:
+		for key: String in bosque_relation:
+			if int(bosque_relation[key]) <= AdventureRules.angry_candidate_at() and not angry_candidate.has(int(key)):
+				angry_candidate.append(int(key))
 	battle_attempts = {}
 	var attempts: Dictionary = data.get("battle_attempts", {})
 	for key: Variant in attempts:
