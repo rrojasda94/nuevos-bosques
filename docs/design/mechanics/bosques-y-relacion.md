@@ -72,10 +72,10 @@ El letrero y el mapa (M) podrían indicar el estado con texto o color (`navegaci
 
 ## Peaje con caducidad (#134)
 - **Regla del dueño**: el peaje pagado tiene **límite de tiempo**, salvo que la **amistad con el Bosque sea alta**.
-- **Propuesta**:
+- **Confirmado por el dueño** ("#134 si"):
   - Pagar abre el Bosque **hasta el segundo riutash siguiente** (más o menos un ciclo día/noche: ~13 min de reloj, `tiempo-y-riutash.md`).
   - Con **relación ≥ 60** ("amistad alta"), el paso es **permanente**.
-  - Vencer a los Botarramas abre por el mismo tiempo (#141).
+- ~~Vencer a los Botarramas abre por el mismo tiempo.~~ Sustituido por ADR 0013: vencer deja el Bosque "forzado" (#141).
 - **Cambio técnico**: hoy `open_bosques` es permanente (ADR 0009). Pasará a guardar por Bosque **hasta cuándo** está abierto (número de riutash), más la marca de permanente por amistad.
 
 ## Relación con cada Bosque (#135)
@@ -92,6 +92,7 @@ El letrero y el mapa (M) podrían indicar el estado con texto o color (`navegaci
 | Vencer a sus Botarramas | **−10** (ADR 0013, implementado), además de +1 de hostilidad |
 | Robar en él: por ahora, un segundo fruto del mismo Bosque en el mismo Momento, o fruto de un Bosque no pagado | **−20** y hostilidad +1 (implementado en el PR "frutos") |
 | Pagar con una ofrenda | Además: **hostilidad −1**, sin bajar de 0 ("el bosque olvida con ofrendas", #147) |
+| Sacar del Bosque un fruto guardado | **−5** por fruto y por salida (provisional) |
 
 | Umbral (propuesta) | Efecto |
 |---|---|
@@ -100,6 +101,7 @@ El letrero y el mapa (M) podrían indicar el estado con texto o color (`navegaci
 | ≤ −30 | Peaje × 1,5 |
 | ≤ −50 | El Bosque puede volverse **enojado** con el jugador |
 
+- **Valores y umbrales de relación confirmados por el dueño** ("#135 si perfecto"): los de las dos tablas anteriores, con la amistad alta en relación ≥ 60.
 - "Precio por estar ahí" (primera ronda): la caducidad del peaje es el coste de permanecer. No hace falta un cobro aparte por tiempo (lectura de `game-designer`, a confirmar).
 
 ## Dormir y Pensamiento (#136, salvoconducto)
@@ -142,6 +144,12 @@ El letrero y el mapa (M) podrían indicar el estado con texto o color (`navegaci
   - El árbol del que se toma el fruto **queda vacío** hasta el riutash.
 - Esto cierra la pregunta del fruto como robo (#144) y la #149.
 - **Implementado** (PR de frutos, 0.3): 3–6 frutales por chunk junto a claros y senderos, alcanzables desde una casilla vecina; valores en `balance.json` (`fruit.heal_pct`, `bosque_memory.hostility_per_theft` y `relation_per_theft`). Antes de robar, el juego avisa y deja elegir "Tomarlo igualmente" o "Dejarlo". El robo emite `EventBus.bosque_robbed`, donde se engancharán los Ofomni.
+- **Feedback del dueño**: "los frutos se ven bien."
+- **Frutos guardables** (dueño: "con la vida llena o con daño puedes elegir solo coger el fruto y almacenarlo en el inventario para consumirlo dentro del bosque luego. no puedes sacar un fruto de su bosque sino dañas su relación"). Se implementan en el PR de inventario (PR 5 de la 0.3).
+  - Al tomar un fruto (lícito) se elige **"Comer"** o **"Guardar"**, con los PV llenos o con daño.
+  - Un fruto guardado ocupa una casilla del inventario, recuerda su **Bosque de origen** y **solo se puede comer dentro de ese Bosque**.
+  - **Sacarlo de su Bosque** baja la relación con él: **−5 por fruto y por salida** (provisional). El fruto no se pierde al salir.
+  - Tomarlo para guardar cuenta igual para el límite de 1 por Momento y por Bosque.
 
 ## Modelo de datos actualizado (por Bosque)
 | Campo | Tipo | Valores | Persistencia |

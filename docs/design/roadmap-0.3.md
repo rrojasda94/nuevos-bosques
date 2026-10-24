@@ -8,9 +8,9 @@
 |---|---|---|---|---|---|
 | 1 | **El Bosque recuerda**: vencer deja el Bosque forzado y pagar lo deja pagado; hostilidad; relación base; Ofrecer Luz paga y termina la pelea; ajuste del Ofomni; `appeasable` | rpg-systems-dev | ADR 0013, `cruce-y-combate-v2.md`, `mision-ofomni.md`, `monstruos.md` | — | En curso |
 | 2 | **Frutos**: `FRUIT_TREE`, +25% de PV, 1 por Momento, el extra es robo (hostilidad +1, relación −20), rebrote tras el riutash | world-gen-dev, rpg-systems-dev | `bosques-y-relacion.md` ("Fruto") | 1 (hostilidad y relación) | En curso |
-| 3 | **Relación completa**: el pago caduca (`open_until`); ofrendas dejadas en el Bosque; descanso del riutash junto al Nujio; umbrales de amistad (peaje ×0,75 / ×0,5, paso permanente con ≥ 60) | rpg-systems-dev, engine-architect (guardado) | `bosques-y-relacion.md` | 1, 2 | Pendiente |
+| 3 | **Relación completa**: el pago caduca (`open_until`); ofrendas dejadas en el Bosque; descanso del riutash junto al Nujio; umbrales de amistad (peaje ×0,75 / ×0,5, paso permanente con ≥ 60) | rpg-systems-dev, engine-architect (guardado) | `bosques-y-relacion.md` | 1, 2 | Pendiente; **desbloqueado** (#134 y #135 confirmadas) |
 | 4 | **Estados de Bosque**: sano, enojado, corrupto, muerto y necesita ayuda; su generación por seed y área; señales visuales; peaje según el estado | world-gen-dev, rpg-systems-dev, pixel-artist | `bosques-y-relacion.md` | 3 (la relación ≤ −50 vuelve el Bosque enojado; los factores del peaje) | Pendiente |
-| 5 | **Inventario y equipo**: bolsa + ranuras de equipo (mano principal, máscara, talismán); equipar y desequipar el arma | rpg-systems-dev, ui-ux-dev | `ofrendas-v1.md`, `sigilo-y-robo.md` | — (en paralelo con 3 y 4) | Pendiente; **desbloqueado** (#113 confirmado: 12 casillas + 3 ranuras) |
+| 5 | **Inventario y equipo**: bolsa + ranuras de equipo (mano principal, máscara, talismán); equipar y desequipar el arma; **frutos guardables** (comer o guardar; solo se comen en su Bosque; sacarlos baja la relación −5) | rpg-systems-dev, ui-ux-dev | `ofrendas-v1.md`, `sigilo-y-robo.md` | — (en paralelo con 3 y 4) | Pendiente; **desbloqueado** (#113 confirmado: 12 casillas + 3 ranuras) |
 | 6 | **Sigilo y robo**: las máscaras y los artefactos de camuflaje reducen la visión de los Únicos; el arma equipada cierra el paso; el robo despierta a `ofomni` apaciguables que persiguen hasta la frontera | rpg-systems-dev, world-gen-dev | `sigilo-y-robo.md`, `monstruos.md` | 1, 2 (robo de fruto), 5 (equipo) | Pendiente |
 | 7 | **Combate en grupo**: reparep (2–4, ataque conjunto, elegir objetivo); Únicos aliados en Bosques que necesitan ayuda; Aledra fatal de noche | rpg-systems-dev, pixel-artist | `monstruos.md` | 1; 4 (para los aliados y los Bosques) | Pendiente |
 | 8 | **Dormir, Pensamiento y misiones lejanas con salvoconducto** | rpg-systems-dev, narrative-writer | `bosques-y-relacion.md`, `tiempo-y-riutash.md` | 3 y 4 (Bosques "buenos" para la ruta), misiones (0.2) | Pendiente |
@@ -44,8 +44,7 @@ Ordenadas por urgencia (primero lo que bloquea lo que está en curso o es lo sig
 - ~~**#149**~~ Resuelta: 1 fruto por Momento **por Bosque** y solo si pagaste su peaje (o es el natal); el resto es robo.
 
 **PR 3, relación**
-- Confirmar la duración del pago (propuesta: hasta el segundo riutash) y el umbral de amistad alta (≥ 60) (#134).
-- Confirmar los valores por acción (ofrenda +valor, misión +25, defender +15, riutash junto al Nujio +5) (#135).
+- ~~#134 y #135~~ **Confirmadas**: el pago dura hasta el segundo riutash (permanente con relación ≥ 60), y se aceptan los valores de relación propuestos. Sin bloqueos.
 
 **PR 4, estados**
 - **#150**: ¿qué proporción de cada estado hay por área o región? ¿Cambian con el tiempo durante la partida?
