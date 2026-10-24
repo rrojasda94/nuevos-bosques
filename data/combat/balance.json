@@ -42,13 +42,15 @@
     "per_d": 1
   },
   "bosque_memory": {
-    "$comment": "El Bosque recuerda (reglas del dueño 0.3): cada Botarramas vencido suma 1 de hostilidad a su Bosque. Peaje = 3 + d + hostility_toll x hostilidad, como mucho toll_max. vision_radius de sus Botarramas + hostility_vision x hostilidad, como mucho + vision_max_bonus. Relación (-relation_max .. relation_max): relation_per_kill por victoria, relation_per_payment al pagar (Luz, ofrenda o Ofrecer Luz en combate). Provisionales: game-designer.",
+    "$comment": "El Bosque recuerda (reglas del dueño 0.3): cada Botarramas vencido suma 1 de hostilidad a su Bosque. Peaje = 3 + d + hostility_toll x hostilidad, como mucho toll_max. vision_radius de sus Botarramas + hostility_vision x hostilidad, como mucho + vision_max_bonus. Relación (-relation_max .. relation_max): relation_per_kill por victoria, relation_per_payment al pagar (Luz, ofrenda o Ofrecer Luz en combate). Robo (p. ej. un fruto sin derecho, FruitRules): hostility_per_theft a la hostilidad y relation_per_theft a la relación. Provisionales: game-designer.",
     "hostility_toll": 2,
     "toll_max": 10,
     "hostility_vision": 2,
     "vision_max_bonus": 6,
     "relation_per_kill": -10,
     "relation_per_payment": 1,
+    "hostility_per_theft": 1,
+    "relation_per_theft": -20,
     "relation_max": 100
   },
   "victory_luz": 1,
@@ -61,6 +63,10 @@
     "$comment": "Hallazgos en refugios (ofrendas-v1.md): un refugio de cada one_in guarda una ofrenda del catálogo con ese source (determinista por seed y chunk).",
     "one_in": 3,
     "source": "refuge"
+  },
+  "fruit": {
+    "$comment": "Frutos del Bosque (bosques-y-relacion.md, sección Fruto). Provisional. heal_pct: % de los PV máximos que cura un fruto (redondeo hacia arriba). Un fruto por Momento y por Bosque, si el Bosque da permiso (natal o peaje pagado); otro del mismo Bosque en el mismo Momento, o cualquiera sin permiso, es robo (efectos en bosque_memory: hostility_per_theft y relation_per_theft).",
+    "heal_pct": 25
   },
   "monsters": {
     "$comment": "Monstruos del mundo (monstruos.md, mision-ofomni.md), una entrada por id. Genéricos: vision_radius (casillas, Chebyshev: a qué distancia te ve), step_time (s por casilla: su velocidad) y engage_distance (casillas, Chebyshev: a qué distancia empieza el encuentro; 1 = adyacente, con diagonal). Reposo: idle_wander (casillas de ida y vuelta) e idle_step_time. leash: casillas máximas desde su puesto, y distancia del jugador a la que deja de perseguir. max_outside: casillas que puede salir de su chunk. engage_cooldown: segundos sin ver al jugador tras retroceder o huir (y al aparecer). retreat_cells: casillas que retrocede el jugador. stats: bloque de fórmulas según d. fatal_at: Momentos en que perder es game over. special_every y special_factor: ataque especial cada N ataques con multiplicador de daño (0 = sin especial). appeasable: acepta Luz u ofrendas para irse (por defecto true). hp_factor: multiplica sus PV (por defecto 1). texts: claves de data/text/sistema.json para narrar sus ataques (attack, warning, special, special_defended) y para explicar por qué no acepta pagos (offer_luz_blocked, ofrenda_blocked).",

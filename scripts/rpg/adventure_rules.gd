@@ -431,6 +431,19 @@ static func loot_refuge(coord: Vector2i) -> Dictionary:
 	return item
 
 
+# --- Robo al Bosque (bosques-y-relacion.md, sigilo-y-robo.md) ---------------------------------
+
+## Robo al Bosque `bosque_id` (hoy: tomar fruto sin permiso o un segundo fruto del mismo Bosque
+## en el mismo Momento, FruitRules).
+## El Bosque lo recuerda: hostilidad + hostility_per_theft (1) y relación + relation_per_theft
+## (−20), bloque bosque_memory. Avisa con bosque_robbed: ahí se engancha la persecución de los
+## Ofomni por robo (otro PR).
+static func record_theft(bosque_id: int) -> void:
+	GameState.bosque_hostility[str(bosque_id)] = hostility(bosque_id) + int(_memory().hostility_per_theft)
+	change_relation(bosque_id, int(_memory().relation_per_theft))
+	EventBus.bosque_robbed.emit(bosque_id)
+
+
 ## Villa natal dañada (misión fallida): pierde Luz suelta (redondeo hacia abajo) y queda marcada.
 static func damage_villa(luz_factor: float) -> void:
 	set_luz(floori(GameState.luz * luz_factor))

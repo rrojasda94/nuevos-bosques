@@ -15,6 +15,9 @@ extends RefCounted
 ## - Cada borde tiene una entrada (sendero) en la misma posición vista desde los dos chunks.
 ## - Los lados con camino principal (BosqueMap.road_sides) llevan un ROAD de 2 casillas en vez
 ##   del sendero, con letreros hacia la villa natal y refugios junto al camino.
+## - Frutales (FRUIT_TREE) en los Bosques que dan fruto (bloque "fruit" de la región): unos pocos
+##   árboles por chunk junto a claros y senderos, siempre con una casilla vecina alcanzable desde
+##   el hub. Se eligen entre los TREE ya generados, así que no cambian por dónde se anda.
 
 const REGION_DIR: String = "res://data/world/regions/"
 ## Radio del claro central (punto de aparición seguro).
@@ -47,6 +50,7 @@ const SALT_CORRIDOR: int = 12
 const SALT_TREE: int = 13
 const SALT_FORD: int = 14
 const SALT_REFUGE: int = 18
+const SALT_FRUIT: int = 31
 
 ## Valores por defecto de los parámetros de región (data/world/regions/*.json).
 const DEFAULT_SIZE_CHUNKS: Array = [8, 8]
@@ -66,6 +70,16 @@ const DEFAULT_RIVERS: Dictionary = {
 	"stream_width": 0.0, "stream_until": 0.0,
 	"riverside_clearing_from": 2.0, "riverside_band": 3.0,
 }
+## Frutales (bosques-y-relacion.md, sección Fruto). `bosque_state`: estado provisional de todos los
+## Bosques con Nujio hasta que existan los estados por Bosque; `states`: estados que dan fruto;
+## `per_chunk`: [mín, máx] frutales por chunk; `min_spacing`: distancia mínima (Chebyshev) entre
+## dos frutales del mismo chunk.
+const DEFAULT_FRUIT: Dictionary = {
+	"bosque_state": "sano", "states": ["sano", "necesita_ayuda"],
+	"per_chunk": [3, 6], "min_spacing": 5,
+}
+## Casillas libres de frutales alrededor de la plaza de la villa (además de la plaza).
+const FRUIT_PLAZA_MARGIN: int = 2
 
 
 static func generate(seed_value: int, coord: Vector2i, region: Dictionary = {}, bosques: BosqueMap = null) -> ChunkData:
@@ -129,7 +143,98 @@ static func generate(seed_value: int, coord: Vector2i, region: Dictionary = {}, 
 			_place_home_sign(chunk, seed_value, coord, home_side)
 		if bosques.has_refuge(coord) and not villa:
 			_place_refuge(chunk, seed_value, coord)
+
+	# Lo último: los frutales solo sustituyen árboles, ya con senderos, villa y refugio puestos.
+	if bosque_gives_fruit(region, bosques, bosque_id):
+		var plaza_radius: int = nujio_n / 2 + 3 + FRUIT_PLAZA_MARGIN if villa else -1
+		_place_fruit_trees(chunk, seed_value, coord, fruit_params(region), center, plaza_radius)
 	return chunk
+
+
+## Parámetros de frutales de la región, con los valores por defecto.
+static func fruit_params(region: Dictionary) -> Dictionary:
+	return DEFAULT_FRUIT.merged(region.get("fruit", {}), true)
+
+
+## Estado del Bosque para los frutales. Provisional: todos los Bosques con Nujio tienen el
+## `bosque_state` de la región (hoy "sano"); los estados por Bosque llegan en otro PR.
+static func bosque_state(region: Dictionary, bosques: BosqueMap, bosque_id: int) -> String:
+	if bosques == null or bosque_id < 0:
+		return ""
+	return str(fruit_params(region).bosque_state)
+
+
+## El Bosque da fruto según su estado (sano y necesita_ayuda, bosques-y-relacion.md).
+static func bosque_gives_fruit(region: Dictionary, bosques: BosqueMap, bosque_id: int) -> bool:
+	var state: String = bosque_state(region, bosques, bosque_id)
+	return state != "" and (fruit_params(region).states as Array).has(state)
+
+
+## Convierte en FRUIT_TREE entre per_chunk[0] y per_chunk[1] árboles (número por hash del chunk).
+## Candidatos: TREE que no están en el borde, fuera de la plaza (radio `plaza_radius` desde
+## `center`, -1 = sin villa) y con una casilla vecina transitable y alcanzable desde el hub (se
+## toma el fruto desde ahí). Primero los que dan a un claro o un sendero; separados entre sí al
+## menos min_spacing. Un TREE ya bloquea, así que el cambio no corta ningún paso.
+static func _place_fruit_trees(chunk: ChunkData, seed_value: int, coord: Vector2i, params: Dictionary,
+		center: Vector2i, plaza_radius: int) -> void:
+	var size: int = ChunkData.SIZE
+	var range_n: Array = params.per_chunk
+	var lo: int = int(range_n[0])
+	var hi: int = maxi(lo, int(range_n[1]))
+	var spacing: int = int(params.min_spacing)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = hash_ints([seed_value, coord.x, coord.y, SALT_FRUIT])
+	var wanted: int = rng.randi_range(lo, hi)
+	if wanted <= 0:
+		return
+	var reach: PackedByteArray = chunk.reachable_from_hub()
+	var near_open: Array[Vector2i] = []
+	var others: Array[Vector2i] = []
+	for y: int in range(1, size - 1):
+		for x: int in range(1, size - 1):
+			var c := Vector2i(x, y)
+			if chunk.get_tile(c) != ChunkData.Tile.TREE:
+				continue
+			if plaza_radius >= 0 and (c - center).length_squared() <= plaza_radius * plaza_radius:
+				continue
+			var opens: bool = false
+			var by_clearing: bool = false
+			for d: Vector2i in ChunkData.SIDES:
+				var n: Vector2i = c + d
+				if chunk.is_walkable(n) and reach[n.y * size + n.x] == 1:
+					opens = true
+					var t: int = chunk.get_tile(n)
+					by_clearing = by_clearing or t == ChunkData.Tile.CLEARING or t == ChunkData.Tile.PATH
+			if by_clearing:
+				near_open.append(c)
+			elif opens:
+				others.append(c)
+	_shuffle(near_open, rng)
+	_shuffle(others, rng)
+	var picked: Array[Vector2i] = []
+	for pool: Array[Vector2i] in [near_open, others]:
+		for c: Vector2i in pool:
+			if picked.size() >= wanted:
+				break
+			var far: bool = true
+			for p: Vector2i in picked:
+				if maxi(absi(p.x - c.x), absi(p.y - c.y)) < spacing:
+					far = false
+					break
+			if far:
+				picked.append(c)
+	for c: Vector2i in picked:
+		chunk.set_tile(c, ChunkData.Tile.FRUIT_TREE)
+	chunk.fruit_trees = picked
+
+
+## Fisher-Yates con el RNG local (Array.shuffle usaría el RNG global).
+static func _shuffle(cells: Array[Vector2i], rng: RandomNumberGenerator) -> void:
+	for i: int in range(cells.size() - 1, 0, -1):
+		var j: int = rng.randi_range(0, i)
+		var tmp: Vector2i = cells[i]
+		cells[i] = cells[j]
+		cells[j] = tmp
 
 
 ## Letrero hacia la villa natal junto al tramo recto del camino que lleva a casa (lado `side`).

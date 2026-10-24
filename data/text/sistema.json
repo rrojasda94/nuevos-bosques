@@ -54,5 +54,13 @@
   "monster_botarramas": "Botarramas",
   "monster_ofomni": "Ofomni",
   "monster_ofomni_descarriado": "Ofomni descarriado",
-  "map_legend_botarramas": "Botarramas"
+  "map_legend_botarramas": "Botarramas",
+  "$provisional_fruit": "Textos fruit_* provisionales: pendientes de revisión de narrative-writer.",
+  "fruit_taken": "Tomas un fruto del Bosque. +%d PV",
+  "fruit_one_per_momento": "El Bosque solo ofrece un fruto por Momento. Tomar otro sería robar.",
+  "fruit_no_permission": "Este Bosque no te ha dado permiso: tomarlo sería robar.",
+  "fruit_take_anyway": "Tomarlo igualmente",
+  "fruit_leave": "Dejarlo",
+  "fruit_theft_seen": "El Bosque lo ha visto.",
+  "fruit_empty": "Este árbol ya no tiene fruto. Volverá a dar tras el riutash."
 }

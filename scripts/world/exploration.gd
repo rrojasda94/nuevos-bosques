@@ -5,7 +5,8 @@ extends Node2D
 ## el paso abierto; en el borde de uno cerrado se emite bosque_border_reached y el menú del borde
 ## (scenes/rpg/crossing.tscn, ADR 0009) decide si se cruza. Los chunks se regeneran desde la seed;
 ## la caché es solo para no recalcular durante la sesión.
-## Con interact (E) se habla con los NPC, se leen letreros y se examinan refugios (Interaction).
+## Con interact (E) se habla con los NPC, se leen letreros, se examinan refugios y se toma el
+## fruto de los frutales (Interaction, FruitRules).
 ## Monstruos (MonsterField): los Botarramas de los tramos de frontera interceptan al jugador y su
 ## encuentro abre el menú del borde; el borde cerrado lo abre igual si nadie le persigue (red de
 ## seguridad). El Ofomni de la misión (QuestRunner) aparece en su chunk y su encuentro es el
@@ -34,6 +35,9 @@ var _pending_dir: Vector2i = Vector2i.ZERO
 var _resting: bool = false
 ## Monstruo cuyo encuentro abrió el menú o el combate en curso (null = se empujó el borde).
 var _pending_monster: OverworldMonster
+## Frutales dibujados: casilla del TileMap -> [chunk, casilla del chunk, id del Bosque]. Para
+## redibujarlos al tomar el fruto o al rebrotar.
+var _fruit_cells: Dictionary = {}
 
 @onready var _terrain: TileMapLayer = $Terrain
 @onready var _nujios: Node2D = $Nujios
@@ -132,6 +136,7 @@ func _get_chunk(coord: Vector2i) -> ChunkData:
 ## Ajusta los límites de la cámara a lo dibujado.
 func _draw_area() -> void:
 	_terrain.clear()
+	_fruit_cells.clear()
 	for child: Node in _nujios.get_children():
 		child.queue_free()
 	var size: int = ChunkData.SIZE
@@ -160,13 +165,33 @@ func _draw_chunk(chunk: ChunkData, bosque_id: int, offset: Vector2i, area: Rect2
 	for y: int in range(area.position.y, area.end.y):
 		for x: int in range(area.position.x, area.end.x):
 			var c := Vector2i(x, y)
-			_terrain.set_cell(offset + c, bosque_id, Vector2i(chunk.get_tile(c), PlaceholderTileset.variant_for(chunk, c, sign_dir)))
+			var tile: int = chunk.get_tile(c)
+			if tile == ChunkData.Tile.FRUIT_TREE:
+				_fruit_cells[offset + c] = [chunk.coord, c, bosque_id]
+				_draw_fruit_tree(offset + c)
+				continue
+			_terrain.set_cell(offset + c, bosque_id, Vector2i(tile, PlaceholderTileset.variant_for(chunk, c, sign_dir)))
 	if chunk.nujio_rect.size.x > 0:
 		var sprite := Sprite2D.new()
 		sprite.centered = false
 		sprite.texture = _nujio_texture(bosque_id)
 		sprite.position = Vector2((offset + chunk.nujio_rect.position) * TILE_SIZE)
 		_nujios.add_child(sprite)
+
+
+## Frutal dibujado en la casilla `at` del TileMap: con fruto o vaciado (FruitRules).
+func _draw_fruit_tree(at: Vector2i) -> void:
+	var info: Array = _fruit_cells[at]
+	var chunk: ChunkData = _get_chunk(info[0])
+	var variant: int = PlaceholderTileset.variant_for(chunk, info[1], 0)
+	if not FruitRules.has_fruit(info[0], info[1]):
+		variant += PlaceholderTileset.FRUIT_EMPTY_VARIANT
+	_terrain.set_cell(at, info[2], Vector2i(ChunkData.Tile.FRUIT_TREE, variant))
+
+
+func _refresh_fruit_trees() -> void:
+	for at: Vector2i in _fruit_cells:
+		_draw_fruit_tree(at)
 
 
 func _ensure_source(bosque_id: int) -> void:
@@ -228,6 +253,40 @@ func _interact() -> void:
 			_dialogue.show_lines([_sign_line(target.cell)])
 		Interaction.Kind.REFUGE:
 			_dialogue.show_lines(_refuge_lines())
+		Interaction.Kind.FRUIT_TREE:
+			_interact_fruit_tree(target.cell)
+
+
+## Frutal (FruitRules): sin fruto, avisa; con fruto, lo toma. Si sería robo (Bosque sin permiso,
+## o ya dio su fruto en este Momento), pregunta antes.
+func _interact_fruit_tree(cell: Vector2i) -> void:
+	if not FruitRules.has_fruit(_chunk.coord, cell):
+		_dialogue.show_lines([Texts.get_text("fruit_empty")])
+		return
+	var bosque_id: int = _bosques.bosque_at(_chunk.coord)
+	if not FruitRules.is_theft(bosque_id, _home_bosque):
+		_take_fruit(cell)
+		return
+	var warning: String = "fruit_one_per_momento" if FruitRules.has_permission(bosque_id, _home_bosque) else "fruit_no_permission"
+	_dialogue.choice.connect(_on_fruit_theft_choice.bind(cell), CONNECT_ONE_SHOT)
+	_dialogue.ask(Texts.get_text(warning), [Texts.get_text("fruit_take_anyway"), Texts.get_text("fruit_leave")])
+
+
+## "Tomarlo igualmente" (0) roba el fruto; "Dejarlo" (o cancelar) no hace nada.
+func _on_fruit_theft_choice(index: int, cell: Vector2i) -> void:
+	if index == 0:
+		_take_fruit(cell)
+
+
+func _take_fruit(cell: Vector2i) -> void:
+	var result: Dictionary = FruitRules.take(_chunk.coord, cell, _bosques.bosque_at(_chunk.coord), _home_bosque)
+	if result.is_empty():
+		return
+	_refresh_fruit_trees()
+	var lines: Array = [Texts.get_text("fruit_taken") % int(result.healed)]
+	if bool(result.theft):
+		lines.append(Texts.get_text("fruit_theft_seen"))
+	_dialogue.show_lines(lines)
 
 
 ## Refugio (ofrendas-v1.md): si guarda una ofrenda se recoge una vez; después, "No queda nada".
@@ -442,6 +501,8 @@ func _set_moonlight(value: float) -> void:
 
 func _on_riutash_passed(sheltered: bool) -> void:
 	AdventureRules.apply_riutash(sheltered)
+	FruitRules.regrow()
+	_refresh_fruit_trees()
 	var tween: Tween = create_tween()
 	tween.tween_property(_flash, "color:a", FLASH_ALPHA, FLASH_IN_TIME)
 	tween.tween_property(_flash, "color:a", 0.0, FLASH_OUT_TIME)

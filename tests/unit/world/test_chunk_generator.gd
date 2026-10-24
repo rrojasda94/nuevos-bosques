@@ -137,7 +137,7 @@ func test_rivers_are_sampled_in_world_space() -> void:
 	# así que los ríos siguen al cruzar el borde entre chunks.
 	var carved: Array[int] = [ChunkData.Tile.PATH, ChunkData.Tile.BRIDGE, ChunkData.Tile.CLEARING,
 		ChunkData.Tile.PLAZA, ChunkData.Tile.BUILDING, ChunkData.Tile.NUJIO, ChunkData.Tile.SIGN,
-		ChunkData.Tile.ROAD, ChunkData.Tile.REFUGE]
+		ChunkData.Tile.ROAD, ChunkData.Tile.REFUGE, ChunkData.Tile.FRUIT_TREE]
 	for s in [1, 42]:
 		var terrain := ChunkGenerator.Terrain.new(s, _region)
 		for c in [Vector2i(6, 13), Vector2i(7, 13), Vector2i(3, 5)]:

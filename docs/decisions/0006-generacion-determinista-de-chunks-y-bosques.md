@@ -132,6 +132,19 @@ Iteración 4, versión 0.2.0 (plan "Primer encargo"): el dueño pide que no sea 
 - **Región del MVP**: `data/world/regions/valle_del_sara.json`. `world_map.json` la marca como `start_region`; `claro_inicial` queda como dato antiguo sin uso.
 - **Píxel**: `rendering/2d/snap/snap_2d_transforms_to_pixel=true`, para que el tween entre casillas no deje subpíxeles. El color de fondo es el más oscuro de la paleta.
 
+### Frutales (0.3.0)
+- **Tile** `FRUIT_TREE` (valor 16, al final del enum para no mover los índices del atlas). Bloquea como `TREE`. `ChunkData.fruit_trees` guarda sus casillas en el orden de colocación.
+- **Qué Bosques**: los que dan fruto según su estado (`bosques-y-relacion.md`: sano y necesita_ayuda). Mientras no haya estados por Bosque, todos los Bosques con Nujio tienen el estado `fruit.bosque_state` de la región (`"sano"`). `ChunkGenerator.bosque_state()` es el punto que cambiará el PR de estados.
+- **Parámetros** en el bloque `fruit` de la región: `bosque_state`, `states`, `per_chunk` ([3, 6]) y `min_spacing` (5, Chebyshev).
+- **Algoritmo**, el último paso de `generate()` (después de senderos, camino, villa, Nujio, letreros y refugio):
+  1. RNG propio sembrado con `hash(seed, x, y, SALT_FRUIT = 31)`; con él se elige cuántos (entre `per_chunk[0]` y `per_chunk[1]`).
+  2. Candidatos: casillas `TREE` fuera del borde del chunk y fuera de la plaza de la villa más 2 casillas, con al menos una vecina ortogonal transitable y alcanzable desde el hub (desde ahí se toma el fruto con E).
+  3. Dos grupos: primero los que dan a un `CLEARING` o un `PATH` (para que se encuentren), luego el resto. Cada grupo se baraja con Fisher-Yates y el RNG local (nunca `Array.shuffle`, que usa el RNG global).
+  4. Se aceptan en orden si están a `min_spacing` o más de los ya elegidos.
+- **Garantías**: solo sustituye árboles, así que no cambia por dónde se anda ni pisa la plaza, el camino, los senderos o el agua. Lo comprueba `tests/unit/world/test_fruit_trees.gd` comparando con la misma región sin frutales.
+- **Dibujo** (`PlaceholderTileset`): la silueta y los colores del árbol del Bosque, con hasta 4 frutos de 2x2. El color es el primero de rojo, amarillo, naranja, magenta, blanco y azul (con su sombra, todos de la paleta) que contrasta con las dos hojas del Bosque. En las filas 0-1 del atlas el frutal tiene fruto; en las 2-3 (`FRUIT_EMPTY_VARIANT`) solo quedan los rabillos.
+- **Estado del jugador**, que no es de generación: los frutales vaciados y los frutos tomados por Bosque en el Momento viven en `GameState` (guardado v10) y los gestiona `FruitRules`. Los tiles se siguen regenerando.
+
 ## Consecuencias
 - Determinismo y reglas verificados en `tests/unit/world/test_chunk_generator.gd`, `tests/unit/world/test_bosque_map.gd` y `tests/unit/world/test_roads.gd` (caminos, letreros y refugios).
 - Los caminos se trazan por chunks; dentro de un chunk el camino puede cruzar un río en diagonal y dejar un puente escalonado. Es aceptable con el placeholder; con el arte final convendrá forzar cruces rectos.
