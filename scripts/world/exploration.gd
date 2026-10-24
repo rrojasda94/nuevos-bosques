@@ -120,6 +120,9 @@ func _enter_chunk(coord: Vector2i, cell: Vector2i) -> void:
 	_resting = AdventureRules.is_villa_rest(_chunk, cell)
 	_camera.reset_smoothing()
 	var bosque_id: int = _bosques.bosque_at(coord)
+	# Frutos guardados de otro Bosque: su Bosque de origen nota que te los llevas (FruitRules).
+	if FruitRules.bosque_entered(bosque_id) > 0:
+		EventBus.notice_requested.emit(Texts.get_text("fruit_taken_out"))
 	EventBus.chunk_entered.emit(coord, bosque_id, _bosques.size_of(bosque_id))
 	_fade.color.a = 1.0
 	create_tween().tween_property(_fade, "color:a", 0.0, TRANSITION_TIME)
@@ -257,33 +260,40 @@ func _interact() -> void:
 			_interact_fruit_tree(target.cell)
 
 
-## Frutal (FruitRules): sin fruto, avisa; con fruto, lo toma. Si sería robo (Bosque sin permiso,
-## o ya dio su fruto en este Momento), pregunta antes.
+## Frutal (FruitRules): sin fruto, avisa; con fruto, pregunta "Comerlo", "Guardarlo" (solo si
+## cabe en la bolsa) o "Dejarlo". Si sería robo (Bosque sin permiso, o ya dio su fruto en este
+## Momento), la pregunta lo avisa.
 func _interact_fruit_tree(cell: Vector2i) -> void:
 	if not FruitRules.has_fruit(_chunk.coord, cell):
 		_dialogue.show_lines([Texts.get_text("fruit_empty")])
 		return
 	var bosque_id: int = _bosques.bosque_at(_chunk.coord)
-	if not FruitRules.is_theft(bosque_id, _home_bosque):
-		_take_fruit(cell)
+	var prompt: String = "fruit_prompt"
+	if FruitRules.is_theft(bosque_id, _home_bosque):
+		prompt = "fruit_one_per_momento" if FruitRules.has_permission(bosque_id, _home_bosque) else "fruit_no_permission"
+	var actions: Array[StringName] = [&"eat"]
+	if FruitRules.can_store(bosque_id):
+		actions.append(&"store")
+	actions.append(&"leave")
+	var options: Array = actions.map(func(a: StringName) -> String: return Texts.get_text("fruit_" + String(a)))
+	_dialogue.choice.connect(_on_fruit_choice.bind(cell, actions), CONNECT_ONE_SHOT)
+	_dialogue.ask(Texts.get_text(prompt), options)
+
+
+## "Comerlo" cura y "Guardarlo" lo mete en la bolsa (ambos cuentan para el límite y el robo);
+## "Dejarlo" (o cancelar) no hace nada.
+func _on_fruit_choice(index: int, cell: Vector2i, actions: Array[StringName]) -> void:
+	if index < 0 or index >= actions.size() or actions[index] == &"leave":
 		return
-	var warning: String = "fruit_one_per_momento" if FruitRules.has_permission(bosque_id, _home_bosque) else "fruit_no_permission"
-	_dialogue.choice.connect(_on_fruit_theft_choice.bind(cell), CONNECT_ONE_SHOT)
-	_dialogue.ask(Texts.get_text(warning), [Texts.get_text("fruit_take_anyway"), Texts.get_text("fruit_leave")])
+	_take_fruit(cell, actions[index] == &"store")
 
 
-## "Tomarlo igualmente" (0) roba el fruto; "Dejarlo" (o cancelar) no hace nada.
-func _on_fruit_theft_choice(index: int, cell: Vector2i) -> void:
-	if index == 0:
-		_take_fruit(cell)
-
-
-func _take_fruit(cell: Vector2i) -> void:
-	var result: Dictionary = FruitRules.take(_chunk.coord, cell, _bosques.bosque_at(_chunk.coord), _home_bosque)
+func _take_fruit(cell: Vector2i, store: bool) -> void:
+	var result: Dictionary = FruitRules.take(_chunk.coord, cell, _bosques.bosque_at(_chunk.coord), _home_bosque, store)
 	if result.is_empty():
 		return
 	_refresh_fruit_trees()
-	var lines: Array = [Texts.get_text("fruit_taken") % int(result.healed)]
+	var lines: Array = [Texts.get_text("fruit_stored") if store else Texts.get_text("fruit_taken") % int(result.healed)]
 	if bool(result.theft):
 		lines.append(Texts.get_text("fruit_theft_seen"))
 	_dialogue.show_lines(lines)
@@ -298,6 +308,9 @@ func _refuge_lines() -> Array:
 	if item.is_empty():
 		return [Texts.get_text("refuge_looted")]
 	var found: String = "%s (%d)" % [Ofrendas.display_name(StringName(str(item.id))), int(item.luz)]
+	# Bolsa llena: se ve, pero no se toma; el refugio la guarda para otra vez.
+	if not bool(item.taken):
+		return [Texts.get_text("refuge_found") % found, Texts.get_text("bag_full")]
 	return [Texts.get_text("refuge_found") % found, Texts.get_text("refuge_empty")]
 
 

@@ -95,7 +95,7 @@ func test_battle_logic_uses_level_stats() -> void:
 	GameState.hp = 46
 	var logic: BattleLogic = AdventureRules.start_battle(3, 2)
 	assert_eq(logic.adoc_max_hp, 46)
-	assert_eq(logic.adoc_atk, 9)
+	assert_eq(logic.adoc_atk, 9 + 2, "ATQ del nivel 5 más la Lanza de adoc equipada")
 	assert_eq(logic.adoc_def, 4)
 	assert_eq(logic.adoc_hp, 46)
 	var stats := { "max_hp": 50, "atk": 11, "def": 7 }
@@ -161,7 +161,7 @@ func test_migration_from_v6_derives_level_from_xp() -> void:
 func test_migration_from_old_save_starts_at_level_1() -> void:
 	var v5: Dictionary = GameState.to_dict()
 	v5.save_version = 5
-	for key: String in ["level", "looted_refuges", "xp", "fama", "inventory"]:
+	for key: String in ["level", "looted_refuges", "xp", "fama", "bag", "equipped"]:
 		v5.erase(key)
 	GameState.level = 7
 	GameState.from_dict(v5)
@@ -179,7 +179,7 @@ func test_hud_status_lines() -> void:
 	assert_eq(lines[0], "Nivel 2")
 	assert_eq(lines[1], "XP 12 / 25")
 	assert_eq(lines[2], "PV 30/34")
-	assert_eq(lines[3], "ATQ 7   DEF 3")
+	assert_eq(lines[3], "ATQ 9 (+2)   DEF 3", "con la lanza equipada")
 	assert_eq(lines[5], "Fama 1")
 	GameState.level = 10
 	GameState.xp = 400

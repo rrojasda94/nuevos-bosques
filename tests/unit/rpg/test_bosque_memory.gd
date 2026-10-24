@@ -104,7 +104,7 @@ func test_ofrenda_lowers_hostility_and_toll_but_luz_does_not() -> void:
 	GameState.luz = 10
 	assert_true(AdventureRules.pay_toll(_target, 8))
 	assert_eq(AdventureRules.hostility(_target), 2, "pagar con Luz no borra la hostilidad")
-	GameState.inventory.append(Ofrendas.make_item(&"figura_sarua"))
+	InventoryLogic.add(GameState.bag, &"figura_sarua")
 	assert_true(AdventureRules.pay_toll_with_ofrenda(_target, 8, 0))
 	assert_eq(AdventureRules.hostility(_target), 1, "el Bosque olvida con ofrendas")
 	assert_eq(AdventureRules.toll_for(_target, 1), 6, "el peaje vuelve a bajar")
@@ -113,12 +113,12 @@ func test_ofrenda_lowers_hostility_and_toll_but_luz_does_not() -> void:
 	# En combate, con la acción Ofrenda.
 	var other: int = _home
 	GameState.bosque_hostility[str(other)] = 1
-	GameState.inventory.append(Ofrendas.make_item(&"figura_sarua"))
+	InventoryLogic.add(GameState.bag, &"figura_sarua")
 	var logic: BattleLogic = AdventureRules.start_battle(other, 1)
 	logic.offer_ofrenda(logic.payable_ofrendas()[0])
 	assert_eq(AdventureRules.finish_battle(logic, other), &"appeased")
 	assert_eq(AdventureRules.hostility(other), 0)
-	GameState.inventory.append(Ofrendas.make_item(&"figura_sarua"))
+	InventoryLogic.add(GameState.bag, &"figura_sarua")
 	AdventureRules.pay_toll_with_ofrenda(other, 4, 0)
 	assert_eq(AdventureRules.hostility(other), 0, "no baja de 0")
 
@@ -158,7 +158,7 @@ func test_relation_drops_on_kill_and_rises_on_payment() -> void:
 	assert_eq(AdventureRules.relation(_target), int(m.relation_per_kill))
 	AdventureRules.pay_toll(_target, 0)
 	assert_eq(AdventureRules.relation(_target), int(m.relation_per_kill) + int(m.relation_per_payment))
-	GameState.inventory.append(Ofrendas.make_item(&"figura_sarua"))
+	InventoryLogic.add(GameState.bag, &"figura_sarua")
 	AdventureRules.pay_toll_with_ofrenda(_home, 4, 0)
 	assert_eq(AdventureRules.relation(_home), int(m.relation_per_payment), "la ofrenda también suma")
 	for i in 20:
@@ -202,7 +202,7 @@ func test_descarriado_refuses_luz_and_ofrendas_but_bosque_ofomni_accepts() -> vo
 	q.state = String(QuestLogic.ACTIVE)
 	q.ofomni_d = 4
 	GameState.quests[Q] = q
-	GameState.inventory.append(Ofrendas.make_item(&"figura_sarua"))
+	InventoryLogic.add(GameState.bag, &"figura_sarua")
 	var logic: BattleLogic = AdventureRules.start_quest_battle(Q, 4)
 	assert_false(logic.can_offer_luz())
 	assert_false(logic.can_offer_ofrenda())

@@ -15,7 +15,6 @@
   "reward": {
     "refill_luz_to_max": true,
     "ofrenda": "cuenco_ritual",
-    "ofrenda_luz": 6,
     "xp": 25,
     "fama": 1
   },

@@ -68,7 +68,7 @@ func test_reward_only_once() -> void:
 	GameState.luz = 2
 	AdventureRules.apply_quest_reward(reward)
 	assert_eq(GameState.luz, AdventureRules.luz_max(), "Luz al tope")
-	assert_eq(GameState.inventory, [{ "id": "cuenco_ritual", "luz": 6 }])
+	assert_eq(AdventureRules.bag_ofrendas(), [{ "id": "cuenco_ritual", "luz": 6 }])
 	assert_eq(GameState.xp, 25)
 	assert_eq(GameState.fama, 1)
 
@@ -234,7 +234,7 @@ func test_save_v6_round_trip() -> void:
 	var q: Dictionary = _active()
 	QuestLogic.advance(q, 100.5, _map, 42, _home, EVERY)
 	QuestLogic.commit(Q, q, &"")
-	GameState.inventory = [{ "id": "cuenco_ritual", "luz": 6 }]
+	InventoryLogic.add(GameState.bag, &"cuenco_ritual")
 	GameState.villa_damaged = true
 	GameState.xp = 13
 	GameState.fama = 1
@@ -247,7 +247,7 @@ func test_save_v6_round_trip() -> void:
 	assert_eq(int(loaded.ofomni_bosque), int(q.ofomni_bosque))
 	assert_almost_eq(float(loaded.ofomni_elapsed), 100.5, 0.001)
 	assert_eq(int(loaded.ofomni_d), int(q.ofomni_d))
-	assert_eq(GameState.inventory, [{ "id": "cuenco_ritual", "luz": 6 }])
+	assert_eq(AdventureRules.bag_ofrendas(), [{ "id": "cuenco_ritual", "luz": 6 }])
 	assert_true(GameState.villa_damaged)
 	assert_eq(GameState.xp, 13)
 	assert_eq(GameState.fama, 1)
@@ -258,6 +258,8 @@ func test_v5_save_migrates_with_defaults() -> void:
 	var v5: Dictionary = GameState.to_dict()
 	v5.save_version = 5
 	v5.inventory = {}
+	v5.erase("bag")
+	v5.erase("equipped")
 	v5.quests = {}
 	for key in ["villa_damaged", "xp", "fama", "seen_monsters"]:
 		v5.erase(key)
@@ -267,7 +269,7 @@ func test_v5_save_migrates_with_defaults() -> void:
 	GameState.villa_damaged = true
 	GameState.xp = 99
 	assert_eq(SaveManager.load_game(SAVE_SLOT), OK)
-	assert_eq(GameState.inventory, [], "el diccionario de v5 pasa a lista vacía")
+	assert_eq(AdventureRules.bag_ofrendas(), [], "el diccionario de v5 pasa a una bolsa sin ofrendas")
 	assert_eq(GameState.quests, {}, "sin misión: la exploración la vuelve a ofrecer")
 	assert_false(GameState.villa_damaged)
 	assert_eq(GameState.xp, 0)

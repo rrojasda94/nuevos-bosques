@@ -42,7 +42,7 @@
     "per_d": 1
   },
   "bosque_memory": {
-    "$comment": "El Bosque recuerda (reglas del dueño 0.3): cada Botarramas vencido suma 1 de hostilidad a su Bosque. Peaje = 3 + d + hostility_toll x hostilidad, como mucho toll_max. vision_radius de sus Botarramas + hostility_vision x hostilidad, como mucho + vision_max_bonus. Relación (-relation_max .. relation_max): relation_per_kill por victoria, relation_per_payment al pagar (Luz, ofrenda o Ofrecer Luz en combate). Robo (p. ej. un fruto sin derecho, FruitRules): hostility_per_theft a la hostilidad y relation_per_theft a la relación. Provisionales: game-designer.",
+    "$comment": "El Bosque recuerda (reglas del dueño 0.3): cada Botarramas vencido suma 1 de hostilidad a su Bosque. Peaje = 3 + d + hostility_toll x hostilidad, como mucho toll_max. vision_radius de sus Botarramas + hostility_vision x hostilidad, como mucho + vision_max_bonus. Relación (-relation_max .. relation_max): relation_per_kill por victoria, relation_per_payment al pagar (Luz, ofrenda o Ofrecer Luz en combate). Robo (p. ej. un fruto sin derecho, FruitRules): hostility_per_theft a la hostilidad y relation_per_theft a la relación. relation_per_fruit_taken_out: por cada fruto guardado que sacas de su Bosque de origen (una vez por salida). Provisionales: game-designer.",
     "hostility_toll": 2,
     "toll_max": 10,
     "hostility_vision": 2,
@@ -51,6 +51,7 @@
     "relation_per_payment": 1,
     "hostility_per_theft": 1,
     "relation_per_theft": -20,
+    "relation_per_fruit_taken_out": -5,
     "relation_max": 100
   },
   "victory_luz": 1,

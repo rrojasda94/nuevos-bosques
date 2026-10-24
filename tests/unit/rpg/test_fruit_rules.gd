@@ -135,7 +135,7 @@ func test_save_round_trip() -> void:
 	assert_eq(GameState.emptied_fruit_trees, [Vector4i(6, 13, 5, 5), Vector4i(7, 13, 1, 2)] as Array[Vector4i])
 	assert_eq(GameState.fruit_taken, { str(HOME): 1, str(PAID): 1 })
 	assert_true(FruitRules.is_theft(HOME, HOME), "el Momento sigue contado tras cargar")
-	assert_eq(int(GameState.to_dict().save_version), 10)
+	assert_eq(int(GameState.to_dict().save_version), GameState.SAVE_VERSION)
 
 
 func test_migration_from_v8_has_all_fruit() -> void:
