@@ -6,6 +6,8 @@
   "momento_gietos": "Amanece. Momento de Gietos.",
   "momento_riumna": "Anochece. Momento de Riumna.",
   "new_day": "Día %d",
+  "hud_momento_gietos": "Día de Gietos",
+  "hud_momento_riumna": "Noche de Riumna",
   "signpost_villa_natal": "Hacia tu villa natal: %s",
   "signpost_villa_bosque": "Hacia la villa de este Bosque: %s",
   "refuge_empty": "Un refugio. Aquí pasarás el riutash.",

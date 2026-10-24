@@ -227,3 +227,50 @@ func test_spawn_and_defeat_wake_up_in_home_villa_next_to_nujio() -> void:
 	EventBus.crossing_resolved.emit(_map.neighbours_of(_home)[0], &"defeated")
 	assert_eq(GameState.chunk_coord, villa_chunk)
 	assert_true(AdventureRules.is_next_to_nujio(chunk, GameState.player_cell))
+
+
+# --- Riutash (ADR 0012, ficha tiempo-y-riutash.md) ---
+
+func test_riutash_exposed_takes_30_percent_of_max_hp() -> void:
+	assert_eq(AdventureRules.riutash_hp(30, 30, false), 21, "30% de 30 = 9")
+	assert_eq(AdventureRules.riutash_hp(25, 33, false), 16, "30% de 33 = 9,9 -> 9")
+
+
+func test_riutash_never_kills() -> void:
+	assert_eq(AdventureRules.riutash_hp(9, 30, false), 1, "justo el daño: queda a 1")
+	assert_eq(AdventureRules.riutash_hp(5, 30, false), 1)
+	assert_eq(AdventureRules.riutash_hp(1, 30, false), 1, "a 1 PV sigue con 1")
+	AdventureRules.set_hp(3)
+	AdventureRules.apply_riutash(false)
+	assert_eq(GameState.hp, 1)
+
+
+func test_riutash_sheltered_heals_half_of_missing_rounding_up() -> void:
+	assert_eq(AdventureRules.riutash_hp(10, 30, true), 20, "faltan 20 -> +10")
+	assert_eq(AdventureRules.riutash_hp(25, 30, true), 28, "faltan 5 -> +3")
+	assert_eq(AdventureRules.riutash_hp(29, 30, true), 30, "falta 1 -> +1")
+	assert_eq(AdventureRules.riutash_hp(30, 30, true), 30, "al máximo, sin cambio")
+
+
+func test_apply_riutash_writes_hp_and_notifies() -> void:
+	AdventureRules.set_hp(10)
+	watch_signals(EventBus)
+	assert_eq(AdventureRules.apply_riutash(true), 10)
+	assert_eq(GameState.hp, 20)
+	assert_signal_emitted_with_parameters(EventBus, "hp_changed", [20, AdventureRules.max_hp()])
+	assert_eq(AdventureRules.apply_riutash(false), -9)
+	assert_eq(GameState.hp, 11)
+
+
+func test_riutash_shelter_is_refuge_or_villa_rest() -> void:
+	var villa: ChunkData = _nujio_chunk_of(true)
+	var rect: Rect2i = villa.nujio_rect
+	assert_true(AdventureRules.is_riutash_shelter(villa, rect.position + Vector2i(-1, 0)), "junto al Nujio de la villa")
+	var chunk := ChunkData.new()
+	chunk.tiles.resize(ChunkData.SIZE * ChunkData.SIZE)
+	chunk.tiles.fill(ChunkData.Tile.GRASS)
+	chunk.set_tile(Vector2i(5, 5), ChunkData.Tile.REFUGE)
+	assert_true(AdventureRules.is_riutash_shelter(chunk, Vector2i(5, 5)), "casilla REFUGE")
+	assert_false(AdventureRules.is_riutash_shelter(chunk, Vector2i(5, 6)), "al lado no")
+	assert_false(AdventureRules.is_riutash_shelter(chunk, Vector2i(-1, 0)), "fuera del chunk no")
+	assert_false(AdventureRules.is_riutash_shelter(null, Vector2i(5, 5)), "sin chunk, expuesto")

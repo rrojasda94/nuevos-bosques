@@ -2,12 +2,17 @@ extends Node
 ## GameState: estado serializable de la partida. Sin lógica de dominio.
 
 ## v2: chunk_coord y player_cell (ADR 0006). v3: luz, hp, open_bosques y battle_attempts
-## (ADR 0009). Las versiones anteriores se cargan con valores por defecto.
-const SAVE_VERSION: int = 3
+## (ADR 0009). v4: reloj de Aventura, clock_momento y clock_elapsed (ADR 0012). Las versiones
+## anteriores se cargan con valores por defecto.
+const SAVE_VERSION: int = 4
 
 var rng := RandomNumberGenerator.new()
 var seed_value: int = 0
 var day: int = 1
+## Reloj de Aventura (ADR 0012): Momento actual (&"gietos" o &"riumna") y segundos transcurridos
+## dentro de él. La lógica está en WorldClock.
+var clock_momento: StringName = &"gietos"
+var clock_elapsed: float = 0.0
 ## Región del mapa mundial donde ocurre la partida (ADR 0003).
 var region_id: StringName = &""
 ## Reservado para cambios persistentes sobre chunks (ADR 0006). Los tiles NO se guardan:
@@ -44,6 +49,8 @@ func new_game(new_seed: int = 0, new_region: StringName = &"valle_del_sara") -> 
 	seed_value = new_seed if new_seed != 0 else int(Time.get_unix_time_from_system())
 	rng.seed = seed_value
 	day = 1
+	clock_momento = TimeConfig.start_momento()
+	clock_elapsed = TimeConfig.start_elapsed()
 	region_id = new_region
 	chunk = {}
 	chunk_coord = Vector2i(-1, -1)
@@ -65,6 +72,8 @@ func to_dict() -> Dictionary:
 		"save_version": SAVE_VERSION,
 		"seed": seed_value,
 		"day": day,
+		"clock_momento": String(clock_momento),
+		"clock_elapsed": clock_elapsed,
 		"region_id": String(region_id),
 		"chunk": chunk,
 		"chunk_coord": [chunk_coord.x, chunk_coord.y],
@@ -86,6 +95,11 @@ func to_dict() -> Dictionary:
 func from_dict(data: Dictionary) -> void:
 	seed_value = int(data.get("seed", 0))
 	day = int(data.get("day", 1))
+	# Sin reloj (v3 o anterior): inicio del Momento inicial, como en una partida nueva.
+	clock_momento = StringName(str(data.get("clock_momento", TimeConfig.start_momento())))
+	if not TimeConfig.is_momento(clock_momento):
+		clock_momento = TimeConfig.start_momento()
+	clock_elapsed = clampf(float(data.get("clock_elapsed", TimeConfig.start_elapsed())), 0.0, TimeConfig.duration(clock_momento))
 	region_id = StringName(data.get("region_id", "valle_del_sara"))
 	chunk = data.get("chunk", {})
 	chunk_coord = _to_vector2i(data.get("chunk_coord", [-1, -1]), Vector2i(-1, -1))

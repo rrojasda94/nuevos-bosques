@@ -37,6 +37,7 @@ func _ready() -> void:
 	_player.edge_reached.connect(_on_edge_reached)
 	_player.stepped.connect(_on_player_stepped)
 	EventBus.crossing_resolved.connect(_on_crossing_resolved)
+	_setup_riutash()
 
 
 ## Arranca la exploración con el estado actual de GameState (partida nueva o cargada).
@@ -50,8 +51,11 @@ func start() -> void:
 	var coord: Vector2i = GameState.chunk_coord
 	if not AdventureRules.is_passable(_bosques.bosque_at(coord), _home_bosque):
 		_enter_home_villa()
-		return
-	_enter_chunk(coord, GameState.player_cell)
+	else:
+		_enter_chunk(coord, GameState.player_cell)
+	if _moon_tween != null:
+		_moon_tween.kill()
+	_set_moonlight(1.0 if WorldClock.is_night() else 0.0)
 
 
 ## El Adoc aparece (partida nueva) o despierta (derrota) en su villa natal, junto al Nujio:
@@ -225,3 +229,68 @@ func _unhandled_input(event: InputEvent) -> void:
 		picker.randomize()
 		GameState.new_game(picker.randi_range(1, 999_999_999), GameState.region_id)
 		start()
+
+
+# --- Reloj y riutash (ADR 0012) -------------------------------------------------------------
+const MOONLIGHT_SHADER: Shader = preload("res://assets/shaders/moonlight.gdshader")
+## Capa del post-proceso de luz de luna: encima del mundo (canvas 0) y debajo de toda la UI, que
+## debe ir en la capa 2 o más (el HUD se sube a MOONLIGHT_LAYER + 1 al crearla).
+const MOONLIGHT_LAYER: int = 1
+## Destello blanco del riutash: subida y bajada.
+const FLASH_IN_TIME: float = 0.08
+const FLASH_OUT_TIME: float = 0.5
+const FLASH_ALPHA: float = 0.85
+
+var _moonlight: ColorRect
+var _moon_tween: Tween
+var _flash: ColorRect
+
+
+func _setup_riutash() -> void:
+	var layer := CanvasLayer.new()
+	layer.name = "Moonlight"
+	layer.layer = MOONLIGHT_LAYER
+	add_child(layer)
+	$DebugHud.layer = maxi($DebugHud.layer, MOONLIGHT_LAYER + 1)
+	_moonlight = ColorRect.new()
+	_moonlight.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_moonlight.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var material := ShaderMaterial.new()
+	material.shader = MOONLIGHT_SHADER
+	var uniforms: Dictionary = TimeConfig.moonlight_uniforms()
+	for key: String in uniforms:
+		material.set_shader_parameter(key, uniforms[key])
+	_moonlight.material = material
+	layer.add_child(_moonlight)
+	_set_moonlight(0.0)
+	_flash = ColorRect.new()
+	_flash.name = "Flash"
+	_flash.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_flash.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_flash.color = Color(1, 1, 1, 0)
+	$Transition.add_child(_flash)
+	WorldClock.shelter_check = func() -> bool: return AdventureRules.is_riutash_shelter(_chunk, _player.cell)
+	EventBus.riutash_passed.connect(_on_riutash_passed)
+	EventBus.momento_changed.connect(_on_momento_changed)
+
+
+## Intensidad de la luz de luna (0 = día, 1 = noche). De día el rect se oculta y no lee la pantalla.
+func _set_moonlight(value: float) -> void:
+	_moonlight.material.set_shader_parameter(&"intensity", value)
+	_moonlight.visible = value > 0.0
+
+
+func _on_riutash_passed(sheltered: bool) -> void:
+	AdventureRules.apply_riutash(sheltered)
+	var tween: Tween = create_tween()
+	tween.tween_property(_flash, "color:a", FLASH_ALPHA, FLASH_IN_TIME)
+	tween.tween_property(_flash, "color:a", 0.0, FLASH_OUT_TIME)
+
+
+func _on_momento_changed(momento: StringName) -> void:
+	if _moon_tween != null:
+		_moon_tween.kill()
+	var from: float = float(_moonlight.material.get_shader_parameter(&"intensity"))
+	var to: float = 1.0 if momento == TimeConfig.RIUMNA else 0.0
+	_moon_tween = create_tween()
+	_moon_tween.tween_method(_set_moonlight, from, to, TimeConfig.moonlight_fade_seconds())

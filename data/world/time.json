@@ -1,0 +1,24 @@
+{
+  "$comment": "Reloj del modo Aventura (ADR 0012). Estructura: engine-architect; valores PROVISIONALES: game-designer (docs/design/mechanics/tiempo-y-riutash.md). Segundos reales sin pausa. Los efectos del riutash van en porcentajes enteros para no depender del redondeo de coma flotante.",
+  "gietos_seconds": 480,
+  "riumna_seconds": 300,
+  "warning_seconds": [60, 15],
+  "start_momento": "gietos",
+  "start_elapsed": 0,
+  "riutash": {
+    "exposed_damage_pct_of_max_hp": 30,
+    "sheltered_heal_pct_of_missing_hp": 50
+  },
+  "moonlight": {
+    "$comment": "Post-proceso de luz de luna en Riumna (assets/shaders/moonlight.gdshader). Cada clave es un uniform del shader; tint es un color hex.",
+    "fade_seconds": 3.0,
+    "tint": "8b9bb4",
+    "tint_strength": 0.5,
+    "midtone_desaturation": 0.5,
+    "midtone_level": 0.9,
+    "highlight_threshold": 0.6,
+    "highlight_boost": 1.15,
+    "shadow_threshold": 0.3,
+    "shadow_level": 0.75
+  }
+}

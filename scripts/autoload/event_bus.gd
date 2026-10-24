@@ -1,10 +1,16 @@
 extends Node
 ## EventBus: solo señales. Sin lógica. Todos los sistemas se comunican por aquí.
 
-# --- Tiempo / simulación (por días, ver ADR 0002) ---
+# --- Tiempo / simulación (días: ADR 0002; tiempo real con pausa en Aventura: ADR 0012) ---
 signal end_day_requested
 signal day_ended(day: int)
 signal day_started(day: int)
+## Reloj de Aventura (ADR 0012, WorldClock). Orden en cada cambio de Momento: riutash_warning
+## (60 y 15 s antes), riutash_passed y momento_changed. momento: &"gietos" o &"riumna".
+signal riutash_warning(seconds_left: int)
+## sheltered: el jugador estaba en un refugio (REFUGE o plaza de villa) al pasar el riutash.
+signal riutash_passed(sheltered: bool)
+signal momento_changed(momento: StringName)
 
 # --- Mundo (ADR 0003) ---
 signal chunk_generated(region_id: StringName, seed_value: int)

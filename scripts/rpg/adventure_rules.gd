@@ -1,8 +1,9 @@
 class_name AdventureRules
 extends RefCounted
 ## Reglas del Adoc fuera del combate (ADR 0009): Luz, PV, peaje entre Bosques, Únicos,
-## resultado de un combate y descanso en una villa. Escribe en GameState y avisa por EventBus.
-## Los números viven en data/combat/balance.json.
+## resultado de un combate, descanso en una villa y efecto del riutash (ADR 0012). Escribe en
+## GameState y avisa por EventBus. Los números viven en data/combat/balance.json y, los del
+## riutash, en data/world/time.json.
 
 const BALANCE_PATH: String = "res://data/combat/balance.json"
 const SALT_BATTLE: int = 21
@@ -129,7 +130,7 @@ static func is_next_to_nujio(chunk: ChunkData, cell: Vector2i) -> bool:
 
 
 ## Se descansa en una villa: en su plaza o junto al Nujio de un Bosque con villa. Un Nujio sin
-## villa no cura (más adelante también curará el riutash, cuando haya día y noche).
+## villa no cura.
 static func is_villa_rest(chunk: ChunkData, cell: Vector2i) -> bool:
 	if not chunk.has_villa or not ChunkData.in_bounds(cell):
 		return false
@@ -140,3 +141,25 @@ static func is_villa_rest(chunk: ChunkData, cell: Vector2i) -> bool:
 static func rest() -> void:
 	set_hp(max_hp())
 	EventBus.rested_in_villa.emit()
+
+
+## Refugio frente al riutash: una casilla REFUGE o un lugar de descanso de villa.
+static func is_riutash_shelter(chunk: ChunkData, cell: Vector2i) -> bool:
+	return chunk != null and ChunkData.in_bounds(cell) and (chunk.is_refuge(cell) or is_villa_rest(chunk, cell))
+
+
+## PV tras el riutash (pura). Expuesto: pierde el % de los PV máximos (redondeo hacia abajo) sin
+## bajar nunca de 1. En refugio: recupera el % de los PV que faltan (redondeo hacia arriba).
+static func riutash_hp(hp: int, hp_max: int, sheltered: bool) -> int:
+	if sheltered:
+		var missing: int = maxi(0, hp_max - hp)
+		return mini(hp_max, hp + ceili(missing * TimeConfig.riutash_heal_pct() / 100.0))
+	var damage: int = floori(hp_max * TimeConfig.riutash_damage_pct() / 100.0)
+	return mini(hp, maxi(1, hp - damage))
+
+
+## Aplica el riutash al Adoc. Devuelve el cambio de PV (negativo si hiere).
+static func apply_riutash(sheltered: bool) -> int:
+	var before: int = GameState.hp
+	set_hp(riutash_hp(before, max_hp(), sheltered))
+	return GameState.hp - before
