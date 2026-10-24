@@ -106,8 +106,14 @@ SOUNDS = {
     "sfx_step": lambda: noise(2500, 1500, 0.035, 0.12),
     # Letra del diálogo: un clic de cuadrada aguda, cortísimo.
     "sfx_text_blip": lambda: pulse(990, 990, 0.022, 0.13, duty=0.25),
-    # Golpe: ruido seco más un golpe de cuadrada que cae.
-    "sfx_hit": lambda: mix(noise(9000, 1200, 0.14, 0.35), pulse(220, 60, 0.12, 0.25, duty=0.5)),
+    # Golpe con cuerpo: chasquido de impacto, caída de cuadrada, golpe grave de triangular
+    # y una cola de ruido sordo para que no suene seco.
+    "sfx_hit": lambda: mix(
+        noise(14000, 4000, 0.05, 0.3),
+        pulse(160, 45, 0.22, 0.2, duty=0.5),
+        triangle(70, 0.28, 0.35),
+        noise(1800, 600, 0.3, 0.12, attack=0.005),
+    ),
     # Latigazo: silbido que sube y chasquido final.
     "sfx_whip": lambda: cat(
         noise(4000, 20000, 0.12, 0.12, attack=0.08, hold=1.0),
