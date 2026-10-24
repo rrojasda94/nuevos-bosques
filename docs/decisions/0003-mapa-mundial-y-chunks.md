@@ -1,5 +1,7 @@
 # ADR 0003 — Mapa mundial diseñado + chunks procedurales con seed
 
+> **Aviso (2026-10-24):** el [ADR 0014](0014-mundo-2-relieve-movimiento-libre-y-mundo-hibrido.md) (Mundo 2.0, versión 0.4) **amplía** este ADR: además del mapa mundial hay autoría por región (PNG por capas + CSV de lugares) y la región se pregenera entera con `seed + region_id + autoría` y se cachea.
+
 ## Contexto
 El dueño del proyecto diseñará a mano un mapa general del mundo (Nardaram). Las partidas no ocurren en ese mapa directamente: ocurren en **chunks** generados proceduralmente con seed. El mapa mundial es la guía de clima, geografía general y contexto geopolítico de cada chunk.
 

@@ -151,7 +151,7 @@ El letrero y el mapa (M) podrían indicar el estado con texto o color (`navegaci
   - **Sacarlo de su Bosque** baja la relación con él: **−5 por fruto y por salida** (provisional). El fruto no se pierde al salir.
   - Tomarlo para guardar cuenta igual para el límite de 1 por Momento y por Bosque.
 
-## Salvar los Bosques (0.4, propuesta)
+## Salvar los Bosques (0.5, propuesta)
 Palabras del dueño (2026-10-24): "salvar los bosques".
 - **Bosque en necesidad de ayuda con incendio**:
   - Encargo "Apagar el incendio": hay **3–5 focos** (casillas de fuego) en un chunk del Bosque y se apagan con **E**, uno por uno.

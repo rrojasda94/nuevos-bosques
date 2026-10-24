@@ -1,5 +1,7 @@
 # ADR 0006 — Generación determinista de chunks, Bosques y su persistencia
 
+> **Aviso (2026-10-24):** el [ADR 0014](0014-mundo-2-relieve-movimiento-libre-y-mundo-hibrido.md) **sustituye en parte** este ADR desde la versión 0.4: terreno base (relieve en niveles), senderos (red sin X), hub no central, chunk de 80×80, caché en disco y mundo continuo sin franja de vecinos. Siguen vigentes la identidad y el determinismo por hash, `BosqueMap` (reparto, estilos, caminos y refugios) y las reglas de frutales y letreros.
+
 > El nombre del archivo decía "zonas" por historia; se renombró en la pasada `refactor` del ADR 0011. "Zona" pasó a llamarse **Bosque** (iteración 2 del slice, 2026-10-23). La escala es chunk < Bosque < área < región.
 
 ## Contexto

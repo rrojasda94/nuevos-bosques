@@ -1,6 +1,6 @@
 # Ficha: NPC y servicios de las villas
 
-> Dueño: `game-designer`. **Propuesta para la 0.4 "Los otros adoc"** (`docs/design/roadmap-0.4.md`). Valores **provisionales**.
+> Dueño: `game-designer`. **Propuesta para la 0.5 "Los otros adoc"** (antes 0.4; `docs/design/roadmap-0.5.md`). Valores **provisionales**.
 > Fuentes: palabras del dueño (abajo); glosario §5 ("Villa", tabla de Oficios), §6 ("Luz", "Trueque", "Multiplicador de valor" del Ista); ADR 0010 (ofrendas, dumno y heridas graves); `ofrendas-v1.md`, `sigilo-y-robo.md`, `moralidad-y-progresion.md`. No se inventa lore: los oficios y sus funciones son los del glosario.
 
 ## Objetivo

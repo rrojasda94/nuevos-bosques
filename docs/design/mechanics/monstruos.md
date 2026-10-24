@@ -14,7 +14,7 @@ Reunir en un sitio qué monstruos hay, qué se sabe de cada uno y qué regla de 
 - **Añade**: los monstruos **fatales** convierten una derrota en **game over** (ADR 0004). Aledra lo es de noche, lo que hace la noche más peligrosa. Los grupos de reparep castigan pelear con la DEF baja o sin Luz.
 - **Alivia**: los Únicos comunes y el Ofomni de la primera misión no son fatales; perder contra ellos te devuelve a la villa.
 
-## Iserald (0.4+, propuesta)
+## Iserald (0.5+, propuesta)
 Palabras del dueño: "Tendria que dañar el bosque o intentar destruirlo para recien desatar al iserald, el iserald solo es vencido por un grupo de adoc, solo no lo creo. Es mejor huir si vemos uno. Un iserald desata el status de miedo y este da mas velocidad pero los movimientos pueden ser mas torpes. Los garelinos si pueden desatar un iserald. O un nujio que ya tiene su cordura al minimo, cualquier cosa mala puede liberar iserald."
 
 - **Cuándo se desata** (en un Bosque con Nujio):
@@ -69,7 +69,7 @@ Palabras del dueño: "Tendria que dañar el bosque o intentar destruirlo para re
 - **Después** (dueño: "si, muere"): al desatarse el Iserald, **el Nujio muere** y el Bosque pasa a **muerto** (`bosques-y-relacion.md`).
 - Miedo: **se mantiene la propuesta** (el dueño no la cambió en su respuesta a #160).
 
-## Garelinos (0.4, propuesta)
+## Garelinos (0.5, propuesta)
 - **Enemigos humanos**, hostiles. Pueden **hacer daño pero no matar**, y el adoc tampoco los mata (ADR 0004). **Combate no letal**: "no matan, no mueren".
 - **Dónde**: atacando Bosques (estado "en necesidad de ayuda" con `hazard: ataque`, `bosques-y-relacion.md`) y en caminos cercanos a esos Bosques.
 - **Combate**: el combate en grupo (son grupos de 2–3; stats humanos provisionales: PV 15 + 3·d, ATQ 3 + d, DEF 2), con Únicos del Bosque como aliados si el Bosque lo necesita.
