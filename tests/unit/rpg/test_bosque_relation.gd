@@ -285,7 +285,7 @@ func test_save_v12_round_trip() -> void:
 	assert_eq(SaveManager.save_game(SAVE_SLOT), OK)
 	GameState.new_game(1)
 	assert_eq(SaveManager.load_game(SAVE_SLOT), OK)
-	assert_eq(int(GameState.to_dict().save_version), 12)
+	assert_eq(int(GameState.to_dict().save_version), GameState.SAVE_VERSION)
 	assert_eq(GameState.riutash_count, 1)
 	assert_eq(GameState.open_until, { str(_target): 3, str(other): AdventureRules.OPEN_PERMANENT })
 	assert_eq(GameState.angry_candidate, [_home] as Array[int])

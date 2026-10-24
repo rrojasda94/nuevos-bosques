@@ -24,7 +24,7 @@ const TEXT_UNICO_ATTACK: String = "El Único te golpea: %d de daño."
 const TEXT_SPECIAL_WARNING: String = "El Único se prepara para un golpe terrible..."
 const TEXT_VICTORY: String = "El Único vuelve a la Luz del Bosque."
 const TEXT_VICTORY_LUZ: String = " (+%d Luz)"
-const TEXT_DEFEAT: String = "Caes. Despertarás junto al Nujio de tu villa."
+const TEXT_DEFEAT: String = "Caes. Despertarás junto a un Nujio."
 const OPTIONS: Array[String] = ["Atacar", "Defender", "Ofrecer Luz", "Ofrenda", "Huir"]
 ## Índice de "Ofrecer Luz" en OPTIONS (su texto lleva el peaje).
 const OFFER_LUZ_OPTION: int = 2

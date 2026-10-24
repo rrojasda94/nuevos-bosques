@@ -110,14 +110,14 @@ func test_victory_at_luz_cap_does_not_exceed_max() -> void:
 	assert_eq(GameState.luz, 0)
 
 
-func test_defeat_restores_hp_halves_luz_and_keeps_closed() -> void:
+func test_defeat_wakes_at_half_hp_halves_luz_and_keeps_closed() -> void:
 	var target: int = _map.neighbours_of(_home)[0]
 	GameState.luz = 7
 	var logic: BattleLogic = AdventureRules.start_battle(target, 1)
 	logic.adoc_hp = 0
 	logic.result = BattleLogic.Result.DEFEAT
 	assert_eq(AdventureRules.finish_battle(logic, target), &"defeat")
-	assert_eq(GameState.hp, AdventureRules.max_hp())
+	assert_eq(GameState.hp, 15, "50% de 30 (reaparición, cruce-y-combate-v2.md)")
 	assert_eq(GameState.luz, 3, "mitad de 7, redondeando hacia abajo")
 	assert_false(AdventureRules.is_open(target))
 

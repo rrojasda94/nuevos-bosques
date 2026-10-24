@@ -41,7 +41,8 @@ signal battle_started(bosque_id: int)
 signal battle_ended(bosque_id: int, result: StringName)
 ## Fin del menú del borde de un Bosque. outcome: &"paid" (con Luz, con una ofrenda o con una
 ## ofrenda en combate) o &"won" (paso abierto: se cruza),
-## &"retreated" o &"fled" (se vuelve atrás), &"defeated" (se despierta en el Nujio inicial),
+## &"retreated" o &"fled" (se vuelve atrás), &"defeated" (se despierta junto al Nujio aliado más
+## cercano, AdventureRules.respawn_target),
 ## &"game_over" (derrota contra un monstruo fatal: partida nueva).
 signal crossing_resolved(bosque_id: int, outcome: StringName)
 signal luz_changed(luz: int)

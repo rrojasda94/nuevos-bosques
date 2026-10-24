@@ -91,14 +91,25 @@ func start() -> void:
 	_set_moonlight(1.0 if WorldClock.is_night() else 0.0)
 
 
-## El Adoc aparece (partida nueva) o despierta (derrota) en su villa natal, junto al Nujio:
-## en la casilla justo al sur del Nujio, o en el hub si no fuese transitable.
+## El Adoc aparece (partida nueva o partida cargada en un Bosque que ya no se puede cruzar) en su
+## villa natal, junto al Nujio: en la casilla justo al sur del Nujio, o en el hub si no fuese
+## transitable.
 func _enter_home_villa() -> void:
 	var coord: Vector2i = _bosques.nujio_chunk[_home_bosque]
 	var chunk: ChunkData = _get_chunk(coord)
 	var rect: Rect2i = chunk.nujio_rect
 	var cell := Vector2i(rect.position.x + rect.size.x / 2, rect.end.y)
 	_enter_chunk(coord, cell if chunk.is_walkable(cell) else chunk.hub)
+
+
+## Derrota no fatal (cruce-y-combate-v2.md): despierta junto al Nujio aliado (o el del último
+## Bosque pagado) más cercano a donde cayó, o en la villa natal (AdventureRules.respawn_target), y
+## lo avisa. Los PV y la Luz ya los ajustó el final del combate.
+func _respawn() -> void:
+	var target: int = AdventureRules.respawn_target(_bosques, GameState.chunk_coord, _home_bosque)
+	var coord: Vector2i = _bosques.nujio_chunk[target]
+	_enter_chunk(coord, AdventureRules.respawn_cell(_get_chunk(coord)))
+	EventBus.notice_requested.emit(AdventureRules.respawn_notice(_bosques, target))
 
 
 func _on_player_stepped(cell: Vector2i) -> void:
@@ -386,7 +397,7 @@ func _on_crossing_resolved(_bosque_id: int, outcome: StringName) -> void:
 			elif outcome == &"won":
 				_field.dissolve(monster)
 		&"defeated":
-			_enter_home_villa()
+			_respawn()
 		&"game_over":
 			_game_over()
 		_:
@@ -400,7 +411,7 @@ func _on_quest_battle_resolved(_quest_id: StringName, outcome: StringName) -> vo
 		&"victory":
 			_field.remove_ofomni()
 		&"defeat":
-			_enter_home_villa()
+			_respawn()
 		&"game_over":
 			_game_over()
 		_:
@@ -539,9 +550,24 @@ func _setup_riutash() -> void:
 	_flash.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_flash.color = Color(1, 1, 1, 0)
 	$Transition.add_child(_flash)
-	WorldClock.shelter_check = func() -> bool: return AdventureRules.is_riutash_shelter(_chunk, _player.cell)
 	EventBus.riutash_passed.connect(_on_riutash_passed)
 	EventBus.momento_changed.connect(_on_momento_changed)
+
+
+## Comprobación de refugio que esta exploración presta a WorldClock mientras está en el árbol.
+var _shelter_check: Callable
+
+
+func _enter_tree() -> void:
+	_shelter_check = func() -> bool: return _chunk != null and AdventureRules.is_riutash_shelter(_chunk, _player.cell)
+	WorldClock.shelter_check = _shelter_check
+
+
+## Al salir del árbol (o liberarse) suelta la comprobación de refugio: si no, WorldClock llamaría a
+## una exploración ya liberada en el siguiente riutash ("Bad address index").
+func _exit_tree() -> void:
+	if WorldClock.shelter_check == _shelter_check:
+		WorldClock.shelter_check = Callable()
 
 
 ## Intensidad de la luz de luna (0 = día, 1 = noche). De día el rect se oculta y no lee la pantalla.

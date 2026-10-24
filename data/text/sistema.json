@@ -58,6 +58,8 @@
   "ofomni_whips_hit": "¡Latigazo múltiple! Los látigos caen: %d de daño.",
   "ofomni_whips_defended": "Resistes los látigos: %d de daño.",
   "defeat_fatal_game_over": "Has caído ante %s. Tu viaje termina aquí.",
+  "respawn_villa": "Despiertas junto al Nujio de %s.",
+  "respawn_bosque": "Despiertas junto al Nujio de un Bosque sin villa.",
   "compass_ofomni_descarriado": "Ofomni descarriado",
   "compass_sfida": "Sfida",
   "compass_villa": "Villa",

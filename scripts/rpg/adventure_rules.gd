@@ -7,7 +7,8 @@ extends RefCounted
 ## relación multiplica el peaje y sube con ofrendas ante el Nujio, misiones, defensa y descansos junto
 ## al Nujio), Únicos (los Botarramas de borde),
 ## combate de misión (Ofomni descarriado), resultado de un combate (con monstruos fatales según el Momento,
-## monstruos.md), recompensa de misión, hallazgos en refugios, bolsa y equipo (el arma equipada
+## monstruos.md), reaparición tras una derrota no fatal junto al Nujio aliado más cercano
+## (cruce-y-combate-v2.md), recompensa de misión, hallazgos en refugios, bolsa y equipo (el arma equipada
 ## suma ATQ), villa dañada, descanso en una villa y efecto del riutash (ADR 0012). Escribe en GameState y avisa por EventBus. Los
 ## números viven en data/combat/balance.json y, los del riutash, en data/world/time.json.
 
@@ -460,10 +461,12 @@ static func open_bosque(bosque_id: int) -> void:
 
 
 ## Pago del peaje (Luz, ofrenda u Ofrecer Luz en combate): mejora la relación y abre el Bosque
-## (después: si la relación llega a la amistad alta, el paso es permanente). Con Luz, la relación
+## (después: si la relación llega a la amistad alta, el paso es permanente) y queda como el último
+## Bosque pagado (destino de reaparición, respawn_target). Con Luz, la relación
 ## sube relation_per_payment. Con una ofrenda (`ofrenda_value` >= 0) sube su valor y la hostilidad
 ## baja 1, sin bajar de 0 ("el bosque olvida con ofrendas", dueño, #147).
 static func _paid(bosque_id: int, ofrenda_value: int = -1) -> void:
+	GameState.last_paid_bosque = bosque_id
 	if ofrenda_value >= 0:
 		_ofrenda_given(bosque_id, ofrenda_value)
 	else:
@@ -600,12 +603,86 @@ static func _apply_result(logic: BattleLogic) -> StringName:
 			if logic.fatal:
 				EventBus.game_ended.emit(&"fatal_defeat")
 				return &"game_over"
-			set_hp(max_hp())
+			set_hp(respawn_hp(max_hp()))
 			set_luz(floori(logic.luz * float(b.defeat_luz_factor)))
 			return &"defeat"
 	set_hp(logic.adoc_hp)
 	set_luz(logic.luz)
 	return &"fled"
+
+
+# --- Reaparición tras una derrota no fatal (cruce-y-combate-v2.md) ------------------------------
+
+static func _respawn_cfg() -> Dictionary:
+	return balance().respawn
+
+
+## PV con que se despierta tras una derrota no fatal: hp_pct de los PV máximos (redondeo hacia
+## arriba, mínimo 1).
+static func respawn_hp(max_value: int) -> int:
+	return clampi(ceili(max_value * float(_respawn_cfg().hp_pct) / 100.0), 1, maxi(1, max_value))
+
+
+## Aliado para reaparecer: el Bosque natal, o uno con relación >= ally_relation que no esté
+## forzado (vencer a un Botarramas sin pagar no lo hace aliado).
+static func is_ally(bosque_id: int, home: int) -> bool:
+	if bosque_id < 0:
+		return false
+	if bosque_id == home:
+		return true
+	return relation(bosque_id) >= int(_respawn_cfg().ally_relation) and not is_forced(bosque_id)
+
+
+## Bosque en cuyo Nujio se despierta tras caer en el chunk `fell_at`: el más cercano (chunks,
+## Manhattan, hasta su chunk de Nujio) entre los aliados (is_ally, con el natal) y el último Bosque
+## pagado (GameState.last_paid_bosque). Empates: el natal, luego el último pagado, luego el id más
+## bajo. Sin ninguno válido, el natal (villa natal).
+static func respawn_target(map: BosqueMap, fell_at: Vector2i, home: int) -> int:
+	var best: int = home
+	var best_key: int = 1 << 30
+	var last_paid: int = GameState.last_paid_bosque
+	for id: int in map.count():
+		if id != last_paid and not is_ally(id, home):
+			continue
+		var c: Vector2i = map.nujio_chunk[id]
+		var dist: int = absi(c.x - fell_at.x) + absi(c.y - fell_at.y)
+		var rank: int = 0 if id == home else (1 if id == last_paid else 2)
+		var key: int = (dist * 3 + rank) * (map.count() + 1) + id
+		if key < best_key:
+			best = id
+			best_key = key
+	return best
+
+
+## Casilla donde se despierta en el chunk del Nujio: una transitable junto a su huella (también en
+## diagonal) y a la que se llega desde el hub, la más cercana a la casilla al sur de su centro
+## (empates por fila y columna). Sin ninguna, el hub (en un Bosque con villa, la plaza).
+static func respawn_cell(chunk: ChunkData) -> Vector2i:
+	var rect: Rect2i = chunk.nujio_rect
+	if rect.size.x <= 0:
+		return chunk.hub
+	var south := Vector2i(rect.position.x + rect.size.x / 2, rect.end.y)
+	var ring: Rect2i = rect.grow(1)
+	var best: Vector2i = chunk.hub
+	var best_score: int = 1 << 30
+	for y: int in range(ring.position.y, ring.end.y):
+		for x: int in range(ring.position.x, ring.end.x):
+			var c := Vector2i(x, y)
+			if rect.has_point(c) or not chunk.is_walkable(c) or not chunk.is_reachable(c):
+				continue
+			var score: int = (absi(c.x - south.x) + absi(c.y - south.y)) * ChunkData.SIZE * ChunkData.SIZE 				+ y * ChunkData.SIZE + x
+			if score < best_score:
+				best = c
+				best_score = score
+	return best
+
+
+## Aviso de dónde se despierta: "Despiertas junto al Nujio de <villa>." si el Bosque tiene villa;
+## si no, el del Bosque sin villa.
+static func respawn_notice(map: BosqueMap, bosque_id: int) -> String:
+	if bosque_id >= 0 and map.has_villa[bosque_id]:
+		return Texts.get_text("respawn_villa") % Signpost.villa_name(GameState.seed_value, bosque_id)
+	return Texts.get_text("respawn_bosque")
 
 
 ## Quita de la bolsa la ofrenda entregada en combate (una unidad de su id).

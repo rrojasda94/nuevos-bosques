@@ -24,8 +24,11 @@ Todos los cambios que nota el jugador. Formato [Keep a Changelog](https://keepac
 - "Ofrecer Luz" en combate ya no hace daño: paga el peaje del Bosque con tu Luz suelta ("Ofrecer N Luz"), el Botarramas se aparta y el paso queda abierto, sin experiencia. Si no te llega la Luz, la opción sale en gris.
 - El Ofomni de la misión es ahora el Ofomni descarriado: un Único que ha perdido el control, que no acepta Luz ni ofrendas y al que hay que vencer. Tiene menos PV (un 30% menos) para compensar que Ofrecer Luz ya no le hace daño. Las partidas guardadas se convierten solas.
 
+- Perder un combate que no es mortal (en un borde o contra el Ofomni descarriado) ya no te devuelve a tu villa natal con todos los PV: despiertas con la mitad de tus PV máximos junto al Nujio más cercano a donde caíste entre los de tus Bosques aliados (relación 30 o más, y siempre tu Bosque natal) y el del último Bosque al que pagaste el peaje, aunque ese paso ya haya caducado. Un Bosque que has forzado sin pagar no cuenta como aliado. Sigues perdiendo la mitad de tu Luz suelta y el HUD te dice dónde estás ("Despiertas junto al Nujio de Villa Honda."). El guardado pasa a la versión 13; en las partidas anteriores, el último Bosque pagado es el que tenías pagado más recientemente.
+
 ### Corregido
 - Un Botarramas vencido ya no vuelve a su puesto a bloquear el camino: se desvanece en la Luz del Bosque y no reaparece en la partida. Los Botarramas de un Bosque ya abierto no cierran el paso.
+- El reloj del riutash ya no intenta comprobar el refugio en una exploración que ya se ha cerrado (error "Bad address index").
 - Ya hay refugios más allá de tu Bosque: todos los Bosques tienen al menos uno, junto a su Nujio, y hay más repartidos por toda la región (más o menos uno de cada 2 o 3 chunks), también lejos del camino, junto a senderos y claros. Nunca estás a más de 2 chunks de un refugio y siempre se llega a pie.
 
 ## [0.2.0] - 2026-10-24
