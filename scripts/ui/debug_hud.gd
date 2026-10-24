@@ -31,7 +31,6 @@ func _ready() -> void:
 	EventBus.luz_changed.connect(func(_l: int) -> void: _refresh())
 	EventBus.hp_changed.connect(func(_h: int, _m: int) -> void: _refresh())
 	EventBus.rested_in_villa.connect(func() -> void: _show_notice(NOTICE_REST))
-	EventBus.signpost_read.connect(_on_signpost_read)
 	EventBus.riutash_warning.connect(_on_riutash_warning)
 	EventBus.riutash_passed.connect(_on_riutash_passed)
 	EventBus.momento_changed.connect(_on_momento_changed)
@@ -58,13 +57,6 @@ func _process(_delta: float) -> void:
 	elif left > last and not _sticky.is_empty():
 		_set_sticky("")
 	_refresh()
-
-
-func _on_signpost_read(direction: String, kind: int) -> void:
-	if kind == ChunkData.SignKind.HOME_VILLA:
-		_show_notice(Texts.get_text("signpost_villa_natal") % direction)
-	else:
-		_show_notice(Texts.get_text("signpost_villa_bosque") % direction)
 
 
 func _on_chunk_entered(_coord: Vector2i, bosque_id: int, bosque_size: int) -> void:

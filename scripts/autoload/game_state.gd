@@ -2,9 +2,10 @@ extends Node
 ## GameState: estado serializable de la partida. Sin lógica de dominio.
 
 ## v2: chunk_coord y player_cell (ADR 0006). v3: luz, hp, open_bosques y battle_attempts
-## (ADR 0009). v4: reloj de Aventura, clock_momento y clock_elapsed (ADR 0012). Las versiones
-## anteriores se cargan con valores por defecto.
-const SAVE_VERSION: int = 4
+## (ADR 0009). v4: reloj de Aventura, clock_momento y clock_elapsed (ADR 0012). v5: chunks
+## explorados y objetivo de la brújula (navegacion.md). Las versiones anteriores se cargan con
+## valores por defecto.
+const SAVE_VERSION: int = 5
 
 var rng := RandomNumberGenerator.new()
 var seed_value: int = 0
@@ -30,6 +31,15 @@ var hp: int = 0
 var open_bosques: Array[int] = []
 ## Combates empezados por Bosque: { "id": n }. Forma parte de la semilla de cada combate.
 var battle_attempts: Dictionary = {}
+## Chunks visitados en la partida (mapa con M, navegacion.md). Los marca MapLogic.mark_explored.
+## Los refugios y villas vistos se deducen de aquí (chunk explorado con refugio o villa).
+var explored_chunks: Array[Vector2i] = []
+## Objetivo de la brújula y del mapa (por ejemplo, la última posición conocida del Ofomni).
+## objective_chunk (-1, -1) = sin objetivo: la brújula apunta a la villa natal.
+## objective_cell (-1, -1) = casilla desconocida dentro del chunk.
+var objective_chunk: Vector2i = Vector2i(-1, -1)
+var objective_cell: Vector2i = Vector2i(-1, -1)
+var objective_label: String = ""
 
 ## Recursos de la ciudad: { "wood": 10, "stone": 5, ... }
 var resources: Dictionary = {}
@@ -59,6 +69,8 @@ func new_game(new_seed: int = 0, new_region: StringName = &"valle_del_sara") -> 
 	hp = AdventureRules.max_hp()
 	open_bosques = []
 	battle_attempts = {}
+	explored_chunks = []
+	clear_objective()
 	resources = { "wood": 20, "stone": 10, "food": 15, "gold": 0 }
 	buildings = []
 	citizens = []
@@ -82,6 +94,10 @@ func to_dict() -> Dictionary:
 		"hp": hp,
 		"open_bosques": open_bosques,
 		"battle_attempts": battle_attempts,
+		"explored_chunks": explored_chunks.map(func(c: Vector2i) -> Array: return [c.x, c.y]),
+		"objective_chunk": [objective_chunk.x, objective_chunk.y],
+		"objective_cell": [objective_cell.x, objective_cell.y],
+		"objective_label": objective_label,
 		"rng_state": rng.state,
 		"resources": resources,
 		"buildings": buildings,
@@ -113,6 +129,18 @@ func from_dict(data: Dictionary) -> void:
 	var attempts: Dictionary = data.get("battle_attempts", {})
 	for key: Variant in attempts:
 		battle_attempts[str(key)] = int(attempts[key])
+	# Sin chunks explorados (v4 o anterior): solo el chunk actual, si se conoce.
+	explored_chunks = []
+	if data.has("explored_chunks"):
+		for value: Variant in data["explored_chunks"]:
+			var c: Vector2i = _to_vector2i(value, Vector2i(-1, -1))
+			if c.x >= 0 and c.y >= 0 and not explored_chunks.has(c):
+				explored_chunks.append(c)
+	elif chunk_coord.x >= 0 and chunk_coord.y >= 0:
+		explored_chunks.append(chunk_coord)
+	objective_chunk = _to_vector2i(data.get("objective_chunk", [-1, -1]), Vector2i(-1, -1))
+	objective_cell = _to_vector2i(data.get("objective_cell", [-1, -1]), Vector2i(-1, -1))
+	objective_label = str(data.get("objective_label", ""))
 	rng.seed = seed_value
 	rng.state = int(data.get("rng_state", rng.state))
 	resources = data.get("resources", {})
@@ -121,6 +149,21 @@ func from_dict(data: Dictionary) -> void:
 	party = data.get("party", [])
 	inventory = data.get("inventory", {})
 	quests = data.get("quests", {})
+
+
+## Fija el objetivo de la brújula y del mapa. `label`: texto corto ya traducido ("Ofomni").
+func set_objective(coord: Vector2i, label: String, cell: Vector2i = Vector2i(-1, -1)) -> void:
+	objective_chunk = coord
+	objective_cell = cell
+	objective_label = label
+
+
+func clear_objective() -> void:
+	set_objective(Vector2i(-1, -1), "")
+
+
+func has_objective() -> bool:
+	return objective_chunk.x >= 0 and objective_chunk.y >= 0
 
 
 static func _to_vector2i(value: Variant, fallback: Vector2i) -> Vector2i:

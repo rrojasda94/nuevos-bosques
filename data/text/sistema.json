@@ -34,5 +34,13 @@
   "compass_ofomni": "Ofomni",
   "compass_sfida": "Sfida",
   "compass_villa": "Villa",
-  "compass_here": "Aquí"
+  "compass_here": "Aquí",
+  "map_close": "M / Esc: cerrar",
+  "map_legend_home": "Villa natal",
+  "map_legend_villa": "Villa",
+  "map_legend_refuge": "Refugio",
+  "map_legend_road": "Camino",
+  "map_legend_player": "Tú",
+  "map_legend_fog": "Sin explorar",
+  "map_legend_objective": "Objetivo"
 }
