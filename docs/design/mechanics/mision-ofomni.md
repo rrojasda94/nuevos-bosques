@@ -65,6 +65,7 @@ Si el Ofomni llega a la villa: "la misión falla y la villa queda dañada; la pa
   - **Defender** lo reduce a la mitad (×1,5). Textos: `ofomni_whips_hit` y `ofomni_whips_defended` en `data/text/sistema.json`.
   - Da sentido a Defender: con pocos PV, un Latigazo múltiple sin defender puede matar (~13–20 de daño).
   - Las claves de texto `ofomni_gaze_*` pasan a llamarse `ofomni_whips_*`, y se añade `ofomni_whip_hit`. El código tiene que usar las claves nuevas.
+- **No guarda bordes**: los guardianes del paso son los Botarramas (`monstruos.md`). En la 0.3.0 los Ofomni también serán perseguidores tras un robo (`sigilo-y-robo.md`).
 - **No es fatal en la primera misión** (confirmado por el dueño, 2026-10-24: "El ofomni es no fatal en la primera mision"): perder contra él no es game over. `fatal_at: []` (`monstruos.md`).
 - **Acciones**: Atacar, Defender, Ofrecer Luz (2 de Luz, 8 de daño) y Huir (75%). **"Ofrecer ofrenda" no está disponible**: la misión es vencerlo.
 - **No abre Bosques** ni usa `battle_attempts` por Bosque (tiene su propia semilla de combate).

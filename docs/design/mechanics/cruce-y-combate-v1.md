@@ -45,6 +45,8 @@ El dueño pidió: "Dame algo para cruzar temporalmente o poder cruzar y pelear c
 - Un Bosque vecino del inicial tiene d = 1.
 
 ### Menú del borde
+> **0.2.0 (Botarramas):** el menú ya no sale al pisar el borde. Sale cuando un **Botarramas** visible del Bosque cerrado intercepta al jugador y llega a tocarlo (`monstruos.md`, sección "Botarramas"). Si el jugador cruza sin contacto, se cuela sin abrir el Bosque (propuesta, #129). Las opciones y N no cambian.
+
 Al llegar al borde de un Bosque todavía no abierto aparece un menú:
 1. **"Ofrecer N Luz"**, con **N = 3 + d**. Pagar abre el borde.
 2. **"Enfrentar a sus Únicos"**: inicia el combate contra el Único del Bosque de destino.
@@ -53,7 +55,9 @@ Al llegar al borde de un Bosque todavía no abierto aparece un menú:
 Pagar o ganar **abre ese borde** (entre esos dos Bosques) **para el resto de la partida**, en los dos sentidos.
 
 ### Único (provisional)
-- **Uno por Bosque**, generado por seed.
+> **0.2.0:** el Único que restringe el paso se llama **Botarramas** (nombre provisional): un ave sin plumas que renquea. Hay uno por tramo de frontera de chunk, todos con los stats de abajo según d. El Ofomni y Aledra ya no guardan bordes. Detalle en `monstruos.md`.
+
+- ~~**Uno por Bosque**, generado por seed.~~ Sustituido por los Botarramas (uno por tramo de frontera).
 - **Los Únicos son monstruos, no árboles** (dueño, playtest v1). Según el glosario §3, nacen al activarse a partir de un árbol, un animal o una sustancia del Bosque. No hay contradicción: nacen de eso, pero son monstruos.
 - Placeholder: **una criatura con la combinación de colores de su Bosque** (ADR 0008). Sustituye a la silueta de árbol del principio de v1.
 - Nombre provisional: **"Único de <tipo de árbol>"**. Por revisar junto con aspecto, tipos y nombres (#119).
