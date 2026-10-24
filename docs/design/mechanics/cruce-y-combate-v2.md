@@ -68,7 +68,13 @@ Palabras del dueño: "una vez vencido al botarrama los demas botarramas deberian
   | **Huir** | 75% de éxito. Vuelves a tu lado; el Único recupera todos sus PV. |
 - **El Único** ataca con la misma fórmula. Ataques especiales: `special_every` y `special_factor` (Ofomni: Latigazo múltiple).
 - **Victoria**: XP = 4 + 3·d (`progresion-adoc.md`), +1 de Luz (hasta el límite). Ese Botarramas se disuelve, el Bosque queda **forzado**, su **hostilidad sube 1** y su **relación baja 10**.
-- **Derrota**: según `fatal_at` (`monstruos.md`). Si es no fatal, despiertas en la villa natal con todos los PV y pierdes la mitad de la Luz suelta. Si es fatal: game over.
+- **Derrota**: según `fatal_at` (`monstruos.md`).
+  - **Fatal**: game over.
+  - **No fatal: reaparición** (dueño, sobre los garelinos: "te vas a respawunear recuperado parcialmente cerca al nujio aliado mas cercano o el ultimo que pagaste peaje o en caso no se cumpla ninguno a tu villa original"). Se aplica a **todas** las derrotas no fatales; esto es interpretación de `game-designer` y del coordinador.
+    - **Dónde**: junto al Nujio más cercano entre los **aliados** (Bosques con relación ≥ 30, y el Bosque natal) y el **último Nujio al que pagaste peaje**. Si no hay ninguno, en la **villa natal**.
+    - **Con cuánto**: el **50% de los PV máximos** (provisional), en lugar de todos.
+    - **Luz**: se pierde **la mitad de la Luz suelta** (sin cambios; a revisar en playtest, porque ya no hay curación completa).
+  - Sustituye al anterior "despiertas en la villa natal con todos los PV".
 
 ### Stats
 - **Adoc**: según su nivel (`progresion-adoc.md`; nivel 1: 30 PV / 6 ATQ / 3 DEF). Luz inicial 10, límite 10.

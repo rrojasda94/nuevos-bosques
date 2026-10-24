@@ -28,7 +28,25 @@ Palabras del dueño: "Tendria que dañar el bosque o intentar destruirlo para re
   - Un Bosque con cordura < 20 está **corrupto** ("a punto de lanzar a su Iserald"). Con cordura ya mínima, **cualquier cosa mala** lo libera.
   - **Los garelinos** también pueden desatarlo al atacar el Bosque.
 - **Fatal siempre** (`fatal_at: ["gietos", "riumna"]`).
-- **Solo lo vence un grupo de adoc**: en combate, sin al menos **2 adoc aliados** (`otros-adoc.md`), "Atacar" apenas le hace daño. Propuesta: su DEF es tan alta que el daño mínimo es 1, y sus PV son muy altos (por ejemplo, 120). Con aliados, cada adoc aliado le resta 10 de DEF ("lo rodean").
+- **Solo lo vence un grupo grande de adoc** (dueño: "haria falta por lo menos 6 u 8. el nivel, la fuerza y las habilidades van a influir").
+- **Propuesta de mecánica (provisional)**:
+  - **Fuerza del grupo** F = suma, para cada adoc del grupo (el jugador y sus aliados), de **nivel + ATQ + 2 × skills aprendidas**.
+    - Un adoc de nivel 3 equilibrado (ATQ 8, 1 skill) aporta 3 + 8 + 2 = 13.
+    - Uno de nivel 5 (ATQ 10, 2 skills) aporta 19.
+  - **Umbral**: el Iserald solo recibe daño normal si **F ≥ 100** y el grupo tiene **al menos 6 adoc**.
+    - Con 6 adoc de nivel 5 ≈ 114; con 8 de nivel 3 ≈ 104.
+    - Por debajo, todo ataque le hace 1 de daño y lo sensato es huir.
+  - **Combate de grupo grande** (para no tener 8 turnos de aliados):
+    - El jugador actúa normalmente.
+    - Los aliados actúan como un solo bloque: daño por turno = **F / 4** (redondeado).
+    - El Iserald tiene **PV 200, ATQ 14, DEF 10** (frente al jugador). Cada turno ataca al jugador o retira a un aliado (50/50); un aliado retirado resta su aporte a F.
+    - Si F cae por debajo de 100, el combate vuelve a ser imposible y hay que huir.
+  - **Fatal** para el jugador (`fatal_at` siempre).
+- **Cómo se reúnen los adoc** (propuesta):
+  - Cuando un Iserald se desata, las villas de los Bosques vecinos (Ildo o Sfida) lanzan una **llamada de adoc**: un encargo especial.
+  - El jugador recluta adoc NPC en villas y caminos. Solo se unen los de **afinidad** compatible (`otros-adoc.md`).
+  - Cuando el grupo llega a 6 o más con F ≥ 100, se puede ir a por el Iserald.
+  - Mientras tanto, el Iserald recorre su Bosque muerto (¿y sale de él? #163).
 - **Lo sensato es huir**. Al verlo empieza el estado **Miedo**.
 - **Estado Miedo** (propuesta):
   - **En el mundo**:
@@ -39,14 +57,15 @@ Palabras del dueño: "Tendria que dañar el bosque o intentar destruirlo para re
     - Huir sube al **90%** (más rápido).
     - Atacar tiene un **25% de fallar** (movimientos torpes).
   - Se ve con un icono en el HUD y con temblor del sprite.
-- **Después**: si el Iserald se desata, ¿el Nujio muere y el Bosque pasa a **muerto**? ¿Cuántos adoc hacen falta? ¿Se confirma la propuesta de Miedo? (#160)
+- **Después** (dueño: "si, muere"): al desatarse el Iserald, **el Nujio muere** y el Bosque pasa a **muerto** (`bosques-y-relacion.md`).
+- Miedo: propuesta pendiente de confirmar (#160).
 
 ## Garelinos (0.4, propuesta)
 - **Enemigos humanos**, hostiles. Pueden **hacer daño pero no matar**, y el adoc tampoco los mata (ADR 0004). **Combate no letal**: "no matan, no mueren".
 - **Dónde**: atacando Bosques (estado "en necesidad de ayuda" con `hazard: ataque`, `bosques-y-relacion.md`) y en caminos cercanos a esos Bosques.
 - **Combate**: el combate en grupo (son grupos de 2–3; stats humanos provisionales: PV 15 + 3·d, ATQ 3 + d, DEF 2), con Únicos del Bosque como aliados si el Bosque lo necesita.
 - **Al ganar tú**: los garelinos **se retiran** (no mueren). El Bosque deja de estar bajo ataque; relación +15 y Senda +5 (salvar el Bosque).
-- **Al perder tú**: no es fatal. Propuesta: quedas **inconsciente**, despiertas en el **refugio más cercano** con 1 PV, y los garelinos siguen dañando el Bosque (cordura −10). Si se llevan algo (Luz, ofrendas): #158.
+- **Al perder tú**: no es fatal. Reapareces con el 50% de los PV junto al Nujio aliado más cercano o el último al que pagaste peaje; si no hay ninguno, en tu villa natal (dueño; regla general de derrota no fatal en `cruce-y-combate-v2.md`). Los garelinos siguen dañando el Bosque (cordura −10).
 - **Pueden desatar a un Iserald** si dañan el Bosque hasta la cordura 0.
 
 ## Regla general: percepción y encuentro
