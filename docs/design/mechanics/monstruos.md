@@ -14,6 +14,41 @@ Reunir en un sitio qué monstruos hay, qué se sabe de cada uno y qué regla de 
 - **Añade**: los monstruos **fatales** convierten una derrota en **game over** (ADR 0004). Aledra lo es de noche, lo que hace la noche más peligrosa. Los grupos de reparep castigan pelear con la DEF baja o sin Luz.
 - **Alivia**: los Únicos comunes y el Ofomni de la primera misión no son fatales; perder contra ellos te devuelve a la villa.
 
+## Iserald (0.4+, propuesta)
+Palabras del dueño: "Tendria que dañar el bosque o intentar destruirlo para recien desatar al iserald, el iserald solo es vencido por un grupo de adoc, solo no lo creo. Es mejor huir si vemos uno. Un iserald desata el status de miedo y este da mas velocidad pero los movimientos pueden ser mas torpes. Los garelinos si pueden desatar un iserald. O un nujio que ya tiene su cordura al minimo, cualquier cosa mala puede liberar iserald."
+
+- **Cuándo se desata** (en un Bosque con Nujio):
+  - Cuando su **cordura llega a 0** (`bosques-y-relacion.md`).
+  - La cordura baja con cualquier cosa mala:
+    - robo: −10;
+    - Botarramas vencido: −5;
+    - dañar el Bosque (talar, quemar, más adelante): −20;
+    - ataque de garelinos: −10 por Momento;
+    - incendio no apagado: −20.
+  - Un Bosque con cordura < 20 está **corrupto** ("a punto de lanzar a su Iserald"). Con cordura ya mínima, **cualquier cosa mala** lo libera.
+  - **Los garelinos** también pueden desatarlo al atacar el Bosque.
+- **Fatal siempre** (`fatal_at: ["gietos", "riumna"]`).
+- **Solo lo vence un grupo de adoc**: en combate, sin al menos **2 adoc aliados** (`otros-adoc.md`), "Atacar" apenas le hace daño. Propuesta: su DEF es tan alta que el daño mínimo es 1, y sus PV son muy altos (por ejemplo, 120). Con aliados, cada adoc aliado le resta 10 de DEF ("lo rodean").
+- **Lo sensato es huir**. Al verlo empieza el estado **Miedo**.
+- **Estado Miedo** (propuesta):
+  - **En el mundo**:
+    - Pasos **más rápidos** (`step_time` ×0,75).
+    - Cada paso tiene un **15%** de probabilidad de **tropezar**: se pierde ese paso, o se da en una dirección vecina, al azar.
+    - Dura mientras el Iserald esté a la vista y 10 s más.
+  - **En combate**:
+    - Huir sube al **90%** (más rápido).
+    - Atacar tiene un **25% de fallar** (movimientos torpes).
+  - Se ve con un icono en el HUD y con temblor del sprite.
+- **Después**: si el Iserald se desata, ¿el Nujio muere y el Bosque pasa a **muerto**? ¿Cuántos adoc hacen falta? ¿Se confirma la propuesta de Miedo? (#160)
+
+## Garelinos (0.4, propuesta)
+- **Enemigos humanos**, hostiles. Pueden **hacer daño pero no matar**, y el adoc tampoco los mata (ADR 0004). **Combate no letal**: "no matan, no mueren".
+- **Dónde**: atacando Bosques (estado "en necesidad de ayuda" con `hazard: ataque`, `bosques-y-relacion.md`) y en caminos cercanos a esos Bosques.
+- **Combate**: el combate en grupo (son grupos de 2–3; stats humanos provisionales: PV 15 + 3·d, ATQ 3 + d, DEF 2), con Únicos del Bosque como aliados si el Bosque lo necesita.
+- **Al ganar tú**: los garelinos **se retiran** (no mueren). El Bosque deja de estar bajo ataque; relación +15 y Senda +5 (salvar el Bosque).
+- **Al perder tú**: no es fatal. Propuesta: quedas **inconsciente**, despiertas en el **refugio más cercano** con 1 PV, y los garelinos siguen dañando el Bosque (cordura −10). Si se llevan algo (Luz, ofrendas): #158.
+- **Pueden desatar a un Iserald** si dañan el Bosque hasta la cordura 0.
+
 ## Regla general: percepción y encuentro
 Palabras del dueño (2026-10-24): "los Únicos deben tener un radio de visión, una velocidad, y una distancia para iniciar el engage."
 
@@ -51,7 +86,8 @@ Todo Único que se mueva por el mundo tiene tres parámetros (en datos, por tipo
 | **Ofomni descarriado** (`ofomni_descarriado`, el de la misión) | "el ofomni de la mision y el de los bosques con nujio no estan diferenciados" (dueño, 0.3). Es el de "Primer encargo": berserk (glosario §5: los adoc apaciguan Únicos "descarriados"; ronda 1: Únicos "en modo berserk") | Subtipo de Únicos | `[]` en la primera misión | **`appeasable: false`**: no acepta Luz ni ofrendas; hay que vencerlo. Latigazo múltiple. 0.2.0, `mision-ofomni.md`. |
 | **Ofomni** (`ofomni`, el de un Bosque con Nujio) | "un ojo con tentáculos"; "ataca con latigos y cada 3 turnos usa varios latigos"; "es no fatal en la primera mision"; "si robas algun objeto [...] despiertas a los ofomni que te persiguen por el bosque hasta la frontera" | Subtipo de Únicos | Por definir (#127) | **`appeasable: true`**: se puede apaciguar con Luz u ofrendas. 0.3: perseguidor tras un robo (`sigilo-y-robo.md`). No guarda bordes. |
 | **Aledra** | "Aledras son fatales en las noches" | Aparece cuando la villa crece en población sin permiso y causa enfermedades. Serpiente roja gigante con aura rojiza, cabeza de calavera reptiliana, ojos negros que se comen la luz física y colmillos carmesí | `["riumna"]` | No existe todavía. **No guarda bordes**: queda para su evento de villa (glosario). Dónde y cuándo aparece en Aventura: #128. |
-| **Iserald** | "un iserald es fatal" | El Único más poderoso y último recurso; sale del propio Nujio. Teorías: inmolación para que el Bosque no sea profanado, o pérdida de cordura | `["gietos", "riumna"]` | No existe todavía (#103). |
+| **Iserald** | "un iserald es fatal"; "Tendria que dañar el bosque o intentar destruirlo para recien desatar al iserald, el iserald solo es vencido por un grupo de adoc [...]. Es mejor huir si vemos uno. Un iserald desata el status de miedo [...]" | El Único más poderoso y último recurso; sale del propio Nujio. Teorías: inmolación para que el Bosque no sea profanado, o pérdida de cordura | `["gietos", "riumna"]` | No existe todavía. Reglas en la sección "Iserald" (0.4+). |
+| **Garelinos** (enemigos humanos; no son Únicos) | "Los garelinos si pueden ser hostiles y causar daño mas no matar."; "Los garelinos si pueden desatar un iserald." | Ver ADR 0004 (grupo de fanáticos que destruye Bosques dominados por un Nujio) | `[]`: **combate no letal** | 0.4 (sección "Garelinos"). |
 | **Reparep** | "son como cangrejos fantasmales y tacan en grupos de 2 hasta 4 individuos. Son debiles solos pero en grupo el ataque conjunto suma daños" | No aparece en el glosario | `[]` (provisional) | **0.3.0** (fuera de la 0.2.0). Propuesta de combate de grupo abajo. Si son Únicos o no: #128. |
 
 "Aun no tenemos más monstruos" (dueño, 2026-10-24). Botarramas se añadió después (dueño, misma fecha).

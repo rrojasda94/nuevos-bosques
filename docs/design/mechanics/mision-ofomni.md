@@ -89,6 +89,7 @@ Estrategia: solo atacar. Defender ante el Latigazo múltiple no cambia la media 
 - **Con −15%** (propuesta del coordinador), el Ofomni de d = 4 **ya no se puede ganar en nivel 3**: hace falta nivel 4. Rompe la dificultad que confirmó el dueño ("ganable desde nivel 3").
 - **Con −30% (recomendado)**, el nivel 3 contra d = 4 queda igual que en la 0.2.0 con Luz (~32 de 38), y d = 5 en nivel 3 es justo (antes exigía la Luz llena).
 - **Alternativa**: −15% de PV y −1 de ATQ (d = 4: 29/7/3). Con nivel 3, ~35 de 38, más justo.
+- **0.4 (puntos de stat, `moralidad-y-progresion.md`)**: con la progresión nueva (automático +3 PV y +1 ATQ/DEF alternando, más 3 puntos por nivel), el ×0,7 resulta demasiado fácil. **Recomendación para la 0.4: PV ×0,85** (d = 4: 29). Gana cualquier build de combate de nivel 3, perdiendo del 70% al 95% de los PV, y el nivel 2 sigue perdiendo. Tabla en esa ficha.
 
 ### Balance 0.2.0 (historial, con "Ofrecer Luz" de 8 de daño)
 Estrategia: primero todas las "Ofrecer Luz" disponibles, luego atacar.
