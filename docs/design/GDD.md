@@ -73,12 +73,18 @@ Antes de implementarse necesitan fuente, sumidero y qué pasa si se agotan:
   - **Botarramas** (0.2.0, nombre provisional): son los Únicos que restringen el paso, aves sin plumas que renquean. Se ven en el mundo (y en el mapa) y salen a interceptar al jugador cuando se acerca a un Bosque cerrado; al tocarlo se abre el menú del borde. Sustituyen a los "Únicos de borde" genéricos.
   - **Sigilo, armas y robo** (0.3.0, [`mechanics/sigilo-y-robo.md`](mechanics/sigilo-y-robo.md)): solo una máscara u otro artefacto que camufle la Luz permite colarse (sin eso, el borde sigue cerrado). El arma se equipa o se desequipa de la mano principal, y solo equipada cierra el paso. Robar despierta a los Ofomni, que persiguen hasta la frontera.
   - Todos los Únicos tienen radio de visión, velocidad y distancia de encuentro (`vision_radius`, `step_time`, `engage_distance`).
-- **Bosques con carácter y relación** (backlog, después de la 0.2.0; [`mechanics/bosques-y-relacion.md`](mechanics/bosques-y-relacion.md)):
-  - Cada Bosque tiene tipo, temperamento (de agresivo a pacífico), cordura y estado de "bajo ataque".
-  - Los Nuevos Bosques no cobran Luz y tienen otra fauna (mamíferos y reptiles).
-  - Un Bosque que te llama a una misión no cobra y puede darte un salvoconducto por Bosques buenos.
-  - Mejorar la relación con un Bosque abarata cruzarlo o estar en él.
-  - Cada uno es fatal o no según el Momento (`fatal_at`). Aledra es fatal de noche; Iserald, siempre; el Ofomni no lo es en la primera misión.
+  - Cada monstruo es fatal o no según el Momento (`fatal_at`). Aledra es fatal de noche; Iserald, siempre; el Ofomni no lo es en la primera misión.
+- **Estados de Bosque y relación** (backlog, después de la 0.2.0; [`mechanics/bosques-y-relacion.md`](mechanics/bosques-y-relacion.md)):
+  - **Estados**:
+    - **sano**: sin efecto, da fruto.
+    - **enojado**: muchos Únicos; no cobra, pero no eres bienvenido.
+    - **corrupto**: a punto de lanzar a su Iserald; cobra y a veces ataca.
+    - **muerto**: sin Nujio, decadencia, pocos Únicos que a veces piden Luz.
+    - **en necesidad de ayuda**: incendios; no cobra, da fruto y algunos Únicos pelean a tu lado.
+    - Los Nuevos Bosques no cobran Luz y tienen otra fauna (mamíferos y reptiles).
+  - **Peaje con caducidad**: el paso pagado dura un tiempo limitado, salvo amistad alta.
+  - **Relación**: sube con ofrendas dejadas en el Bosque, misiones, defenderlo de incendios o ataques y descansar el riutash junto a su Nujio. Se guarda entre sesiones y se reinicia con un game over o una partida nueva.
+  - **Dormir** en villas y refugios hace pasar el tiempo. De noche es lo normal y lleva a Pensamiento, donde se descubren misiones lejanas. De día consume Luz, porque "Gietos detesta el descanso". Aceptarlas da un **salvoconducto** por Bosques buenos, que no tiene por qué ser la ruta más corta.
   - Los reparep (cangrejos fantasmales en grupos de 2 a 4) traen el combate contra grupos, propuesto para la 0.3.0.
 - **Curación de PV** (Aventura, ADR 0010): en una villa (plaza o junto a su Nujio) o, en parte, tras un riutash (cambio entre día y noche). El riutash **no cura heridas graves**.
 - **Heridas graves** (Aventura, ADR 0010): perks o estados negativos que deja un combate complicado, aparte de los PV. Solo se curan en una villa con el oficiante adecuado, por ejemplo un dumno ([glosario §5](../glosario_nuevos_bosques.md)). Se puede pedir un dumno a otra villa, a cambio de quedarse más tiempo. Pendiente: #116–#118. Las villas solo están en 1 de cada 5 Bosques, pero **se empieza en la villa natal** y el Bosque inicial siempre tiene villa.

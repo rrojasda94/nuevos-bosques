@@ -97,7 +97,16 @@ Propuestas, a confirmar con el dueño:
 - El día sube en el riutash del amanecer.
 - La plaza de la villa cuenta como refugio.
 
+## Backlog relacionado (después de la 0.2.0; `bosques-y-relacion.md`)
+- **Dormir** (dueño: "en villas y refugios y si pasa el tiempo, solo se debe dormir de noche, dormir de dia consume Luz. Gietos detesta el descanso."):
+  - **De noche**: lleva a **Pensamiento** (misiones lejanas). Propuesta: salta hasta el riutash del amanecer, pasado como refugiado, y es gratis.
+  - **De día**: propuesta: salta hasta el riutash del atardecer y cuesta 1 de Luz por cada 2 minutos saltados (máximo 4), sin Pensamiento.
+  - Detalle en `bosques-y-relacion.md`.
+- **Descansar el riutash cerca del Nujio** de un Bosque sube la relación con él (dueño).
+- El **peaje pagado caduca**. Propuesta: hasta el segundo riutash siguiente, salvo amistad alta (#134).
+
 ## Preguntas abiertas
+- Dormir de día y los Humores (#145).
 - Peligros propios de la noche y Bosques donde no se puede andar de noche (#75).
 - Estamina (#73) y heridas graves (#114, #116).
 - Regeneración de los Únicos con el tiempo (#120).

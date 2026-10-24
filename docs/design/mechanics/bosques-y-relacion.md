@@ -1,95 +1,173 @@
-# Ficha (backlog): Bosques con carácter y relación con el adoc
+# Ficha (backlog): Estados de Bosque, relación, peaje temporal, salvoconducto y dormir
 
-> Dueño: `game-designer`. **Backlog, después de la 0.2.0.** El dueño pidió dejarlo pendiente ("algo que quiero que quede pendiente tambien...").
-> Sin números cerrados: solo el modelo de datos, cómo se combinaría con el peaje y las preguntas. Fuentes: palabras del dueño (abajo); glosario §3 ("Nujio": "Puede perder la cordura, evolucionar y cansarse de existir"; "Iserald"), §6 ("Salvoconducto"; "Multiplicador de valor" del Ista, de −5 a +5) y §7 ("Nuevos Bosques"); ADR 0004 (garelinos); `cruce-y-combate-v1.md`; `monstruos.md`.
+> Dueño: `game-designer`. **Backlog, después de la 0.2.0.** Sin números cerrados: los valores son **propuestas** que hay que confirmar.
+> Fuentes: palabras del dueño (abajo); glosario §1 ("Pensamiento"), §3 ("Nujio", "Bosque", "Fruto", "Iserald"), §6 ("Salvoconducto", multiplicador del Ista) y §7 ("Nuevos Bosques"); ADR 0004 (garelinos, fatales), ADR 0010 (ofrendas); `cruce-y-combate-v1.md`, `monstruos.md`, `tiempo-y-riutash.md`, `ofrendas-v1.md`.
 
 ## Objetivo
-Que cada Bosque tenga carácter propio y que la relación del adoc con él cambie lo que cuesta cruzarlo. Así no hay una sola ruta óptima: hay rutas buenas según con quién te lleves bien.
+Que cada Bosque tenga un estado reconocible que cambie cómo se cruza y qué ofrece, y que la relación del adoc con cada Bosque abra rutas propias.
 
-Palabras del dueño (2026-10-24):
+## Palabras del dueño
+Primera ronda (2026-10-24):
 > "algo que quiero que quede pendiente tambien es el tipo de bosque y cuan agresivo o pacifico es, tambien su nivel de cordura, si está siendo atacado o no. Tambien tener en cuenta los nuevos bosques que no cobran luz y tienen otro tipo de vida silvestre con seres mas similares a mamiferos o reptiles. Aparte si un bosque diferente te llama para una misión, este no te cobra Luz puede ayudarte a tener una ruta de salvoconducto por bosques buenos que no necesariamente es la ruta más corta. Mejorar la relación con algunos bosques puede ayudarte a bajar el precio de Luz por cruzar o estar ahí."
 
+Segunda ronda (respuestas a #133–#136):
+> "#134 si, debería tener un límite de tiempo el peaje pagado, a menos que tu amistad con el bosque sea alta.
+> #135 llevar ofrendas de objetos y dejarlos en el bosque, ayudarlo con misiones, defenderlo de algun incendio o ataque, descansar riutash cerca al nujio. La relación se conserva entre sesiones, pero si hay game over o se empieza otra partidatodo se reinicia.
+> #136 lo da el aceptar una misión de un bosque lejano luego de entrar en Pensamiento en la noche (dormir) durmiendo puedes oir o ver misiones distantes en áras o regiones más lejanas.
+> #133 hay bosques sanos, bosques enojados, bosques corruptos, bosques muertos y bosques en necesidad de ayuda. Los sanos no tienen efecto, los enojados tienen muchos Únicos desplegados, no cobran entrada pero no eres bienvenido, deberas enfrentarte a varios únicos en diferentes momentos o tener algo que aumente tu velocidad o te camufle muy muy bien. Los bosques corruptos estan a punto de lanza su iserald y además cobran entrada, atacan a veces. Los bosques muertos solo tienen un numero limitado de Únicos a veces los Únicos idependientemente piden un poco de Luz, no tienen Nujio, se ve decadencia. Los Bosques que necesitan ayuda pueden presentar incendios, pero estos ayudan a jugador sin cobrar peaje, dan fruto (los normales tambien dan fruto) y algunos Únicos pelean junto a ti.."
+
 ## Pilares
-- **Pilar 4 (cada partida es distinta, cada región se reconoce)**: el temperamento y la cordura de cada Bosque cambian con la seed.
-- **Pilar 1 (dos capas)**: las misiones para un Bosque mejoran la relación, y eso abarata los viajes.
-- **Pilar 3 (legibilidad)**: el carácter del Bosque tiene que poder leerse (color, Botarramas, texto del letrero o del mapa).
+- **Pilar 4**: el estado de cada Bosque cambia con la seed y con el tiempo. Cada partida tiene un mapa de estados distinto.
+- **Pilar 1 (dos capas)**: lo que haces por un Bosque (ofrendas, misiones, defenderlo) cambia lo que el Bosque hace por ti.
+- **Pilar 3 (legibilidad)**: cada estado se reconoce a simple vista (tabla "Cómo se ve").
 
 ## Presión de supervivencia
-- **Añade**: hay Bosques agresivos, con poca cordura o bajo ataque, más caros o peligrosos de cruzar.
-- **Alivia**: la buena relación, las misiones de un Bosque y los Nuevos Bosques (sin peaje de Luz) abaratan los viajes.
+- **Añade**:
+  - Los Bosques **enojados** (muchos Únicos, no hay pago posible) y los **corruptos** (peaje, ataques, riesgo de Iserald, que es fatal).
+  - El peaje pagado **caduca**.
+- **Alivia**:
+  - Los Bosques **en necesidad de ayuda** (sin peaje, fruto, Únicos aliados) y los **Nuevos Bosques** (sin peaje de Luz).
+  - La amistad alta hace el paso permanente.
+  - El salvoconducto de las misiones lejanas.
+  - El fruto.
 
-## Lo que dijo el dueño (reglas)
-1. Cada Bosque tiene un **tipo** y un grado de **agresivo a pacífico**.
-2. Cada Bosque tiene un **nivel de cordura**. Enlaza con el glosario §3: el Nujio "puede perder la cordura", y una teoría sobre Iserald es la pérdida de cordura.
-3. Cada Bosque puede estar **siendo atacado o no**. Enlaza con los garelinos (ADR 0004).
-4. Los **Nuevos Bosques no cobran Luz** y tienen **otra fauna**: "seres más similares a mamíferos o reptiles" (glosario §7: conciencia mínima, una sola misión, no requieren Luz).
-5. Si **un Bosque te llama para una misión**, **no te cobra Luz** y puede darte una **ruta de salvoconducto** por **Bosques buenos**, que **no tiene por qué ser la más corta** (glosario §6: "Salvoconducto: permiso de algunos oficios para viajar entre lugares").
-6. **Mejorar la relación** con un Bosque **baja el precio de Luz** por **cruzar** o por **estar ahí**.
+## Estados de Bosque (reglas del dueño y propuestas)
+Sustituyen al `temperament` numérico de la versión anterior de esta ficha.
 
-## Modelo de datos propuesto (por Bosque)
-| Campo | Tipo | Rango propuesto | Origen |
-|---|---|---|---|
-| `kind` | enum | `nujio`, `nuevo_bosque` (más adelante, `desierto`…) | Generación (seed + región) |
-| `temperament` | int | −2 (agresivo) … +2 (pacífico) | Generación |
-| `sanity` | int | 0 (sin cordura) … 100 (cuerdo) | Generación. Cambia con eventos (ataques, misiones) |
-| `under_attack` | bool (+ `attacker`) | — | Estado del mundo (garelinos) |
-| `relation` | int, **guardado por partida** | −100 … +100 (empieza en 0) | Acciones del adoc |
+| Estado | Lo que dijo el dueño | Peaje | Únicos | Otros efectos (propuesta salvo cita) |
+|---|---|---|---|---|
+| **sano** | "no tienen efecto"; "dan fruto" | Normal: N = 3 + d, modificado por la relación | Botarramas normales (`monstruos.md`) | Fruto. |
+| **enojado** | "muchos Únicos desplegados, no cobran entrada pero no eres bienvenido, deberas enfrentarte a varios únicos en diferentes momentos o tener algo que aumente tu velocidad o te camufle muy muy bien" | **No se puede pagar**: el menú del borde no ofrece "Ofrecer Luz" ni ofrendas | Muchos: ×2 Botarramas por tramo y además Únicos que patrullan dentro, con encuentros repetidos | Para cruzarlo hay que vencerlos, ser más rápido (objetos de velocidad) o un camuflaje "muy muy bueno" (`sigilo-y-robo.md`). Sin fruto. |
+| **corrupto** | "estan a punto de lanza su iserald y además cobran entrada, atacan a veces" | Sí: N × 1,5 (propuesta) | Normales, más **emboscadas** ocasionales dentro (por ejemplo, 1 cada 3 minutos de reloj con probabilidad) | Riesgo de **Iserald** (fatal, `monstruos.md`): ¿cuándo lo lanza? (#139). Sin fruto. |
+| **muerto** | "solo tienen un numero limitado de Únicos a veces los Únicos idependientemente piden un poco de Luz, no tienen Nujio, se ve decadencia" | Sin peaje del Bosque | Pocos (por ejemplo, 1–2 en todo el Bosque). **A veces un Único pide Luz por su cuenta** (1–2): se paga o se pelea | Sin Nujio, así que no hay descanso de Nujio. Decadencia visible. Sin fruto (#140). |
+| **en necesidad de ayuda** | "pueden presentar incendios, pero estos ayudan a jugador sin cobrar peaje, dan fruto [...] y algunos Únicos pelean junto a ti" | **0** | **Aliados**: en combates dentro de este Bosque (o contra quien lo ataca), 1 Único del Bosque pelea a tu lado (propuesta) | **Incendios** (peligro y misión de defensa). Fruto. Defenderlo sube mucho la relación. |
+| **Nuevo Bosque** (`kind` aparte) | "no cobran luz y tienen otro tipo de vida silvestre con seres mas similares a mamiferos o reptiles" | **0** de Luz | Sin Botarramas. Fauna de mamíferos y reptiles (#137) | — |
 
-- `relation` es lo único que depende del jugador; el resto es estado del Bosque.
-- Como fuente de diseño (no decidido): el glosario §6 tiene un **multiplicador de valor del Ista de −5 a +5**, aplicado como ±1.x sobre el valor nominal. Podría inspirar la escala de `relation` o de `temperament`.
-
-## Cómo se combinaría con el peaje (sin números cerrados)
-Peaje actual: **N = base + per_d · d** (`toll` en `balance.json`).
-
-Propuesta de forma:
-
-```
-si kind == nuevo_bosque                  -> peaje de Luz = 0 (regla del dueño)
-si el Bosque te ha llamado a una misión  -> peaje = 0 en él y en su ruta de salvoconducto
-si no:
-  N = (base + per_d·d) × f_temperament × f_relation × f_sanity × f_attack
-```
-
-| Factor | Idea | Dirección |
-|---|---|---|
-| `f_temperament` | Agresivo, más caro; pacífico, más barato | Por ejemplo, de ×1,4 a ×0,7 |
-| `f_relation` | Buena relación, más barato (regla del dueño) | Por ejemplo, de ×1,3 a ×0,5 |
-| `f_sanity` | Poca cordura: el Bosque no acepta pagar, solo combate, o el peaje sube | Por definir |
-| `f_attack` | Bajo ataque: ¿más desconfiado (más caro) o pide ayuda (misión)? | Por definir |
-
-- Redondeo y mínimo: N ≥ 1 salvo en los casos de peaje 0.
-- **Ruta de salvoconducto**: camino en el grafo de Bosques restringido a Bosques "buenos" (por ejemplo, `relation` ≥ umbral o `temperament` ≥ 1), desde el Bosque que llama hasta la villa o el objetivo de la misión. No tiene por qué ser el más corto. Mientras dure la misión, no se cobra peaje en esos Bosques.
-
-## Cómo cambia la relación (propuesta, sin números)
-| Acción del adoc | Efecto en `relation` |
+### Relación con la cordura y el "bajo ataque"
+| Campo del modelo | Relación con los estados (propuesta) |
 |---|---|
-| Completar una misión para ese Bosque | Sube mucho |
-| Pagar el peaje (Luz u ofrenda) | Sube poco |
-| Vencer a sus Botarramas | Baja poco |
-| Robar en él (0.3.0, `sigilo-y-robo.md`) | Baja mucho |
-| Entrar con el arma equipada (0.3.0) | Baja poco |
+| `sanity` (0–100; glosario: el Nujio "puede perder la cordura") | sano ≥ 50. Por debajo de 20, el Bosque pasa a **corrupto** (Iserald inminente). La cordura no aplica a los **muertos** (sin Nujio). |
+| `under_attack` / `hazard` (incendio, garelinos) | Si es verdadero y la cordura es ≥ 20, el estado es **en necesidad de ayuda**. Si nadie lo ayuda, la cordura baja con el tiempo. |
+| Enojado | No depende de la cordura: es hostilidad hacia los forasteros. Puede venir de la generación o de que el jugador lo haya agraviado (relación ≤ −50, propuesta). |
+| Muerto | Sin Nujio: un Nujio muerto (por ejemplo, tras Iserald, como cuenta el glosario §7) o cansado de existir (glosario §3). |
 
-## Otros efectos posibles
-- **Temperamento**: modifica el `vision_radius` y la `step_time` de sus Botarramas, y cuántos hay.
-- **Cordura baja**: más riesgo de Iserald (fatal). Coherente con el glosario, pero sin decidir.
-- **Bajo ataque**: puede generar misiones de "ayuda al Bosque" que dan salvoconducto.
-- **Nuevos Bosques**: fauna distinta (mamíferos y reptiles), sin Botarramas ni peaje. ¿Hay peligros?
+### Cómo se ve (#133)
+| Estado | Señal visual (propuesta para `pixel-artist` y `world-gen-dev`) |
+|---|---|
+| sano | Colores plenos de su combinación; frutos en los árboles. |
+| enojado | Más siluetas de Únicos a la vista; colores más saturados o rojizos en la vegetación del borde. |
+| corrupto | Colores alterados o manchados; el Nujio con un aura extraña. |
+| muerto | Decadencia: árboles secos o grises, sin frutos, sin Nujio. |
+| en necesidad de ayuda | Humo o llamas (incendios), Únicos heridos. |
+| Nuevo Bosque | Troncos de color madera y hojas verdes (glosario §7). |
 
-## Casos límite (para cuando se implemente)
-- Un Bosque con buena relación pero agresivo: ¿qué factor manda?
-- Una misión termina mientras el jugador está a mitad de la ruta de salvoconducto.
-- Un Bosque de la ruta pierde cordura o pasa a estar bajo ataque durante la misión.
-- Relación negativa extrema: ¿el Bosque deja de aceptar el peaje?
+El letrero y el mapa (M) podrían indicar el estado con texto o color (`navegacion.md`).
+
+## Peaje con caducidad (#134)
+- **Regla del dueño**: el peaje pagado tiene **límite de tiempo**, salvo que la **amistad con el Bosque sea alta**.
+- **Propuesta**:
+  - Pagar abre el Bosque **hasta el segundo riutash siguiente** (más o menos un ciclo día/noche: ~13 min de reloj, `tiempo-y-riutash.md`).
+  - Con **relación ≥ 60** ("amistad alta"), el paso es **permanente**.
+  - Vencer a los Botarramas abre por el mismo tiempo (#141).
+- **Cambio técnico**: hoy `open_bosques` es permanente (ADR 0009). Pasará a guardar por Bosque **hasta cuándo** está abierto (número de riutash), más la marca de permanente por amistad.
+
+## Relación con cada Bosque (#135)
+- **Suben la relación** (dueño): dejar **ofrendas de objetos** en el Bosque, **ayudarlo con misiones**, **defenderlo de incendios o ataques** y **descansar el riutash cerca de su Nujio**.
+- **Persistencia** (dueño): se **conserva entre sesiones** (va en el guardado). Un **game over** o una **partida nueva** la reinician.
+
+| Acción | Cambio propuesto en `relation` (−100 … +100, empieza en 0) |
+|---|---|
+| Dejar una ofrenda (como peaje o de forma voluntaria junto al Nujio) | + su valor (3–8) |
+| Completar una misión para ese Bosque | +25 |
+| Defenderlo de un incendio o un ataque | +15 |
+| Descansar el riutash junto a su Nujio (refugio a ≤ 3 casillas del Nujio, o la plaza de su villa) | +5, una vez por riutash |
+| Pagar el peaje con Luz suelta | +1 (propuesta; el dueño no lo nombró) |
+| Vencer a sus Botarramas | −5 (propuesta) |
+| Robar en él (0.3.0) | −20 (propuesta) |
+
+| Umbral (propuesta) | Efecto |
+|---|---|
+| ≥ 60, amistad alta | Peaje pagado permanente; peaje × 0,5 |
+| ≥ 30 | Peaje × 0,75; cuenta como "Bosque bueno" para el salvoconducto |
+| ≤ −30 | Peaje × 1,5 |
+| ≤ −50 | El Bosque puede volverse **enojado** con el jugador |
+
+- "Precio por estar ahí" (primera ronda): la caducidad del peaje es el coste de permanecer. No hace falta un cobro aparte por tiempo (lectura de `game-designer`, a confirmar).
+
+## Dormir y Pensamiento (#136, salvoconducto)
+- **Regla del dueño**: durmiendo de noche se entra en **Pensamiento** (glosario §1: "Mundo entre la Luz y el mundo físico, a donde va la Mente al dormir") y se pueden **oír o ver misiones distantes** en áreas o regiones lejanas. **Aceptar** una de esas misiones de un **Bosque lejano** da un **salvoconducto**.
+- **Reglas del dueño sobre dormir** (respuesta a #142): "en villas y refugios y si pasa el tiempo, solo se debe dormir de noche, dormir de dia consume Luz. Gietos detesta el descanso."
+  - Se duerme en **villas y refugios**.
+  - Dormir **hace pasar el tiempo**.
+  - Lo normal es dormir **de noche** (Momento de Riumna). Dormir **de día** (Momento de Gietos) es posible, pero **consume Luz**, porque "Gietos detesta el descanso". Encaja con el glosario §1: Gietos "pide que el mundo sea activo y vivaz", y desobedecer los mandatos de los Ojos puede volver adversos los Humores.
+  - Solo dormir de noche permite entrar en **Pensamiento** y oír misiones lejanas (#136).
+- **Propuesta de dormir** (valores provisionales):
+  - Acción "Dormir" con E en un refugio o en la plaza o una casa de una villa.
+  - **De noche**:
+    - Salta el tiempo hasta el **riutash del amanecer**, que se pasa dormido en refugio: cuenta como **refugiado** y cura el 50% de los PV que faltan (`tiempo-y-riutash.md`).
+    - Gratis.
+    - El resto del mundo avanza durante el salto (por ejemplo, el Ofomni sigue su ruta).
+    - Al despertar, con probabilidad **1/2**, llega una **visión de Pensamiento** con una misión lejana (diálogo para aceptarla o no).
+  - **De día**:
+    - Salta el tiempo hasta el **riutash del atardecer**, también como refugiado.
+    - Cuesta **1 de Luz suelta por cada 2 minutos de reloj saltados** (redondeando hacia arriba; como máximo 4, porque el día dura 8 min).
+    - Sin visiones de Pensamiento.
+    - Si no hay Luz suficiente, la opción aparece desactivada.
+  - Efecto sobre los Humores al dormir de día (glosario): fuera de alcance mientras no existan los Humores (#145).
+- **Salvoconducto** (propuesta):
+  - Al aceptar, el Bosque que llama no cobra peaje y se marca una **ruta por Bosques buenos** (estado sano o en necesidad de ayuda, o relación ≥ 30) hasta él. No tiene por qué ser la ruta más corta.
+  - Mientras la misión siga activa, esos Bosques no cobran peaje.
+  - Termina al completar o fallar la misión.
+
+## Fruto
+- **Regla del dueño**: los Bosques **sanos** y los **en necesidad de ayuda** dan fruto. Glosario §3: el fruto es "solo alimento [...] contiene lo necesario para mantener vivo y sano a un ser".
+- **Propuesta**: se recoge con E de algunos árboles y cura el 25% de los PV máximos. Rebrota tras un riutash. **No cuenta como robo** (el Bosque lo da).
+
+## Modelo de datos actualizado (por Bosque)
+| Campo | Tipo | Valores | Persistencia |
+|---|---|---|---|
+| `kind` | enum | `nujio`, `nuevo_bosque` | Generación (seed) |
+| `state` | enum | `sano`, `enojado`, `corrupto`, `muerto`, `necesita_ayuda` (solo `kind == nujio`) | Generación; cambia con eventos |
+| `sanity` | int | 0–100 (no aplica a `muerto` ni a `nuevo_bosque`) | Guardado |
+| `hazard` | enum o nulo | `null`, `incendio`, `ataque` (garelinos u otros) | Guardado |
+| `relation` | int | −100 … +100 | Guardado por partida; se reinicia con un game over o una partida nueva |
+| `open_until` | int o `PERMANENT` | Número de riutash hasta el que el paso está abierto | Guardado |
+| `fruit_ready` | por árbol o por chunk | bool + riutash de rebrote | Guardado |
+
+### Peaje combinado (forma propuesta)
+```
+si kind == nuevo_bosque or state in [necesita_ayuda, muerto] -> 0
+   (en muerto, un Único puede pedir 1–2 de Luz por su cuenta)
+si salvoconducto activo y el Bosque está en la ruta -> 0
+si state == enojado -> no se puede pagar (solo Enfrentar o Retroceder)
+si no: N = (3 + d) × f_state × f_relation
+   f_state: sano 1, corrupto 1,5
+   f_relation: ×0,5 (≥ 60), ×0,75 (≥ 30), ×1 (entre −29 y 29), ×1,5 (≤ −30)
+N ≥ 1
+```
+
+## Casos límite
+- **Caduca el paso mientras el jugador está dentro del Bosque**: puede salir libremente hacia el Bosque por el que entró; para volver a entrar, paga otra vez.
+- **El Bosque cambia de estado con el jugador dentro** (por ejemplo, de sano a corrupto): aplica el nuevo estado desde ese momento.
+- **Iserald se lanza con el jugador en el Bosque corrupto**: combate fatal (#139).
+- **Salvoconducto por un Bosque que se vuelve enojado**: sale de la ruta. Se recalcula una ruta buena, si existe.
+- **Dormir de día sin Luz suficiente**: la opción aparece desactivada, con el coste a la vista.
+- **Dormir con la misión del Ofomni activa**: el salto de tiempo puede acercarlo a la villa. El diálogo de "Dormir" debería avisarlo (propuesta).
+- **Relación ≥ 60 con un Bosque corrupto**: el peaje es permanente, pero el riesgo de Iserald sigue.
 
 ## Criterios de éxito para playtest (borrador)
-- El jugador nota que un Bosque es agresivo o pacífico antes de llegar al borde.
-- El jugador elige alguna vez una ruta más larga porque es más barata o más segura.
-- Tras una misión para un Bosque, el jugador nota que cruzarlo le cuesta menos.
+- El jugador identifica el estado de un Bosque antes de cruzarlo (pregunta: "¿cómo estaba ese Bosque?").
+- El jugador elige alguna vez una ruta de salvoconducto más larga.
+- Tras varias ofrendas y descansos, el jugador nota que el paso le cuesta menos o es permanente.
+- El jugador usa "Dormir" y entiende que puede revelar misiones lejanas.
 
 ## Preguntas abiertas
-- **#133**: ¿qué tipos de Bosque hay además de Nujio y Nuevo Bosque? ¿Cómo se ven el temperamento y la cordura (color, letrero, mapa)?
-- **#134**: "precio de Luz por estar ahí": ¿hay un coste por permanecer en un Bosque (por Momento, por día)? ¿Cuánto y cómo se cobra?
-- **#135**: relación: ¿qué acciones la cambian y cuánto? ¿Es por Bosque o por grupo de Bosques? ¿Se guarda entre partidas?
-- **#136**: salvoconducto: ¿qué es un "Bosque bueno"? ¿Cuánto dura el salvoconducto (la misión, X días)? ¿Lo da el Bosque que llama o un oficiante (el glosario §6 lo asocia a oficios)?
-- **#137**: Nuevos Bosques: ¿qué fauna tienen (mamíferos o reptiles, peligrosos o no) y hay algún coste para cruzarlos que no sea Luz?
-- **#138**: cordura y ataque: ¿cómo bajan o suben? ¿Qué efecto de juego tienen (peajes, Iserald, misiones)? ¿Quién ataca, además de los garelinos?
+- **#139**: corrupto e Iserald: ¿cuándo lo lanza un Bosque corrupto? ¿Se puede evitar (subir la cordura, ofrendas)? ¿Cómo se ve?
+- **#140**: Bosques muertos: ¿se pueden revivir (Nuevos Bosques sembrados por garelinos, glosario §7)? ¿Cuánta Luz pide el Único "independiente"?
+- **#141**: ¿vencer a los Botarramas también abre el paso solo por un tiempo, como pagar?
+- ~~**#142**: dormir.~~ Resuelta: en villas y refugios, hace pasar el tiempo, de noche es lo normal y de día consume Luz. Siguen siendo propuestas el salto exacto, el coste de día y la frecuencia de las visiones.
+- **#145**: ¿dormir de día vuelve adversos los Humores (glosario §1)? ¿Tiene más castigos que la Luz?
+- **#143**: aliados: ¿cuántos Únicos pelean a tu lado en un Bosque en necesidad de ayuda? ¿Qué hacen en combate (atacan, curan)? ¿Pueden caer?
+- **#144**: fruto: ¿qué hace exactamente (curar PV, estamina, heridas)? ¿Se puede llevar en el inventario?
+- **#137**: fauna de los Nuevos Bosques.
+- **#138**: cómo cambian la cordura y el estado de ataque.

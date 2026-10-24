@@ -49,6 +49,12 @@ Todo Único que se mueva por el mundo tiene tres parámetros (en datos, por tipo
 
 "Aun no tenemos más monstruos" (dueño, 2026-10-24). Botarramas se añadió después (dueño, misma fecha).
 
+**Comportamiento según el estado del Bosque** (backlog; `bosques-y-relacion.md`):
+- **enojado**: muchos Únicos desplegados y encuentros repetidos; no se puede pagar.
+- **corrupto**: emboscadas ocasionales y riesgo de **Iserald** (fatal) (#139).
+- **muerto**: pocos Únicos; a veces uno pide un poco de Luz por su cuenta.
+- **en necesidad de ayuda**: algunos Únicos del Bosque **pelean a tu lado** (aliados, #143).
+
 ## Botarramas (0.2.0, se implementa ya)
 > Valores **PROVISIONALES**, en `data/combat/balance.json` (bloque `botarramas`; estructura: `rpg-systems-dev`). Arte: `pixel-artist` (ave sin plumas, renqueante, con la combinación de colores de su Bosque).
 
