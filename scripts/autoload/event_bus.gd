@@ -43,6 +43,8 @@ signal luz_changed(luz: int)
 signal hp_changed(hp: int, max_hp: int)
 ## El Adoc descansa en una villa (PV al máximo).
 signal rested_in_villa
+## El jugador empieza a hablar con un NPC (E). Las misiones lo escuchan (PR 6).
+signal npc_talked(npc_id: StringName)
 signal quest_state_changed(quest_id: StringName, state: StringName)
 signal character_leveled_up(character_id: StringName, level: int)
 signal game_ended(reason: StringName)

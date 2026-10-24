@@ -5,6 +5,7 @@ extends Node2D
 ## el paso abierto; en el borde de uno cerrado se emite bosque_border_reached y el menú del borde
 ## (scenes/rpg/crossing.tscn, ADR 0009) decide si se cruza. Los chunks se regeneran desde la seed;
 ## la caché es solo para no recalcular durante la sesión.
+## Con interact (E) se habla con los NPC, se leen letreros y se examinan refugios (Interaction).
 
 const TILE_SIZE: int = 16
 ## Duración del fundido al cambiar de chunk.
@@ -20,20 +21,23 @@ var _home_bosque: int = -1
 var _nujio_textures: Dictionary = {}
 ## Evita repetir el aviso cada frame mientras se empuja contra un borde bloqueado.
 var _blocked_dir: Vector2i = Vector2i.ZERO
-var _last_sign: Vector2i = Vector2i(-1, -1)
+## NPC del chunk actual: casilla -> id de datos. Bloquean el paso.
+var _npcs: Dictionary = {}
 ## Dirección del último borde cerrado contra el que se empujó (la usa crossing_resolved).
 var _pending_dir: Vector2i = Vector2i.ZERO
 var _resting: bool = false
 
 @onready var _terrain: TileMapLayer = $Terrain
 @onready var _nujios: Node2D = $Nujios
+@onready var _npc_layer: Node2D = $Npcs
+@onready var _dialogue: DialogueBox = $Dialogue/DialogueBox
 @onready var _player: PlayerWalker = $Player
 @onready var _camera: Camera2D = $Player/Camera2D
 @onready var _fade: ColorRect = $Transition/Fade
 
 
 func _ready() -> void:
-	_player.is_walkable = func(c: Vector2i) -> bool: return _chunk != null and _chunk.is_walkable(c)
+	_player.is_walkable = func(c: Vector2i) -> bool: return _chunk != null and _chunk.is_walkable(c) and not _npcs.has(c)
 	_player.edge_reached.connect(_on_edge_reached)
 	_player.stepped.connect(_on_player_stepped)
 	EventBus.crossing_resolved.connect(_on_crossing_resolved)
@@ -71,17 +75,16 @@ func _enter_home_villa() -> void:
 func _on_player_stepped(cell: Vector2i) -> void:
 	GameState.player_cell = cell
 	_blocked_dir = Vector2i.ZERO
-	_check_sign(cell)
 	_check_villa_rest(cell)
 
 
 func _enter_chunk(coord: Vector2i, cell: Vector2i) -> void:
 	_blocked_dir = Vector2i.ZERO
-	_last_sign = Vector2i(-1, -1)
 	_chunk = _get_chunk(coord)
 	GameState.chunk_coord = coord
 	_draw_area()
-	if not _chunk.is_walkable(cell):
+	_place_npcs()
+	if not _player.is_walkable.call(cell):
 		cell = _chunk.hub
 	GameState.player_cell = cell
 	_player.place_at(cell)
@@ -161,21 +164,45 @@ func _sign_direction_index(coord: Vector2i, bosque_id: int) -> int:
 	return ChunkGenerator.direction_index(_bosques.nujio_chunk[bosque_id] - coord)
 
 
-## Al pisar un letrero de piedra o estar al lado, el HUD indica hacia dónde queda la villa: la
-## del Bosque actual o, en los letreros del camino principal, la villa natal (siguiente tramo).
-func _check_sign(cell: Vector2i) -> void:
-	for d: Vector2i in [Vector2i.ZERO, Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]:
-		var c: Vector2i = cell + d
-		if ChunkData.in_bounds(c) and _chunk.get_tile(c) == ChunkData.Tile.SIGN:
-			if c != _last_sign:
-				_last_sign = c
-				var kind: int = _chunk.sign_kind(c)
-				var delta: Vector2i = _chunk.home_direction
-				if kind == ChunkData.SignKind.BOSQUE_VILLA:
-					delta = _bosques.nujio_chunk[_bosques.bosque_at(_chunk.coord)] - _chunk.coord
-				EventBus.signpost_read.emit(ChunkGenerator.direction_name(delta), kind)
-			return
-	_last_sign = Vector2i(-1, -1)
+## Línea del letrero (Signpost): villa de destino, flecha, dirección y tiempo de camino, con aviso
+## si el camino dura más que lo que falta para el riutash (WorldClock).
+func _sign_line(c: Vector2i) -> Dictionary:
+	var dest: Dictionary = Signpost.destination(_bosques, _chunk, c, _home_bosque)
+	var villa: String = Signpost.villa_name(GameState.seed_value, dest.bosque_id)
+	var text: String = Signpost.text(villa, dest.to_home, dest.delta, dest.chunks, WorldClock.time_to_riutash())
+	return { "speaker": "", "text": text, "arrow": dest.delta }
+
+
+## NPC del chunk: por ahora, el sfida en la plaza de la villa natal.
+func _place_npcs() -> void:
+	_npcs.clear()
+	for child: Node in _npc_layer.get_children():
+		child.queue_free()
+	if _chunk.coord != _bosques.nujio_chunk[_home_bosque]:
+		return
+	var at: Vector2i = Npc.sfida_cell(_chunk)
+	if at.x < 0:
+		return
+	var npc := Npc.new()
+	npc.setup(&"sfida_natal", at)
+	_npc_layer.add_child(npc)
+	_npcs[at] = npc.npc_id
+
+
+## E: habla con el NPC de delante, o lee el letrero o examina el refugio (delante o debajo).
+func _interact() -> void:
+	# Durante el fundido de entrada no: el diálogo pausa el árbol y lo dejaría a oscuras.
+	if _chunk == null or _player.is_moving() or _fade.color.a > 0.0:
+		return
+	var target: Dictionary = Interaction.find(_chunk, _player.cell, _player.facing, _npcs)
+	match target.kind:
+		Interaction.Kind.NPC:
+			EventBus.npc_talked.emit(target.npc_id)
+			_dialogue.show_lines(NpcDialogue.lines_for(target.npc_id))
+		Interaction.Kind.SIGN:
+			_dialogue.show_lines([_sign_line(target.cell)])
+		Interaction.Kind.REFUGE:
+			_dialogue.show_lines([Texts.get_text("refuge_empty")])
 
 
 func _on_edge_reached(direction: Vector2i) -> void:
@@ -223,7 +250,10 @@ func _check_villa_rest(cell: Vector2i) -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if event.is_action_pressed(&"new_seed"):
+	if event.is_action_pressed(&"interact"):
+		get_viewport().set_input_as_handled()
+		_interact()
+	elif event.is_action_pressed(&"new_seed"):
 		# Elegir una seed nueva no es aleatoriedad de juego: se usa un RNG aparte, no GameState.rng.
 		var picker := RandomNumberGenerator.new()
 		picker.randomize()
