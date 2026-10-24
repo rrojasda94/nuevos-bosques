@@ -27,6 +27,7 @@ EventBus="*res://scripts/autoload/event_bus.gd"
 GameState="*res://scripts/autoload/game_state.gd"
 WorldClock="*res://scripts/autoload/world_clock.gd"
 SaveManager="*res://scripts/autoload/save_manager.gd"
+Sfx="*res://scripts/autoload/sfx.gd"
 
 [display]
 

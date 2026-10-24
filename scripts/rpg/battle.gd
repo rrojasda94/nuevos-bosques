@@ -30,6 +30,7 @@ const UNICO_TILES: int = 6
 const BAR_WIDTH: float = 100.0
 
 var _logic: BattleLogic
+var _kind: UnicoArt.Kind = UnicoArt.Kind.BOTARRAMAS
 
 @onready var _ground: ColorRect = $Ground
 @onready var _unico: TextureRect = $Unico
@@ -52,9 +53,10 @@ func _ready() -> void:
 
 func begin(logic: BattleLogic, style: Dictionary, kind: UnicoArt.Kind) -> void:
 	_logic = logic
+	_kind = kind
 	_ground.color = PlaceholderTileset.GROUNDS[int(style.get("ground", 0))][0]
-	_unico.texture = UnicoArt.texture(kind, style, UNICO_TILES * PlaceholderTileset.TILE)
-	_adoc.texture = PlayerWalker._make_texture(Vector2i.UP)
+	_unico.texture = UnicoArt.battle_texture(kind, style, UNICO_TILES * PlaceholderTileset.TILE)
+	_adoc.texture = PlayerWalker.back_texture()
 	_unico_name.text = logic.unico_name
 	# Respiración del Único: sube y baja 2 px.
 	var bob := create_tween().set_loops()
@@ -142,8 +144,11 @@ func _on_message_started(m: Dictionary) -> void:
 	match m.get("flash", &""):
 		&"unico":
 			_flash(_unico)
+			Sfx.play(&"hit")
 		&"adoc":
 			_flash(_adoc)
+			# El Ofomni ataca con látigos (monstruos.md).
+			Sfx.play(&"whip" if _kind == UnicoArt.Kind.EYES else &"hit")
 		&"vanish":
 			create_tween().tween_property(_unico, "modulate:a", 0.0, 0.8)
 

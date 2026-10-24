@@ -40,7 +40,7 @@ Las palabras genéricas van en inglés aunque existan en español: `chunk`, `reg
 | Datos `.json` | `snake_case.json`. Catálogos pequeños: un archivo con lista de entradas (`data/items/ofrendas.json`); entidades grandes: un archivo por id (`data/world/regions/valle_del_sara.json`) | |
 | Test | `tests/unit/<dominio>/test_<archivo>.gd` | `tests/unit/rpg/test_battle_logic.gd` |
 | Asset gráfico | `<tipo>_<nombre>[_<variante>].png` | `tileset_bosque_conifera.png`, `sprite_adoc_walk.png` |
-| Audio | `<music\|sfx>_<nombre>.ogg` | `sfx_hit.ogg` |
+| Audio | `<music\|sfx>_<nombre>.ogg`; los SFX cortos pueden ser `.wav` | `sfx_hit.wav`, `music_forest.ogg` |
 | ADR | `docs/decisions/NNNN-titulo-en-kebab-case.md` | `0009-cruce-entre-bosques-y-combate-v1.md` |
 | Fichas de diseño | `docs/design/mechanics/<nombre-kebab>.md` | `cruce-y-combate-v1.md` |
 | Archivos estándar de la raíz | Nombre estándar en mayúsculas | `README.md`, `CONTRIBUTING.md`, `CHANGELOG.md` |
