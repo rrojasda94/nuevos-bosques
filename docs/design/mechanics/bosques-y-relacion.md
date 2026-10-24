@@ -90,7 +90,8 @@ El letrero y el mapa (M) podrían indicar el estado con texto o color (`navegaci
 | Descansar el riutash junto a su Nujio (refugio a ≤ 3 casillas del Nujio, o la plaza de su villa) | +5, una vez por riutash |
 | Pagar el peaje con Luz suelta | +1 (propuesta; el dueño no lo nombró) |
 | Vencer a sus Botarramas | **−10** (ADR 0013, implementado), además de +1 de hostilidad |
-| Robar en él: por ahora, tomar un segundo fruto en el mismo Momento | **−20** y hostilidad +1 (implementado en el PR "frutos") |
+| Robar en él: por ahora, un segundo fruto del mismo Bosque en el mismo Momento, o fruto de un Bosque no pagado | **−20** y hostilidad +1 (implementado en el PR "frutos") |
+| Pagar con una ofrenda | Además: **hostilidad −1**, sin bajar de 0 ("el bosque olvida con ofrendas", #147) |
 
 | Umbral (propuesta) | Efecto |
 |---|---|
@@ -129,13 +130,17 @@ El letrero y el mapa (M) podrían indicar el estado con texto o color (`navegaci
 ## Fruto
 - **Regla del dueño**: los Bosques **sanos** y los **en necesidad de ayuda** dan fruto. Glosario §3: el fruto es "solo alimento [...] contiene lo necesario para mantener vivo y sano a un ser".
 - **Adelantado al principio de la 0.3** (PR 2 "frutos", en implementación por `world-gen-dev`). Palabras del dueño: "Debemos incorporar los frutos, porque ya que no es facil recuperarse, los bosques normales deben dar frutos y con eso poder recuperar algo de vida. solo puedes tomar 1 fruto por Momento, sino es un robo al boque."
-- **Reglas (valores provisionales)**:
-  - **Árboles frutales** (tile `FRUIT_TREE`) en los Bosques normales (sanos; más adelante, también los que necesitan ayuda).
+- **Respuesta del dueño a #149**: "en el bosque puedes encontrar frutos, si pagas tu peaje puedes tomar un fruto por momento. Pero si en otro arbol del mismo bosque tomas un futo, es robo. solo 1 por momento. el arbol del que tomaste queda vacio. No todos los arboles tienen fruto."
+- **Reglas** (valores provisionales):
+  - **No todos los árboles tienen fruto**: solo los **frutales** (tile `FRUIT_TREE`) de los Bosques normales (sanos; más adelante, también los que necesitan ayuda).
   - Con **E** se toma un fruto, que cura el **25% de los PV máximos**.
-  - **1 fruto por Momento**, en total (implementado así; pregunta abierta: ¿en total o por Bosque? #149).
-  - **Tomar otro en el mismo Momento es robo** al Bosque donde está el frutal: **hostilidad +1** y **relación −20**. Más adelante, también despierta a los Ofomni (`sigilo-y-robo.md`).
-  - El frutal vaciado **rebrota tras el riutash**.
-- El fruto **dado** (el primero del Momento) no es robo; el extra sí. Esto cierra en parte la pregunta del fruto como robo (#144).
+  - **1 fruto por Momento y por Bosque**, y solo si **pagaste el peaje** de ese Bosque o es el **Bosque natal**.
+  - **Es robo**:
+    - un **segundo fruto del mismo Bosque en el mismo Momento**, de cualquier árbol;
+    - **cualquier fruto de un Bosque no pagado** (cerrado o forzado).
+    - Efecto: **hostilidad +1** y **relación −20** con ese Bosque. Más adelante, también despierta a los Ofomni (`sigilo-y-robo.md`).
+  - El árbol del que se toma el fruto **queda vacío** hasta el riutash.
+- Esto cierra la pregunta del fruto como robo (#144) y la #149.
 
 ## Modelo de datos actualizado (por Bosque)
 | Campo | Tipo | Valores | Persistencia |
@@ -147,7 +152,8 @@ El letrero y el mapa (M) podrían indicar el estado con texto o color (`navegaci
 | `relation` | int | −100 … +100 | Guardado por partida; se reinicia con un game over o una partida nueva |
 | `open_until` | int o `PERMANENT` | Número de riutash hasta el que el paso está abierto | Guardado |
 | `fruit_ready` | por árbol o por chunk | bool + riutash de rebrote | Guardado |
-| `hostility` | int ≥ 0, con tope | +1 por Botarramas vencido (ADR 0013) | Guardado |
+| `hostility` | int ≥ 0, con tope | +1 por Botarramas vencido o robo; −1 por pago con ofrenda (ADR 0013, #147) | Guardado |
+| `fruit_taken_momento` | id del Momento | Momento en que se tomó el último fruto de ese Bosque | Guardado |
 | `access` | enum | `cerrado`, `forzado`, `pagado` (ADR 0013; más `open_until` cuando caduque el pago) | Guardado |
 
 ### Peaje combinado (forma propuesta)
