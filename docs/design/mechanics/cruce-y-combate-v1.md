@@ -45,7 +45,7 @@ El dueño pidió: "Dame algo para cruzar temporalmente o poder cruzar y pelear c
 - Un Bosque vecino del inicial tiene d = 1.
 
 ### Menú del borde
-> **0.2.0 (Botarramas):** el menú ya no sale al pisar el borde. Sale cuando un **Botarramas** visible del Bosque cerrado intercepta al jugador y llega a tocarlo (`monstruos.md`, sección "Botarramas"). Si el jugador cruza sin contacto, se cuela sin abrir el Bosque (propuesta, #129). Las opciones y N no cambian.
+> **0.2.0 (Botarramas):** el menú ya no sale al pisar el borde. Sale cuando un **Botarramas** visible del Bosque cerrado intercepta al jugador y llega a tocarlo (`monstruos.md`, sección "Botarramas"). Si llega a la frontera sin que lo hayan alcanzado, el menú se abre al tocarla: sin máscara no se puede colarse (dueño, 2026-10-24; `sigilo-y-robo.md`). Las opciones y N no cambian.
 
 Al llegar al borde de un Bosque todavía no abierto aparece un menú:
 1. **"Ofrecer N Luz"**, con **N = 3 + d**. Pagar abre el borde.

@@ -22,18 +22,22 @@ Palabras del dueño:
 - **Alivia**: con máscaras y talismanes se puede pasar sin pagar ni pelear.
 
 ## Reglas (lo dicho por el dueño)
-1. **Objetos de sigilo**: **máscaras** de distintas formas y **algunos talismanes** permiten colarse ("sneak") en los Bosques.
-2. **Armas equipadas**: si el jugador las lleva, el Bosque **no le deja pasar** y tiene que **vencer a los enemigos constantemente**.
-3. **Robo**: dentro de un Bosque, **robar un objeto** estando **sin protección** o **a la vista de otro Único** **despierta a los Ofomni**.
-4. **Persecución**: los Ofomni **persiguen al jugador por el Bosque hasta la frontera**.
+1. **Objetos de sigilo**: **máscaras** de distintas formas y **algunos talismanes** permiten colarse ("sneak") en los Bosques. Precisión (2026-10-24): "sneak puede darse usando una mascara solamente o algun otro artefacto que camufle la Luz del jugador". **Sin uno de esos objetos no se puede colarse**: el borde sigue cerrado aunque se esquive a los Botarramas.
+2. **Armas equipadas**: si el jugador las lleva, el Bosque **no le deja pasar** y tiene que **vencer a los enemigos constantemente**. Precisión (2026-10-24): "Las armas deberían poder estar o equipadas o desequipadas de la mano principal". **Desequipada, no cierra el paso.**
+3. **Percepción de los Únicos**: tienen radio de visión, velocidad y distancia de encuentro (`monstruos.md`, regla general). Las máscaras y los artefactos de camuflaje actúan sobre esa percepción.
+4. **Robo**: dentro de un Bosque, **robar un objeto** estando **sin protección** o **a la vista de otro Único** **despierta a los Ofomni**.
+5. **Persecución**: los Ofomni **persiguen al jugador por el Bosque hasta la frontera**.
 
 ## Propuestas de `game-designer` (a confirmar; sin números todavía)
-- **Máscara o talismán equipado**: los Botarramas no detectan al jugador o lo detectan a un radio menor (por ejemplo, la mitad), según la máscara. Algunas formas podrían servir solo en ciertos tipos de Bosque.
-- **Armas equipadas**:
-  - Los Botarramas detectan al jugador a más distancia.
+- **Máscara o artefacto de camuflaje equipado**:
+  - Reduce el `vision_radius` con el que los Únicos ven al jugador (por ejemplo, a la mitad o a 0, según la máscara).
+  - Permite cruzar una frontera cerrada sin que salte el menú si ningún Único llega a la `engage_distance`. El Bosque no se abre.
+  - Algunas formas podrían servir solo en ciertos tipos de Bosque.
+- **Arma equipada en la mano principal**:
+  - Los Únicos la ven desde más lejos.
   - El menú del borde no ofrece pagar, solo "Enfrentar" o "Retroceder".
   - Dentro del Bosque aparecen Botarramas o Únicos con más frecuencia.
-- **Guardar el arma**: si el adoc puede guardarla (no equipada) para pasar en paz, y sacarla para pelear, ¿con qué coste o penalización (turnos, ATQ)?
+- **Arma desequipada**: no cierra el paso. Equipar o desequipar: ¿desde el menú, gratis fuera de combate? ¿En combate cuesta un turno o se lucha con ATQ reducido? (#131)
 - **Robo**:
   - Acción con E sobre objetos del Bosque.
   - Con máscara y sin Únicos a la vista: sin consecuencias.
@@ -49,13 +53,13 @@ Palabras del dueño:
 - **Refugios con ofrendas** (0.2.0): ver choque 2.
 
 ## Choques que hay que resolver
-1. **El adoc es especialista en armas** (glosario §5: "Protectores; únicos especialistas en armas, para apaciguar Únicos descarriados"), pero **llevar armas equipadas hace que el Bosque no te deje pasar**. ¿El adoc lleva el arma guardada y solo la saca para pelear? ¿Que su oficio sea el de las armas es justo lo que hace que los Bosques desconfíen de él? (#131)
+1. ~~**El adoc es especialista en armas** (glosario §5), pero **llevar armas equipadas hace que el Bosque no te deje pasar**.~~ **Resuelto** (dueño, 2026-10-24): el arma se equipa o se desequipa de la mano principal, y desequipada no cierra el paso. El adoc lleva su arma y la desequipa para pasar en paz. Quedan los detalles en #131.
 2. **Hallazgos en refugios (0.2.0) frente al robo (0.3.0)**:
    - En la 0.2.0, el jugador recoge con E ofrendas que encuentra en los refugios.
    - En la 0.3.0, robar un objeto del Bosque despierta a los Ofomni.
    - Además, pagar con una ofrenda consiste en "dejar el artículo entero en el bosque" (ADR 0010).
    - ¿Recoger una ofrenda de un refugio es robar al Bosque? (#130)
-3. **Colarse en la 0.2.0** (propuesta de `monstruos.md`: cruzar por un tramo sin Botarramas cerca) frente al **sigilo con máscaras de la 0.3.0**: si en la 0.2.0 ya se puede colarse sin objetos, las máscaras valen menos. ¿Colarse sin máscara debería ser imposible o muy difícil a partir de la 0.3.0? (#129)
+3. ~~**Colarse en la 0.2.0 frente a las máscaras de la 0.3.0.**~~ **Resuelto** (dueño, 2026-10-24): solo se puede colarse con una máscara u otro artefacto que camufle la Luz. En la 0.2.0 el borde sigue cerrado. Las máscaras conservan su valor.
 
 ## Casos límite (para cuando se definan las reglas)
 - Robar con máscara pero a la vista de un Único.
@@ -70,6 +74,6 @@ Palabras del dueño:
 
 ## Preguntas abiertas
 - **#130**: qué cuenta como robar (¿frutos, objetos de refugios, ofrendas dejadas por otros?) y qué es "estar sin protección".
-- **#131**: qué es un "arma equipada" para el adoc (¿guardada o desenvainada?) y si puede pasar en paz.
-- **#132**: duración y efecto de las máscaras y los talismanes de sigilo. ¿Se gastan? ¿Cada forma de máscara sirve para ciertos Bosques? ¿De dónde salen (villas, sarua)?
+- **#131** (en parte): el arma se equipa o se desequipa de la mano principal, y desequipada no cierra el paso. Falta saber cuánto cuesta equipar o desequipar y su efecto en combate.
+- **#132**: duración y efecto de las máscaras y los artefactos que camuflan la Luz. ¿Se gastan? ¿Cada forma de máscara sirve para ciertos Bosques? ¿De dónde salen (villas, sarua)?
 - Inventario y equipo (#113).

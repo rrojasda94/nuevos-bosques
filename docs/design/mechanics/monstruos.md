@@ -14,6 +14,20 @@ Reunir en un sitio qué monstruos hay, qué se sabe de cada uno y qué regla de 
 - **Añade**: los monstruos **fatales** convierten una derrota en **game over** (ADR 0004). Aledra lo es de noche, lo que hace la noche más peligrosa. Los grupos de reparep castigan pelear con la DEF baja o sin Luz.
 - **Alivia**: los Únicos comunes y el Ofomni de la primera misión no son fatales; perder contra ellos te devuelve a la villa.
 
+## Regla general: percepción y encuentro
+Palabras del dueño (2026-10-24): "los Únicos deben tener un radio de visión, una velocidad, y una distancia para iniciar el engage."
+
+Todo Único que se mueva por el mundo tiene tres parámetros (en datos, por tipo):
+
+| Parámetro | Qué es | Botarramas (0.2.0) | Ofomni (0.2.0) |
+|---|---|---|---|
+| `vision_radius` | Casillas (Chebyshev) a las que ve al jugador y empieza a ir hacia él | 10 | Según el PR 6 |
+| `step_time` | Segundos por casilla al moverse (más alto = más lento; el jugador va a 0,16) | 0,24 | Según el PR 6 |
+| `engage_distance` | Distancia a la que empieza el encuentro (menú del borde o combate) | 1 | 2 |
+
+- Las máscaras y los artefactos que camuflan la Luz (0.3.0) actuarán sobre la visión (`sigilo-y-robo.md`).
+- Los valores del Ofomni que no figuran aquí son los del PR 6; deben copiarse a esta tabla cuando estén fijados.
+
 ## Regla general: fatal según el Momento
 - Palabras del dueño: "es un survival, deberia ser game over dependiendo del monstruo que te ataque, un iserald es fatal" y "Aledras son fatales en las noches".
 - Cada tipo de monstruo tiene un campo **`fatal_at`**: la lista de Momentos en los que perder contra él es game over.
@@ -45,7 +59,7 @@ Que los guardianes del paso entre Bosques se vean en el mundo y salgan al encuen
 - **Pilar 3 (legibilidad)**: el peligro se ve venir y se puede leer.
 - **Pilar 4**: los puestos dependen de la seed y de las fronteras del Bosque.
 - **Añade presión**: acercarse a un Bosque cerrado tiene un coste visible (Luz, ofrenda o combate).
-- **Alivia**: un jugador atento puede colarse por un tramo de frontera sin vigilancia.
+- **Alivia**: el peligro se ve venir y se puede retroceder antes del contacto. Colarse **no** es posible sin máscara (dueño, 2026-10-24).
 
 ### Reglas
 - **Quién**: los Botarramas son los Únicos que **restringen el paso** entre Bosques (sustituyen al "Único de borde" de `cruce-y-combate-v1.md`). Pertenecen al Bosque que guardan, el que el jugador quiere abrir.
@@ -55,21 +69,20 @@ Que los guardianes del paso entre Bosques se vean en el mundo y salgan al encuen
   - Posición determinista por seed.
 - **Visibilidad**: se ven en el mundo. En el mapa (M) aparecen en su última posición vista (`navegacion.md`).
 - **Reposo**: en su puesto, con un renqueo de ida y vuelta de hasta **3 casillas**.
-- **Detección**: si el jugador entra en un **radio de 10 casillas** (distancia de Chebyshev) de un Botarramas de un Bosque **cerrado**, este pasa a **interceptar**.
+- **Detección**: si el jugador entra en su **radio de visión** (`vision_radius` = 10 casillas, distancia de Chebyshev) y el Bosque está **cerrado**, el Botarramas pasa a **interceptar**.
 - **Intercepción**:
   - Renquea hacia el jugador a **1 casilla cada 0,24 s** (el jugador va a 1 cada 0,16 s: el Botarramas va a 2/3 de su velocidad).
   - Respeta las casillas transitables y puede salir de su Bosque hasta **4 casillas** dentro del vecino.
   - Correa: no se aleja más de **14 casillas** de su puesto. Si el jugador sale de un radio de **14**, vuelve a su puesto.
-- **Contacto** (casilla adyacente, también en diagonal): se pausa el juego y se abre el **menú del borde** actual: "Ofrecer N Luz", "Ofrecer una ofrenda" (`ofrendas-v1.md`), "Enfrentar a sus Únicos" y "Retroceder". Las reglas, N y d son las de `cruce-y-combate-v1.md`.
+- **Encuentro** (a `engage_distance` = 1, es decir, casilla adyacente, también en diagonal): se pausa el juego y se abre el **menú del borde** actual: "Ofrecer N Luz", "Ofrecer una ofrenda" (`ofrendas-v1.md`), "Enfrentar a sus Únicos" y "Retroceder". Las reglas, N y d son las de `cruce-y-combate-v1.md`.
 - **Resultado**:
   - **Pagar o vencer** abre el Bosque entero (`open_bosques`, como en v1). Todos los Botarramas de ese Bosque quedan **pasivos**: se ven y no interceptan.
   - **Retroceder o huir**: el jugador vuelve 2 casillas hacia su Bosque y ese Botarramas queda **sin detectar durante 3 s**, para no repetir el menú en bucle.
   - **Derrota**: regla de v1 (no fatal: despiertas en la villa natal).
-- **Colarse** (propuesta, a confirmar):
-  - Si el jugador cruza la frontera sin contacto, entra en el Bosque cerrado, pero el Bosque **no se abre**.
-  - Los Botarramas que lo detecten dentro seguirán interceptándolo.
-  - Volver a un Bosque abierto siempre es libre.
-  - Es la recompensa a la exploración que se pedía. El sigilo con máscaras de la 0.3.0 la ampliará (`sigilo-y-robo.md`).
+- **Sin colarse** (dueño, 2026-10-24: "sneak puede darse usando una mascara solamente o algun otro artefacto que camufle la Luz del jugador"):
+  - En la 0.2.0 no hay máscaras, así que **el borde de un Bosque cerrado sigue cerrado**.
+  - Si el jugador llega a la frontera sin que lo haya alcanzado un Botarramas, al tocarla se abre el mismo menú del borde (como en v1).
+  - Colarse llegará con las máscaras y los artefactos de camuflaje de la 0.3.0 (`sigilo-y-robo.md`).
 - **Stats**: los del Único de v1 según d (PV 18 + 4·d, ATQ 4 + d, DEF 1 + ⌊d/2⌋ con tope 4). XP y Luz de victoria: igual que un Único (`progresion-adoc.md`).
 - **Fatal**: `fatal_at: []` (provisional).
 - **Regeneración**: recupera todos sus PV si el jugador huye o retrocede (v1). Por tiempo: #120.
@@ -78,8 +91,9 @@ Que los guardianes del paso entre Bosques se vean en el mundo y salgan al encuen
 ### Números (para `balance.json`)
 | Clave propuesta | Valor |
 |---|---|
-| `botarramas.detect_radius` | 10 |
+| `botarramas.vision_radius` | 10 |
 | `botarramas.step_time` | 0.24 (s por casilla) |
+| `botarramas.engage_distance` | 1 |
 | `botarramas.idle_wander` | 3 |
 | `botarramas.leash` | 14 |
 | `botarramas.max_outside` | 4 |
@@ -92,8 +106,7 @@ Que los guardianes del paso entre Bosques se vean en el mundo y salgan al encuen
 
 ### Casos límite
 - **Dos Botarramas detectan a la vez**: intercepta el que llega antes; el otro vuelve a su puesto si el Bosque se abre.
-- **Botarramas bloqueado por agua o riscos**: no hay camino hasta el jugador y vuelve a su puesto. Esto permite colarse.
-- **Jugador dentro de un Bosque cerrado (se ha colado)**: los Botarramas siguen interceptando. Contactar abre el mismo menú; pagar o vencer abre ese Bosque.
+- **Botarramas bloqueado por agua o riscos**: no hay camino hasta el jugador y vuelve a su puesto. Si el jugador toca la frontera, se abre el menú igualmente (no se puede colarse sin máscara).
 - **Bosque abierto**: sus Botarramas no interceptan aunque el jugador pase pegado.
 - **El riutash llega durante una persecución**: la persecución sigue; el riutash se aplica según el refugio (`tiempo-y-riutash.md`).
 - **Contacto mientras está abierto otro diálogo o el mapa**: no puede pasar, porque el mundo está en pausa.
@@ -167,7 +180,7 @@ Propuestas, a confirmar con el dueño:
 - El dueño considera que los reparep "son débiles solos pero en grupo suman daños" (pregunta directa).
 
 ## Decisiones a confirmar con el dueño
-- Botarramas: uno por tramo de frontera de chunk, radio 10, 2/3 de la velocidad del jugador, correa de 14 y colarse permitido sin abrir el Bosque (#129).
+- Botarramas: uno por tramo de frontera de chunk, visión 10, 2/3 de la velocidad del jugador, engage 1 y correa de 14 (#129).
 - `fatal_at` por Momento, mirando el Momento del inicio del combate.
 - Fórmula del ataque conjunto (suma de ATQ, DEF restada una vez), selección de objetivo y Defender sobre todo el ataque.
 - Stats y XP de los reparep.
@@ -178,5 +191,5 @@ Propuestas, a confirmar con el dueño:
 - Otros monstruos fatales, aviso previo, huir de un fatal, qué pasa tras un game over (#127).
 - Dónde y cuándo aparecen Aledra y los reparep en Aventura. ¿Los reparep son Únicos? ¿Guardan bordes, vagan por el Bosque o salen de noche? (#128)
 - Iserald en el juego (#103).
-- Botarramas: números, colarse y nombre definitivo (#129).
+- Botarramas: números y nombre definitivo (#129).
 - Aspecto y nombres de los Únicos comunes (#119).
