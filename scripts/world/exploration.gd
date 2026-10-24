@@ -82,6 +82,7 @@ func _enter_chunk(coord: Vector2i, cell: Vector2i) -> void:
 	_blocked_dir = Vector2i.ZERO
 	_chunk = _get_chunk(coord)
 	GameState.chunk_coord = coord
+	MapLogic.mark_explored(GameState.explored_chunks, coord)
 	_draw_area()
 	_place_npcs()
 	if not _player.is_walkable.call(cell):

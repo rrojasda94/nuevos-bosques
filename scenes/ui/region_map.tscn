@@ -1,0 +1,46 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/region_map.gd" id="1_map"]
+[ext_resource type="Theme" path="res://assets/ui/theme.tres" id="2_theme"]
+
+[node name="RegionMap" type="CanvasLayer"]
+process_mode = 3
+layer = 8
+script = ExtResource("1_map")
+
+[node name="Root" type="Panel" parent="."]
+offset_right = 320.0
+offset_bottom = 180.0
+theme = ExtResource("2_theme")
+theme_type_variation = &"MapPanel"
+
+[node name="Title" type="Label" parent="Root"]
+layout_mode = 0
+offset_left = 8.0
+offset_top = 2.0
+offset_right = 312.0
+offset_bottom = 13.0
+theme_type_variation = &"TitleLabel"
+
+[node name="Canvas" type="Control" parent="Root"]
+layout_mode = 0
+offset_right = 320.0
+offset_bottom = 180.0
+mouse_filter = 2
+
+[node name="Legend" type="Control" parent="Root"]
+layout_mode = 0
+offset_left = 142.0
+offset_top = 24.0
+offset_right = 316.0
+offset_bottom = 150.0
+mouse_filter = 2
+
+[node name="Hint" type="Label" parent="Root"]
+layout_mode = 0
+offset_left = 142.0
+offset_top = 164.0
+offset_right = 314.0
+offset_bottom = 176.0
+theme_type_variation = &"HintLabel"
+horizontal_alignment = 2
