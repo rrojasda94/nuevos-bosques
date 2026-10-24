@@ -16,11 +16,12 @@ Que el proyecto Godot sea coherente, escalable y rápido de iterar. Es el agente
 - Convenciones de código y estructura de carpetas.
 
 ## Arquitectura base
-- **Autoloads** (orden importa): `EventBus` → `GameState` → `SaveManager`.
+- **Autoloads** (orden importa): `EventBus` → `GameState` → `WorldClock` → `SaveManager`.
 - `EventBus`: solo señales. Sin lógica.
 - `GameState`: estado serializable del juego (recursos, ciudad, party, quests). Sin lógica de dominio.
 - `SaveManager`: serializa `GameState` a `user://saves/slot_N.json`. Versionado con `save_version`.
-- Simulación por días (ADR 0002): `DayManager` en `scenes/main` emite `EventBus.day_ended(day)` solo cuando el jugador termina el día o una expedición consume días. Sin tiempo real.
+- Tiempo (ADR 0012): en Aventura, tiempo real con pausa vía `WorldClock` (Momentos de Gietos/Riumna y riutash); `DayManager` sube el día en el riutash del amanecer. La gestión de villa (Supervivencia) sigue sin tiempo real (ADR 0002).
+- UI siempre en `CanvasLayer` de capa ≥ 2: la capa 1 es el post-proceso de luz de luna.
 - Mundo (ADR 0003): `GameState` guarda `seed`, `region_id` y `chunk`; la generación es de `world-gen-dev`.
 - Escenas de dominio no se conocen entre sí: hablan por `EventBus`.
 
