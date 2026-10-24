@@ -46,7 +46,7 @@ Sustituyen al `temperament` numérico de la versión anterior de esta ficha.
 | **sano** | "no tienen efecto"; "dan fruto" | Normal: N = 3 + d, modificado por la relación | Botarramas normales (`monstruos.md`) | Fruto. |
 | **enojado** | "muchos Únicos desplegados, no cobran entrada pero no eres bienvenido, deberas enfrentarte a varios únicos en diferentes momentos o tener algo que aumente tu velocidad o te camufle muy muy bien" | **No se puede pagar**: el menú del borde no ofrece "Ofrecer Luz" ni ofrendas | Muchos: ×2 Botarramas por tramo y además Únicos que patrullan dentro, con encuentros repetidos | Para cruzarlo hay que vencerlos, ser más rápido (objetos de velocidad) o un camuflaje "muy muy bueno" (`sigilo-y-robo.md`). Sin fruto. |
 | **corrupto** | "estan a punto de lanza su iserald y además cobran entrada, atacan a veces" | Sí: N × 1,5 (propuesta) | Normales, más **emboscadas** ocasionales dentro (por ejemplo, 1 cada 3 minutos de reloj con probabilidad) | Riesgo de **Iserald** (fatal, `monstruos.md`): ¿cuándo lo lanza? (#139). Sin fruto. |
-| **muerto** | "solo tienen un numero limitado de Únicos a veces los Únicos idependientemente piden un poco de Luz, no tienen Nujio, se ve decadencia" | Sin peaje del Bosque | Pocos (por ejemplo, 1–2 en todo el Bosque). **A veces un Único pide Luz por su cuenta** (1–2): se paga o se pelea | Sin Nujio, así que no hay descanso de Nujio. Decadencia visible. Sin fruto (#140). |
+| **muerto** | "solo tienen un numero limitado de Únicos a veces los Únicos idependientemente piden un poco de Luz, no tienen Nujio, se ve decadencia" | Sin peaje del Bosque | Pocos (por ejemplo, 1–2 en todo el Bosque). **A veces un Único pide Luz por su cuenta** (1–2): se paga o se pelea | Sin Nujio, así que no hay descanso de Nujio. Decadencia visible. Sin fruto (#140). **Un Bosque pasa a muerto cuando se desata su Iserald: el Nujio muere** (dueño). Sus artesanos, si los hay, pueden no tener materiales (`npcs-y-villas.md`). |
 | **en necesidad de ayuda** | "pueden presentar incendios, pero estos ayudan a jugador sin cobrar peaje, dan fruto [...] y algunos Únicos pelean junto a ti" | **0** | **Aliados**: en combates dentro de este Bosque (o contra quien lo ataca), 1 Único del Bosque pelea a tu lado (propuesta) | **Incendios** (peligro y misión de defensa). Fruto. Defenderlo sube mucho la relación. |
 | **Nuevo Bosque** (`kind` aparte) | "no cobran luz y tienen otro tipo de vida silvestre con seres mas similares a mamiferos o reptiles" | **0** de Luz | Sin Botarramas. Fauna de mamíferos y reptiles (#137) | — |
 
@@ -84,10 +84,10 @@ El letrero y el mapa (M) podrían indicar el estado con texto o color (`navegaci
 
 | Acción | Cambio propuesto en `relation` (−100 … +100, empieza en 0) |
 |---|---|
-| Dejar una ofrenda (como peaje o de forma voluntaria junto al Nujio) | + su valor (3–8) |
+| Dejar una ofrenda (como peaje o de forma voluntaria junto al Nujio) | + su valor en Luz (3–8; implementado así en el PR #33) |
 | Completar una misión para ese Bosque | +25 |
 | Defenderlo de un incendio o un ataque | +15 |
-| Descansar el riutash junto a su Nujio (refugio a ≤ 3 casillas del Nujio, o la plaza de su villa) | +5, una vez por riutash |
+| Descansar el riutash junto a su Nujio (a **≤ 6 casillas** del Nujio, o en la plaza de su villa; implementado en el PR de relación #33) | +5, una vez por riutash |
 | Pagar el peaje con Luz suelta | +1 (propuesta; el dueño no lo nombró) |
 | Vencer a sus Botarramas | **−10** (ADR 0013, implementado), además de +1 de hostilidad |
 | Robar en él: por ahora, un segundo fruto del mismo Bosque en el mismo Momento, o fruto de un Bosque no pagado | **−20** y hostilidad +1 (implementado en el PR "frutos") |

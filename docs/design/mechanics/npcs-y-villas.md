@@ -62,9 +62,31 @@ Palabras del dueño (2026-10-24): "Deberia haber más npc. [...] Algunas villas 
 | Máscara (cara) | Reduce el `vision_radius` de los Únicos un 25% por nivel (1–3) (`sigilo-y-robo.md`) | 8 | 10 / 12 |
 | Talismán | Por tipo: +2 de Luz máx., +3 PV máx. o −1 al peaje (mín. 1) | 6 | 8 / 10 |
 
-- **Coste** (propuesta; el dueño no habló de materiales):
-  - **Luz u ofrendas**, más, para la mejora a nivel 3, un **objeto de hallazgo** (algo encontrado en refugios o dejado por Únicos vencidos con la skill Botín).
-  - Materiales propiamente dichos (madera de árboles muertos con permiso, piedra…): pregunta abierta (#159).
+- **Coste: Luz u ofrendas + materiales** (dueño, #159: "usan materiales, si su bosque esta ya decrepito es posible que no tengan nada que ofrecer o te pediran que lo consigas para que te hagan el artefacto").
+- **Artesanos de un Bosque decrépito** (estado muerto o corrupto, `bosques-y-relacion.md`): no tienen materiales propios. O no ofrecen nada, o **te piden que traigas el material** y luego fabrican (pagando solo la Luz u ofrenda).
+- En un Bosque sano, el artesano pone sus propios materiales en la fabricación básica. Para las **mejoras** siempre hay que traerlos.
+
+### Materiales (propuesta, provisional)
+Lista corta sacada del glosario y del mundo del juego:
+
+| Material | De dónde sale | Regla | Base |
+|---|---|---|---|
+| **Madera muerta** | Árboles muertos de un Bosque (con E) | Solo **con permiso**: Bosque pagado o relación ≥ 30. Sin permiso es **robo** (hostilidad +1, relación −20, Senda −10) | Glosario §5: madera "solo de árboles muertos y con permiso" |
+| **Barro** | Orillas de arroyos y ríos | Libre | Glosario §5: casas de barro |
+| **Piedra** | Junto a riscos y pendientes | Libre | Glosario §5: casas de piedra |
+| **Fibra** | Plantas de los Bosques (casillas de maleza) | Como la madera: con permiso, si no es robo | Del mundo del juego, sin entrada en el glosario |
+| **Metal de Gietos** | **Muy raro**: solo como recompensa de misiones difíciles | Ver el choque abajo | Glosario §3: es la única posesión de los errantes, de origen desconocido |
+
+- **Restos de Únicos: no se proponen.** El glosario dice que los Únicos "vuelven a la Luz del Bosque" al terminar, así que no dejan cuerpo. La skill Botín da ofrendas, no restos.
+- **Choque con el glosario**: el metal de Gietos es "material de la única posesión de los errantes; origen desconocido". Usarlo como material de artesano puede contradecir el lore. Se deja como recompensa rarísima, a confirmar (#164).
+
+| Recetas (provisional) | Fabricar | Mejorar (+1 nivel) |
+|---|---|---|
+| Arma (Paruas) | 6 de Luz + 2 madera muerta + 1 piedra | +2 madera muerta + 2 piedra; nivel 3: + 1 metal de Gietos |
+| Máscara (Sarua) | 8 de Luz + 2 madera muerta + 2 fibra | +2 fibra + 1 barro |
+| Talismán (Sarua) | 6 de Luz + 2 barro + 1 fibra | +2 barro + 1 piedra |
+
+- Cada material ocupa una casilla del inventario, apilable hasta 10 (propuesta, compatible con la bolsa de 12 casillas).
 - Precios × multiplicador del Ista de la villa, si lo hay (−5…+5 → ×0,5…×1,5).
 
 ### Diálogos y servicios básicos
@@ -80,6 +102,7 @@ Palabras del dueño (2026-10-24): "Deberia haber más npc. [...] Algunas villas 
 - **Villa sin Sarua ni Paruas**: solo Ildo, Sfida y los que salgan. El Rogoc puede indicar una villa cercana con artesano.
 - **Favor imposible** (el objetivo está en un Bosque enojado): se puede abandonar sin castigo.
 - **Fabricar sin Luz suficiente**: la opción aparece desactivada, con el precio a la vista.
+- **Artesano de un Bosque decrépito sin materiales**: ofrece "Tráeme…" con la lista de lo que necesita. Se guarda como encargo hasta que se le entrega.
 - **Villa dañada** (misión fallida): ¿menos servicios? (#124).
 
 ## Criterios de éxito para playtest
@@ -88,5 +111,5 @@ Palabras del dueño (2026-10-24): "Deberia haber más npc. [...] Algunas villas 
 
 ## Preguntas abiertas
 - ~~¿Qué oficio fabrica qué?~~ Confirmado: Paruas, armas; Sarua, máscaras y talismanes (#154).
-- ¿Hay materiales además de Luz, ofrendas y objetos de hallazgo? (#159)
+- ~~¿Hay materiales?~~ Resuelta (#159): sí; la lista y las recetas son propuesta. El metal de Gietos como material: #164.
 - Efectos de la villa dañada en los servicios (#124).
