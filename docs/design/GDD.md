@@ -9,7 +9,9 @@
 >   - vencer a un Botarramas deja el Bosque "forzado" y sube su hostilidad;
 >   - pagar lo deja "pagado";
 >   - "Ofrecer Luz" paga el peaje y termina la pelea.
-> - Frutos: 1 por Momento y por Bosque, solo si pagaste su peaje (o es el natal). El segundo, o el de un Bosque no pagado, es robo.
+> - Frutos: 1 por Momento y por Bosque, solo si pagaste su peaje (o es el natal). El segundo, o el de un Bosque no pagado, es robo. Se pueden **guardar** en el inventario para comerlos luego **dentro de su Bosque**; sacarlos de él baja la relación (−5).
+> - Relación confirmada (#134, #135): el pago dura hasta el segundo riutash, salvo amistad alta (relación ≥ 60), que lo hace permanente.
+> - Refugios: al menos 1 por Bosque y ningún chunk a más de 2 chunks de uno (corrección de un bug del dueño).
 > - El Bosque olvida con ofrendas: cada pago con ofrenda baja 1 la hostilidad. Los Botarramas disueltos no reaparecen.
 > - Ofomni descarriado (misión, no apaciguable) frente a Ofomni normal (apaciguable).
 >

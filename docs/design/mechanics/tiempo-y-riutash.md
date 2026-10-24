@@ -40,7 +40,7 @@ Al llegar el riutash se comprueba dónde está el jugador:
 | **Expuesto** | Pierde el **30% de sus PV máximos**, redondeando hacia abajo. **Nunca baja de 1 PV**: el riutash no mata. |
 | **En refugio** | Recupera el **50% de los PV que le faltan**, redondeando hacia arriba. |
 
-- **Refugio**: una casilla `REFUGE` (árbol hueco o cueva, junto a los caminos) o la plaza de una villa (las casillas donde ya se descansa, ADR 0009). Los refugios se describen en `navegacion.md`.
+- **Refugio**: una casilla `REFUGE` (árbol hueco o cueva, junto a los caminos) o la plaza de una villa (las casillas donde ya se descansa, ADR 0009). Los refugios se describen en `navegacion.md`. Desde la corrección de la 0.3 (bug del dueño: casi no había refugios fuera del Bosque natal) hay al menos 1 por Bosque, cerca del Nujio, y ningún chunk queda a más de 2 chunks de un refugio. Así, el aviso de 60 s debería bastar casi siempre para llegar a uno.
 - El riutash **no cura heridas graves** (ADR 0010; las heridas graves no existen aún en la 0.2.0).
 - Estamina: el riutash la regenerará cuando exista (#73). No está en la 0.2.0.
 - Mensaje al pasar, por ejemplo: "El riutash pasa. Te has resguardado." / "El riutash te alcanza." (textos: `narrative-writer`).

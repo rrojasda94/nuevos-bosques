@@ -49,6 +49,11 @@ Palabras del dueño: "mejorar los sistemas de caminos y generación de lugares c
 - La **plaza de la villa** también es refugio.
 - Sirven para el riutash (`tiempo-y-riutash.md`). Algunos guardan una ofrenda (`ofrendas-v1.md`).
 - Se examinan con E.
+- **Bug reportado por el dueño (0.3)**: casi no había refugios fuera del Bosque natal. **Corrección en curso**, con estas reglas nuevas de densidad:
+  - **Al menos 1 refugio por Bosque**, cerca de su Nujio.
+  - **Ningún chunk a más de 2 chunks** de un refugio.
+  - Sustituyen a "cada 2–3 chunks de camino" como garantía mínima. Los refugios junto a los caminos se mantienen.
+  - Criterio de test: para todo chunk generado, la distancia en chunks al refugio más cercano es ≤ 2, y cada Bosque tiene ≥ 1 refugio.
 
 ### Mapa (tecla M)
 - **Pausa el juego** y el reloj.
