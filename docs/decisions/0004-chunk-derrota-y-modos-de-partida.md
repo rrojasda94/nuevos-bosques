@@ -44,6 +44,13 @@ Respuesta del dueño a la #126 ("si fallar un encargo no acaba la partida, ¿cu�
 - Esto matiza la fila "Aventura" de la tabla de arriba: "la muerte del personaje es game over" vale solo contra monstruos fatales.
 - Qué otros monstruos son fatales: #127.
 
+**Actualización (2026-10-24).** Palabras del dueño: "El ofomni es no fatal en la primera mision. Aledras son fatales en las noches. Aun no tenemos más monstruos."
+- El Ofomni **no es fatal en la primera misión**: confirmado.
+- **Aledra es fatal de noche** (Momento de Riumna) y no fatal de día.
+- La regla `fatal: bool` pasa a ser **fatal según el Momento**: campo `fatal_at` con la lista de Momentos en los que perder es game over (`[]` nunca, `["riumna"]` solo de noche, `["gietos", "riumna"]` siempre). Cuenta el Momento en que empieza el combate.
+- Iserald: `["gietos", "riumna"]`.
+- Detalle en `docs/design/mechanics/monstruos.md`.
+
 ### Reglas de no matar
 - **Aventura**: no se puede matar gente en lugares donde haya otras personas o seres con consciencia.
 - **Garelino**: matar gente afecta mucho a la reputación del grupo y hace más difícil el trabajo, o vuelve a los enemigos más agresivos y fuertes.

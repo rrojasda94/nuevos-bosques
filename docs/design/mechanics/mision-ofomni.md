@@ -65,11 +65,11 @@ Si el Ofomni llega a la villa: "la misión falla y la villa queda dañada; la pa
   - **Defender** lo reduce a la mitad (×1,5). Textos: `ofomni_whips_hit` y `ofomni_whips_defended` en `data/text/sistema.json`.
   - Da sentido a Defender: con pocos PV, un Latigazo múltiple sin defender puede matar (~13–20 de daño).
   - Las claves de texto `ofomni_gaze_*` pasan a llamarse `ofomni_whips_*`, y se añade `ofomni_whip_hit`. El código tiene que usar las claves nuevas.
-- **No es fatal** (provisional, a confirmar): perder contra el Ofomni no es game over (ver "Derrota" y ADR 0004).
+- **No es fatal en la primera misión** (confirmado por el dueño, 2026-10-24: "El ofomni es no fatal en la primera mision"): perder contra él no es game over. `fatal_at: []` (`monstruos.md`).
 - **Acciones**: Atacar, Defender, Ofrecer Luz (2 de Luz, 8 de daño) y Huir (75%). **"Ofrecer ofrenda" no está disponible**: la misión es vencerlo.
 - **No abre Bosques** ni usa `battle_attempts` por Bosque (tiene su propia semilla de combate).
 - Al **huir**, el Ofomni recupera todos sus PV (como los Únicos) y sigue su ruta.
-- **Derrota**: el Ofomni es **no fatal** (provisional; ADR 0004, nota sobre la derrota en Aventura). Despiertas en la villa natal (regla de v1: PV completos, mitad de la Luz suelta). El Ofomni **sigue avanzando**.
+- **Derrota**: el Ofomni es **no fatal** en esta misión (confirmado; ADR 0004). Despiertas en la villa natal (regla de v1: PV completos, mitad de la Luz suelta). El Ofomni **sigue avanzando**.
 
 ### Balance (valores medios; Latigazo múltiple incluido; daño recibido frente a PV del adoc)
 Estrategia: primero todas las "Ofrecer Luz" disponibles, luego atacar.
@@ -135,13 +135,12 @@ Respuesta textual a la propuesta: "1 si, me agrada eso. el ofomni ataca con lati
 | Dificultad ganable desde nivel 3 | **Confirmada**. |
 | Avance de un Bosque cada 6 min, solo tras aceptar | **Confirmado**. |
 | Recompensa: Luz al tope, Cuenco ritual (6), 25 XP, +1 de fama | **Confirmada**. |
-| Derrota en Aventura | Depende del monstruo: hay monstruos **fatales** (game over) e Iserald siempre lo es. El Ofomni es **no fatal**, provisional (#126, ADR 0004). |
+| Derrota en Aventura | Depende del monstruo: hay monstruos **fatales** (game over) e Iserald siempre lo es. El Ofomni es **no fatal en la primera misión** (confirmado el 2026-10-24). |
 
 ## Decisiones aún a confirmar
 - La d del Ofomni es fija desde su aparición (4–5). La dificultad confirmada se calculó con esa regla.
 - Villa dañada: la mitad de la Luz suelta y una marca, sin más efectos en la 0.2.0 (#124).
 - Vencerlo después de fallar no da recompensa.
-- El Ofomni no es fatal (provisional; es la primera misión y una versión de prueba).
 
 ## Preguntas abiertas
 - Efectos reales de la villa dañada (#124).
