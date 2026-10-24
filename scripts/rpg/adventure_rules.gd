@@ -1,8 +1,9 @@
 class_name AdventureRules
 extends RefCounted
 ## Reglas del Adoc fuera del combate (ADR 0009): Luz, PV, nivel y XP (progresion-adoc.md), peaje
-## entre Bosques (con Luz o con una ofrenda, ofrendas-v1.md), Únicos (los Botarramas de borde),
-## combate de misión (Ofomni), resultado de un combate (con monstruos fatales según el Momento,
+## entre Bosques (con Luz o con una ofrenda, ofrendas-v1.md), memoria del Bosque (hostilidad y
+## relación: vencer a un Botarramas fuerza el Bosque sin abrirlo y encarece su peaje), Únicos (los Botarramas de borde),
+## combate de misión (Ofomni descarriado), resultado de un combate (con monstruos fatales según el Momento,
 ## monstruos.md), recompensa de misión, hallazgos en refugios, villa dañada, descanso en una villa
 ## y efecto del riutash (ADR 0012). Escribe en GameState y avisa por EventBus. Los
 ## números viven en data/combat/balance.json y, los del riutash, en data/world/time.json.
@@ -96,10 +97,49 @@ static func luz_max() -> int:
 	return int(balance().adoc.luz_max)
 
 
-## Luz que exige el Nujio de un Bosque a distancia d del Bosque inicial.
+## Luz que exige el Nujio de un Bosque a distancia d del Bosque inicial (sin hostilidad).
 static func toll_cost(d: int) -> int:
 	var t: Dictionary = balance().toll
 	return int(t.base) + int(t.per_d) * d
+
+
+# --- El Bosque recuerda (reglas del dueño 0.3) --------------------------------------------------
+
+static func _memory() -> Dictionary:
+	return balance().bosque_memory
+
+
+## Botarramas vencidos en el Bosque.
+static func hostility(bosque_id: int) -> int:
+	return int(GameState.bosque_hostility.get(str(bosque_id), 0))
+
+
+static func relation(bosque_id: int) -> int:
+	return int(GameState.bosque_relation.get(str(bosque_id), 0))
+
+
+static func relation_max() -> int:
+	return int(_memory().relation_max)
+
+
+## Suma `delta` a la relación con el Bosque, dentro de -relation_max .. relation_max.
+static func change_relation(bosque_id: int, delta: int) -> void:
+	GameState.bosque_relation[str(bosque_id)] = clampi(relation(bosque_id) + delta, -relation_max(), relation_max())
+
+
+## Peaje del Bosque a distancia d con su hostilidad: 3 + d + hostility_toll × hostilidad. La
+## hostilidad no lo sube por encima de toll_max (si la distancia ya lo supera, se queda en el de d).
+static func toll_for(bosque_id: int, d: int) -> int:
+	var base: int = toll_cost(d)
+	var raised: int = base + int(_memory().hostility_toll) * hostility(bosque_id)
+	return maxi(base, mini(raised, int(_memory().toll_max)))
+
+
+## Radio de visión de un Botarramas del Bosque: el de sus datos + hostility_vision × hostilidad,
+## con un extra de vision_max_bonus como mucho ("mira, observa").
+static func vision_radius(bosque_id: int, base: int) -> int:
+	var m: Dictionary = _memory()
+	return base + mini(int(m.vision_max_bonus), int(m.hostility_vision) * hostility(bosque_id))
 
 
 ## Stats del Único del Bosque a distancia d (deterministas: solo dependen de d). `unico_name`:
@@ -115,7 +155,8 @@ static func make_unico(d: int, unico_name: String, stats_block: String = "unico"
 	}
 
 
-## Configuración de un monstruo del mundo (balance.json, bloque monsters: "botarramas", "ofomni").
+## Configuración de un monstruo del mundo (balance.json, bloque monsters: "botarramas", "ofomni",
+## "ofomni_descarriado").
 static func monster_config(monster_id: StringName) -> Dictionary:
 	return (balance().get("monsters", {}) as Dictionary).get(String(monster_id), {})
 
@@ -125,10 +166,16 @@ static func monster_name(monster_id: StringName) -> String:
 	return Texts.get_text(str(monster_config(monster_id).get("name_key", monster_id)))
 
 
+## El monstruo acepta Luz u ofrendas para irse (appeasable en sus datos; por defecto, sí).
+static func is_appeasable(cfg: Dictionary) -> bool:
+	return bool(cfg.get("appeasable", true))
+
+
 ## Rival de un monstruo a distancia d: stats de su bloque de fórmulas y su ataque especial.
 static func make_monster(monster_id: StringName, d: int) -> Dictionary:
 	var cfg: Dictionary = monster_config(monster_id)
 	var unico: Dictionary = make_unico(d, monster_name(monster_id), str(cfg.get("stats", "unico")))
+	unico.max_hp = maxi(1, roundi(int(unico.max_hp) * float(cfg.get("hp_factor", 1.0))))
 	unico.special_every = int(cfg.get("special_every", 0))
 	unico.special_factor = float(cfg.get("special_factor", 1.0))
 	unico.texts = cfg.get("texts", {})
@@ -158,14 +205,45 @@ static func home_bosque(map: BosqueMap, region: Dictionary) -> int:
 	return map.bosque_at(ChunkGenerator.region_start_chunk(region))
 
 
-## Se puede entrar libremente: el Bosque inicial o uno con el paso abierto.
+## Se puede cruzar su frontera: el Bosque inicial, uno pagado o uno forzado.
 static func is_passable(bosque_id: int, home: int) -> bool:
+	return is_paid(bosque_id, home) or is_forced(bosque_id)
+
+
+## El Bosque inicial o uno con el peaje pagado: sus Botarramas quedan pasivos.
+static func is_paid(bosque_id: int, home: int) -> bool:
 	return bosque_id >= 0 and (bosque_id == home or GameState.open_bosques.has(bosque_id))
 
 
+## Forzado: se venció a alguno de sus Botarramas sin pagar. Se cruza, pero los demás siguen activos.
+static func is_forced(bosque_id: int) -> bool:
+	return bosque_id >= 0 and GameState.forced_bosques.has(bosque_id)
+
+
+## Marca el Bosque como pagado (deja de estar forzado).
 static func open_bosque(bosque_id: int) -> void:
 	if not GameState.open_bosques.has(bosque_id):
 		GameState.open_bosques.append(bosque_id)
+	GameState.forced_bosques.erase(bosque_id)
+
+
+## Pago del peaje (Luz, ofrenda u Ofrecer Luz en combate): abre el Bosque y mejora la relación.
+## "El bosque olvida con ofrendas" (dueño, #147): pagar con una ofrenda baja además 1 la hostilidad
+## (sin bajar de 0); pagar con Luz no la borra.
+static func _paid(bosque_id: int, with_ofrenda: bool) -> void:
+	open_bosque(bosque_id)
+	change_relation(bosque_id, int(_memory().relation_per_payment))
+	if with_ofrenda and hostility(bosque_id) > 0:
+		GameState.bosque_hostility[str(bosque_id)] = hostility(bosque_id) - 1
+
+
+## Un Botarramas del Bosque ha sido vencido: el Bosque queda forzado (si no estaba pagado), lo
+## recuerda (+1 de hostilidad) y la relación baja.
+static func guardian_defeated(bosque_id: int) -> void:
+	if not GameState.open_bosques.has(bosque_id) and not GameState.forced_bosques.has(bosque_id):
+		GameState.forced_bosques.append(bosque_id)
+	GameState.bosque_hostility[str(bosque_id)] = hostility(bosque_id) + 1
+	change_relation(bosque_id, int(_memory().relation_per_kill))
 
 
 static func set_luz(value: int) -> void:
@@ -183,7 +261,7 @@ static func pay_toll(bosque_id: int, cost: int) -> bool:
 	if GameState.luz < cost:
 		return false
 	set_luz(GameState.luz - cost)
-	open_bosque(bosque_id)
+	_paid(bosque_id, false)
 	return true
 
 
@@ -197,7 +275,7 @@ static func pay_toll_with_ofrenda(bosque_id: int, cost: int, index: int) -> bool
 		return false
 	GameState.inventory.remove_at(index)
 	set_luz(GameState.luz - Ofrendas.luz_needed(value, cost))
-	open_bosque(bosque_id)
+	_paid(bosque_id, true)
 	return true
 
 
@@ -210,24 +288,27 @@ static func start_battle(bosque_id: int, d: int, monster_id: StringName = &"bota
 	var logic := BattleLogic.new(balance(), adoc_stats(GameState.level), GameState.hp, GameState.luz,
 		make_monster(monster_id, d), battle_seed(GameState.seed_value, bosque_id, attempt))
 	_prepare(logic, monster_config(monster_id), d)
-	logic.toll = toll_cost(d)
+	logic.toll = toll_for(bosque_id, d)
 	logic.ofrendas = GameState.inventory.duplicate(true)
 	EventBus.battle_started.emit(bosque_id)
 	return logic
 
 
 ## Aplica a GameState el final de un combate de borde. Devuelve el resultado como StringName
-## (&"victory", &"defeat", &"fled", &"appeased" si el Único se fue con una ofrenda o &"game_over"
-## si el rival era fatal). Vencer o la ofrenda abren el paso.
+## (&"victory", &"defeat", &"fled", &"appeased" si el Único se fue con Luz o una ofrenda o
+## &"game_over" si el rival era fatal). Apaciguar paga el peaje (abre el Bosque); vencer lo fuerza
+## y el Bosque lo recuerda.
 static func finish_battle(logic: BattleLogic, bosque_id: int) -> StringName:
 	var outcome: StringName = _apply_result(logic)
-	if outcome == &"victory" or outcome == &"appeased":
-		open_bosque(bosque_id)
+	if outcome == &"appeased":
+		_paid(bosque_id, logic.ofrenda_index >= 0)
+	elif outcome == &"victory":
+		guardian_defeated(bosque_id)
 	EventBus.battle_ended.emit(bosque_id, outcome)
 	return outcome
 
 
-## Combate de misión contra su monstruo (`target` del JSON de la misión, p. ej. el Ofomni) con su d
+## Combate de misión contra su monstruo (`target` del JSON de la misión, p. ej. el Ofomni descarriado) con su d
 ## fija. No abre Bosques y su contador de intentos (semilla) es el de la misión.
 static func start_quest_battle(quest_id: StringName, d: int) -> BattleLogic:
 	var q: Dictionary = GameState.quests.get(quest_id, {})
@@ -238,9 +319,8 @@ static func start_quest_battle(quest_id: StringName, d: int) -> BattleLogic:
 	var rng_seed: int = ChunkGenerator.hash_ints([GameState.seed_value, String(quest_id).hash(), attempt, SALT_QUEST_BATTLE])
 	var logic := BattleLogic.new(balance(), adoc_stats(GameState.level), GameState.hp, GameState.luz,
 		make_monster(target, d), rng_seed)
+	# Sin Bosque que cobre: no hay peaje que ofrecer. El Ofomni descarriado, además, no acepta pagos.
 	_prepare(logic, monster_config(target), d)
-	# La misión es vencerlo: no acepta ofrendas (mision-ofomni.md).
-	logic.accepts_ofrenda = false
 	return logic
 
 
@@ -257,6 +337,8 @@ static func finish_quest_battle(logic: BattleLogic, quest_id: StringName) -> Str
 
 
 static func _prepare(logic: BattleLogic, cfg: Dictionary, d: int) -> void:
+	# Acepta Luz u ofrendas para irse salvo que sus datos digan lo contrario (el Ofomni descarriado).
+	logic.accepts_payment = is_appeasable(cfg)
 	logic.fatal = is_fatal(cfg.get("fatal_at", []), GameState.clock_momento)
 	logic.victory_xp = victory_xp(d)
 	logic.level_ups = levels_gained(GameState.xp, logic.victory_xp)

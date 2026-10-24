@@ -264,7 +264,8 @@ func _cross(direction: Vector2i) -> void:
 
 
 ## Resultado del menú del borde (ADR 0009). Si lo abrió un Botarramas, pagar o vencer no cruza
-## (el Bosque queda abierto y sus Botarramas, pasivos); si se empujó el borde, se cruza.
+## (pagar deja sus Botarramas pasivos; vencer disuelve al vencido y fuerza el Bosque, cuyos demás
+## Botarramas siguen activos); si se empujó el borde, se cruza.
 func _on_crossing_resolved(_bosque_id: int, outcome: StringName) -> void:
 	var monster: OverworldMonster = _pending_monster
 	_pending_monster = null
@@ -296,11 +297,11 @@ func _on_quest_battle_resolved(_quest_id: StringName, outcome: StringName) -> vo
 			_retreat_from(monster)
 
 
-## Encuentro con un monstruo: el Ofomni empieza el combate de misión; un Botarramas, el menú del
+## Encuentro con un monstruo: el Ofomni descarriado empieza el combate de misión; un Botarramas, el menú del
 ## borde del Bosque que guarda.
 func _on_monster_engaged(monster: OverworldMonster) -> void:
 	_pending_monster = monster
-	if monster.monster_id == MonsterField.OFOMNI:
+	if monster.monster_id == MonsterField.OFOMNI_DESCARRIADO:
 		EventBus.quest_battle_requested.emit(QuestRunner.QUEST)
 	else:
 		EventBus.bosque_border_reached.emit(monster.bosque_id)
@@ -366,7 +367,7 @@ func _sync_ofomni() -> void:
 	# En la villa espera al sur de la plaza; en otro chunk, en su claro central.
 	var near: Vector2i = _chunk.hub + (OFOMNI_VILLA_OFFSET if _chunk.has_villa else Vector2i.ZERO)
 	_field.spawn_ofomni(String(QuestRunner.QUEST), near, _chunk, _bosques.styles[_bosques.bosque_at(_chunk.coord)])
-	_region_map.set_objective(_chunk.coord, Texts.get_text("compass_ofomni"), _field.ofomni().cell)
+	_region_map.set_objective(_chunk.coord, Texts.get_text("compass_ofomni_descarriado"), _field.ofomni().cell)
 
 
 ## En la plaza de una villa o junto a su Nujio el Adoc descansa: PV al máximo y aviso en el HUD

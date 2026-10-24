@@ -6,7 +6,6 @@ const BALANCE: Dictionary = {
 	"adoc": { "max_hp": 30, "atk": 6, "def": 3, "start_luz": 10, "luz_max": 10 },
 	"attack": { "roll_min": -1, "roll_max": 2, "min_damage": 1 },
 	"defend_factor": 0.5,
-	"offer_luz": { "cost": 2, "damage": 8 },
 	"flee_chance": 0.75,
 	"victory_luz": 1,
 }
@@ -57,18 +56,33 @@ func test_defend_halves_next_hit_rounding_up() -> void:
 		assert_false(a.defending, "Defender solo cubre el siguiente golpe")
 
 
-func test_offer_luz_costs_luz_and_ignores_def() -> void:
-	var tough: Dictionary = UNICO.duplicate()
-	tough.def = 50
-	var a := _logic(30, 5, tough)
+func test_offer_luz_pays_toll_and_appeases() -> void:
+	var a := _logic(30, 7)
+	a.toll = 6
+	assert_true(a.can_offer_luz())
 	var events: Array[Dictionary] = a.play_turn(BattleLogic.Action.OFFER_LUZ)
-	assert_eq(events[0].kind, &"offer_luz")
-	assert_eq(a.unico_hp, 22 - 8)
-	assert_eq(a.luz, 3)
+	assert_eq(events.map(func(e: Dictionary) -> StringName: return e.kind), [&"offer_luz", &"unico_leaves"])
+	assert_eq(events[0].amount, 6, "entrega el peaje entero")
+	assert_eq(a.result, BattleLogic.Result.APPEASED, "termina la pelea")
+	assert_eq(a.luz, 1)
+	assert_eq(a.unico_hp, 22, "no hace daño")
+	assert_eq(a.adoc_hp, 30, "el Único no ataca")
+	assert_false(a.can_offer_luz(), "combate acabado")
+
+
+func test_offer_luz_disabled_without_payment() -> void:
+	var a := _logic(30, 10)
+	a.toll = 6
+	a.accepts_payment = false
+	assert_false(a.can_offer_luz(), "rival que no acepta pagos")
+	assert_eq(a.play_turn(BattleLogic.Action.OFFER_LUZ), [] as Array[Dictionary])
+	var no_toll := _logic(30, 10)
+	assert_false(no_toll.can_offer_luz(), "sin peaje no hay nada que ofrecer")
 
 
 func test_offer_luz_without_enough_luz_does_nothing() -> void:
 	var a := _logic(30, 1)
+	a.toll = 4
 	assert_false(a.can_offer_luz())
 	assert_eq(a.play_turn(BattleLogic.Action.OFFER_LUZ), [] as Array[Dictionary])
 	assert_eq(a.luz, 1)
@@ -78,9 +92,9 @@ func test_offer_luz_without_enough_luz_does_nothing() -> void:
 
 func test_victory_ends_before_unico_attacks() -> void:
 	var weak: Dictionary = UNICO.duplicate()
-	weak.max_hp = 8
+	weak.max_hp = 1
 	var a := _logic(30, 4, weak)
-	var events: Array[Dictionary] = a.play_turn(BattleLogic.Action.OFFER_LUZ)
+	var events: Array[Dictionary] = a.play_turn(BattleLogic.Action.ATTACK)
 	assert_eq(a.result, BattleLogic.Result.VICTORY)
 	assert_eq(events.back().kind, &"victory")
 	assert_eq(a.adoc_hp, 30)

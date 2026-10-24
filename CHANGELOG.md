@@ -4,6 +4,16 @@ Todos los cambios que nota el jugador. Formato [Keep a Changelog](https://keepac
 
 ## [Sin publicar]
 
+### Añadido
+- El Bosque recuerda: cada Botarramas que vences sube 2 de Luz el peaje de su Bosque (hasta 10) y hace que sus demás Botarramas vean 2 casillas más lejos (hasta 6 más). Cuando el Bosque recuerda tu violencia, el menú del borde lo avisa con una línea más.
+- Relación con cada Bosque: baja 10 cada vez que vences a uno de sus Botarramas y sube 1 cada vez que pagas. La pantalla de estado (I) muestra la relación con el Bosque en el que estás.
+- Pagar con una ofrenda (en el borde o en combate) hace que el Bosque olvide un poco: su hostilidad baja 1, y con ella el peaje y la visión de sus Botarramas. Pagar con Luz abre el paso, pero no borra lo que recuerda.
+
+### Cambiado
+- Vencer a un Botarramas ya no abre su Bosque: puedes cruzar su frontera, pero sus demás Botarramas siguen alerta, te salen al paso también dentro del Bosque y vuelven a exigirte el pago. Pagar (con Luz o con una ofrenda) deja el Bosque abierto y a sus Botarramas tranquilos.
+- "Ofrecer Luz" en combate ya no hace daño: paga el peaje del Bosque con tu Luz suelta ("Ofrecer N Luz"), el Botarramas se aparta y el paso queda abierto, sin experiencia. Si no te llega la Luz, la opción sale en gris.
+- El Ofomni de la misión es ahora el Ofomni descarriado: un Único que ha perdido el control, que no acepta Luz ni ofrendas y al que hay que vencer. Tiene menos PV (un 30% menos) para compensar que Ofrecer Luz ya no le hace daño. Las partidas guardadas se convierten solas.
+
 ### Corregido
 - Un Botarramas vencido ya no vuelve a su puesto a bloquear el camino: se desvanece en la Luz del Bosque y no reaparece en la partida. Los Botarramas de un Bosque ya abierto no cierran el paso.
 

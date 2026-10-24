@@ -140,7 +140,7 @@ func test_save_v7_round_trip_level_and_refuges() -> void:
 	assert_eq(GameState.xp, 30)
 	assert_eq(GameState.level, 3)
 	assert_eq(GameState.looted_refuges, [Vector2i(3, 4)] as Array[Vector2i])
-	assert_eq(int(GameState.to_dict().save_version), 8)
+	assert_eq(int(GameState.to_dict().save_version), GameState.SAVE_VERSION)
 
 
 func test_migration_from_v6_derives_level_from_xp() -> void:

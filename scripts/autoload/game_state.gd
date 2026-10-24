@@ -5,9 +5,15 @@ extends Node
 ## (ADR 0009). v4: reloj de Aventura, clock_momento y clock_elapsed (ADR 0012). v5: chunks
 ## explorados y objetivo de la brújula (navegacion.md). v6: misiones (mision-ofomni.md), inventario
 ## como lista de ofrendas, villa dañada, XP, fama y Botarramas vistos. v7: nivel del Adoc y
-## refugios saqueados (progresion-adoc.md, ofrendas-v1.md). Las versiones anteriores se cargan con
-## valores por defecto.
-const SAVE_VERSION: int = 8
+## refugios saqueados (progresion-adoc.md, ofrendas-v1.md). v8: monstruos vencidos. v9: el Bosque
+## recuerda (0.3): Bosques forzados, hostilidad y relación por Bosque; el Ofomni de la misión pasa a
+## ofomni_descarriado. Las versiones anteriores se cargan con valores por defecto.
+const SAVE_VERSION: int = 9
+## Migración a v9: el Ofomni de la misión pasó de "ofomni" a "ofomni_descarriado" (y su etiqueta
+## de brújula, de "Ofomni" a "Ofomni descarriado").
+const LEGACY_OFOMNI_ID: String = "ofomni"
+const LEGACY_OFOMNI_LABEL: String = "Ofomni"
+const QUEST_OFOMNI_ID: String = "ofomni_descarriado"
 
 var rng := RandomNumberGenerator.new()
 var seed_value: int = 0
@@ -29,8 +35,16 @@ var player_cell: Vector2i = Vector2i(-1, -1)
 ## Adoc (ADR 0009): Luz y PV actuales. Valores iniciales en data/combat/balance.json.
 var luz: int = 0
 var hp: int = 0
-## Ids de los Bosques con el paso abierto (pagado o ganado), además del inicial.
+## Ids de los Bosques con el paso pagado (Luz, ofrenda o Ofrecer Luz en combate), además del
+## inicial: se cruzan y sus Botarramas quedan pasivos.
 var open_bosques: Array[int] = []
+## Ids de los Bosques forzados (se ha vencido a alguno de sus Botarramas sin pagar): se cruzan, pero
+## sus demás Botarramas siguen activos y vuelven a exigir el pago. Pagar lo pasa a open_bosques.
+var forced_bosques: Array[int] = []
+## El Bosque recuerda: Botarramas vencidos por Bosque { "id": n }. Sube su peaje y su visión.
+var bosque_hostility: Dictionary = {}
+## Relación con cada Bosque { "id": -100 .. 100 } (bosques-y-relacion.md). Empieza en 0.
+var bosque_relation: Dictionary = {}
 ## Combates empezados por Bosque: { "id": n }. Forma parte de la semilla de cada combate.
 var battle_attempts: Dictionary = {}
 ## Chunks visitados en la partida (mapa con M, navegacion.md). Los marca MapLogic.mark_explored.
@@ -86,6 +100,9 @@ func new_game(new_seed: int = 0, new_region: StringName = &"valle_del_sara") -> 
 	luz = AdventureRules.start_luz()
 	hp = AdventureRules.max_hp()
 	open_bosques = []
+	forced_bosques = []
+	bosque_hostility = {}
+	bosque_relation = {}
 	battle_attempts = {}
 	explored_chunks = []
 	clear_objective()
@@ -116,6 +133,9 @@ func to_dict() -> Dictionary:
 		"luz": luz,
 		"hp": hp,
 		"open_bosques": open_bosques,
+		"forced_bosques": forced_bosques,
+		"bosque_hostility": bosque_hostility,
+		"bosque_relation": bosque_relation,
 		"battle_attempts": battle_attempts,
 		"explored_chunks": explored_chunks.map(func(c: Vector2i) -> Array: return [c.x, c.y]),
 		"objective_chunk": [objective_chunk.x, objective_chunk.y],
@@ -158,6 +178,13 @@ func from_dict(data: Dictionary) -> void:
 	open_bosques = []
 	for id: Variant in data.get("open_bosques", []):
 		open_bosques.append(int(id))
+	# v8 o anterior: no había Bosques forzados ni memoria (vencer abría el Bosque como pagar).
+	forced_bosques = []
+	for id: Variant in data.get("forced_bosques", []):
+		if not open_bosques.has(int(id)) and not forced_bosques.has(int(id)):
+			forced_bosques.append(int(id))
+	bosque_hostility = _int_dict(data.get("bosque_hostility", {}), 0, 1 << 30)
+	bosque_relation = _int_dict(data.get("bosque_relation", {}), -AdventureRules.relation_max(), AdventureRules.relation_max())
 	battle_attempts = {}
 	var attempts: Dictionary = data.get("battle_attempts", {})
 	for key: Variant in attempts:
@@ -174,6 +201,10 @@ func from_dict(data: Dictionary) -> void:
 	objective_chunk = _to_vector2i(data.get("objective_chunk", [-1, -1]), Vector2i(-1, -1))
 	objective_cell = _to_vector2i(data.get("objective_cell", [-1, -1]), Vector2i(-1, -1))
 	objective_label = str(data.get("objective_label", ""))
+	# v8 o anterior: el Ofomni de la misión aún no se llamaba "Ofomni descarriado".
+	var old_version: bool = int(data.get("save_version", 1)) < 9
+	if old_version and objective_label == LEGACY_OFOMNI_LABEL:
+		objective_label = Texts.get_text("compass_ofomni_descarriado")
 	rng.seed = seed_value
 	rng.state = int(data.get("rng_state", rng.state))
 	resources = data.get("resources", {})
@@ -210,7 +241,10 @@ func from_dict(data: Dictionary) -> void:
 			var e: Variant = seen[id]
 			if e is Dictionary:
 				var c: Vector2i = _to_vector2i(e.get("chunk", [-1, -1]), Vector2i(-1, -1))
-				seen_monsters[str(id)] = { "monster": str(e.get("monster", "")), "bosque_id": int(e.get("bosque_id", -1)), "chunk": [c.x, c.y] }
+				var monster: String = str(e.get("monster", ""))
+				if old_version and monster == LEGACY_OFOMNI_ID:
+					monster = QUEST_OFOMNI_ID
+				seen_monsters[str(id)] = { "monster": monster, "bosque_id": int(e.get("bosque_id", -1)), "chunk": [c.x, c.y] }
 
 
 ## Fija el objetivo de la brújula y del mapa. `label`: texto corto ya traducido ("Ofomni").
@@ -226,6 +260,15 @@ func clear_objective() -> void:
 
 func has_objective() -> bool:
 	return objective_chunk.x >= 0 and objective_chunk.y >= 0
+
+
+## { "id": n } con claves de texto y valores enteros acotados (descarta lo que no sea diccionario).
+static func _int_dict(value: Variant, lo: int, hi: int) -> Dictionary:
+	var out: Dictionary = {}
+	if value is Dictionary:
+		for key: Variant in value:
+			out[str(key)] = clampi(int(value[key]), lo, hi)
+	return out
 
 
 static func _to_vector2i(value: Variant, fallback: Vector2i) -> Vector2i:

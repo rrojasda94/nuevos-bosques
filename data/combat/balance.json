@@ -36,14 +36,20 @@
     "min_damage": 1
   },
   "defend_factor": 0.5,
-  "offer_luz": {
-    "cost": 2,
-    "damage": 8
-  },
   "flee_chance": 0.75,
   "toll": {
     "base": 3,
     "per_d": 1
+  },
+  "bosque_memory": {
+    "$comment": "El Bosque recuerda (reglas del dueño 0.3): cada Botarramas vencido suma 1 de hostilidad a su Bosque. Peaje = 3 + d + hostility_toll x hostilidad, como mucho toll_max. vision_radius de sus Botarramas + hostility_vision x hostilidad, como mucho + vision_max_bonus. Relación (-relation_max .. relation_max): relation_per_kill por victoria, relation_per_payment al pagar (Luz, ofrenda o Ofrecer Luz en combate). Provisionales: game-designer.",
+    "hostility_toll": 2,
+    "toll_max": 10,
+    "hostility_vision": 2,
+    "vision_max_bonus": 6,
+    "relation_per_kill": -10,
+    "relation_per_payment": 1,
+    "relation_max": 100
   },
   "victory_luz": 1,
   "defeat_luz_factor": 0.5,
@@ -57,7 +63,7 @@
     "source": "refuge"
   },
   "monsters": {
-    "$comment": "Monstruos del mundo (monstruos.md, mision-ofomni.md), una entrada por id. Genéricos: vision_radius (casillas, Chebyshev: a qué distancia te ve), step_time (s por casilla: su velocidad) y engage_distance (casillas, Chebyshev: a qué distancia empieza el encuentro; 1 = adyacente, con diagonal). Reposo: idle_wander (casillas de ida y vuelta) e idle_step_time. leash: casillas máximas desde su puesto, y distancia del jugador a la que deja de perseguir. max_outside: casillas que puede salir de su chunk. engage_cooldown: segundos sin ver al jugador tras retroceder o huir (y al aparecer). retreat_cells: casillas que retrocede el jugador. stats: bloque de fórmulas según d. fatal_at: Momentos en que perder es game over. special_every y special_factor: ataque especial cada N ataques con multiplicador de daño (0 = sin especial). texts: claves de data/text/sistema.json para narrar sus ataques.",
+    "$comment": "Monstruos del mundo (monstruos.md, mision-ofomni.md), una entrada por id. Genéricos: vision_radius (casillas, Chebyshev: a qué distancia te ve), step_time (s por casilla: su velocidad) y engage_distance (casillas, Chebyshev: a qué distancia empieza el encuentro; 1 = adyacente, con diagonal). Reposo: idle_wander (casillas de ida y vuelta) e idle_step_time. leash: casillas máximas desde su puesto, y distancia del jugador a la que deja de perseguir. max_outside: casillas que puede salir de su chunk. engage_cooldown: segundos sin ver al jugador tras retroceder o huir (y al aparecer). retreat_cells: casillas que retrocede el jugador. stats: bloque de fórmulas según d. fatal_at: Momentos en que perder es game over. special_every y special_factor: ataque especial cada N ataques con multiplicador de daño (0 = sin especial). appeasable: acepta Luz u ofrendas para irse (por defecto true). hp_factor: multiplica sus PV (por defecto 1). texts: claves de data/text/sistema.json para narrar sus ataques (attack, warning, special, special_defended) y para explicar por qué no acepta pagos (offer_luz_blocked, ofrenda_blocked).",
     "botarramas": {
       "$comment": "Guardianes de borde. post_depth: casillas desde la puerta del tramo hacia dentro de su Bosque.",
       "name_key": "monster_botarramas",
@@ -72,14 +78,43 @@
       "engage_cooldown": 3.0,
       "retreat_cells": 2,
       "post_depth": 3,
+      "appeasable": true,
       "fatal_at": [],
       "special_every": 0,
       "special_factor": 1.0
     },
+    "ofomni_descarriado": {
+      "$comment": "Ofomni descarriado de la misión: un Único que perdió el control. No acepta Luz ni ofrendas (appeasable false): hay que vencerlo. d fija. Latigazo múltiple: cada 3 ataques, x3 de daño. hp_factor multiplica los PV de su bloque de stats (0.7 en la 0.3, al quitar el daño de Ofrecer Luz: ganable desde nivel 3; d = 4 -> 24 PV, d = 5 -> 27 PV; mision-ofomni.md, Balance 0.3).",
+      "name_key": "monster_ofomni_descarriado",
+      "stats": "unico",
+      "appeasable": false,
+      "vision_radius": 8,
+      "step_time": 0.3,
+      "engage_distance": 2,
+      "idle_wander": 2,
+      "idle_step_time": 0.8,
+      "leash": 64,
+      "max_outside": 0,
+      "engage_cooldown": 3.0,
+      "retreat_cells": 2,
+      "fatal_at": [],
+      "hp_factor": 0.7,
+      "special_every": 3,
+      "special_factor": 3.0,
+      "texts": {
+        "attack": "ofomni_descarriado_whip_hit",
+        "warning": "ofomni_descarriado_whips_warning",
+        "special": "ofomni_whips_hit",
+        "special_defended": "ofomni_whips_defended",
+        "offer_luz_blocked": "battle_offer_luz_blocked_descarriado",
+        "ofrenda_blocked": "battle_ofrenda_blocked_descarriado"
+      }
+    },
     "ofomni": {
-      "$comment": "Ofomni de la misión, con su d fija. Latigazo múltiple: cada 3 ataques, x3 de daño.",
+      "$comment": "Ofomni de un Bosque con Nujio: un Único que sirve a su Bosque y se apacigua con Luz u ofrendas, como un Botarramas. Aún no aparece en el mundo (perseguidores por robo, sigilo-y-robo.md). Valores provisionales, copiados del descarriado sin rebaja de PV.",
       "name_key": "monster_ofomni",
       "stats": "unico",
+      "appeasable": true,
       "vision_radius": 8,
       "step_time": 0.3,
       "engage_distance": 2,

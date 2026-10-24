@@ -19,7 +19,7 @@ func _decide(state: int, cell: Vector2i, post: Vector2i, player: Vector2i, can_d
 
 
 func test_every_monster_has_the_generic_parameters() -> void:
-	for id in ["botarramas", "ofomni"]:
+	for id in ["botarramas", "ofomni", "ofomni_descarriado"]:
 		var cfg: Dictionary = AdventureRules.monster_config(StringName(id))
 		for key in ["vision_radius", "step_time", "engage_distance", "fatal_at", "special_every", "stats", "name_key"]:
 			assert_true(cfg.has(key), "%s.%s" % [id, key])
@@ -30,7 +30,7 @@ func test_every_monster_has_the_generic_parameters() -> void:
 	assert_eq(int(b.leash), 14)
 	assert_eq(int(b.max_outside), 4)
 	assert_almost_eq(float(b.engage_cooldown), 3.0, 0.0001)
-	assert_eq(int(AdventureRules.monster_config(&"ofomni").engage_distance), 2)
+	assert_eq(int(AdventureRules.monster_config(&"ofomni_descarriado").engage_distance), 2)
 
 
 func test_sees_within_vision_radius_only_if_it_can_detect() -> void:

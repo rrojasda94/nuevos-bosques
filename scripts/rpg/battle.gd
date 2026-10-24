@@ -5,8 +5,10 @@ extends CanvasLayer
 ## durante la escritura lo completa y pulsar después pasa al siguiente. Las barras cambian al
 ## mostrarse el mensaje que las cambia. El menú solo aparece cuando no queda ningún mensaje.
 ## No aplica nada a GameState: al terminar emite `finished` y Crossing aplica el resultado.
-## "Ofrenda" abre un submenú con las ofrendas que alcanzan el peaje (ofrendas-v1.md); contra un
-## rival que no las acepta (el Ofomni) sale en gris y, al elegirla, explica por qué. Tras la
+## "Ofrecer N Luz" paga el peaje del Bosque con Luz suelta y el Único se va (en gris si no llega).
+## "Ofrenda" abre un submenú con las ofrendas que alcanzan el peaje (ofrendas-v1.md). Contra un
+## rival que no acepta pagos (appeasable: false, como el Ofomni descarriado) las dos salen en gris
+## y, al elegirlas, explican por qué. Tras la
 ## victoria se anuncian la XP y cada nivel nuevo (progresion-adoc.md).
 
 signal finished(logic: BattleLogic)
@@ -16,7 +18,6 @@ const TEXT_START: String = "¡%s te cierra el paso!"
 const TEXT_PROMPT: String = "¿Qué hará el Adoc?"
 const TEXT_ATTACK: String = "Atacas: %d de daño."
 const TEXT_DEFEND: String = "Te pones en guardia."
-const TEXT_OFFER_LUZ: String = "Ofreces Luz: %d de daño."
 const TEXT_FLEE_FAIL: String = "No logras huir."
 const TEXT_FLEE_OK: String = "Huyes a tu lado del Bosque."
 const TEXT_UNICO_ATTACK: String = "El Único te golpea: %d de daño."
@@ -25,6 +26,8 @@ const TEXT_VICTORY: String = "El Único vuelve a la Luz del Bosque."
 const TEXT_VICTORY_LUZ: String = " (+%d Luz)"
 const TEXT_DEFEAT: String = "Caes. Despertarás junto al Nujio de tu villa."
 const OPTIONS: Array[String] = ["Atacar", "Defender", "Ofrecer Luz", "Ofrenda", "Huir"]
+## Índice de "Ofrecer Luz" en OPTIONS (su texto lleva el peaje).
+const OFFER_LUZ_OPTION: int = 2
 ## Acción de cada opción del menú, en el mismo orden.
 const MENU_ACTIONS: Array[BattleLogic.Action] = [
 	BattleLogic.Action.ATTACK, BattleLogic.Action.DEFEND, BattleLogic.Action.OFFER_LUZ,
@@ -113,8 +116,7 @@ static func messages_for(events: Array[Dictionary], balance: Dictionary, texts: 
 			&"defend":
 				m.text = TEXT_DEFEND
 			&"offer_luz":
-				m.text = TEXT_OFFER_LUZ % e.amount
-				m.flash = &"unico"
+				m.text = Texts.get_text("battle_offer_luz_paid") % e.amount
 			&"flee_fail":
 				m.text = TEXT_FLEE_FAIL
 			&"flee_ok":
@@ -161,15 +163,39 @@ func _unhandled_input(event: InputEvent) -> void:
 			_handle_submenu(_menu.handle(event))
 			return
 		var choice: int = _menu.handle(event)
-		if choice == OptionMenu.DISABLED and MENU_ACTIONS[_menu.index] == BattleLogic.Action.OFRENDA \
-				and not _logic.accepts_ofrenda:
-			_show_messages([{ "text": Texts.get_text("battle_ofrenda_blocked_ofomni") }])
+		var blocked: String = blocked_text(_logic, MENU_ACTIONS[_menu.index]) if choice == OptionMenu.DISABLED else ""
+		if blocked != "":
+			_show_messages([{ "text": blocked }])
 		elif choice >= 0 and MENU_ACTIONS[choice] == BattleLogic.Action.OFRENDA:
 			_open_submenu()
 		elif choice >= 0:
 			_play(_logic.play_turn(MENU_ACTIONS[choice]))
 		return
 	_text_box.handle(event)
+
+
+## Explicación al elegir un pago desactivado porque el rival no los acepta ("" si no aplica).
+## Los textos son los del monstruo (texts.offer_luz_blocked y texts.ofrenda_blocked).
+static func blocked_text(logic: BattleLogic, action: BattleLogic.Action) -> String:
+	if logic.accepts_payment:
+		return ""
+	var key: String = ""
+	match action:
+		BattleLogic.Action.OFFER_LUZ:
+			key = "offer_luz_blocked"
+		BattleLogic.Action.OFRENDA:
+			key = "ofrenda_blocked"
+	if key == "":
+		return ""
+	return Texts.get_text(str(logic.unico_texts.get(key, "battle_payment_refused")))
+
+
+## Opciones del menú de combate: "Ofrecer Luz" lleva el peaje si el rival acepta pagos.
+static func menu_options(logic: BattleLogic) -> Array[String]:
+	var texts: Array[String] = OPTIONS.duplicate()
+	if logic.accepts_payment and logic.toll > 0:
+		texts[OFFER_LUZ_OPTION] = Texts.get_text("battle_offer_luz_option") % logic.toll
+	return texts
 
 
 func _play(events: Array[Dictionary]) -> void:
@@ -251,7 +277,7 @@ func _on_messages_finished() -> void:
 func _open_menu() -> void:
 	_text_box.show_static(TEXT_PROMPT)
 	var enabled: Array[bool] = [true, true, _logic.can_offer_luz(), _logic.can_offer_ofrenda(), true]
-	_menu.set_options(OPTIONS, enabled, true)
+	_menu.set_options(menu_options(_logic), enabled, true)
 	_menu_box.visible = true
 
 

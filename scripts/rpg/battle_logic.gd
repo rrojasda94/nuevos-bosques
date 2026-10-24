@@ -5,9 +5,10 @@ extends RefCounted
 ## Números en data/combat/balance.json. RNG propio sembrado (nunca randi() global ni GameState.rng).
 ## Ataque especial configurable por monstruo: cada `special_every` ataques el rival multiplica su daño
 ## por `special_factor` y lo anuncia en el turno anterior (Latigazo múltiple del Ofomni).
-## Ofrenda (ofrendas-v1.md): una ofrenda del inventario, completada con Luz suelta hasta el peaje
-## del Bosque, hace que el Único se vaya (APPEASED) y el paso se abre. No da XP. El Ofomni no la
-## acepta (accepts_ofrenda = false).
+## Pagar en combate (APPEASED, no da XP; el Bosque queda pagado): Ofrecer Luz entrega el peaje N
+## del Bosque (con su hostilidad) en Luz suelta; la ofrenda (ofrendas-v1.md) entrega una del
+## inventario, completada con Luz suelta hasta N. El Único se va. El Ofomni de la misión no acepta
+## ninguno de los dos pagos (accepts_payment = false).
 
 enum Action { ATTACK, DEFEND, OFFER_LUZ, FLEE, OFRENDA }
 enum Result { ONGOING, VICTORY, DEFEAT, FLED, APPEASED }
@@ -44,10 +45,10 @@ var victory_xp: int = 0
 ## Niveles que alcanza el Adoc si vence, en orden (los calcula AdventureRules al empezar), para
 ## anunciarlos en el combate tras la victoria.
 var level_ups: Array[int] = []
-## Ofrendas: peaje del Bosque (N), si el rival las acepta, copia del inventario ([{ id, luz }]) y
-## la ofrenda entregada (índice en `ofrendas`, -1 = ninguna).
+## Pagos: peaje del Bosque (N, con hostilidad), si el rival acepta Luz u ofrendas, copia del
+## inventario ([{ id, luz }]) y la ofrenda entregada (índice en `ofrendas`, -1 = ninguna).
 var toll: int = 0
-var accepts_ofrenda: bool = true
+var accepts_payment: bool = true
 var ofrendas: Array = []
 var ofrenda_index: int = -1
 
@@ -88,12 +89,14 @@ static func defended_damage(damage: int, factor: float) -> int:
 	return ceili(damage * factor)
 
 
+## Luz que cuesta Ofrecer Luz: el peaje del Bosque.
 func luz_cost() -> int:
-	return int(balance.offer_luz.cost)
+	return toll
 
 
+## Ofrecer Luz: el rival acepta pagos, hay peaje y llega la Luz suelta.
 func can_offer_luz() -> bool:
-	return luz >= luz_cost()
+	return not is_over() and accepts_payment and toll > 0 and luz >= toll
 
 
 func is_over() -> bool:
@@ -103,7 +106,7 @@ func is_over() -> bool:
 ## Índices de `ofrendas` con los que se puede pagar el peaje ahora (uno por id, de menor a mayor
 ## valor). Vacío si el rival no acepta ofrendas.
 func payable_ofrendas() -> Array[int]:
-	if not accepts_ofrenda:
+	if not accepts_payment:
 		return []
 	return Ofrendas.payable(ofrendas, luz, toll)
 
@@ -134,9 +137,12 @@ func offer_ofrenda(index: int) -> Array[Dictionary]:
 ## Juega un turno completo (primero el Adoc, luego el Único si sigue en pie).
 ## Devuelve eventos para narrar, en orden: { "kind": StringName, "amount": int, y el estado justo
 ## después del evento: "unico_hp", "adoc_hp", "luz" } (la UI actualiza las barras con cada uno).
-## kind: attack, defend, offer_luz, flee_ok, flee_fail, unico_attack, unico_special (lleva además
-## "defended": bool), special_warning (aviso del especial del turno siguiente), victory, defeat.
-## Una acción no válida (Ofrecer Luz sin Luz, combate acabado) devuelve [] y no consume turno.
+## kind: attack, defend, offer_luz (paga el peaje: "amount" = Luz entregada; le sigue unico_leaves
+## y el combate acaba APPEASED, sin turno del rival), flee_ok, flee_fail, unico_attack,
+## unico_special (lleva además "defended": bool), special_warning (aviso del especial del turno
+## siguiente), victory, defeat.
+## Una acción no válida (Ofrecer Luz sin Luz o contra el Ofomni, combate acabado) devuelve [] y no
+## consume turno.
 ## La ofrenda no se juega aquí: va por offer_ofrenda. La victoria lleva además "xp" y "level_ups".
 func play_turn(action: Action) -> Array[Dictionary]:
 	var events: Array[Dictionary] = []
@@ -151,10 +157,12 @@ func play_turn(action: Action) -> Array[Dictionary]:
 			defending = true
 			events.append(_event(&"defend"))
 		Action.OFFER_LUZ:
-			luz -= luz_cost()
-			var dmg_luz: int = int(balance.offer_luz.damage)
-			unico_hp = maxi(0, unico_hp - dmg_luz)
-			events.append(_event(&"offer_luz", dmg_luz))
+			var paid: int = luz_cost()
+			luz -= paid
+			result = Result.APPEASED
+			events.append(_event(&"offer_luz", paid))
+			events.append(_event(&"unico_leaves"))
+			return events
 		Action.FLEE:
 			if rng.randf() < float(balance.flee_chance):
 				result = Result.FLED
