@@ -4,6 +4,9 @@ Todos los cambios que nota el jugador. Formato [Keep a Changelog](https://keepac
 
 ## [Sin publicar]
 
+### Corregido
+- Un Botarramas vencido ya no vuelve a su puesto a bloquear el camino: se desvanece en la Luz del Bosque y no reaparece en la partida. Los Botarramas de un Bosque ya abierto no cierran el paso.
+
 ## [0.2.0] - 2026-10-24
 "Primer encargo": la primera misión del modo Aventura, con tiempo, orientación, progresión, ofrendas y primeros sprites y sonidos.
 

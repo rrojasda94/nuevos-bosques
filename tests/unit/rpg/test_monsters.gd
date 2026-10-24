@@ -189,3 +189,29 @@ func test_open_bosque_makes_its_botarramas_passive() -> void:
 	assert_false(field._can_detect(m), "Bosque abierto: pasivo")
 	var ofomni: OverworldMonster = autofree(OverworldMonster.new())
 	assert_true(field._can_detect(ofomni), "el Ofomni no guarda Bosques: siempre detecta")
+
+
+func test_passive_botarramas_does_not_block_and_defeated_dissolves() -> void:
+	GameState.new_game(42)
+	var region := ChunkGenerator.load_region(&"valle_del_sara")
+	var map := BosqueMap.for_region(42, region)
+	var home: int = AdventureRules.home_bosque(map, region)
+	var neighbour: int = map.neighbours_of(home)[0]
+	var field: MonsterField = add_child_autofree(MonsterField.new())
+	field._home = home
+	var m := OverworldMonster.new()
+	m.bosque_id = neighbour
+	m.key = "puesto_prueba"
+	m.cell = Vector2i(5, 5)
+	field.add_child(m)
+	field._monsters.append(m)
+	assert_true(field.occupied(Vector2i(5, 5)), "Bosque cerrado: bloquea")
+	AdventureRules.pay_toll(neighbour, 0)
+	assert_false(field.occupied(Vector2i(5, 5)), "pasivo: no bloquea el paso")
+	field.dissolve(m)
+	assert_false(field._monsters.has(m), "vencido: sale del campo")
+	assert_true(GameState.defeated_monsters.has("puesto_prueba"), "no reaparece en la partida")
+	var restored := GameState.to_dict()
+	GameState.new_game(42)
+	GameState.from_dict(restored)
+	assert_true(GameState.defeated_monsters.has("puesto_prueba"), "se guarda y se carga")

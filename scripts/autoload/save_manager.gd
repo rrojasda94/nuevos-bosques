@@ -32,7 +32,7 @@ func load_game(slot: int) -> Error:
 	var version: int = int(data.get("save_version", 0))
 	if version < 1 or version > GameState.SAVE_VERSION:
 		return ERR_INVALID_DATA
-	# Migraciones: de v1 a v7 solo se añadieron campos; GameState.from_dict les da su valor por
+	# Migraciones: de v1 a v8 solo se añadieron campos; GameState.from_dict les da su valor por
 	# defecto (v3: Luz y PV iniciales, ningún Bosque abierto; v4: reloj al inicio del Momento de
 	# Gietos; v5: solo el chunk actual explorado y sin objetivo; v6: inventario vacío (antes era
 	# un diccionario), sin misiones (la exploración la vuelve a ofrecer), villa sana, 0 XP y fama
