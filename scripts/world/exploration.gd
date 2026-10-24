@@ -272,6 +272,8 @@ func _on_crossing_resolved(_bosque_id: int, outcome: StringName) -> void:
 		&"paid", &"won":
 			if monster == null:
 				_cross(_pending_dir)
+			elif outcome == &"won":
+				_field.dissolve(monster)
 		&"defeated":
 			_enter_home_villa()
 		&"game_over":

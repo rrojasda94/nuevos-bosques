@@ -45,6 +45,8 @@ func populate(bosques: BosqueMap, home: int, coord: Vector2i, chunk_at: Callable
 	_home = home
 	var cfg: Dictionary = AdventureRules.monster_config(BOTARRAMAS)
 	for p: Dictionary in BotarramasPosts.posts_near(bosques, GameState.seed_value, home, coord):
+		if GameState.defeated_monsters.has(String(p.id)):
+			continue
 		var chunk: ChunkData = chunk_at.call(p.chunk)
 		var offset: Vector2i = (p.chunk - coord) * ChunkData.SIZE
 		var at: Vector2i = offset + BotarramasPosts.post_cell(chunk, GameState.seed_value, p.side, int(cfg.post_depth))
@@ -73,6 +75,18 @@ func remove_ofomni() -> void:
 		m.queue_free()
 
 
+## El monstruo vencido vuelve a la Luz del Bosque: se desvanece en un destello y no reaparece.
+func dissolve(m: OverworldMonster) -> void:
+	if m == null or not _monsters.has(m):
+		return
+	_monsters.erase(m)
+	GameState.defeated_monsters.append(m.key)
+	var tween: Tween = m.create_tween()
+	tween.tween_property(m, "modulate", Color(2.0, 2.0, 2.0, 1.0), 0.15)
+	tween.tween_property(m, "modulate:a", 0.0, 0.45)
+	tween.tween_callback(m.queue_free)
+
+
 func ofomni() -> OverworldMonster:
 	for m: OverworldMonster in _monsters:
 		if m.monster_id == OFOMNI:
@@ -80,10 +94,11 @@ func ofomni() -> OverworldMonster:
 	return null
 
 
-## Hay un monstruo en la casilla (bloquea al jugador).
+## Hay un monstruo que bloquea la casilla. Los pasivos (Botarramas de un Bosque ya abierto) se
+## apartan: no cierran el paso.
 func occupied(c: Vector2i) -> bool:
 	for m: OverworldMonster in _monsters:
-		if m.cell == c:
+		if m.cell == c and _can_detect(m):
 			return true
 	return false
 

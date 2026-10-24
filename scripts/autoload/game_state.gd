@@ -7,7 +7,7 @@ extends Node
 ## como lista de ofrendas, villa dañada, XP, fama y Botarramas vistos. v7: nivel del Adoc y
 ## refugios saqueados (progresion-adoc.md, ofrendas-v1.md). Las versiones anteriores se cargan con
 ## valores por defecto.
-const SAVE_VERSION: int = 7
+const SAVE_VERSION: int = 8
 
 var rng := RandomNumberGenerator.new()
 var seed_value: int = 0
@@ -67,6 +67,8 @@ var looted_refuges: Array[Vector2i] = []
 ## Última posición vista de cada Botarramas, para el mapa:
 ## { "id del puesto": { "monster", "bosque_id", "chunk": [x, y] } }.
 var seen_monsters: Dictionary = {}
+## Monstruos del mundo vencidos que han vuelto a la Luz del Bosque (no reaparecen en la partida).
+var defeated_monsters: Array[String] = []
 
 
 func new_game(new_seed: int = 0, new_region: StringName = &"valle_del_sara") -> void:
@@ -97,6 +99,7 @@ func new_game(new_seed: int = 0, new_region: StringName = &"valle_del_sara") -> 
 	fama = 0
 	looted_refuges = []
 	seen_monsters = {}
+	defeated_monsters = []
 
 
 func to_dict() -> Dictionary:
@@ -131,6 +134,7 @@ func to_dict() -> Dictionary:
 		"fama": fama,
 		"looted_refuges": looted_refuges.map(func(c: Vector2i) -> Array: return [c.x, c.y]),
 		"seen_monsters": seen_monsters,
+		"defeated_monsters": defeated_monsters,
 	}
 
 
@@ -195,6 +199,10 @@ func from_dict(data: Dictionary) -> void:
 		var c: Vector2i = _to_vector2i(value, Vector2i(-1, -1))
 		if c.x >= 0 and c.y >= 0 and not looted_refuges.has(c):
 			looted_refuges.append(c)
+	defeated_monsters = []
+	for value: Variant in data.get("defeated_monsters", []):
+		if not defeated_monsters.has(str(value)):
+			defeated_monsters.append(str(value))
 	seen_monsters = {}
 	var seen: Variant = data.get("seen_monsters", {})
 	if seen is Dictionary:
