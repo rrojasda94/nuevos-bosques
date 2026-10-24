@@ -1,5 +1,6 @@
 extends GutTest
-## Red de caminos principales, letreros hacia la villa natal y refugios (ADR 0006).
+## Red de caminos principales, letreros hacia la villa natal y refugios en los chunks de camino
+## (ADR 0006). El reparto de refugios por toda la región se prueba en test_refuges.gd.
 
 const SEEDS: Array[int] = [1, 42, 777, 123456789]
 const OK_ON_ROAD: Array[int] = [ChunkData.Tile.ROAD, ChunkData.Tile.BRIDGE, ChunkData.Tile.FORD]
@@ -146,35 +147,27 @@ func test_road_home_is_walkable_across_chunks() -> void:
 		assert_true(reached.has(path[-1]), "seed %d: de %s a la villa natal a pie (%d chunks)" % [s, far, path.size()])
 
 
-func test_refuges_density_and_reachability() -> void:
-	var refuges := 0
-	var road := 0
-	for s in range(1, 41):
-		var map := _map(s)
-		for c in _road_chunks(map):
-			road += 1
-			if map.has_refuge(c):
-				refuges += 1
-		# Yendo a casa, nunca más de 3 chunks seguidos sin refugio (la villa cuenta).
-		for id in map.count():
-			var gap := 0
-			for c in _path_home(map, map.nujio_chunk[id]):
-				gap = 0 if map.has_refuge(c) or map.road_distance(c) == 0 else gap + 1
-				assert_lte(gap, 2, "seed %d: tramo largo sin refugio en %s" % [s, c])
-	assert_between(float(refuges) / road, 0.3, 0.5, "%d refugios en %d chunks de camino" % [refuges, road])
+func test_road_chunks_with_refuge_keep_it_reachable_and_off_the_road() -> void:
+	# Reparto general de refugios en test_refuges.gd; aquí, que en los chunks de camino el
+	# refugio no pisa el camino y se llega a pie.
 	for s in [1, 42]:
 		var map := _map(s)
-		for c in _road_chunks(map).slice(0, 16):
-			var chunk := _gen(s, c)
-			var count := chunk.tiles.count(ChunkData.Tile.REFUGE)
-			var expected := 1 if map.has_refuge(c) and not chunk.has_villa else 0
-			assert_eq(count, expected, "seed %d chunk %s" % [s, c])
-			if count == 0:
+		var checked := 0
+		for c in _road_chunks(map):
+			if not map.has_refuge(c) or checked >= 10:
 				continue
-			var cell := Vector2i(chunk.tiles.find(ChunkData.Tile.REFUGE) % ChunkData.SIZE, chunk.tiles.find(ChunkData.Tile.REFUGE) / ChunkData.SIZE)
-			assert_true(chunk.is_refuge(cell))
+			checked += 1
+			var chunk := _gen(s, c)
+			var i := chunk.tiles.find(ChunkData.Tile.REFUGE)
+			assert_gte(i, 0, "seed %d chunk %s: hay refugio" % [s, c])
+			if i < 0:
+				continue
+			var cell := Vector2i(i % ChunkData.SIZE, i / ChunkData.SIZE)
+			assert_eq(chunk.tiles.count(ChunkData.Tile.REFUGE), 1)
 			assert_true(chunk.is_walkable(cell), "el refugio no bloquea")
 			assert_true(chunk.is_reachable(cell), "seed %d chunk %s: refugio alcanzable" % [s, c])
+			assert_gt(chunk.tiles.count(ChunkData.Tile.ROAD), 0, "el camino sigue ahí")
+		assert_gt(checked, 0, "seed %d: chunks de camino con refugio" % s)
 
 
 func test_home_signs_point_along_the_road_home() -> void:

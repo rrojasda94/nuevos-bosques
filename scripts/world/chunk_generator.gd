@@ -14,7 +14,9 @@ extends RefCounted
 ##   GameState.rng ni randi()/randf() globales.
 ## - Cada borde tiene una entrada (sendero) en la misma posición vista desde los dos chunks.
 ## - Los lados con camino principal (BosqueMap.road_sides) llevan un ROAD de 2 casillas en vez
-##   del sendero, con letreros hacia la villa natal y refugios junto al camino.
+##   del sendero, con letreros hacia la villa natal.
+## - Refugios (REFUGE) en los chunks que marca BosqueMap.has_refuge (todos los Bosques, con camino
+##   o sin él): junto al Nujio, a un camino, sendero o claro, siempre alcanzables desde el hub.
 ## - Frutales (FRUIT_TREE) en los Bosques que dan fruto (bloque "fruit" de la región): unos pocos
 ##   árboles por chunk junto a claros y senderos, siempre con una casilla vecina alcanzable desde
 ##   el hub. Se eligen entre los TREE ya generados, así que no cambian por dónde se anda.
@@ -141,8 +143,9 @@ static func generate(seed_value: int, coord: Vector2i, region: Dictionary = {}, 
 		var home_side: Vector2i = bosques.road_home_side(coord)
 		if home_side != Vector2i.ZERO and (roads.size() >= 3 or posmod(coord.x + coord.y, 2) == 0):
 			_place_home_sign(chunk, seed_value, coord, home_side)
-		if bosques.has_refuge(coord) and not villa:
-			_place_refuge(chunk, seed_value, coord)
+
+	if bosques != null and bosques.has_refuge(coord):
+		_place_refuge(chunk, seed_value, coord, nujio_n, villa)
 
 	# Lo último: los frutales solo sustituyen árboles, ya con senderos, villa y refugio puestos.
 	if bosque_gives_fruit(region, bosques, bosque_id):
@@ -259,36 +262,80 @@ static func _place_home_sign(chunk: ChunkData, seed_value: int, coord: Vector2i,
 	chunk.home_direction = side
 
 
-## Refugio (árbol hueco o cueva) pegado al camino y lejos del claro central. Prefiere ocupar un
-## árbol. Como está junto a un ROAD, se llega a pie desde el hub.
-static func _place_refuge(chunk: ChunkData, seed_value: int, coord: Vector2i) -> void:
+## Distancia (Chebyshev) en casillas de un refugio al Nujio para contar como "junto al Nujio"
+## (bosques-y-relacion.md: refugio a <= 3 casillas del Nujio).
+const REFUGE_NUJIO_REACH: int = 3
+
+
+## Refugio (árbol hueco o cueva) del chunk. Nunca falla: busca por niveles de preferencia y, si
+## un nivel no tiene sitio, pasa al siguiente. Toda casilla candidata es suelo natural (o, en el
+## último nivel, un sendero) con una vecina transitable y alcanzable desde el hub, así que el
+## refugio (que no bloquea) siempre se alcanza a pie. Nunca en la plaza, el camino ni el agua.
+## Niveles:
+## 0. Chunk de Nujio sin villa: en el claro, a <= REFUGE_NUJIO_REACH casillas del Nujio.
+##    Resto: un árbol o una roca (árbol hueco o cueva) junto a un camino, sendero o claro, lejos
+##    del hub.
+## 1. Un árbol o una roca con acceso, lejos del hub.
+## 2. Cualquier suelo natural con acceso (sin la casilla del hub).
+## 3. Cualquier sendero alcanzable (sin la casilla del hub).
+## Las rocas se dibujan como cueva y los árboles como árbol hueco (PlaceholderTileset).
+static func _place_refuge(chunk: ChunkData, seed_value: int, coord: Vector2i, nujio_n: int, villa: bool) -> Vector2i:
 	var size: int = ChunkData.SIZE
-	var trees: Array[Vector2i] = []
-	var open: Array[Vector2i] = []
-	var road: Array[Vector2i] = []
+	var reach: PackedByteArray = chunk.reachable_from_hub()
 	var keep_away: int = CENTER_CLEARING_RADIUS + 4
+	var near_nujio_zone: bool = nujio_n > 0 and not villa
+	var tiers: Array = [[], [], [], []]
 	for y: int in range(2, size - 2):
 		for x: int in range(2, size - 2):
 			var c := Vector2i(x, y)
+			if c == chunk.hub:
+				continue
 			var tile: int = chunk.get_tile(c)
-			if tile == ChunkData.Tile.ROAD:
-				road.append(c)
+			var natural: bool = _is_free_ground(tile)
+			if not natural and tile != ChunkData.Tile.PATH:
 				continue
-			if not _is_free_ground(tile) or absi(c.x - chunk.hub.x) + absi(c.y - chunk.hub.y) <= keep_away:
-				continue
-			var by_road: bool = false
+			var access: bool = false
+			var by_open: bool = false
 			var by_sign: bool = false
 			for d: Vector2i in ChunkData.SIDES:
-				var n: int = chunk.get_tile(c + d)
-				by_road = by_road or n == ChunkData.Tile.ROAD
-				by_sign = by_sign or n == ChunkData.Tile.SIGN
-			if by_road and not by_sign:
-				(trees if tile == ChunkData.Tile.TREE else open).append(c)
-	var pool: Array[Vector2i] = trees if not trees.is_empty() else (open if not open.is_empty() else road)
-	if pool.is_empty():
-		return
-	var pick: int = hash_ints([seed_value, coord.x, coord.y, SALT_REFUGE]) % pool.size()
-	chunk.set_tile(pool[pick], ChunkData.Tile.REFUGE)
+				var n: Vector2i = c + d
+				var t: int = chunk.get_tile(n)
+				by_sign = by_sign or t == ChunkData.Tile.SIGN
+				if chunk.is_walkable(n) and reach[n.y * size + n.x] == 1:
+					access = true
+					by_open = by_open or t == ChunkData.Tile.ROAD or t == ChunkData.Tile.PATH or t == ChunkData.Tile.CLEARING
+			if by_sign or not (access or reach[y * size + x] == 1):
+				continue
+			if not natural:
+				(tiers[3] as Array).append(c)
+				continue
+			if not access:
+				continue
+			var solid: bool = tile == ChunkData.Tile.TREE or tile == ChunkData.Tile.CLIFF or tile == ChunkData.Tile.ROCKY
+			var far: bool = absi(c.x - chunk.hub.x) + absi(c.y - chunk.hub.y) > keep_away
+			if near_nujio_zone:
+				if tile == ChunkData.Tile.CLEARING and _nujio_gap(chunk.nujio_rect, c) <= REFUGE_NUJIO_REACH:
+					(tiers[0] as Array).append(c)
+					continue
+			elif solid and far and by_open:
+				(tiers[0] as Array).append(c)
+				continue
+			(tiers[1 if solid and far else 2] as Array).append(c)
+	for pool: Array in tiers:
+		if pool.is_empty():
+			continue
+		var pick: Vector2i = pool[hash_ints([seed_value, coord.x, coord.y, SALT_REFUGE]) % pool.size()]
+		chunk.set_tile(pick, ChunkData.Tile.REFUGE)
+		return pick
+	push_error("Chunk %s sin sitio para su refugio" % coord)
+	return Vector2i(-1, -1)
+
+
+## Casillas (Chebyshev) entre `cell` y el rectángulo del Nujio (0 = dentro).
+static func _nujio_gap(rect: Rect2i, cell: Vector2i) -> int:
+	var dx: int = maxi(0, maxi(rect.position.x - cell.x, cell.x - (rect.end.x - 1)))
+	var dy: int = maxi(0, maxi(rect.position.y - cell.y, cell.y - (rect.end.y - 1)))
+	return maxi(dx, dy)
 
 
 ## Suelo natural donde se puede poner un letrero o un refugio (no agua, ni camino, ni villa).

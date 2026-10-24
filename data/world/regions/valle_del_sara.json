@@ -41,5 +41,11 @@
     "states": ["sano", "necesita_ayuda"],
     "per_chunk": [3, 6],
     "min_spacing": 5
+  },
+  "refuges": {
+    "$comment": "Reparto de refugios (navegacion.md, tiempo-y-riutash.md, bosques-y-relacion.md; ADR 0006). per_bosque: mínimo de refugios por Bosque (el primero en su chunk de Nujio, a <= 3 casillas del Nujio si no hay villa). min_spacing: distancia mínima en chunks (Manhattan) entre refugios del reparto general; 2 = nunca en chunks vecinos, sale ~1 de cada 2-3 chunks, con camino o sin él. max_distance: ningún chunk queda a más de estos chunks de un refugio. Valores provisionales de game-designer.",
+    "per_bosque": 1,
+    "min_spacing": 2,
+    "max_distance": 2
   }
 }

@@ -92,10 +92,20 @@ Iteración 4, versión 0.2.0 (plan "Primer encargo"): el dueño pide que no sea 
   - `EventBus.signpost_read(direction, kind)`. El HUD dice "Hacia tu villa natal: este" o, en los letreros de siempre, "Hacia la villa de este Bosque: ..." (textos de `data/text/sistema.json`).
   - Desviación de `navegacion.md` ("8 direcciones hacia la villa natal"): la flecha señala el siguiente tramo del camino (4 direcciones), porque la línea recta puede apuntar a un lado sin camino. Pendiente de confirmar por el dueño.
   - Los letreros hacia la villa del Bosque no cambian.
-- **Refugios** (`REFUGE`, no bloquea; `ChunkData.is_refuge(cell)`):
-  - En los chunks de camino con `road_distance % 5` en {1, 3}: yendo hacia casa hay refugio cada 2 o 3 chunks (40 % de los chunks de camino). En la villa no hace falta: su plaza cuenta como refugio (`AdventureRules.is_villa_rest`, PR del reloj).
-  - Uno por chunk, pegado a un `ROAD` y fuera del claro central, prefiriendo ocupar un árbol (árbol hueco). Si toca roca se dibuja como cueva.
-  - Al estar junto al camino, siempre se llega a pie desde el hub (test).
+- **Refugios** (`REFUGE`, no bloquea; `ChunkData.is_refuge(cell)`). Corregido en la 0.3.0: antes solo salían en los chunks de camino con `road_distance % 5` en {1, 3} (~18 % de los chunks), así que fuera del camino había zonas a 3–5 chunks del refugio más cercano y algunos Bosques sin ninguno.
+  - **Reparto** (`BosqueMap.has_refuge`, `refuge_chunks()`, `refuge_distance(coord)`), determinista por seed, con los parámetros del bloque `refuges` del JSON de la región (`per_bosque`, `min_spacing`, `max_distance`; valores provisionales de `game-designer`):
+    1. Cada Bosque tiene al menos `per_bosque` refugios (1); el primero en su **chunk de Nujio** (descansar el riutash junto al Nujio sube la relación, `bosques-y-relacion.md`).
+    2. Reparto general por toda la región, con camino o sin él, en orden de hash: un chunk recibe refugio si está a `min_spacing` chunks (Manhattan) o más de todos los anteriores. Con 2 nunca hay dos en chunks vecinos y sale ~1 de cada 2,7 chunks.
+    3. Cobertura: todo chunk a más de `max_distance` (2) chunks de un refugio recibe uno. Con los valores actuales la distancia máxima real es 1.
+  - **Colocación** (`ChunkGenerator._place_refuge`), una casilla por chunk marcado, también en las villas (fuera de la plaza). Nunca falla: busca por niveles y, si un nivel está vacío, pasa al siguiente; si no hubiera sitio, `push_error` (nunca en silencio):
+    0. Chunk de Nujio sin villa: en el claro, a ≤ 3 casillas del Nujio. Resto: un árbol o una roca junto a un camino, sendero o claro, lejos del hub.
+    1. Un árbol o una roca con acceso, lejos del hub.
+    2. Cualquier suelo natural con acceso.
+    3. Un sendero alcanzable.
+  - Toda candidata tiene una vecina transitable y alcanzable desde el hub, así que el refugio siempre se alcanza a pie. Nunca en el hub, la plaza, el camino, el agua (ríos, vados, puentes), un letrero, un edificio ni el Nujio, ni pegado a un letrero.
+  - Las rocas (o lo que toca roca) se dibujan como cueva y los árboles como árbol hueco (`PlaceholderTileset`).
+  - La plaza de la villa sigue contando como refugio (`AdventureRules.is_villa_rest`).
+  - Tests en `tests/unit/world/test_refuges.gd`: todo Bosque con refugio, distancia máxima ≤ 2, todo `has_refuge` produce un `REFUGE` alcanzable que solo cambia su casilla, determinismo.
 
 ### Bosques
 - `BosqueMap` (`scripts/world/bosque_map.gd`) reparte el grid de chunks de la región en Bosques de **4 a 16 chunks contiguos**, de forma determinista por seed:

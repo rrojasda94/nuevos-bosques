@@ -19,6 +19,7 @@ Todos los cambios que nota el jugador. Formato [Keep a Changelog](https://keepac
 
 ### Corregido
 - Un Botarramas vencido ya no vuelve a su puesto a bloquear el camino: se desvanece en la Luz del Bosque y no reaparece en la partida. Los Botarramas de un Bosque ya abierto no cierran el paso.
+- Ya hay refugios más allá de tu Bosque: todos los Bosques tienen al menos uno, junto a su Nujio, y hay más repartidos por toda la región (más o menos uno de cada 2 o 3 chunks), también lejos del camino, junto a senderos y claros. Nunca estás a más de 2 chunks de un refugio y siempre se llega a pie.
 
 ## [0.2.0] - 2026-10-24
 "Primer encargo": la primera misión del modo Aventura, con tiempo, orientación, progresión, ofrendas y primeros sprites y sonidos.
