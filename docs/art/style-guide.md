@@ -1,6 +1,6 @@
 # Guía de estilo visual — Nardaram
 
-- Paleta: `assets/palettes/palette_nuevos_bosques.gpl` (32 colores). Sin excepciones.
+- Paleta: `assets/palettes/palette_nuevos_bosques.gpl` (32 colores). Sin excepciones en el arte; la única excepción es la iluminación (luz de luna nocturna como post-proceso, ADR 0012).
 - Resolución lógica 320×180. Tile 16×16.
 - Personajes: 16×16 ciudadanos, 16×24 héroes. Outline 1 px en tono oscuro de la rampa.
 - Perspectiva: **top-down 3/4** (estilo Zelda 2D). Fachadas de edificios visibles; techos ocupan ~60 % del sprite.
