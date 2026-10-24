@@ -1,0 +1,25 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/riutash_clock.gd" id="1_clock"]
+[ext_resource type="Theme" path="res://assets/ui/theme.tres" id="2_theme"]
+
+[node name="RiutashClock" type="CanvasLayer"]
+layer = 2
+script = ExtResource("1_clock")
+
+[node name="Root" type="Control" parent="."]
+layout_mode = 3
+anchors_preset = 0
+offset_right = 320.0
+offset_bottom = 180.0
+mouse_filter = 2
+theme = ExtResource("2_theme")
+
+[node name="Dial" type="TextureRect" parent="Root"]
+layout_mode = 0
+offset_left = 287.0
+offset_top = 147.0
+offset_right = 320.0
+offset_bottom = 180.0
+mouse_filter = 1
+stretch_mode = 2

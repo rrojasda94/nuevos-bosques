@@ -1,13 +1,12 @@
 extends CanvasLayer
 ## HUD de depuración del vertical slice: nivel, PV y Luz del Adoc, seed, chunk, Bosque y día,
-## Momento y tiempo hasta el riutash (WorldClock), más avisos temporales. El último aviso del
-## riutash parpadea y se queda fijo hasta que pasa. Solo escucha EventBus y lee GameState y WorldClock.
+## más avisos temporales. El Momento y la cercanía del riutash los muestra el reloj del riutash
+## (riutash_clock.gd); aquí quedan los avisos textuales: el último parpadea y se queda fijo hasta
+## que pasa. Solo escucha EventBus y lee GameState y WorldClock.
 
 const NOTICE_TIME: float = 3.0
 const NOTICE_REST: String = "Descansas en la villa"
 const NOTICE_REGION_EDGE: String = "Límite de la región"
-## Línea del reloj: Momento y tiempo hasta el riutash (mm:ss).
-const TEXT_CLOCK: String = "%s   Riutash en %s"
 ## Intervalo del parpadeo del aviso fijo del riutash.
 const BLINK_TIME: float = 0.4
 
@@ -45,8 +44,8 @@ func _ready() -> void:
 	_refresh()
 
 
-## Solo redibuja cuando cambia el segundo mostrado. Además repone o quita el aviso fijo tras cargar
-## una partida o empezar otra (los avisos ya pasados no se reemiten).
+## Repone o quita el aviso fijo tras cargar una partida o empezar otra (los avisos ya pasados no
+## se reemiten). Se comprueba una vez por segundo de reloj.
 func _process(_delta: float) -> void:
 	var left: float = WorldClock.time_to_riutash()
 	var seconds: int = ceili(left)
@@ -58,7 +57,6 @@ func _process(_delta: float) -> void:
 		_set_sticky(Texts.get_text("riutash_warning_%d" % last))
 	elif left > last and not _sticky.is_empty():
 		_set_sticky("")
-	_refresh()
 
 
 func _on_chunk_entered(_coord: Vector2i, bosque_id: int, bosque_size: int) -> void:
@@ -68,16 +66,10 @@ func _on_chunk_entered(_coord: Vector2i, bosque_id: int, bosque_size: int) -> vo
 
 
 func _refresh() -> void:
-	_label.text = "Nv %d   PV %d/%d   Luz %d/%d\nSeed %d  Chunk (%d, %d)  Día %d\nBosque #%d (%d chunks)  Shift corre  R seed  I inventario\n%s" % [
+	_label.text = "Nv %d   PV %d/%d   Luz %d/%d\nSeed %d  Chunk (%d, %d)  Día %d\nBosque #%d (%d chunks)  Shift corre  R seed  I inventario" % [
 		GameState.level, GameState.hp, AdventureRules.max_hp(), GameState.luz, AdventureRules.luz_max(), GameState.seed_value, GameState.chunk_coord.x, GameState.chunk_coord.y, GameState.day,
-		_bosque_id, _bosque_size, _clock_line(),
+		_bosque_id, _bosque_size,
 	]
-
-
-func _clock_line() -> String:
-	var seconds: int = ceili(WorldClock.time_to_riutash())
-	var momento: String = Texts.get_text("hud_momento_%s" % WorldClock.momento())
-	return TEXT_CLOCK % [momento, "%02d:%02d" % [floori(seconds / 60.0), seconds % 60]]
 
 
 ## El aviso más cercano al riutash (el que parpadea), o 0 si no hay avisos.

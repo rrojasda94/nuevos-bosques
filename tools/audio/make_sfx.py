@@ -131,6 +131,12 @@ SOUNDS = {
         noise(30000, 8000, 0.75, 0.12, attack=0.01),
         triangle(131, 0.75, 0.25),
     ),
+    # Swish del reloj del riutash: barrido de ruido que sube (se hincha) y baja con una cola
+    # suave, "swishhh". Acompaña al pulso del reloj en los avisos y en los últimos segundos.
+    "sfx_riutash_swish": lambda: cat(
+        noise(2500, 16000, 0.15, 0.2, attack=0.14, hold=1.0),
+        noise(16000, 4500, 0.27, 0.2, attack=0.001, hold=0.15),
+    ),
     # Subir de nivel: arpegio de do mayor y nota larga.
     "sfx_level_up": lambda: mix(
         arpeggio([523, 659, 784, 1047], 0.08, 0.2, duty=0.5, tail=0.3),
