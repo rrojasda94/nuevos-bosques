@@ -27,13 +27,85 @@ Reunir en un sitio qué monstruos hay, qué se sabe de cada uno y qué regla de 
 ## Catálogo
 | Monstruo | Qué dijo el dueño | Glosario §3 | `fatal_at` | Estado en el juego |
 |---|---|---|---|---|
-| **Únicos comunes de borde** | "los únicos no son arboles, son monstruos"; "pueden regenerarse con el tiempo" | Agentes del Bosque que se activan como anticuerpos; nacen de un árbol, animal o sustancia del Bosque | `[]` (provisional) | En el juego desde la 0.1.0: 5 tipos de placeholder (ADR 0009). |
-| **Ofomni** | "un ojo con tentáculos"; "ataca con latigos y cada 3 turnos usa varios latigos"; "es no fatal en la primera mision" | Subtipo de Únicos | `[]` en la primera misión (**confirmado**). Fuera de ella: por definir (#127) | 0.2.0, misión "Primer encargo" (`mision-ofomni.md`). |
-| **Aledra** | "Aledras son fatales en las noches" | Aparece cuando la villa crece en población sin permiso y causa enfermedades. Serpiente roja gigante con aura rojiza, cabeza de calavera reptiliana, ojos negros que se comen la luz física y colmillos carmesí | `["riumna"]` | No existe todavía. Dónde y cuándo aparece en Aventura: #128. |
+| **Botarramas** (nombre provisional; sustituyen a los "Únicos comunes de borde") | "Los Únicos que restringen el paso se llamaran Botarramas (por ahora) son aver sin plumas que renquean por los bosques cuando sienten la presencia de alguien acercandose." Antes: "los únicos no son arboles, son monstruos"; "pueden regenerarse con el tiempo" | Agentes del Bosque que se activan como anticuerpos; nacen de un árbol, animal o sustancia del Bosque | `[]` (provisional) | **0.2.0** (sección siguiente). Sustituyen a los 5 tipos de placeholder de borde (ADR 0009). |
+| **Ofomni** | "un ojo con tentáculos"; "ataca con latigos y cada 3 turnos usa varios latigos"; "es no fatal en la primera mision"; "si robas algun objeto [...] despiertas a los ofomni que te persiguen por el bosque hasta la frontera" | Subtipo de Únicos | `[]` en la primera misión (**confirmado**). Fuera de ella: por definir (#127) | 0.2.0: misión "Primer encargo" (`mision-ofomni.md`). 0.3.0: perseguidores tras un robo (`sigilo-y-robo.md`). **Ya no guarda bordes.** |
+| **Aledra** | "Aledras son fatales en las noches" | Aparece cuando la villa crece en población sin permiso y causa enfermedades. Serpiente roja gigante con aura rojiza, cabeza de calavera reptiliana, ojos negros que se comen la luz física y colmillos carmesí | `["riumna"]` | No existe todavía. **No guarda bordes**: queda para su evento de villa (glosario). Dónde y cuándo aparece en Aventura: #128. |
 | **Iserald** | "un iserald es fatal" | El Único más poderoso y último recurso; sale del propio Nujio. Teorías: inmolación para que el Bosque no sea profanado, o pérdida de cordura | `["gietos", "riumna"]` | No existe todavía (#103). |
 | **Reparep** | "son como cangrejos fantasmales y tacan en grupos de 2 hasta 4 individuos. Son debiles solos pero en grupo el ataque conjunto suma daños" | No aparece en el glosario | `[]` (provisional) | **0.3.0** (fuera de la 0.2.0). Propuesta de combate de grupo abajo. Si son Únicos o no: #128. |
 
-"Aun no tenemos más monstruos" (dueño, 2026-10-24).
+"Aun no tenemos más monstruos" (dueño, 2026-10-24). Botarramas se añadió después (dueño, misma fecha).
+
+## Botarramas (0.2.0, se implementa ya)
+> Valores **PROVISIONALES**, en `data/combat/balance.json` (bloque `botarramas`; estructura: `rpg-systems-dev`). Arte: `pixel-artist` (ave sin plumas, renqueante, con la combinación de colores de su Bosque).
+
+### Objetivo
+Que los guardianes del paso entre Bosques se vean en el mundo y salgan al encuentro del jugador, en vez de aparecer solo como un menú al tocar el borde. Palabras del dueño: "Me gustaria ver que los Únicos esten visibles en el mapa. Que te intercepten cuando estas acercandote a uno de los bosques."
+
+### Pilares y presión
+- **Pilar 3 (legibilidad)**: el peligro se ve venir y se puede leer.
+- **Pilar 4**: los puestos dependen de la seed y de las fronteras del Bosque.
+- **Añade presión**: acercarse a un Bosque cerrado tiene un coste visible (Luz, ofrenda o combate).
+- **Alivia**: un jugador atento puede colarse por un tramo de frontera sin vigilancia.
+
+### Reglas
+- **Quién**: los Botarramas son los Únicos que **restringen el paso** entre Bosques (sustituyen al "Único de borde" de `cruce-y-combate-v1.md`). Pertenecen al Bosque que guardan, el que el jugador quiere abrir.
+- **Cuántos y dónde**:
+  - Un Botarramas por cada **tramo de frontera de chunk**, es decir, cada lado de 64 casillas que comparten dos chunks de Bosques distintos.
+  - Está apostado en el lado del Bosque que guarda, junto a la **puerta o el camino** que cruza ese tramo, o en su punto medio si no hay camino.
+  - Posición determinista por seed.
+- **Visibilidad**: se ven en el mundo. En el mapa (M) aparecen en su última posición vista (`navegacion.md`).
+- **Reposo**: en su puesto, con un renqueo de ida y vuelta de hasta **3 casillas**.
+- **Detección**: si el jugador entra en un **radio de 10 casillas** (distancia de Chebyshev) de un Botarramas de un Bosque **cerrado**, este pasa a **interceptar**.
+- **Intercepción**:
+  - Renquea hacia el jugador a **1 casilla cada 0,24 s** (el jugador va a 1 cada 0,16 s: el Botarramas va a 2/3 de su velocidad).
+  - Respeta las casillas transitables y puede salir de su Bosque hasta **4 casillas** dentro del vecino.
+  - Correa: no se aleja más de **14 casillas** de su puesto. Si el jugador sale de un radio de **14**, vuelve a su puesto.
+- **Contacto** (casilla adyacente, también en diagonal): se pausa el juego y se abre el **menú del borde** actual: "Ofrecer N Luz", "Ofrecer una ofrenda" (`ofrendas-v1.md`), "Enfrentar a sus Únicos" y "Retroceder". Las reglas, N y d son las de `cruce-y-combate-v1.md`.
+- **Resultado**:
+  - **Pagar o vencer** abre el Bosque entero (`open_bosques`, como en v1). Todos los Botarramas de ese Bosque quedan **pasivos**: se ven y no interceptan.
+  - **Retroceder o huir**: el jugador vuelve 2 casillas hacia su Bosque y ese Botarramas queda **sin detectar durante 3 s**, para no repetir el menú en bucle.
+  - **Derrota**: regla de v1 (no fatal: despiertas en la villa natal).
+- **Colarse** (propuesta, a confirmar):
+  - Si el jugador cruza la frontera sin contacto, entra en el Bosque cerrado, pero el Bosque **no se abre**.
+  - Los Botarramas que lo detecten dentro seguirán interceptándolo.
+  - Volver a un Bosque abierto siempre es libre.
+  - Es la recompensa a la exploración que se pedía. El sigilo con máscaras de la 0.3.0 la ampliará (`sigilo-y-robo.md`).
+- **Stats**: los del Único de v1 según d (PV 18 + 4·d, ATQ 4 + d, DEF 1 + ⌊d/2⌋ con tope 4). XP y Luz de victoria: igual que un Único (`progresion-adoc.md`).
+- **Fatal**: `fatal_at: []` (provisional).
+- **Regeneración**: recupera todos sus PV si el jugador huye o retrocede (v1). Por tiempo: #120.
+- **Nombre en el combate**: "Botarramas" (provisional; `narrative-writer`).
+
+### Números (para `balance.json`)
+| Clave propuesta | Valor |
+|---|---|
+| `botarramas.detect_radius` | 10 |
+| `botarramas.step_time` | 0.24 (s por casilla) |
+| `botarramas.idle_wander` | 3 |
+| `botarramas.leash` | 14 |
+| `botarramas.max_outside` | 4 |
+| `botarramas.contact_cooldown` | 3.0 (s) |
+| Stats | Fórmula de `unico` según d (sin cambios) |
+
+### Inputs / outputs
+- **Inputs:** fronteras entre chunks de Bosques distintos, puertas y caminos, seed, posición del jugador, `open_bosques`.
+- **Outputs:** posiciones y estados de los Botarramas (reposo, intercepción, pasivo, regreso), apertura del menú del borde, marcas en el mapa.
+
+### Casos límite
+- **Dos Botarramas detectan a la vez**: intercepta el que llega antes; el otro vuelve a su puesto si el Bosque se abre.
+- **Botarramas bloqueado por agua o riscos**: no hay camino hasta el jugador y vuelve a su puesto. Esto permite colarse.
+- **Jugador dentro de un Bosque cerrado (se ha colado)**: los Botarramas siguen interceptando. Contactar abre el mismo menú; pagar o vencer abre ese Bosque.
+- **Bosque abierto**: sus Botarramas no interceptan aunque el jugador pase pegado.
+- **El riutash llega durante una persecución**: la persecución sigue; el riutash se aplica según el refugio (`tiempo-y-riutash.md`).
+- **Contacto mientras está abierto otro diálogo o el mapa**: no puede pasar, porque el mundo está en pausa.
+- **El Ofomni de la misión**: no es un Botarramas y no guarda bordes.
+- **Cargar una partida**: los Botarramas vuelven a su puesto.
+
+### Criterios de éxito para playtest
+Propuestas, a confirmar con el dueño:
+- El jugador ve al Botarramas antes del contacto en al menos 4 de cada 5 intercepciones.
+- El dueño reconoce el renqueo y el "ave sin plumas" (pregunta directa).
+- Al menos una vez el jugador intenta esquivar a un Botarramas, y lo consigue más o menos 1 de cada 3 veces.
+- El jugador entiende que un Bosque abierto ya no le corta el paso.
 
 ## Propuesta: combate contra grupos (reparep), 0.3.0
 > Propuesta de `game-designer` con números **provisionales**. Requiere que el combate pase de 1 contra 1 a 1 contra varios.
@@ -95,6 +167,7 @@ Propuestas, a confirmar con el dueño:
 - El dueño considera que los reparep "son débiles solos pero en grupo suman daños" (pregunta directa).
 
 ## Decisiones a confirmar con el dueño
+- Botarramas: uno por tramo de frontera de chunk, radio 10, 2/3 de la velocidad del jugador, correa de 14 y colarse permitido sin abrir el Bosque (#129).
 - `fatal_at` por Momento, mirando el Momento del inicio del combate.
 - Fórmula del ataque conjunto (suma de ATQ, DEF restada una vez), selección de objetivo y Defender sobre todo el ataque.
 - Stats y XP de los reparep.
@@ -105,4 +178,5 @@ Propuestas, a confirmar con el dueño:
 - Otros monstruos fatales, aviso previo, huir de un fatal, qué pasa tras un game over (#127).
 - Dónde y cuándo aparecen Aledra y los reparep en Aventura. ¿Los reparep son Únicos? ¿Guardan bordes, vagan por el Bosque o salen de noche? (#128)
 - Iserald en el juego (#103).
+- Botarramas: números, colarse y nombre definitivo (#129).
 - Aspecto y nombres de los Únicos comunes (#119).

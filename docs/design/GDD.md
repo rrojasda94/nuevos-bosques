@@ -69,7 +69,9 @@ Antes de implementarse necesitan fuente, sumidero y qué pasa si se agotan:
 - **Orientación** (0.2.0): caminos principales con letreros hacia la villa natal, refugios junto a los caminos, mapa (M) y brújula ([`mechanics/navegacion.md`](mechanics/navegacion.md)). El letrero se lee con **E** y abre un diálogo con una flecha que sigue el camino, el tiempo estimado hasta llegar y el nombre tentativo de la villa.
 - **Noche** (Momento de Riumna): tono plateado de luz de luna; los colores resaltan de otra forma, no se oscurecen (post-proceso, excepción a la paleta anotada en ADR 0012).
 - **Monstruos** ([`mechanics/monstruos.md`](mechanics/monstruos.md)):
-  - Únicos comunes de borde, Ofomni, Aledra, Iserald y reparep.
+  - Botarramas, Ofomni, Aledra, Iserald y reparep.
+  - **Botarramas** (0.2.0, nombre provisional): son los Únicos que restringen el paso, aves sin plumas que renquean. Se ven en el mundo (y en el mapa) y salen a interceptar al jugador cuando se acerca a un Bosque cerrado; al tocarlo se abre el menú del borde. Sustituyen a los "Únicos de borde" genéricos.
+  - **Sigilo, armas y robo** (0.3.0, [`mechanics/sigilo-y-robo.md`](mechanics/sigilo-y-robo.md)): las máscaras y algunos talismanes permiten colarse; las armas equipadas cierran el paso; robar despierta a los Ofomni, que persiguen hasta la frontera.
   - Cada uno es fatal o no según el Momento (`fatal_at`). Aledra es fatal de noche; Iserald, siempre; el Ofomni no lo es en la primera misión.
   - Los reparep (cangrejos fantasmales en grupos de 2 a 4) traen el combate contra grupos, propuesto para la 0.3.0.
 - **Curación de PV** (Aventura, ADR 0010): en una villa (plaza o junto a su Nujio) o, en parte, tras un riutash (cambio entre día y noche). El riutash **no cura heridas graves**.
@@ -97,7 +99,7 @@ Antes de implementarse necesitan fuente, sumidero y qué pasa si se agotan:
 - **Origen:** el jugador elige región y área de origen al empezar (ADR 0005, 0008). Le da conocimiento automático del área y sus Bosques. Cuanto más lejos del punto inicial, más complicado el viaje (#56, #57, #66).
 - **Viaje** (ADR 0007):
   - Movimiento libre dentro del Bosque inicial.
-  - Para entrar a otro Bosque que aún tenga Nujio: pagar Luz o enfrentarse a los Únicos que envía (#70, #71). Versión de prueba con números provisionales: [`mechanics/cruce-y-combate-v1.md`](mechanics/cruce-y-combate-v1.md).
+  - Para entrar a otro Bosque que aún tenga Nujio: pagar Luz o enfrentarse a los Únicos que envía (#70, #71). Desde la 0.2.0, el aviso lo da un **Botarramas** visible que intercepta al jugador ([`mechanics/monstruos.md`](mechanics/monstruos.md)). Versión de prueba con números provisionales: [`mechanics/cruce-y-combate-v1.md`](mechanics/cruce-y-combate-v1.md).
   - Se puede recorrer todo el mapa a pie: es más lento, cansa al personaje y **también cuesta**, pero da más control sobre el gasto y el riesgo (ADR 0008; #73, #91). También se puede usar el mapa de la región para distancias largas (#56).
 - **Terreno** (ADR 0007, 0008):
   - Árboles: bloquean, con espacio para caminar entre ellos (ADR 0008, confirmado).
