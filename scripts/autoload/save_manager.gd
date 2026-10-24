@@ -32,7 +32,7 @@ func load_game(slot: int) -> Error:
 	var version: int = int(data.get("save_version", 0))
 	if version < 1 or version > GameState.SAVE_VERSION:
 		return ERR_INVALID_DATA
-	# Migraciones: de v1 a v12 se añadieron campos; GameState.from_dict les da su valor por
+	# Migraciones: de v1 a v13 se añadieron campos; GameState.from_dict les da su valor por
 	# defecto (v3: Luz y PV iniciales, ningún Bosque abierto; v4: reloj al inicio del Momento de
 	# Gietos; v5: solo el chunk actual explorado y sin objetivo; v6: inventario vacío (antes era
 	# un diccionario), sin misiones (la exploración la vuelve a ofrecer), villa sana, 0 XP y fama
@@ -43,7 +43,8 @@ func load_game(slot: int) -> Error:
 	# el arma inicial va equipada (GameState._load_inventory); v12: el paso pagado caduca, así que
 	# la lista permanente "open_bosques" pasa a open_until (abierto hasta el segundo riutash desde
 	# la carga, o permanente con relación >= 60), el contador de riutash empieza en 0 y los Bosques
-	# con relación <= -50 quedan marcados en angry_candidate.
+	# con relación <= -50 quedan marcados en angry_candidate; v13: el último Bosque pagado
+	# (last_paid_bosque) es el de open_until con la caducidad más tardía, o ninguno.
 	GameState.from_dict(data)
 	EventBus.game_loaded.emit(slot)
 	return OK

@@ -208,7 +208,7 @@ func test_quest_battle_defeat_is_not_fatal() -> void:
 	logic.result = BattleLogic.Result.DEFEAT
 	logic.luz = 7
 	assert_eq(AdventureRules.finish_quest_battle(logic, Q), &"defeat")
-	assert_eq(GameState.hp, AdventureRules.max_hp())
+	assert_eq(GameState.hp, AdventureRules.respawn_hp(AdventureRules.max_hp()), "despierta con el 50%")
 	assert_eq(GameState.luz, 3)
 	assert_eq(QuestLogic.state_of(GameState.quests[Q]), QuestLogic.ACTIVE, "él sigue avanzando")
 

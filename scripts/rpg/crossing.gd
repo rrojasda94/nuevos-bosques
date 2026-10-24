@@ -7,7 +7,7 @@ extends CanvasLayer
 ## También lleva el combate de misión (Ofomni descarriado, EventBus.quest_battle_requested).
 ## Mientras está abierto (o dura el combate) el árbol se pausa; este nodo y el combate siguen
 ## activos (process_mode ALWAYS). Al terminar emite EventBus.crossing_resolved (o
-## quest_battle_resolved) y la exploración cruza, retrocede o despierta al Adoc en su villa.
+## quest_battle_resolved) y la exploración cruza, retrocede o despierta al Adoc junto a un Nujio aliado.
 ## Solo escucha EventBus y lee GameState: no conoce la escena de exploración.
 
 const BATTLE_SCENE: PackedScene = preload("res://scenes/rpg/battle.tscn")

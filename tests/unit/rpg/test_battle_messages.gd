@@ -67,7 +67,7 @@ func test_defeat_message_is_last() -> void:
 	brute.atk = 99
 	var msgs: Array[Dictionary] = Battle.messages_for(_logic(10, brute).play_turn(BattleLogic.Action.ATTACK), BALANCE)
 	assert_eq(msgs.size(), 3)
-	assert_eq(msgs[2].text, "Caes. Despertarás junto al Nujio de tu villa.")
+	assert_eq(msgs[2].text, "Caes. Despertarás junto a un Nujio.")
 	assert_eq(msgs[1].adoc_hp, 0)
 
 

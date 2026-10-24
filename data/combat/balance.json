@@ -71,6 +71,11 @@
   },
   "victory_luz": 1,
   "defeat_luz_factor": 0.5,
+  "respawn": {
+    "$comment": "Reaparición tras una derrota no fatal (cruce-y-combate-v2.md, dueño). hp_pct: % de los PV máximos con que despiertas (redondeo hacia arriba, mínimo 1). ally_relation: relación desde la que un Bosque es aliado y su Nujio es un destino de reaparición (el natal siempre lo es; uno forzado sin pagar, no). Destino: el Nujio aliado o el del último Bosque pagado más cercano en chunks (Manhattan) a donde caíste; si no hay ninguno, la villa natal. La Luz suelta se reduce con defeat_luz_factor. Provisionales: game-designer.",
+    "hp_pct": 50,
+    "ally_relation": 30
+  },
   "xp": {
     "victory_base": 4,
     "victory_per_d": 3

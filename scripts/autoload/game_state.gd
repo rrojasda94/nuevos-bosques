@@ -13,8 +13,11 @@ extends Node
 ## caduca (bosques-y-relacion.md, #134): open_until por Bosque en lugar de la lista permanente
 ## open_bosques, contador de riutash y Bosques candidatos a enojarse (angry_candidate); al migrar,
 ## lo pagado queda abierto hasta el segundo riutash desde la carga (o para siempre con amistad
-## alta). Las versiones anteriores se cargan con valores por defecto.
-const SAVE_VERSION: int = 12
+## alta). v13: último Bosque al que se pagó peaje (last_paid_bosque), destino de reaparición tras
+## una derrota (cruce-y-combate-v2.md); al migrar, el pagado más reciente que siga abierto (el de
+## caducidad más tardía; si solo hay permanentes, el de id más bajo) o ninguno. Las versiones
+## anteriores se cargan con valores por defecto.
+const SAVE_VERSION: int = 13
 ## Migración a v9: el Ofomni de la misión pasó de "ofomni" a "ofomni_descarriado" (y su etiqueta
 ## de brújula, de "Ofomni" a "Ofomni descarriado").
 const LEGACY_OFOMNI_ID: String = "ofomni"
@@ -47,6 +50,9 @@ var riutash_count: int = 0
 ## mientras riutash_count < riutash; AdventureRules.OPEN_PERMANENT (-1) = para siempre (amistad
 ## alta). Mientras dura, se cruza y sus Botarramas quedan pasivos. Lo gestiona AdventureRules.
 var open_until: Dictionary = {}
+## Último Bosque al que se pagó el peaje (Luz, ofrenda u Ofrecer Luz), aunque ya haya caducado:
+## destino de reaparición tras una derrota (AdventureRules.respawn_target). -1 = ninguno.
+var last_paid_bosque: int = -1
 ## Ids de los Bosques forzados (se ha vencido a alguno de sus Botarramas sin pagar): se cruzan, pero
 ## sus demás Botarramas siguen activos y vuelven a exigir el pago. Pagar no borra la marca: si el
 ## paso caduca, el Bosque vuelve a estar forzado (AdventureRules.is_forced).
@@ -122,6 +128,7 @@ func new_game(new_seed: int = 0, new_region: StringName = &"valle_del_sara") -> 
 	hp = AdventureRules.max_hp()
 	riutash_count = 0
 	open_until = {}
+	last_paid_bosque = -1
 	forced_bosques = []
 	angry_candidate = []
 	bosque_hostility = {}
@@ -162,6 +169,7 @@ func to_dict() -> Dictionary:
 		"hp": hp,
 		"riutash_count": riutash_count,
 		"open_until": open_until,
+		"last_paid_bosque": last_paid_bosque,
 		"forced_bosques": forced_bosques,
 		"angry_candidate": angry_candidate,
 		"bosque_hostility": bosque_hostility,
@@ -232,6 +240,11 @@ func from_dict(data: Dictionary) -> void:
 	# amistad alta.
 	for id: int in legacy_open:
 		AdventureRules.open_bosque(id)
+	# v12 o anterior: sin último pagado; se deduce de lo que sigue abierto.
+	if data.has("last_paid_bosque"):
+		last_paid_bosque = maxi(-1, int(data.last_paid_bosque))
+	else:
+		last_paid_bosque = _latest_paid(open_until)
 	angry_candidate = []
 	for id: Variant in data.get("angry_candidate", []):
 		if not angry_candidate.has(int(id)):
@@ -350,6 +363,21 @@ static func _int_dict(value: Variant, lo: int, hi: int) -> Dictionary:
 		for key: Variant in value:
 			out[str(key)] = clampi(int(value[key]), lo, hi)
 	return out
+
+
+## Bosque pagado más reciente según open_until: el de caducidad más tardía (empates: id más bajo);
+## si solo hay permanentes, el de id más bajo. -1 si no hay ninguno.
+static func _latest_paid(until_by_id: Dictionary) -> int:
+	var best: int = -1
+	var best_until: int = -2
+	for key: Variant in until_by_id:
+		var id: int = int(key)
+		var until: int = int(until_by_id[key])
+		# Permanente (-1) cuenta como el más antiguo: no se sabe cuándo se pagó.
+		if until > best_until or (until == best_until and id < best):
+			best = id
+			best_until = until
+	return best
 
 
 static func _to_vector2i(value: Variant, fallback: Vector2i) -> Vector2i:
