@@ -83,9 +83,9 @@ func test_roads_refuges_and_villas_only_where_explored() -> void:
 			var c := Vector2i(x, y)
 			if _map.has_road(c):
 				road_chunks.append(c)
-			if _map.has_refuge(c):
+			if _map.has_refuge(c) and _map.has_road(c):
 				refuge_chunks.append(c)
-	assert_gt(refuge_chunks.size(), 1, "la seed de prueba tiene refugios")
+	assert_gt(refuge_chunks.size(), 1, "la seed de prueba tiene refugios junto al camino")
 	var none: Array[Vector2i] = []
 	assert_true(MapLogic.visible_roads(_map, none).is_empty())
 	assert_true(MapLogic.visible_refuges(_map, none).is_empty())

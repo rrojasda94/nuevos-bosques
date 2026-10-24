@@ -60,7 +60,7 @@ static func visible_roads(bosques: BosqueMap, explored: Array[Vector2i]) -> Dict
 	return out
 
 
-## Refugios vistos: chunks explorados con refugio junto al camino.
+## Refugios vistos: chunks explorados con refugio.
 static func visible_refuges(bosques: BosqueMap, explored: Array[Vector2i]) -> Array[Vector2i]:
 	var out: Array[Vector2i] = []
 	for c: Vector2i in visible_cells(bosques, explored):

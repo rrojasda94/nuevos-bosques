@@ -26,10 +26,12 @@ const SALT_ROAD_EXTRA: int = 16
 const SALT_ROAD_ORDER: int = 17
 ## Porcentaje de aristas de adyacencia fuera del árbol que también llevan camino (ciclos).
 const ROAD_EXTRA_PERCENT: int = 15
-## Refugio en los chunks de camino cuya distancia por camino a la villa natal, módulo
-## REFUGE_PERIOD, esté en REFUGE_STEPS: uno cada 2 o 3 chunks yendo hacia casa.
-const REFUGE_PERIOD: int = 5
-const REFUGE_STEPS: Array[int] = [1, 3]
+## Reparto de refugios por la región (bloque "refuges" del JSON; ADR 0006). `per_bosque`: mínimo
+## de refugios por Bosque (el primero, en su chunk de Nujio); `min_spacing`: distancia mínima
+## (Manhattan, en chunks) entre los refugios del reparto general (2 = nunca en chunks vecinos,
+## sale ~1 de cada 2-3 chunks); `max_distance`: ningún chunk queda más lejos de un refugio.
+const DEFAULT_REFUGES: Dictionary = { "per_bosque": 1, "min_spacing": 2, "max_distance": 2 }
+const SALT_REFUGE_ORDER: int = 19
 
 var grid_size: Vector2i = Vector2i.ZERO
 ## Id de Bosque por chunk (fila a fila). Los ids van de 0 a count() - 1.
@@ -49,16 +51,20 @@ var road_edges: Array[Vector2i] = []
 var _road_sides: Dictionary = {}  # Vector2i -> Array[Vector2i]
 var _road_distance: Dictionary = {}  # Vector2i -> int (chunks de camino hasta la villa natal)
 var _road_home_side: Dictionary = {}  # Vector2i -> Vector2i (lado del siguiente tramo a casa)
+var _refuges: Dictionary = {}  # Vector2i -> true (chunks con refugio)
 
 
 ## Reparto de la región `region` (JSON) con su Bosque inicial (el de start_chunk) con villa.
 static func for_region(seed_value: int, region: Dictionary) -> BosqueMap:
-	return build(seed_value, ChunkGenerator.region_size(region), ChunkGenerator.region_start_chunk(region))
+	return build(seed_value, ChunkGenerator.region_size(region), ChunkGenerator.region_start_chunk(region),
+			region.get("refuges", {}))
 
 
 ## `home_chunk`: chunk inicial de la partida. Su Bosque tiene siempre villa (el lugar natal del
 ## Adoc, ADR 0009), fuera del sorteo de 1 de cada VILLA_ODDS; el resto no cambia.
-static func build(seed_value: int, size: Vector2i, home_chunk: Vector2i = Vector2i(-1, -1)) -> BosqueMap:
+## `refuges`: parámetros del reparto de refugios (DEFAULT_REFUGES si faltan).
+static func build(seed_value: int, size: Vector2i, home_chunk: Vector2i = Vector2i(-1, -1),
+		refuges: Dictionary = {}) -> BosqueMap:
 	var map := BosqueMap.new()
 	map.grid_size = size
 	map.ids.resize(size.x * size.y)
@@ -75,6 +81,7 @@ static func build(seed_value: int, size: Vector2i, home_chunk: Vector2i = Vector
 	else:
 		map.home_bosque = map.bosque_at(size / 2)
 	map._build_roads(seed_value)
+	map._assign_refuges(seed_value, DEFAULT_REFUGES.merged(refuges, true))
 	return map
 
 
@@ -338,10 +345,66 @@ func road_home_side(coord: Vector2i) -> Vector2i:
 	return _road_home_side.get(coord, Vector2i.ZERO)
 
 
-## El chunk tiene un refugio junto al camino: uno cada 2 o 3 chunks de camino hacia casa.
+## El chunk tiene un refugio (ChunkGenerator lo coloca siempre: casilla REFUGE alcanzable).
 func has_refuge(coord: Vector2i) -> bool:
-	var d: int = road_distance(coord)
-	return d > 0 and REFUGE_STEPS.has(d % REFUGE_PERIOD)
+	return _refuges.has(coord)
+
+
+## Chunks con refugio, en orden de fila.
+func refuge_chunks() -> Array[Vector2i]:
+	var out: Array[Vector2i] = []
+	for y: int in grid_size.y:
+		for x: int in grid_size.x:
+			if _refuges.has(Vector2i(x, y)):
+				out.append(Vector2i(x, y))
+	return out
+
+
+## Distancia (Manhattan, en chunks) del chunk al refugio más cercano; -1 si no hay ninguno.
+func refuge_distance(coord: Vector2i) -> int:
+	var best: int = -1
+	for r: Vector2i in _refuges:
+		var d: int = absi(r.x - coord.x) + absi(r.y - coord.y)
+		if best < 0 or d < best:
+			best = d
+	return best
+
+
+## Reparto determinista de refugios, en tres pasadas:
+## 1. Cada Bosque tiene `per_bosque` refugios: el primero en su chunk de Nujio (descansar el
+##    riutash cerca del Nujio sube la relación, bosques-y-relacion.md); los demás, en chunks del
+##    Bosque en orden de hash, lo más separados posible.
+## 2. Reparto general por toda la región (con camino o sin él) en orden de hash: un chunk recibe
+##    refugio si queda a `min_spacing` chunks o más de todos los anteriores.
+## 3. Cobertura: todo chunk a más de `max_distance` de un refugio recibe uno.
+func _assign_refuges(seed_value: int, params: Dictionary) -> void:
+	var spacing: int = int(params.min_spacing)
+	var max_distance: int = int(params.max_distance)
+	var order: Array[Vector2i] = []
+	for y: int in grid_size.y:
+		for x: int in grid_size.x:
+			order.append(Vector2i(x, y))
+	var keys: Dictionary = {}
+	for c: Vector2i in order:
+		keys[c] = ChunkGenerator.hash_ints([seed_value, c.x, c.y, SALT_REFUGE_ORDER])
+	order.sort_custom(func(a: Vector2i, b: Vector2i) -> bool:
+		return keys[a] < keys[b] or (keys[a] == keys[b] and (a.y < b.y or (a.y == b.y and a.x < b.x))))
+	for id: int in count():
+		_refuges[nujio_chunk[id]] = true
+		var wanted: int = int(params.per_bosque) - 1
+		for min_gap: int in [spacing, 1]:
+			for c: Vector2i in order:
+				if wanted <= 0:
+					break
+				if bosque_at(c) == id and not _refuges.has(c) and refuge_distance(c) >= min_gap:
+					_refuges[c] = true
+					wanted -= 1
+	for c: Vector2i in order:
+		if refuge_distance(c) >= spacing:
+			_refuges[c] = true
+	for c: Vector2i in order:
+		if refuge_distance(c) > max_distance:
+			_refuges[c] = true
 
 
 func _build_roads(seed_value: int) -> void:
