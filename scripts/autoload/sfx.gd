@@ -8,7 +8,7 @@ extends Node
 
 const DIR: String = "res://assets/audio/sfx/"
 const NAMES: Array[StringName] = [
-	&"step", &"text_blip", &"hit", &"whip", &"riutash_warning", &"riutash", &"level_up",
+	&"step", &"text_blip", &"hit", &"whip", &"riutash_warning", &"riutash", &"riutash_swish", &"level_up",
 	&"menu_move", &"menu_accept",
 ]
 const BUS: StringName = &"SFX"

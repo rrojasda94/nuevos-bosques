@@ -51,6 +51,7 @@ Letrero y refugio de 8×8, listos para el HUD o el mapa. Todavía no se usan: el
 | `sfx_whip` | Latigazo del Ofomni | Silbido de ruido que sube + chasquido | 210 ms |
 | `sfx_riutash_warning` | `EventBus.riutash_warning` | Dos notas de alerta que bajan | 350 ms |
 | `sfx_riutash` | `EventBus.riutash_passed` (destello) | Arpegio rapidísimo + ruido brillante + triangular grave | 750 ms |
+| `sfx_riutash_swish` | Reloj del riutash: avisos de 60 y 15 s y a los 10 y 5 s | Barrido de ruido que sube y baja, "swishhh" | 420 ms |
 | `sfx_level_up` | `EventBus.character_leveled_up` y `Sfx.play_level_up()` | Arpegio de do mayor | 640 ms |
 | `sfx_menu_move` | Mover el cursor de `OptionMenu` | Cuadrada 1320 Hz | 30 ms |
 | `sfx_menu_accept` | Aceptar en `OptionMenu` | Dos notas que suben | 110 ms |

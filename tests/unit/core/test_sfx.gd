@@ -3,7 +3,7 @@ extends GutTest
 ## rompe nada.
 
 const EXPECTED: Array[StringName] = [
-	&"step", &"text_blip", &"hit", &"whip", &"riutash_warning", &"riutash", &"level_up",
+	&"step", &"text_blip", &"hit", &"whip", &"riutash_warning", &"riutash", &"riutash_swish", &"level_up",
 	&"menu_move", &"menu_accept",
 ]
 
