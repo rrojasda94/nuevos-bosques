@@ -1,8 +1,8 @@
 extends GutTest
 ## Frutos guardados en la bolsa (dueño: "puedes elegir solo coger el fruto y almacenarlo en el
 ## inventario para consumirlo dentro del bosque luego. no puedes sacar un fruto de su bosque sino
-## dañas su relación"): guardar o comer, apilado por origen, límite y robo, comerlo solo en su
-## Bosque, penalización al sacarlo (una vez por salida) y guardado.
+## dañas su relación"): guardar o comer, apilado por origen, límite y robo, comerlo en cualquier
+## sitio (lejos de su Bosque baja la relación), penalización al sacarlo (una vez por salida) y guardado.
 
 const Screen = preload("res://scripts/rpg/inventory_screen.gd")
 const SAVE_SLOT: int = 92
@@ -77,19 +77,29 @@ func test_full_bag_can_only_eat() -> void:
 	assert_false(FruitRules.take(COORD, Vector2i(5, 5), HOME, HOME).is_empty(), "comer sí")
 
 
-func test_eat_only_in_origin_bosque() -> void:
+func test_eat_anywhere_but_away_hurts_origin_relation() -> void:
 	FruitRules.take(COORD, Vector2i(5, 5), PAID, HOME, true)
+	FruitRules.take(COORD, Vector2i(6, 6), PAID, HOME, true)
 	var i: int = _fruit_index(PAID)
 	GameState.hp = 10
-	assert_false(FruitRules.can_eat(i, HOME))
-	assert_eq(FruitRules.eat_from_bag(i, HOME), -1, "fuera de su Bosque, no")
-	assert_eq(Screen.describe_at(i, HOME), "Este fruto solo se puede comer en su Bosque.")
-	assert_eq(Screen.activate(i, HOME), "Este fruto solo se puede comer en su Bosque.")
-	assert_eq(InventoryLogic.count(GameState.bag, Items.FRUIT_ID), 1)
-	assert_eq(GameState.hp, 10)
 	var heal: int = FruitRules.heal_amount(AdventureRules.max_hp())
-	assert_eq(Screen.activate(i, PAID), "Comes el fruto. +%d PV" % heal, "en su Bosque, sí")
+	var away: int = int(AdventureRules.balance().bosque_memory.relation_per_fruit_eaten_away)
+	assert_eq(away, -5, "provisional")
+	assert_true(FruitRules.can_eat(i, HOME), "se puede comer en otro Bosque")
+	assert_true(FruitRules.is_eaten_away(i, HOME))
+	assert_false(FruitRules.is_eaten_away(i, PAID))
+	var name: String = Signpost.villa_name(42, PAID)
+	assert_string_contains(Screen.describe_at(i, HOME), name, "avisa de quién lo sentirá")
+	var before: int = AdventureRules.relation(PAID)
+	assert_eq(FruitRules.bosque_entered(HOME), 2, "sacarlos: -5 por fruto")
+	assert_eq(Screen.activate(i, HOME),
+		"Comes el fruto. +%d PV\nEl Bosque de %s siente que comes su fruto lejos." % [heal, name])
 	assert_eq(GameState.hp, 10 + heal)
+	assert_eq(AdventureRules.relation(PAID), before + 2 * -5 + away, "-5 por sacarlo y -5 por comerlo lejos")
+	var after_away: int = AdventureRules.relation(PAID)
+	GameState.hp = 1
+	assert_eq(Screen.activate(_fruit_index(PAID), PAID), "Comes el fruto. +%d PV" % heal, "en su Bosque, sin aviso")
+	assert_eq(AdventureRules.relation(PAID), after_away, "en su Bosque no penaliza")
 	assert_eq(InventoryLogic.count(GameState.bag, Items.FRUIT_ID), 0)
 
 

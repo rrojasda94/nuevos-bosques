@@ -53,9 +53,9 @@ func test_victory_forces_the_bosque_and_other_botarramas_stay_active() -> void:
 	assert_true(AdventureRules.is_forced(_target))
 	assert_false(AdventureRules.is_paid(_target, _home), "vencer no paga")
 	assert_true(AdventureRules.is_passable(_target, _home), "su frontera se cruza")
-	assert_true(field._can_detect(other), "los demás Botarramas siguen activos")
+	assert_true(field.can_detect(other), "los demás Botarramas siguen activos")
 	assert_true(field.occupied(Vector2i(40, 40)), "y cierran el paso")
-	assert_true(MonsterSteering.engages(other.cell, Vector2i(41, 41), field._can_detect(other), other.cfg),
+	assert_true(MonsterSteering.engages(other.cell, Vector2i(41, 41), field.can_detect(other), other.cfg),
 		"te interceptan y exigen el pago")
 
 
@@ -68,7 +68,7 @@ func test_paying_in_a_forced_bosque_makes_it_paid_and_passive() -> void:
 	assert_true(AdventureRules.pay_toll(_target, toll))
 	assert_true(AdventureRules.is_paid(_target, _home))
 	assert_false(AdventureRules.is_forced(_target), "deja de estar forzado")
-	assert_false(field._can_detect(other), "pasivo")
+	assert_false(field.can_detect(other), "pasivo")
 	assert_false(field.occupied(Vector2i(40, 40)))
 
 

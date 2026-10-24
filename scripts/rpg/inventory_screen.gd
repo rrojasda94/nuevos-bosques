@@ -159,12 +159,22 @@ static func slot_of(cursor: int) -> StringName:
 
 
 ## Texto de la casilla `index` de la bolsa estando en el Bosque `bosque_id`: la descripción y, si
-## es un fruto que no se puede comer aquí, por qué.
+## es un fruto lejos de su Bosque de origen, el aviso de que comerlo aquí daña la relación.
 static func describe_at(index: int, bosque_id: int) -> String:
 	var id: StringName = InventoryLogic.id_at(GameState.bag, index)
 	var text: String = describe(id)
-	if id == Items.FRUIT_ID and not FruitRules.can_eat(index, bosque_id):
-		text = Texts.get_text("fruit_eat_elsewhere")
+	if FruitRules.is_eaten_away(index, bosque_id):
+		text = Texts.get_text("fruit_eat_away_warning") % Signpost.villa_name(GameState.seed_value,
+			InventoryLogic.origin_at(GameState.bag, index))
+	return text
+
+
+## Aviso tras comer un fruto guardado (FruitRules.eat_from_bag): los PV y, si se comió lejos de su
+## Bosque, que ese Bosque lo siente.
+static func fruit_eaten_text(result: Dictionary) -> String:
+	var text: String = Texts.get_text("fruit_eaten") % int(result.healed)
+	if int(result.away_from) >= 0:
+		text += "\n" + Texts.get_text("fruit_eaten_away") % Signpost.villa_name(GameState.seed_value, int(result.away_from))
 	return text
 
 
@@ -218,8 +228,8 @@ static func activate(cursor: int, bosque_id: int = -1) -> String:
 	if Ofrendas.is_ofrenda(id):
 		return TEXT_OFRENDA_USE
 	if id == Items.FRUIT_ID:
-		var healed: int = FruitRules.eat_from_bag(cursor, bosque_id)
-		return Texts.get_text("fruit_eat_elsewhere") if healed < 0 else Texts.get_text("fruit_eaten") % healed
+		var result: Dictionary = FruitRules.eat_from_bag(cursor, bosque_id)
+		return "" if result.is_empty() else fruit_eaten_text(result)
 	if AdventureRules.equip_from_bag(cursor):
 		return TEXT_EQUIPPED % Items.display_name(id)
 	return Texts.get_text("bag_full")
@@ -304,7 +314,7 @@ func _refresh() -> void:
 	for i: int in _cells.size():
 		var id: StringName = id_under(i, GameState.bag, GameState.equipped)
 		var qty: int = InventoryLogic.qty_at(GameState.bag, i) if i < BAG_CELLS else 1
-		var usable: bool = id != Items.FRUIT_ID or FruitRules.can_eat(i, _bosque_id)
+		var usable: bool = i >= BAG_CELLS or not FruitRules.is_eaten_away(i, _bosque_id)
 		_draw_cell(_cells[i], id, qty, i == _cursor, i >= BAG_CELLS, usable)
 	var id: StringName = id_under(_cursor, GameState.bag, GameState.equipped)
 	if id != &"":

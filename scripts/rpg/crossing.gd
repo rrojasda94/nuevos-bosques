@@ -4,7 +4,10 @@ extends CanvasLayer
 ## su Botarramas o retroceder. Lo abre el encuentro con un Botarramas o, como red de seguridad, empujar el borde.
 ## Si el Bosque recuerda Botarramas vencidos, el peaje sube y el título lo avisa con una línea más;
 ## si la relación con el Bosque cambia el peaje (bosques-y-relacion.md), otra con su multiplicador.
-## También lleva el combate de misión (Ofomni descarriado, EventBus.quest_battle_requested).
+## También lleva el combate de misión (Ofomni descarriado, EventBus.quest_battle_requested) y el
+## combate directo contra un Único de dentro del Bosque (EventBus.unico_battle_requested: Ofomni
+## que persiguen tras un robo, cazadores, los que rondan o el que se enfrenta a voluntad; sin menú,
+## se puede apaciguar pagando el peaje del Bosque si el Único lo acepta).
 ## Mientras está abierto (o dura el combate) el árbol se pausa; este nodo y el combate siguen
 ## activos (process_mode ALWAYS). Al terminar emite EventBus.crossing_resolved (o
 ## quest_battle_resolved) y la exploración cruza, retrocede o despierta al Adoc junto a un Nujio aliado.
@@ -31,6 +34,11 @@ var _map_key: String = ""
 var _battle: Node
 ## Misión del combate en curso (&"" = combate de borde).
 var _quest_id: StringName = &""
+## El combate en curso es directo contra un Único de dentro del Bosque.
+var _chase: bool = false
+## Ese combate ofende al Bosque (tenía el paso abierto).
+var _offends: bool = false
+var _home: int = -1
 ## Submenú de ofrendas abierto: índices de AdventureRules.bag_ofrendas() de cada opción (sin la
 ## de volver).
 var _ofrenda_choices: Array[int] = []
@@ -49,6 +57,7 @@ func _ready() -> void:
 	_panel_top = _panel.offset_top
 	EventBus.bosque_border_reached.connect(_on_bosque_border_reached)
 	EventBus.quest_battle_requested.connect(_on_quest_battle_requested)
+	EventBus.unico_battle_requested.connect(_on_unico_battle_requested)
 
 
 func _on_bosque_border_reached(bosque_id: int) -> void:
@@ -174,6 +183,7 @@ func _unhandled_input(event: InputEvent) -> void:
 func _start_battle() -> void:
 	_panel.visible = false
 	_quest_id = &""
+	_chase = false
 	var logic: BattleLogic = AdventureRules.start_battle(_bosque_id, _distance)
 	_open_battle(logic, _map.styles[_bosque_id], UnicoArt.Kind.BOTARRAMAS)
 
@@ -185,9 +195,28 @@ func _on_quest_battle_requested(quest_id: StringName) -> void:
 	var q: Dictionary = GameState.quests[quest_id]
 	_ensure_map(ChunkGenerator.load_region(GameState.region_id))
 	_quest_id = quest_id
+	_chase = false
 	get_tree().paused = true
 	var logic: BattleLogic = AdventureRules.start_quest_battle(quest_id, int(q.ofomni_d))
 	_open_battle(logic, _map.styles[maxi(0, int(q.ofomni_bosque))], UnicoArt.Kind.EYES)
+
+
+## Combate directo contra un Único `monster_id` del Bosque `bosque_id`: a la d del Bosque (como
+## mínimo 1) y con su peaje como precio para apaciguarlo.
+func _on_unico_battle_requested(bosque_id: int, monster_id: StringName, offends: bool) -> void:
+	if bosque_id < 0 or _panel.visible or _battle != null:
+		return
+	var region: Dictionary = ChunkGenerator.load_region(GameState.region_id)
+	_ensure_map(region)
+	_home = AdventureRules.home_bosque(_map, region)
+	_bosque_id = bosque_id
+	_distance = maxi(1, _map.distance(_home, bosque_id))
+	_quest_id = &""
+	_chase = true
+	_offends = offends
+	get_tree().paused = true
+	var logic: BattleLogic = AdventureRules.start_battle(bosque_id, _distance, monster_id)
+	_open_battle(logic, _map.styles[bosque_id], UnicoArt.kind_for(monster_id))
 
 
 func _open_battle(logic: BattleLogic, style: Dictionary, kind: UnicoArt.Kind) -> void:
@@ -205,6 +234,12 @@ func _on_battle_finished(logic: BattleLogic) -> void:
 		get_tree().paused = false
 		EventBus.quest_battle_resolved.emit(_quest_id, quest_outcome)
 		_quest_id = &""
+		return
+	if _chase:
+		_chase = false
+		var chase_outcome: StringName = AdventureRules.finish_unico_battle(logic, _bosque_id, _home, _offends)
+		get_tree().paused = false
+		EventBus.unico_battle_resolved.emit(_bosque_id, chase_outcome)
 		return
 	var outcome: StringName = AdventureRules.finish_battle(logic, _bosque_id)
 	# Apaciguar en combate (Luz u ofrenda) paga el paso (ADR 0010); vencer solo lo fuerza.

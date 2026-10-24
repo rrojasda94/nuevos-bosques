@@ -44,6 +44,19 @@ const FANGS: Array = [
 ]
 
 
+## Silueta de cada monstruo del mundo por su id de datos: Botarramas, Ofomni (los dos, el ojo con
+## tentáculos) y Aledra (la serpiente). Otro id, el placeholder de cuadrúpedo.
+static func kind_for(monster_id: StringName) -> Kind:
+	match monster_id:
+		&"botarramas":
+			return Kind.BOTARRAMAS
+		&"ofomni", &"ofomni_descarriado":
+			return Kind.EYES
+		&"aledra":
+			return Kind.SERPENT
+	return Kind.QUADRUPED
+
+
 static func has_sprite(kind: Kind) -> bool:
 	return SPRITES.has(kind) and ResourceLoader.exists(SPRITES[kind])
 
@@ -101,6 +114,18 @@ static func recolor(img: Image, style: Dictionary) -> Image:
 			if c.a > 0.0 and mapping.has(c.to_rgba32()):
 				out.set_pixel(x, y, mapping[c.to_rgba32()])
 	return out
+
+
+## Copia de `tex` (hoja del mundo o placeholder) con un aura de Luz punteada a 1 px del contorno: la
+## marca de los Ofomni que sirven a su Bosque, frente al descarriado, que no la lleva. Provisional
+## hasta que pixel-artist dé su sprite.
+static func with_aura(tex: Texture2D) -> Texture2D:
+	var img: Image = tex.get_image()
+	if img.is_compressed():
+		img.decompress()
+	img.convert(Image.FORMAT_RGBA8)
+	_ring(img, 1, AURA, true)
+	return ImageTexture.create_from_image(img)
 
 
 ## Monstruo de `px` x `px` píxeles: cuerpo con los colores del Bosque, contorno, ojos, colmillos y
@@ -230,14 +255,15 @@ static func _seg(p: Vector2, a: Vector2, b: Vector2) -> float:
 ## Pinta las casillas vacías a `dist` px (en cruz) de algo pintado. `dotted`: solo en damero.
 static func _ring(img: Image, dist: int, color: Color, dotted: bool) -> void:
 	var solid := img.duplicate() as Image
-	var px: int = img.get_width()
-	for y: int in px:
-		for x: int in px:
+	var w: int = img.get_width()
+	var h: int = img.get_height()
+	for y: int in h:
+		for x: int in w:
 			if solid.get_pixel(x, y).a > 0.0 or (dotted and (x + y) % 2 == 1):
 				continue
 			for d: Vector2i in ChunkData.SIDES:
 				var q := Vector2i(x, y) + d * dist
-				if q.x >= 0 and q.y >= 0 and q.x < px and q.y < px and solid.get_pixelv(q).a > 0.0:
+				if q.x >= 0 and q.y >= 0 and q.x < w and q.y < h and solid.get_pixelv(q).a > 0.0:
 					img.set_pixel(x, y, color)
 					break
 

@@ -12,6 +12,12 @@ extends Node2D
 ## encuentro abre el menú del borde; el borde cerrado lo abre igual si nadie le persigue (red de
 ## seguridad). El Ofomni de la misión (QuestRunner) aparece en su chunk y su encuentro es el
 ## combate de misión.
+## Ofomni del Bosque (OfomniGuard): un robo despierta a los que persiguen al Adoc por ese Bosque
+## (su encuentro es un combate que se puede apaciguar) y se rinden si sale de él; con la primera
+## misión ofrecida y sin aceptar, los del Bosque natal le devuelven a la villa si intenta salir.
+## El Bosque recuerda (BosqueHunt): dentro de un Bosque sin pagar, cada cierto tiempo envía un
+## cazador. Por dentro rondan Únicos de varios tipos (BosquePatrols; Aledra solo de noche). Con E
+## frente a un Único se le enfrenta a voluntad; de noche, antes de pelear con Aledra se avisa.
 
 const TILE_SIZE: int = 16
 ## Duración del fundido al cambiar de chunk.
@@ -42,6 +48,12 @@ var _pending_monster: OverworldMonster
 ## Frutales dibujados: casilla del TileMap -> [chunk, casilla del chunk, id del Bosque]. Para
 ## redibujarlos al tomar el fruto o al rebrotar.
 var _fruit_cells: Dictionary = {}
+## Persecución de los Ofomni tras un robo (no se guarda: al cargar no hay perseguidores).
+var _chase := OfomniGuard.new()
+## Los Ofomni del Bosque natal están devolviendo al Adoc a la villa (primera misión).
+var _capturing: bool = false
+## Cacería del Bosque sin pagar (no se guarda).
+var _hunt := BosqueHunt.new()
 
 @onready var _terrain: TileMapLayer = $Terrain
 @onready var _nujios: Node2D = $Nujios
@@ -62,6 +74,8 @@ func _ready() -> void:
 	_player.stepped.connect(_on_player_stepped)
 	EventBus.crossing_resolved.connect(_on_crossing_resolved)
 	EventBus.quest_battle_resolved.connect(_on_quest_battle_resolved)
+	EventBus.unico_battle_resolved.connect(_on_unico_battle_resolved)
+	EventBus.bosque_robbed.connect(_on_bosque_robbed)
 	_field.player = _player
 	_field.area_walkable = _area_walkable
 	_field.can_engage = func() -> bool: return _fade.color.a <= 0.0
@@ -80,6 +94,9 @@ func start() -> void:
 	_bosques = BosqueMap.for_region(GameState.seed_value, _region)
 	_home_bosque = AdventureRules.home_bosque(_bosques, _region)
 	_chunk = null
+	_chase.clear()
+	_hunt.clear()
+	_capturing = false
 	_quest.start(_bosques, _home_bosque, _get_chunk(_bosques.nujio_chunk[_home_bosque]))
 	var coord: Vector2i = GameState.chunk_coord
 	if not AdventureRules.is_passable(_bosques.bosque_at(coord), _home_bosque):
@@ -106,6 +123,8 @@ func _enter_home_villa() -> void:
 ## Bosque pagado) más cercano a donde cayó, o en la villa natal (AdventureRules.respawn_target), y
 ## lo avisa. Los PV y la Luz ya los ajustó el final del combate.
 func _respawn() -> void:
+	_chase.clear()
+	_hunt.clear()
 	var target: int = AdventureRules.respawn_target(_bosques, GameState.chunk_coord, _home_bosque)
 	var coord: Vector2i = _bosques.nujio_chunk[target]
 	_enter_chunk(coord, AdventureRules.respawn_cell(_get_chunk(coord)))
@@ -119,6 +138,9 @@ func _on_player_stepped(cell: Vector2i) -> void:
 	GameState.player_cell = cell
 	_blocked_dir = Vector2i.ZERO
 	_check_villa_rest(cell)
+	# Primera misión sin aceptar: acercarse a la frontera del Bosque natal (OfomniGuard).
+	if OfomniGuard.is_confined() and OfomniGuard.is_near_exit(_bosques, _chunk.coord, cell, _home_bosque):
+		_capture_home()
 
 
 func _enter_chunk(coord: Vector2i, cell: Vector2i) -> void:
@@ -138,6 +160,18 @@ func _enter_chunk(coord: Vector2i, cell: Vector2i) -> void:
 	_resting = AdventureRules.is_villa_rest(_chunk, cell)
 	_camera.reset_smoothing()
 	var bosque_id: int = _bosques.bosque_at(coord)
+	# Persecución por robo: en otro chunk del mismo Bosque los Ofomni siguen viniendo; en otro
+	# Bosque, se rinden en la frontera.
+	if _chase.bosque_entered(bosque_id):
+		EventBus.notice_requested.emit(Texts.get_text("ofomni_chase_gave_up"))
+	elif _chase.is_active():
+		_spawn_chasers(_chase.count)
+	# Cacería: en otro chunk del mismo Bosque los cazadores siguen viniendo; en otro, se acaba.
+	if _hunt.bosque_id != bosque_id:
+		_hunt.clear()
+	else:
+		for kind: StringName in _hunt.active:
+			_spawn_hunter(kind)
 	# Frutos guardados de otro Bosque: su Bosque de origen nota que te los llevas (FruitRules).
 	if FruitRules.bosque_entered(bosque_id) > 0:
 		EventBus.notice_requested.emit(Texts.get_text("fruit_taken_out"))
@@ -264,6 +298,10 @@ func _interact() -> void:
 	# Durante el fundido de entrada no: el diálogo pausa el árbol y lo dejaría a oscuras.
 	if _chunk == null or _player.is_moving() or _fade.color.a > 0.0:
 		return
+	var monster: OverworldMonster = _field.monster_at(_player.cell + _player.facing)
+	if monster != null:
+		_confront(monster)
+		return
 	var target: Dictionary = Interaction.find(_chunk, _player.cell, _player.facing, _npcs)
 	match target.kind:
 		Interaction.Kind.NPC:
@@ -348,6 +386,8 @@ func _take_fruit(cell: Vector2i, store: bool) -> void:
 	var lines: Array = [Texts.get_text("fruit_stored") if store else Texts.get_text("fruit_taken") % int(result.healed)]
 	if bool(result.theft):
 		lines.append(Texts.get_text("fruit_theft_seen"))
+		if _chase.is_active():
+			lines.append(Texts.get_text("ofomni_chase_alert"))
 	_dialogue.show_lines(lines)
 
 
@@ -367,6 +407,9 @@ func _refuge_lines() -> Array:
 
 
 func _on_edge_reached(direction: Vector2i) -> void:
+	if OfomniGuard.is_confined() and OfomniGuard.is_exit(_bosques, GameState.chunk_coord, direction, _home_bosque):
+		_capture_home()
+		return
 	var next_coord: Vector2i = GameState.chunk_coord + direction
 	var next_bosque: int = _bosques.bosque_at(next_coord)
 	if not AdventureRules.is_passable(next_bosque, _home_bosque):
@@ -421,14 +464,162 @@ func _on_quest_battle_resolved(_quest_id: StringName, outcome: StringName) -> vo
 			_retreat_from(monster)
 
 
-## Encuentro con un monstruo: el Ofomni descarriado empieza el combate de misión; un Botarramas, el menú del
-## borde del Bosque que guarda.
+## Encuentro con un monstruo: el Ofomni descarriado empieza el combate de misión; un Botarramas de
+## frontera, el menú del borde del Bosque que guarda; uno de dentro del Bosque (perseguidor,
+## cazador, ronda), su combate directo (de noche, Aledra avisa antes).
 func _on_monster_engaged(monster: OverworldMonster) -> void:
 	_pending_monster = monster
-	if monster.monster_id == MonsterField.OFOMNI_DESCARRIADO:
+	if monster.role == MonsterField.ROLE_QUEST or monster.monster_id == MonsterField.OFOMNI_DESCARRIADO:
 		EventBus.quest_battle_requested.emit(QuestRunner.QUEST)
-	else:
+	elif monster.role == MonsterField.ROLE_GUARDIAN:
 		EventBus.bosque_border_reached.emit(monster.bosque_id)
+	else:
+		_request_unico_battle(monster, false)
+
+
+## E frente a un Único (enfrentarse a voluntad): el descarriado, su combate de misión; un guardián
+## de frontera que vigila, el menú del borde; un perseguidor o un cazador, combate directo; uno
+## pasivo (su Bosque tiene el paso abierto) o uno que ronda, primero pregunta y avisa de que ofende
+## al Bosque si tenía el paso abierto.
+func _confront(monster: OverworldMonster) -> void:
+	var active: bool = _field.can_detect(monster)
+	if monster.role == MonsterField.ROLE_QUEST or (monster.role == MonsterField.ROLE_GUARDIAN and active) \
+			or monster.role == MonsterField.ROLE_CHASER or monster.role == MonsterField.ROLE_HUNTER:
+		_on_monster_engaged(monster)
+		return
+	var offends: bool = AdventureRules.is_paid(monster.bosque_id, _home_bosque)
+	var text: String = Texts.get_text("unico_confront_prompt") % AdventureRules.monster_name(monster.monster_id)
+	if offends:
+		text += "\n" + Texts.get_text("unico_confront_offends")
+	_dialogue.choice.connect(_on_confront_choice.bind(monster, offends), CONNECT_ONE_SHOT)
+	_dialogue.ask(text, [Texts.get_text("unico_confront_yes"), Texts.get_text("unico_confront_no")])
+
+
+func _on_confront_choice(index: int, monster: OverworldMonster, offends: bool) -> void:
+	if index != 0 or not is_instance_valid(monster):
+		return
+	_pending_monster = monster
+	_request_unico_battle(monster, offends)
+
+
+## Combate directo contra un Único de dentro del Bosque. Si perder sería fatal (Aledra de noche),
+## avisa primero y deja huir sin pelear.
+func _request_unico_battle(monster: OverworldMonster, offends: bool) -> void:
+	var fatal_at: Array = monster.cfg.get("fatal_at", [])
+	if not AdventureRules.is_fatal(fatal_at, GameState.clock_momento):
+		EventBus.unico_battle_requested.emit(monster.bosque_id, monster.monster_id, offends)
+		return
+	_pending_monster = monster
+	_dialogue.choice.connect(_on_fatal_choice.bind(monster, offends), CONNECT_ONE_SHOT)
+	_dialogue.ask(Texts.get_text("aledra_night_warning"), [Texts.get_text("aledra_fight"), Texts.get_text("aledra_flee")])
+
+
+func _on_fatal_choice(index: int, monster: OverworldMonster, offends: bool) -> void:
+	if not is_instance_valid(monster):
+		_pending_monster = null
+		return
+	if index == 0:
+		_pending_monster = monster
+		EventBus.unico_battle_requested.emit(monster.bosque_id, monster.monster_id, offends)
+		return
+	_pending_monster = null
+	_retreat_from(monster)
+
+
+## Fin de un combate directo contra un Único de dentro del Bosque. Vencerlo lo disuelve (los demás
+## siguen; un perseguidor o un cazador deja hueco); apaciguarlo paga al Bosque y se van todos los
+## perseguidores y cazadores (los que rondan quedan pasivos); perder despierta junto a un Nujio y
+## acaba la persecución; huir aleja al Adoc y el Único vuelve un rato a su sitio.
+func _on_unico_battle_resolved(_bosque_id: int, outcome: StringName) -> void:
+	var monster: OverworldMonster = _pending_monster
+	_pending_monster = null
+	match outcome:
+		&"victory":
+			if monster != null:
+				if monster.role == MonsterField.ROLE_CHASER:
+					_chase.chaser_defeated()
+				elif monster.role == MonsterField.ROLE_HUNTER:
+					_hunt.hunter_defeated(monster.monster_id)
+			_field.dissolve(monster)
+		&"appeased":
+			_field.remove_roles([MonsterField.ROLE_CHASER, MonsterField.ROLE_HUNTER] as Array[StringName])
+			_chase.clear()
+			_hunt.clear()
+		&"defeat":
+			_respawn()
+		&"game_over":
+			_game_over()
+		_:
+			_retreat_from(monster)
+
+
+## Un robo en el Bosque actual, a la vista: despiertan sus Ofomni y persiguen al Adoc.
+func _on_bosque_robbed(bosque_id: int) -> void:
+	if _chunk == null or _bosques == null or bosque_id != _bosques.bosque_at(_chunk.coord):
+		return
+	if not OfomniGuard.is_alerted():
+		return
+	var n: int = OfomniGuard.chase_count(GameState.seed_value, bosque_id, AdventureRules.hostility(bosque_id))
+	var added: int = _chase.alert(bosque_id, n)
+	if added > 0:
+		_spawn_chasers(added)
+
+
+## Pone `n` Ofomni perseguidores del Bosque de la persecución cerca del jugador, fuera de la vista.
+func _spawn_chasers(n: int) -> void:
+	var cells: Array[Vector2i] = OfomniGuard.spawn_cells(_player.cell, n,
+		func(c: Vector2i) -> bool: return _field.can_place(c, _chunk), Rect2i(0, 0, ChunkData.SIZE, ChunkData.SIZE))
+	_field.spawn_chasers(_chase.bosque_id, cells, _bosques.styles[_chase.bosque_id])
+
+
+## Pone un cazador del Bosque actual (BosqueHunt) cerca del jugador, fuera de la vista.
+func _spawn_hunter(kind: StringName) -> void:
+	var bosque_id: int = _bosques.bosque_at(_chunk.coord)
+	var cells: Array[Vector2i] = OfomniGuard.spawn_cells(_player.cell, 1,
+		func(c: Vector2i) -> bool: return _field.can_place(c, _chunk), Rect2i(0, 0, ChunkData.SIZE, ChunkData.SIZE))
+	if not cells.is_empty():
+		_field.spawn_hunter(kind, bosque_id, cells[0], _bosques.styles[bosque_id])
+
+
+## Reloj de la cacería: corre con el árbol (se para con menús, combates y diálogos). Al pagar el
+## Bosque, los cazadores que quedan se van.
+func _process(delta: float) -> void:
+	if _chunk == null or _bosques == null or _capturing or _fade.color.a > 0.0:
+		return
+	var bosque_id: int = _bosques.bosque_at(_chunk.coord)
+	var was_hunting: bool = _hunt.bosque_id >= 0
+	var kind: StringName = _hunt.tick(delta, bosque_id, _home_bosque, GameState.seed_value)
+	if was_hunting and _hunt.bosque_id < 0:
+		_field.remove_roles([MonsterField.ROLE_HUNTER] as Array[StringName])
+	if kind == &"":
+		return
+	_spawn_hunter(kind)
+	if _hunt.is_first():
+		EventBus.notice_requested.emit(Texts.get_text("bosque_hunt_started"))
+
+
+## Primera misión sin aceptar (OfomniGuard): los Ofomni del Bosque natal aparecen junto al Adoc, lo
+## dicen y, al cerrar el diálogo, le llevan a la plaza de la villa. Sin combate y sin perder nada.
+func _capture_home() -> void:
+	if _capturing:
+		return
+	_capturing = true
+	var cells: Array[Vector2i] = []
+	for d: Vector2i in [Vector2i(-1, -1), Vector2i(1, -1), Vector2i(-1, 1), Vector2i(1, 1),
+			Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]:
+		var c: Vector2i = _player.cell + d
+		if cells.size() < 2 and _chunk.is_walkable(c) and not _npcs.has(c) and not _field.occupied(c):
+			cells.append(c)
+	_field.spawn_captors(_home_bosque, cells, _bosques.styles[_home_bosque])
+	_dialogue.finished.connect(_finish_capture, CONNECT_ONE_SHOT)
+	_dialogue.show_lines([Texts.get_text("ofomni_capture")])
+
+
+func _finish_capture() -> void:
+	_capturing = false
+	_chase.clear()
+	var coord: Vector2i = _bosques.nujio_chunk[_home_bosque]
+	_enter_chunk(coord, _get_chunk(coord).hub)
 
 
 ## Retroceder o huir: retroceder retreat_cells casillas (alejándose del monstruo o, si se empujó
@@ -611,6 +802,8 @@ func _riutash_relation(sheltered: bool) -> void:
 
 
 func _on_momento_changed(momento: StringName) -> void:
+	# Aledra sale al anochecer y se va al amanecer (BosquePatrols).
+	_field.sync_patrols()
 	if _moon_tween != null:
 		_moon_tween.kill()
 	var from: float = float(_moonlight.material.get_shader_parameter(&"intensity"))

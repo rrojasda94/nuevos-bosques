@@ -25,6 +25,8 @@ var lateral: Vector2i = Vector2i.RIGHT
 var state: MonsterSteering.State = MonsterSteering.State.IDLE
 ## Segundos que le quedan sin ver al jugador (tras retroceder o huir, o al aparecer).
 var cooldown: float = 0.0
+## Papel en el mundo (MonsterField.ROLE_*): guardián de frontera, ronda, perseguidor...
+var role: StringName = &"guardian"
 
 var _idle_phase: int = 0
 var _wait: float = 0.0
@@ -72,6 +74,16 @@ func think(delta: float, player: Vector2i, can_detect: bool, walkable: Callable)
 	_wait = time
 	if d.step != cell:
 		_step_to(d.step, time)
+	elif state == MonsterSteering.State.IDLE:
+		_look_at(player)
+
+
+## Quieto, mira hacia el jugador si lo tiene cerca (te mira pasar). Solo con hoja de PNG: el arte
+## mira a la izquierda y se voltea.
+func _look_at(player: Vector2i) -> void:
+	if _sprite.hframes <= 1 or player.x == cell.x or MonsterSteering.chebyshev(cell, player) > int(cfg.get("vision_radius", 0)):
+		return
+	_sprite.flip_h = player.x > cell.x
 
 
 ## Vuelve a su puesto y olvida al jugador durante `seconds` (retroceder, huir).
