@@ -92,7 +92,9 @@ El letrero y el mapa (M) podrían indicar el estado con texto o color (`navegaci
 | Vencer a sus Botarramas | **−10** (ADR 0013, implementado), además de +1 de hostilidad |
 | Robar en él: por ahora, un segundo fruto del mismo Bosque en el mismo Momento, o fruto de un Bosque no pagado | **−20** y hostilidad +1 (implementado en el PR "frutos") |
 | Pagar con una ofrenda | Además: **hostilidad −1**, sin bajar de 0 ("el bosque olvida con ofrendas", #147) |
-| Sacar del Bosque un fruto guardado | **−5** por fruto y por salida (provisional) |
+| Sacar del Bosque un fruto guardado | **−5** por fruto y por salida (implementado) |
+| Comer fuera de su Bosque un fruto guardado | **−5 más** con el Bosque de origen (implementado, PR #39) |
+| Atacar con E a un Único pasivo de un Bosque pagado (ofensa) | **−10** y hostilidad +1; el Bosque queda forzado (implementado, PR #39) |
 
 | Umbral (propuesta) | Efecto |
 |---|---|
@@ -147,8 +149,12 @@ El letrero y el mapa (M) podrían indicar el estado con texto o color (`navegaci
 - **Feedback del dueño**: "los frutos se ven bien."
 - **Frutos guardables** (dueño: "con la vida llena o con daño puedes elegir solo coger el fruto y almacenarlo en el inventario para consumirlo dentro del bosque luego. no puedes sacar un fruto de su bosque sino dañas su relación"). Se implementan en el PR de inventario (PR 5 de la 0.3).
   - Al tomar un fruto (lícito) se elige **"Comer"** o **"Guardar"**, con los PV llenos o con daño.
-  - Un fruto guardado ocupa una casilla del inventario, recuerda su **Bosque de origen** y **solo se puede comer dentro de ese Bosque**.
-  - **Sacarlo de su Bosque** baja la relación con él: **−5 por fruto y por salida** (provisional). El fruto no se pierde al salir.
+  - Un fruto guardado ocupa una casilla del inventario y recuerda su **Bosque de origen**.
+  - ~~Solo se puede comer dentro de su Bosque.~~ **Corregido** (dueño, tras jugar: "Puedes comer el fruto del bosque en otro lado pero el bosque de donde salio ese fruto y esto perjudica tu relación con dicho bosque"):
+    - **Se puede comer en cualquier sitio**.
+    - Comerlo **fuera de su Bosque** baja la relación con el Bosque de origen **−5 más** (implementado, PR #39).
+  - **Sacarlo de su Bosque** baja la relación con él: **−5 por fruto y por salida**. El fruto no se pierde al salir.
+  - Tomar o comer más de un fruto (robo) **alerta a los Ofomni**, que persiguen (`sigilo-y-robo.md`, implementado).
   - Tomarlo para guardar cuenta igual para el límite de 1 por Momento y por Bosque.
 
 ## Salvar los Bosques (0.5, propuesta)

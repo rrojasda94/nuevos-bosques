@@ -113,12 +113,26 @@ Todo Único que se mueva por el mundo tiene tres parámetros (en datos, por tipo
 | **Botarramas** (nombre provisional; sustituyen a los "Únicos comunes de borde") | "Los Únicos que restringen el paso se llamaran Botarramas (por ahora) son aver sin plumas que renquean por los bosques cuando sienten la presencia de alguien acercandose." Antes: "los únicos no son arboles, son monstruos"; "pueden regenerarse con el tiempo" | Agentes del Bosque que se activan como anticuerpos; nacen de un árbol, animal o sustancia del Bosque | `[]` (provisional) | **0.2.0** (sección siguiente). Sustituyen a los 5 tipos de placeholder de borde (ADR 0009). |
 | **Ofomni descarriado** (`ofomni_descarriado`, el de la misión) | "el ofomni de la mision y el de los bosques con nujio no estan diferenciados" (dueño, 0.3). Es el de "Primer encargo": berserk (glosario §5: los adoc apaciguan Únicos "descarriados"; ronda 1: Únicos "en modo berserk") | Subtipo de Únicos | `[]` en la primera misión | **`appeasable: false`**: no acepta Luz ni ofrendas; hay que vencerlo. Latigazo múltiple. 0.2.0, `mision-ofomni.md`. |
 | **Ofomni** (`ofomni`, el de un Bosque con Nujio) | "un ojo con tentáculos"; "ataca con latigos y cada 3 turnos usa varios latigos"; "es no fatal en la primera mision"; "si robas algun objeto [...] despiertas a los ofomni que te persiguen por el bosque hasta la frontera" | Subtipo de Únicos | Por definir (#127) | **`appeasable: true`**: se puede apaciguar con Luz u ofrendas. 0.3: perseguidor tras un robo (`sigilo-y-robo.md`). No guarda bordes. |
-| **Aledra** | "Aledras son fatales en las noches" | Aparece cuando la villa crece en población sin permiso y causa enfermedades. Serpiente roja gigante con aura rojiza, cabeza de calavera reptiliana, ojos negros que se comen la luz física y colmillos carmesí | `["riumna"]` | No existe todavía. **No guarda bordes**: queda para su evento de villa (glosario). Dónde y cuándo aparece en Aventura: #128. |
+| **Aledra** | "Aledras son fatales en las noches" | Aparece cuando la villa crece en población sin permiso y causa enfermedades. Serpiente roja gigante con aura rojiza, cabeza de calavera reptiliana, ojos negros que se comen la luz física y colmillos carmesí | `["riumna"]` | **En el juego** (PR #39): ronda por los Bosques **solo de noche**, **fatal de noche**, `appeasable: false`. Avisa antes del encuentro y se puede **huir sin coste**. No guarda bordes. Su evento de villa (glosario) queda para más adelante (#128). |
 | **Iserald** | "un iserald es fatal"; "Tendria que dañar el bosque o intentar destruirlo para recien desatar al iserald, el iserald solo es vencido por un grupo de adoc [...]. Es mejor huir si vemos uno. Un iserald desata el status de miedo [...]" | El Único más poderoso y último recurso; sale del propio Nujio. Teorías: inmolación para que el Bosque no sea profanado, o pérdida de cordura | `["gietos", "riumna"]` | No existe todavía. Reglas en la sección "Iserald" (0.4+). |
 | **Garelinos** (enemigos humanos; no son Únicos) | "Los garelinos si pueden ser hostiles y causar daño mas no matar."; "Los garelinos si pueden desatar un iserald." | Ver ADR 0004 (grupo de fanáticos que destruye Bosques dominados por un Nujio) | `[]`: **combate no letal** | 0.4 (sección "Garelinos"). |
 | **Reparep** | "son como cangrejos fantasmales y tacan en grupos de 2 hasta 4 individuos. Son debiles solos pero en grupo el ataque conjunto suma daños" | No aparece en el glosario | `[]` (provisional) | **0.3.0** (fuera de la 0.2.0). Propuesta de combate de grupo abajo. Si son Únicos o no: #128. |
 
 "Aun no tenemos más monstruos" (dueño, 2026-10-24). Botarramas se añadió después (dueño, misma fecha).
+
+## Únicos en el mundo (implementado, PR #39)
+Feedback del dueño tras jugar: "No puedo enfrentarme voluntariamente a los únicos, tampoco veo más diversidad de estos rondando por ahí. el bosque no recuerda que no pague mi tributo. no me vuelve a mandar mas únicos a atacarme una vez vencido el primero."
+
+Respuesta implementada (valores en `data/combat/balance.json`):
+- **Únicos que rondan**: **1–2 por Bosque**, de tipo Botarramas, Ofomni (apaciguable) o Aledra (solo de noche). En un Bosque **pagado** no atacan.
+- **Cazadores** ("el bosque no recuerda que no pague mi tributo"):
+  - En un Bosque **sin pagar** (cerrado o forzado), el Bosque manda un Único cazador **cada 90 s** (−15 s por nivel de hostilidad, **mínimo 30 s**), con **2 a la vez como mucho**.
+  - Dejan de salir al **pagar** o al **salir** del Bosque.
+- **Enfrentar con E** ("no puedo enfrentarme voluntariamente"):
+  - Mirando a un Único pasivo de un Bosque pagado, E permite **atacarlo**.
+  - Eso **ofende** al Bosque: queda **forzado**, con hostilidad +1 y relación −10.
+- **Aledra**: ronda solo de noche, es fatal de noche y no se apacigua. Avisa antes del encuentro y se puede huir sin coste.
+- **Ofomni perseguidores tras un robo**: ver `sigilo-y-robo.md`.
 
 **Comportamiento según el estado del Bosque** (backlog; `bosques-y-relacion.md`):
 - **enojado**: muchos Únicos desplegados y encuentros repetidos; no se puede pagar.

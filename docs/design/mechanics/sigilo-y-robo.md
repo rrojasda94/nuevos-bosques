@@ -29,7 +29,12 @@ Palabras del dueño:
 3. **Percepción de los Únicos**: tienen radio de visión, velocidad y distancia de encuentro (`monstruos.md`, regla general). Las máscaras y los artefactos de camuflaje actúan sobre esa percepción.
 4. **Robo**: dentro de un Bosque, **robar un objeto** estando **sin protección** o **a la vista de otro Único** **despierta a los Ofomni**.
    - **Primer caso definido** (dueño, 0.3: "solo puedes tomar 1 fruto por Momento, sino es un robo al boque"): **es robo tomar un segundo fruto del mismo Bosque en el mismo Momento, o cualquier fruto de un Bosque cuyo peaje no has pagado** (#149: "si pagas tu peaje puedes tomar un fruto por momento. Pero si en otro arbol del mismo bosque tomas un futo, es robo"). Ya implementado: hostilidad +1 y relación −20 con ese Bosque (`bosques-y-relacion.md`, "Fruto").
-   - En este PR se añade que despierte a los Ofomni que persiguen.
+   - **Persecución implementada** (PR #39; dueño: "tomar o comer mas de un fruto puede alertar a los ofomni a que te sigan"):
+     - Al robar aparecen **1–2 `ofomni` apaciguables** que **persiguen dentro del Bosque robado hasta la frontera**.
+     - **Apaciguarlos** (Ofrecer Luz u ofrenda) paga el peaje del Bosque.
+     - **Vencer a uno** da hostilidad +1 y relación −10.
+     - **No son fatales.**
+     - Las máscaras y el arma (resto de esta ficha) siguen pendientes.
    - Los perseguidores son `ofomni` **apaciguables** (`monstruos.md`), no el `ofomni_descarriado` de la misión.
 5. **Persecución**: los Ofomni **persiguen al jugador por el Bosque hasta la frontera**.
 
