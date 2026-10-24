@@ -66,25 +66,31 @@ Palabras del dueño (2026-10-24): "Deberia haber más npc. [...] Algunas villas 
 - **Artesanos de un Bosque decrépito** (estado muerto o corrupto, `bosques-y-relacion.md`): no tienen materiales propios. O no ofrecen nada, o **te piden que traigas el material** y luego fabrican (pagando solo la Luz u ofrenda).
 - En un Bosque sano, el artesano pone sus propios materiales en la fabricación básica. Para las **mejoras** siempre hay que traerlos.
 
-### Materiales (propuesta, provisional)
-Lista corta sacada del glosario y del mundo del juego:
+### Materiales
+Lista del dueño (#164): "Los artesanos normalmente trabjan con madera, piedras, fibras vegetales, obsidianas y algunos metales blandos que se llamaran simplemente metal." Sustituye a la lista anterior: el barro sale y entra la obsidiana. Dónde se consigue cada uno es propuesta.
 
-| Material | De dónde sale | Regla | Base |
+| Material | De dónde sale (propuesta) | Regla | Base |
 |---|---|---|---|
-| **Madera muerta** | Árboles muertos de un Bosque (con E) | Solo **con permiso**: Bosque pagado o relación ≥ 30. Sin permiso es **robo** (hostilidad +1, relación −20, Senda −10) | Glosario §5: madera "solo de árboles muertos y con permiso" |
-| **Barro** | Orillas de arroyos y ríos | Libre | Glosario §5: casas de barro |
+| **Madera** | Árboles muertos de un Bosque (con E) | Solo **con permiso**: Bosque pagado o relación ≥ 30. Sin permiso es **robo** (hostilidad +1, relación −20, Senda −10) | Glosario §5: madera "solo de árboles muertos y con permiso" |
 | **Piedra** | Junto a riscos y pendientes | Libre | Glosario §5: casas de piedra |
-| **Fibra** | Plantas de los Bosques (casillas de maleza) | Como la madera: con permiso, si no es robo | Del mundo del juego, sin entrada en el glosario |
-| **Metal de Gietos** | **Muy raro**: solo como recompensa de misiones difíciles | Ver el choque abajo | Glosario §3: es la única posesión de los errantes, de origen desconocido |
+| **Fibra vegetal** | Maleza y plantas de los Bosques | Con permiso, igual que la madera | Lista del dueño |
+| **Obsidiana** | **Zonas rocosas y montañosas**: chunks con riscos en las subregiones agrestes del norte del Valle del Sara (Lean, Causie, Tossie, Alss) y en Vastie (muy montañosa). 1–2 vetas por chunk montañoso | Libre; las vetas se agotan hasta el riutash | Lista del dueño; relieve de `docs/design/world/sur-lenfi.md` |
+| **Metal** (metales blandos) | **Raro**: 1 veta en algunos chunks de montaña (1 de cada 4), o por **trueque con un Rogoc** (glosario §5: comercian) por 3 de Luz | Libre; la veta se agota hasta el riutash | Lista del dueño |
+| **Metal de Gietos** | **Solo robándoselo a un errante** (dueño: "no se puede conseguir a menos que le robes a un errante") | Robo grave (abajo) | Glosario §3: es la única posesión de los errantes |
 
-- **Restos de Únicos: no se proponen.** El glosario dice que los Únicos "vuelven a la Luz del Bosque" al terminar, así que no dejan cuerpo. La skill Botín da ofrendas, no restos.
-- **Choque con el glosario**: el metal de Gietos es "material de la única posesión de los errantes; origen desconocido". Usarlo como material de artesano puede contradecir el lore. Se deja como recompensa rarísima, a confirmar (#164).
+- **Robar el metal de Gietos a un errante** (propuesta; los errantes aún no están en el juego):
+  - Los errantes son lenfi vinculados al Nujio, uno por Bosque, que advierten o guían a los viajeros (glosario §3).
+  - Robarles es el robo más grave: relación −40 y hostilidad +2 con su Bosque, Senda −20 y cordura del Bosque −10.
+  - En la 0.3 (sigilo), despierta a los Ofomni perseguidores.
+  - No se mata al errante (ADR 0004).
+- **Restos de Únicos: no.** Según el glosario, vuelven a la Luz del Bosque.
 
-| Recetas (provisional) | Fabricar | Mejorar (+1 nivel) |
+| Recetas (provisional) | Fabricar | Mejorar (+1 nivel, máx. 3) |
 |---|---|---|
-| Arma (Paruas) | 6 de Luz + 2 madera muerta + 1 piedra | +2 madera muerta + 2 piedra; nivel 3: + 1 metal de Gietos |
-| Máscara (Sarua) | 8 de Luz + 2 madera muerta + 2 fibra | +2 fibra + 1 barro |
-| Talismán (Sarua) | 6 de Luz + 2 barro + 1 fibra | +2 barro + 1 piedra |
+| Arma (Paruas) | 6 de Luz + 2 madera + 1 metal | +1 metal + 1 obsidiana (nivel 3: +2 metal + 1 obsidiana) |
+| Arma de metal de Gietos (Paruas, especial) | Un arma de nivel 3 + 1 metal de Gietos | +1 ATQ extra sobre el nivel 3 (solo por robo; encaja con la rama Sombra) |
+| Máscara (Sarua) | 8 de Luz + 2 madera + 2 fibra | +2 fibra + 1 obsidiana |
+| Talismán (Sarua) | 6 de Luz + 1 piedra + 1 fibra | +1 obsidiana + 1 piedra |
 
 - Cada material ocupa una casilla del inventario, apilable hasta 10 (propuesta, compatible con la bolsa de 12 casillas).
 - Precios × multiplicador del Ista de la villa, si lo hay (−5…+5 → ×0,5…×1,5).
@@ -111,5 +117,6 @@ Lista corta sacada del glosario y del mundo del juego:
 
 ## Preguntas abiertas
 - ~~¿Qué oficio fabrica qué?~~ Confirmado: Paruas, armas; Sarua, máscaras y talismanes (#154).
-- ~~¿Hay materiales?~~ Resuelta (#159): sí; la lista y las recetas son propuesta. El metal de Gietos como material: #164.
+- ~~¿Hay materiales?~~ Resuelta (#159, #164): madera, piedra, fibra vegetal, obsidiana y metal. El metal de Gietos solo se consigue robando a un errante. Dónde salen la obsidiana y el metal, y las recetas, son propuesta.
+- ¿Cuándo entran los errantes en el juego (necesarios para el metal de Gietos)? (#166)
 - Efectos de la villa dañada en los servicios (#124).

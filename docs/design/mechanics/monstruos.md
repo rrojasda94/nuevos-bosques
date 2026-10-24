@@ -33,7 +33,7 @@ Palabras del dueño: "Tendria que dañar el bosque o intentar destruirlo para re
   - **Fuerza del grupo** F = suma, para cada adoc del grupo (el jugador y sus aliados), de **nivel + ATQ + 2 × skills aprendidas**.
     - Un adoc de nivel 3 equilibrado (ATQ 8, 1 skill) aporta 3 + 8 + 2 = 13.
     - Uno de nivel 5 (ATQ 10, 2 skills) aporta 19.
-  - **Umbral**: el Iserald solo recibe daño normal si **F ≥ 100** y el grupo tiene **al menos 6 adoc**.
+  - **Umbral**: el Iserald solo recibe daño normal si **F ≥ 100** y el grupo tiene **al menos 6 adoc contando al jugador** (es decir, 5 aliados como mínimo; dueño: "si, incluyen al jugador").
     - Con 6 adoc de nivel 5 ≈ 114; con 8 de nivel 3 ≈ 104.
     - Por debajo, todo ataque le hace 1 de daño y lo sensato es huir.
   - **Combate de grupo grande** (para no tener 8 turnos de aliados):
@@ -46,7 +46,16 @@ Palabras del dueño: "Tendria que dañar el bosque o intentar destruirlo para re
   - Cuando un Iserald se desata, las villas de los Bosques vecinos (Ildo o Sfida) lanzan una **llamada de adoc**: un encargo especial.
   - El jugador recluta adoc NPC en villas y caminos. Solo se unen los de **afinidad** compatible (`otros-adoc.md`).
   - Cuando el grupo llega a 6 o más con F ≥ 100, se puede ir a por el Iserald.
-  - Mientras tanto, el Iserald recorre su Bosque muerto (¿y sale de él? #163).
+  - Mientras tanto, el Iserald **se queda en su Bosque** (ver "Contención").
+- **Contención** (dueño, #163: "no suele salir a menos que se le provoque y si una vez cruza el limite, ya se escapa, es mejor mantenerlo dentro del territorio, hay tiempo para reunir adocs siempre y cuando no ocurra un evento que lo saque de su espacio"):
+  - El Iserald **no sale de su Bosque** salvo **provocación**. Mientras siga dentro, **hay tiempo** para reunir a los adoc.
+  - **Provocaciones** (propuesta): entrar en su Bosque con el arma equipada (0.3); robar en su Bosque; un ataque de garelinos; perder o huir de un combate contra él (25% por vez).
+  - Si cruza el límite, **se escapa** por el mapa. Consecuencias propuestas:
+    - avanza un Bosque cada 4 minutos de reloj, alejándose de quien lo persigue;
+    - cada Bosque con Nujio por el que pasa pierde 30 de cordura (puede corromperse) y pasa a enojado mientras está dentro;
+    - una villa por la que pase queda **dañada** (como en la misión fallida);
+    - no vuelve a contenerse: solo un grupo de 6+ adoc puede detenerlo donde esté.
+  - Señal en el mapa: su Bosque marcado; aviso grave si escapa.
 - **Lo sensato es huir**. Al verlo empieza el estado **Miedo**.
 - **Estado Miedo** (propuesta):
   - **En el mundo**:
@@ -58,7 +67,7 @@ Palabras del dueño: "Tendria que dañar el bosque o intentar destruirlo para re
     - Atacar tiene un **25% de fallar** (movimientos torpes).
   - Se ve con un icono en el HUD y con temblor del sprite.
 - **Después** (dueño: "si, muere"): al desatarse el Iserald, **el Nujio muere** y el Bosque pasa a **muerto** (`bosques-y-relacion.md`).
-- Miedo: propuesta pendiente de confirmar (#160).
+- Miedo: **se mantiene la propuesta** (el dueño no la cambió en su respuesta a #160).
 
 ## Garelinos (0.4, propuesta)
 - **Enemigos humanos**, hostiles. Pueden **hacer daño pero no matar**, y el adoc tampoco los mata (ADR 0004). **Combate no letal**: "no matan, no mueren".
