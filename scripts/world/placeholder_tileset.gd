@@ -1,13 +1,33 @@
 class_name PlaceholderTileset
 extends RefCounted
-## Tiles de placeholder generados por código. Solo usa colores de assets/palettes/palette_nuevos_bosques.gpl.
-## Cada Bosque tiene su propio atlas (forma de árbol, hojas, tronco y suelo según su estilo,
-## ver BosqueMap.styles). Se sustituye por el arte de pixel-artist cuando exista.
-## Atlas: columna = ChunkData.Tile, fila = variante (ver variant_for).
+## Atlas del terreno de cada Bosque (forma de árbol, hojas, tronco y suelo según su estilo, ver
+## BosqueMap.styles). Desde la 0.3 cada casilla sale del arte de pixel-artist (TerrainTileset:
+## PNG de assets/tilesets/ recoloreados con el Bosque); si falta el PNG de un grupo, esa casilla
+## se dibuja por código como en el placeholder original (paint_tile). El Nujio grande sigue
+## siendo procedural (nujio_texture). Solo usa colores de assets/palettes/palette_nuevos_bosques.gpl.
+## Atlas: columna = ChunkData.Tile, fila = variante (ver variant_for). Las casillas de agua tienen
+## un segundo fotograma de animación en la columna tile + Tile.size().
 
 const TILE: int = 16
-## Filas del atlas: las usan los letreros (8 direcciones); el resto usa 0-3.
-const VARIANTS: int = 8
+## Filas del atlas: 16 máscaras de borde x 2 variantes (ver variant_for).
+const VARIANTS: int = 32
+## Bits de la máscara de borde de variant_for: lado cuyo vecino es "de fuera".
+const EDGE_N: int = 1
+const EDGE_E: int = 2
+const EDGE_S: int = 4
+const EDGE_W: int = 8
+## Agua animada: fotogramas y velocidad (fotogramas por segundo).
+const ANIMATED_TILES: Array[int] = [ChunkData.Tile.RIVER_NARROW, ChunkData.Tile.RIVER_NAVIGABLE, ChunkData.Tile.FORD]
+const ANIM_FRAMES: int = 2
+const WATER_FPS: float = 2.0
+## Vecinos que dibujan hierba en el borde de senderos, caminos y claros.
+const SOFT_TILES: Array[int] = [
+	ChunkData.Tile.GRASS, ChunkData.Tile.TREE, ChunkData.Tile.FRUIT_TREE, ChunkData.Tile.ROCKY, ChunkData.Tile.CLIFF,
+]
+## Lo que cuenta como agua para las orillas.
+const WATER_TILES: Array[int] = [
+	ChunkData.Tile.RIVER_NARROW, ChunkData.Tile.RIVER_NAVIGABLE, ChunkData.Tile.FORD, ChunkData.Tile.BRIDGE,
+]
 
 # Paleta (Endesga 32).
 const OUTLINE := Color("181425")
@@ -62,12 +82,12 @@ const TRUNKS: Array = [
 	Color("733e39"), Color("3e2731"), Color("ffffff"), Color("f77622"),
 	Color("c0cbdc"), Color("262b44"), Color("e8b796"), Color("a22633"),
 ]
-## Suelo: [hierba, motas de hierba, claro, motas de claro].
+## Suelo: [hierba, motas de hierba, claro, motas de claro, sombra de la hierba].
 const GROUNDS: Array = [
-	[Color("3e8948"), Color("63c74d"), Color("63c74d"), Color("3e8948")],
-	[Color("265c42"), Color("3e8948"), Color("3e8948"), Color("63c74d")],
-	[Color("e4a672"), Color("ead4aa"), Color("ead4aa"), Color("e4a672")],
-	[Color("c28569"), Color("e8b796"), Color("e8b796"), Color("c28569")],
+	[Color("3e8948"), Color("63c74d"), Color("63c74d"), Color("3e8948"), Color("265c42")],
+	[Color("265c42"), Color("3e8948"), Color("3e8948"), Color("63c74d"), Color("193c3e")],
+	[Color("e4a672"), Color("ead4aa"), Color("ead4aa"), Color("e4a672"), Color("c28569")],
+	[Color("c28569"), Color("e8b796"), Color("e8b796"), Color("c28569"), Color("b86f50")],
 ]
 
 
@@ -77,19 +97,30 @@ static func make_tile_set() -> TileSet:
 	return tile_set
 
 
+
 ## Atlas de un Bosque con estilo `style` (ver BosqueMap.styles).
 static func make_source(style: Dictionary) -> TileSetAtlasSource:
 	var count: int = ChunkData.Tile.size()
-	var image := Image.create(TILE * count, TILE * VARIANTS, false, Image.FORMAT_RGBA8)
+	var image := Image.create(TILE * count * ANIM_FRAMES, TILE * VARIANTS, false, Image.FORMAT_RGBA8)
 	for tile: int in count:
+		var frames: int = ANIM_FRAMES if ANIMATED_TILES.has(tile) else 1
 		for variant: int in VARIANTS:
-			_paint(image, tile, variant, Vector2i(tile * TILE, variant * TILE), style)
+			for frame: int in frames:
+				var o := Vector2i((tile + frame * count) * TILE, variant * TILE)
+				if not TerrainTileset.paint(image, tile, variant, o, style, frame):
+					paint_tile(image, tile, legacy_variant(tile, variant) + frame, o, style)
 	var source := TileSetAtlasSource.new()
 	source.texture = ImageTexture.create_from_image(image)
 	source.texture_region_size = Vector2i(TILE, TILE)
 	for tile: int in count:
 		for variant: int in VARIANTS:
 			source.create_tile(Vector2i(tile, variant))
+	for tile: int in ANIMATED_TILES:
+		for variant: int in VARIANTS:
+			var at := Vector2i(tile, variant)
+			source.set_tile_animation_separation(at, Vector2i(count - 1, 0))
+			source.set_tile_animation_frames_count(at, ANIM_FRAMES)
+			source.set_tile_animation_speed(at, WATER_FPS)
 	return source
 
 
@@ -98,37 +129,128 @@ static func nujio_texture(style: Dictionary, n: int) -> Texture2D:
 	return ImageTexture.create_from_image(_tree_image(style, n * TILE, false))
 
 
-## Variante visual de la casilla `cell` del chunk. `sign_dir` = índice de dirección de los
-## letreros hacia la villa del Bosque (orden de ChunkGenerator.direction_name); el letrero hacia
-## la villa natal usa su propia dirección (ChunkData.home_direction). El refugio es cueva (1) si
-## toca roca y árbol hueco (0) si no.
+## Variante visual de la casilla `cell` del chunk (fila del atlas):
+## - Senderos, caminos, claros, plaza y riscos: máscara de borde (EDGE_*) + 16 x (0 o 1).
+## - Agua y vado: máscara de orillas. Puente: orientación (0 norte-sur, 1 este-oeste) + 2 x (0 o 1).
+## - Hierba, pedregal y árbol: 0-3. Frutal: 0-1 (exploration suma FRUIT_EMPTY_VARIANT si está vacío).
+## - Edificio: material de la villa x 16 + techo (0-7) o fachada (8-11 con ventanas, 12-15 con vano).
+## - Letrero: dirección de la flecha + 8 x fondo (TerrainTileset.SignGround). `sign_dir` = índice de
+##   dirección hacia la villa del Bosque (orden de ChunkGenerator.direction_name); el letrero hacia
+##   la villa natal usa su propia dirección (ChunkData.home_direction).
+## - Refugio: cueva (1) si toca roca y árbol hueco (0) si no.
+## Fuera del chunk se supone la misma casilla (sin borde).
 static func variant_for(chunk: ChunkData, cell: Vector2i, sign_dir: int) -> int:
 	var tile: int = chunk.get_tile(cell)
+	var world: Vector2i = chunk.coord * ChunkData.SIZE + cell
+	var alt: int = ChunkGenerator.hash_ints([world.x, world.y])
 	match tile:
 		ChunkData.Tile.CLIFF:
-			var below: Vector2i = cell + Vector2i.DOWN
-			var above: Vector2i = cell + Vector2i.UP
-			var south_face: bool = ChunkData.in_bounds(below) and chunk.get_tile(below) != ChunkData.Tile.CLIFF
-			var north_edge: bool = ChunkData.in_bounds(above) and chunk.get_tile(above) != ChunkData.Tile.CLIFF
-			return (1 if south_face else 0) | (2 if north_edge else 0)
+			return _edge_mask(chunk, cell, [ChunkData.Tile.CLIFF], false) + 16 * (alt % 2)
+		ChunkData.Tile.PATH, ChunkData.Tile.ROAD, ChunkData.Tile.CLEARING:
+			return _edge_mask(chunk, cell, SOFT_TILES, true) + 16 * (alt % 2)
+		ChunkData.Tile.PLAZA:
+			return _edge_mask(chunk, cell, [ChunkData.Tile.PLAZA, ChunkData.Tile.NUJIO], false) + 16 * (alt % 2)
+		ChunkData.Tile.RIVER_NARROW, ChunkData.Tile.RIVER_NAVIGABLE, ChunkData.Tile.FORD:
+			return _edge_mask(chunk, cell, WATER_TILES, false)
+		ChunkData.Tile.BRIDGE:
+			var ns: bool = _is(chunk, cell + Vector2i.UP, WATER_TILES) or _is(chunk, cell + Vector2i.DOWN, WATER_TILES)
+			var ew: bool = _is(chunk, cell + Vector2i.LEFT, WATER_TILES) or _is(chunk, cell + Vector2i.RIGHT, WATER_TILES)
+			return (1 if ns and not ew else 0) + 2 * (alt % 2)
 		ChunkData.Tile.BUILDING:
-			var below_b: Vector2i = cell + Vector2i.DOWN
-			return 1 if not ChunkData.in_bounds(below_b) or chunk.get_tile(below_b) != ChunkData.Tile.BUILDING else 0
+			return _building_variant(chunk, cell)
 		ChunkData.Tile.SIGN:
+			var dir: int = sign_dir
 			if chunk.sign_kind(cell) == ChunkData.SignKind.HOME_VILLA:
-				return ChunkGenerator.direction_index(chunk.home_direction)
-			return sign_dir
+				dir = ChunkGenerator.direction_index(chunk.home_direction)
+			return dir + 8 * _sign_ground(chunk, cell)
 		ChunkData.Tile.REFUGE:
 			for d: Vector2i in ChunkData.SIDES:
 				var n: Vector2i = cell + d
 				if ChunkData.in_bounds(n) and (chunk.get_tile(n) == ChunkData.Tile.CLIFF or chunk.get_tile(n) == ChunkData.Tile.ROCKY):
 					return 1
 			return 0
-	var world: Vector2i = chunk.coord * ChunkData.SIZE + cell
-	return ChunkGenerator.hash_ints([world.x, world.y]) % 2
+		ChunkData.Tile.GRASS, ChunkData.Tile.ROCKY, ChunkData.Tile.TREE:
+			return alt % 4
+		ChunkData.Tile.NUJIO:
+			return 0
+	return alt % 2
 
 
-static func _paint(image: Image, tile: int, variant: int, o: Vector2i, style: Dictionary) -> void:
+## Variante del dibujo procedural (el placeholder original) que corresponde a la fila `variant`
+## del atlas: se usa cuando falta el PNG del grupo.
+static func legacy_variant(tile: int, variant: int) -> int:
+	match tile:
+		ChunkData.Tile.CLIFF:
+			var m: int = variant % 16
+			return (1 if m & EDGE_S else 0) | (2 if m & EDGE_N else 0)
+		ChunkData.Tile.BUILDING:
+			return 0 if variant % 16 < 8 else 1
+		ChunkData.Tile.SIGN:
+			return variant % 8
+		ChunkData.Tile.FRUIT_TREE:
+			return variant % 4
+		ChunkData.Tile.PATH, ChunkData.Tile.ROAD, ChunkData.Tile.CLEARING, ChunkData.Tile.PLAZA:
+			return (variant / 16) % 2
+	return variant % 2
+
+
+## Bits EDGE_* de los lados cuyo vecino está (`edge_if_in`) o no está en `tiles`.
+static func _edge_mask(chunk: ChunkData, cell: Vector2i, tiles: Array[int], edge_if_in: bool) -> int:
+	var mask: int = 0
+	var sides: Array = [[Vector2i.UP, EDGE_N], [Vector2i.RIGHT, EDGE_E], [Vector2i.DOWN, EDGE_S], [Vector2i.LEFT, EDGE_W]]
+	for side: Array in sides:
+		var n: Vector2i = cell + side[0]
+		if not ChunkData.in_bounds(n):
+			continue
+		if tiles.has(chunk.get_tile(n)) == edge_if_in:
+			mask |= int(side[1])
+	return mask
+
+
+static func _is(chunk: ChunkData, cell: Vector2i, tiles: Array[int]) -> bool:
+	return ChunkData.in_bounds(cell) and tiles.has(chunk.get_tile(cell))
+
+
+static func _is_building(chunk: ChunkData, cell: Vector2i) -> bool:
+	return ChunkData.in_bounds(cell) and chunk.get_tile(cell) == ChunkData.Tile.BUILDING
+
+
+## Techo o fachada según haya edificio debajo; material (barro o piedra) igual en toda la villa.
+## La fachada lleva un vano sin puerta en su casilla central (la izquierda si son 2) y ventanitas
+## en las demás.
+static func _building_variant(chunk: ChunkData, cell: Vector2i) -> int:
+	var material: int = ChunkGenerator.hash_ints([chunk.coord.x, chunk.coord.y, 77]) % 2
+	var east: bool = not _is_building(chunk, cell + Vector2i.RIGHT)
+	var west: bool = not _is_building(chunk, cell + Vector2i.LEFT)
+	if _is_building(chunk, cell + Vector2i.DOWN):
+		var north: bool = not _is_building(chunk, cell + Vector2i.UP)
+		return material * 16 + (1 if north else 0) + (2 if east else 0) + (4 if west else 0)
+	var left: int = cell.x
+	while _is_building(chunk, Vector2i(left - 1, cell.y)):
+		left -= 1
+	var right: int = cell.x
+	while _is_building(chunk, Vector2i(right + 1, cell.y)):
+		right += 1
+	var door: bool = cell.x - left == (right - left) / 2
+	return material * 16 + (12 if door else 8) + (1 if east else 0) + (2 if west else 0)
+
+
+## Fondo del letrero: camino si está en medio del camino, sendero si toca uno, hierba si no.
+static func _sign_ground(chunk: ChunkData, cell: Vector2i) -> int:
+	var road: Array[int] = [ChunkData.Tile.ROAD]
+	if (_is(chunk, cell + Vector2i.LEFT, road) and _is(chunk, cell + Vector2i.RIGHT, road)) \
+			or (_is(chunk, cell + Vector2i.UP, road) and _is(chunk, cell + Vector2i.DOWN, road)):
+		return TerrainTileset.SignGround.ROAD
+	var path: Array[int] = [ChunkData.Tile.PATH, ChunkData.Tile.BRIDGE]
+	for d: Vector2i in ChunkData.SIDES:
+		if _is(chunk, cell + d, path):
+			return TerrainTileset.SignGround.PATH
+	return TerrainTileset.SignGround.GRASS
+
+
+## Dibujo procedural (el placeholder original) de la casilla `tile` con su variante antigua
+## (legacy_variant). Solo se usa si falta el PNG del grupo.
+static func paint_tile(image: Image, tile: int, variant: int, o: Vector2i, style: Dictionary) -> void:
 	var ground: Array = GROUNDS[int(style.get("ground", 0))]
 	var v2: int = variant % 2
 	var salt: int = tile * 10 + v2
