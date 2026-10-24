@@ -78,11 +78,26 @@ Carpetas de código por dominio: `scripts/<autoload|core|world|rpg|city|ui>/`, y
 - Los números de balance no se escriben en el código: van en `data/` (por ejemplo `data/combat/balance.json`).
 - El guardado tiene `SAVE_VERSION`. Al cambiar el formato se sube la versión y se escribe la migración en `SaveManager`.
 
-## 6. Escala del mundo
+## 6. Escala del mundo y movimiento
 `chunk` < `bosque` < `area` < `subregion` < `region` < Sur Lenfi.
 - Coordenadas de chunk: `Vector2i` global del mundo (`chunk_coord`).
-- Celda dentro del chunk: `cell` (0–63).
+- Celda dentro del chunk: `cell` (0–63; **0–79** desde el Mundo 2.0, ADR 0014).
+- Desde el Mundo 2.0 (ADR 0014):
+  - `world_cell` (`Vector2i`): casilla global de la región, `chunk_coord * 80 + cell`.
+  - `world_pos` (`Vector2`): posición en píxeles de los **pies** de un personaje.
+  - `sector`: bloque de 16×16 tiles para dibujar y hacer streaming.
+  - `macro`: celda gruesa de 4×4 tiles, la del relieve y la autoría.
+  - Las conversiones viven en `WorldCoords`. No se escriben `* 16`, `* 80` ni `/ 4` sueltos.
 - Prohibido usar `zone`/`zona`: es el nombre antiguo de `bosque` (ADR 0007).
+
+### 6.1 Movimiento
+- **Hasta el Mundo 2.0**: por casillas, con tween entre casillas (`PlayerWalker`, `STEP_TIME`).
+- **Desde el Mundo 2.0 (ADR 0014): movimiento libre en 8 direcciones, ya no por casillas.**
+  - La posición es continua (`world_pos`, `float`) y el dibujo se ajusta al píxel.
+  - La colisión la resuelve `GridMover` (lógica pura) contra la cuadrícula lógica: una caja de 10×6 px en los pies, movimiento por ejes y ayuda de esquina. No se usa física de Godot para el mundo.
+  - Las **reglas siguen en casillas**: la casilla lógica de un personaje es la de sus pies, y los sistemas reaccionan a `cell_changed(world_cell)`, nunca a la posición en píxeles. Ejemplos: letreros, refugio, chunk entrado, límite de Bosque, visión de los Únicos.
+  - Las velocidades van en `data/world/movement.json` (`walk_speed`, `run_speed`, en px/s) y en los datos de cada monstruo (`speed_px`). No van en constantes.
+  - `facing` sigue teniendo 4 direcciones (eje dominante de la entrada) para los sprites y la interacción.
 
 ## 7. Cuando falla una convención
 Si encuentras código que no cumple esto, corrígelo en un PR `refactor` aparte, nunca mezclado con una funcionalidad. Si la convención está mal, se cambia este archivo en el mismo PR y se anota en el ADR 0011.

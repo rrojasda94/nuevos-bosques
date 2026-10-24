@@ -1,5 +1,7 @@
 # ADR 0005 — Mapa fijo, zonas generadas persistentes, modos y MVP en Aventura
 
+> **Aviso (2026-10-24):** el [ADR 0014](0014-mundo-2-relieve-movimiento-libre-y-mundo-hibrido.md) **amplía** este ADR: desde la versión 0.4, los lugares no se generan al entrar, sino que la región entera se genera al crear la partida y se cachea en disco. Sigue siendo distinta en cada partida e igual al volver, y los cambios del jugador persisten. Las villas con nombre y los lugares clave pasan a ser fijos (autoría del dueño).
+
 > **Nota de terminología (ADR 0007):** el nivel "zona" pasa a llamarse **Bosque**. Donde este ADR dice "zona" en el sentido de la escala, se lee "Bosque". Escala vigente: chunk < Bosque < área < región < Sur Lenfi.
 
 ## Contexto

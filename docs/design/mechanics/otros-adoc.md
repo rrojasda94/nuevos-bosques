@@ -1,6 +1,6 @@
 # Ficha: Los otros adoc
 
-> Dueño: `game-designer`. **La parte de combate con aliados va en la 0.3 (PR 7, combate en grupo); el resto, en la 0.4 "Los otros adoc".** Valores **provisionales**.
+> Dueño: `game-designer`. **La parte de combate con aliados va en la 0.3 (PR 7, combate en grupo); el resto, en la 0.5 "Los otros adoc" (antes numerada 0.4).** Valores **provisionales**.
 > Fuentes: palabras del dueño (abajo); glosario §5 ("Adoc": "Protectores; únicos especialistas en armas, para apaciguar Únicos descarriados"); `mision-ofomni.md` ("los otros adoc han salido a otras misiones"); `monstruos.md` (combate en grupo); `npcs-y-villas.md`; `moralidad-y-progresion.md`; `bosques-y-relacion.md`.
 
 ## Objetivo
@@ -19,7 +19,7 @@ Palabras del dueño (2026-10-24): "encontrarte con otros adoc, ayudarles a lucha
 
 ## Reglas
 
-### Siempre aliados, con afinidad (dueño, 0.4)
+### Siempre aliados, con afinidad (dueño, 0.5)
 > "los adoc son aliados siempre, pero algunos pueden no querer trabajar contigo si tienen sendas distintas. No hacen daño."
 
 - **Los adoc nunca son enemigos ni hacen daño** al jugador. No hay adoc rivales.
@@ -53,7 +53,7 @@ Palabras del dueño (2026-10-24): "encontrarte con otros adoc, ayudarles a lucha
 
 - Los combates con aliado contra **Botarramas** ayudan a abrir un paso, pero **también suben la hostilidad** del Bosque (vencer es vencer; ADR 0013).
 
-### Encargos compartidos (0.4)
+### Encargos compartidos (0.5)
 - Un adoc de una villa puede proponer un **encargo compartido**: ir juntos a por un Único descarriado, defender un Bosque en necesidad de ayuda (`bosques-y-relacion.md`, "Salvar los Bosques") o, con 2 o más adoc, enfrentarse a un **Iserald** desatado.
 - El adoc NPC te acompaña (te sigue por el mundo) hasta terminar el encargo.
 - Recompensa repartida: tú recibes la mitad de la Luz y toda la XP.

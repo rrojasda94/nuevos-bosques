@@ -1,5 +1,7 @@
 # ADR 0004 — Tamaño de chunk, derrota y modos de partida
 
+> **Aviso (2026-10-24):** el [ADR 0014](0014-mundo-2-relieve-movimiento-libre-y-mundo-hibrido.md) **sustituye el tamaño de chunk**: 80×80 tiles desde la versión 0.4 (Mundo 2.0), a petición del dueño ("aumentar un poco el tamaño de los chunks"). La derrota y los modos siguen vigentes.
+
 ## Contexto
 Respuestas del dueño del proyecto a las preguntas abiertas (2026-10-23), en dos rondas. Palabras textuales:
 

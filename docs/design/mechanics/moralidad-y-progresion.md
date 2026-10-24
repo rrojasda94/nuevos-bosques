@@ -1,6 +1,6 @@
 # Ficha: Senda (moralidad), puntos de stats y skills
 
-> Dueño: `game-designer`. **Versión 0.4 "Los otros adoc"** (reparto confirmado por el dueño). Valores **provisionales**.
+> Dueño: `game-designer`. **Versión 0.5 "Los otros adoc"** (antes numerada 0.4) (reparto confirmado por el dueño). Valores **provisionales**.
 > Fuentes: palabras del dueño (abajo); `progresion-adoc.md` (tabla de niveles hasta la 0.3), `cruce-y-combate-v2.md` y ADR 0013 (hostilidad, relación), `bosques-y-relacion.md`, `monstruos.md` (fatales, Iserald), ADR 0004 (regla de no matar), `npcs-y-villas.md`, `otros-adoc.md`.
 
 ## Objetivo
@@ -8,7 +8,7 @@ Que el jugador elija cómo ser adoc y que esa elección se note en sus habilidad
 
 Palabras del dueño:
 - Primera ronda: "poder ser un adoc malo y poderoso o uno que se apega a las reglas y avanza con calma. podemos incluir puntos de stats o skills."
-- Respuestas (0.4):
+- Respuestas (0.5, antes 0.4):
   - "vamos por 3 puntos para subir manual pero la vida, y otros stats si esta bien darle 1 o 2, decidelo."
   - "podria ser un icono o parte de la rama de skils que puede desbloquear el jugador. Es decir si comete muchas maldades se desbloquean algunos skils, caso cotrario otros. Quizas para malvados el tema de sigilo, poder, conseguir mas recursos y si eres bueno la confianza, facilidad para pedir favores, habilidades mas blandas."
 

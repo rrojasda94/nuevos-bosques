@@ -4,17 +4,23 @@
 >
 > **MVP = modo Aventura en la región Valle del Sara** (ADR 0005, 0007). Alcance del primer vertical slice: [`mechanics/aventura-mvp.md`](mechanics/aventura-mvp.md).
 >
-> **Versión 0.4 "Los otros adoc"** (reparto confirmado): hoja de ruta en [`roadmap-0.4.md`](roadmap-0.4.md).
+> **Hoja de ruta general**: [`roadmap.md`](roadmap.md). Orden del dueño: 0.3 "El Bosque recuerda" (dinámicas) → 0.4 "Mundo 2.0" (mapa y movimiento) → 0.5 "Los otros adoc" → hacia la 1.0 en Steam.
+>
+> **Versión 0.5 "Los otros adoc"** (reparto confirmado; antes numerada 0.4): hoja de ruta en [`roadmap-0.5.md`](roadmap-0.5.md).
 > - Más NPC en las villas, por oficio: [`mechanics/npcs-y-villas.md`](mechanics/npcs-y-villas.md). Los Sarua dan ofrendas a cambio de favores y hacen máscaras y talismanes; los Paruas hacen armas.
 > - Otros adoc, **siempre aliados** (no hacen daño), con afinidad según la Senda: [`mechanics/otros-adoc.md`](mechanics/otros-adoc.md). Como aliados en combate ya en la 0.3, PR 7.
 > - **Senda** (icono violenta / neutral / respetuosa) que desbloquea las ramas de skills **Sombra** (sigilo, poder, recursos) y **Confianza** (favores, habilidades blandas). Al subir de nivel, +3 PV y +1 ATQ/DEF automáticos más 3 puntos a mano: [`mechanics/moralidad-y-progresion.md`](mechanics/moralidad-y-progresion.md).
 > - **Garelinos**: enemigos humanos, combate no letal. **Iserald**: se desata al dañar el Bosque o sin cordura, y **el Nujio muere** (el Bosque pasa a muerto). Solo lo vence un grupo de **6–8 adoc, contando al jugador**; causa Miedo. **No sale de su Bosque salvo provocación**; si escapa, recorre el mapa dañando Bosques y villas, así que hay que contenerlo ([`mechanics/monstruos.md`](mechanics/monstruos.md)).
 > - **Artesanos con materiales**: madera (de árboles muertos, con permiso), piedra, fibra vegetal, obsidiana (zonas rocosas y montañosas) y metal (metales blandos, raro). El **metal de Gietos** solo se consigue robándoselo a un errante (robo grave). En Bosques decrépitos te piden el material ([`mechanics/npcs-y-villas.md`](mechanics/npcs-y-villas.md)).
 > - **Derrota no fatal**: reapareces con el 50% de los PV junto al Nujio aliado más cercano o el último al que pagaste; si no hay ninguno, en tu villa natal ([`mechanics/cruce-y-combate-v2.md`](mechanics/cruce-y-combate-v2.md)).
-> - **Vista**: la dirección principal es la cenital estilo Zelda con **relieve en capas**. Se está haciendo una **prueba isométrica** para comparar (ADR 0014 de propuesta); decide el dueño tras ver las dos (#165).
 > - Salvar los Bosques (incendios, ataques, cordura): [`mechanics/bosques-y-relacion.md`](mechanics/bosques-y-relacion.md).
 >
-> **Versión 0.3 "El Bosque recuerda"** (en curso): hoja de ruta en [`roadmap-0.3.md`](roadmap-0.3.md).
+> **Versión 0.4 "Mundo 2.0"** (ADR 0014, aceptado): hoja de ruta en [`roadmap-mundo-2.md`](roadmap-mundo-2.md).
+> - **Vista** cenital estilo Zelda con **relieve en capas** (mesetas, riscos, escaleras, rampas, cascadas) y **movimiento libre en 8 direcciones** (#165 resuelta; el isométrico se descarta por el control).
+> - **Mundo híbrido**: la geografía grande, las villas con nombre y los lugares importantes los pinta el dueño (PNG por capas + tabla de lugares); el relleno es procedural y cambia en cada partida. La región se genera entera al crear la partida y se cachea: mundo continuo, sin parpadeos.
+> - Chunks de 80×80 tiles; árboles de 2×2, puntos de interés y red de senderos (sin la X ni el grano del ruido); más variedad de árboles y decoración.
+>
+> **Versión 0.3 "El Bosque recuerda"** (en curso; termina con las dinámicas que quedan): hoja de ruta en [`roadmap-0.3.md`](roadmap-0.3.md).
 > - Combate y cruce vigentes en [`mechanics/cruce-y-combate-v2.md`](mechanics/cruce-y-combate-v2.md) (ADR 0013):
 >   - vencer a un Botarramas deja el Bosque "forzado" y sube su hostilidad;
 >   - pagar lo deja "pagado";
@@ -121,14 +127,14 @@ Antes de implementarse necesitan fuente, sumidero y qué pasa si se agotan:
 - **Mapa mundial fijo** (ADR 0005): `data/world/world_map.json` + arte de referencia en `docs/design/world/`. Mapa del Sur Lenfi (preliminar; norte arriba): `docs/design/world/Sur-Lenfi_02.jpg`, descrito en [`world/sur-lenfi.md`](world/sur-lenfi.md).
 - Región → bioma, clima, relieve, facción, recursos, peligro.
 - **Ámbito jugable:** solo la parte suroccidental de Nardaram. Regiones del mapa, de oeste a este: Safis, Dorias, Valle del Sara, Nosie, Balasu, Naca (al norte del lago), Cabuta (costa sur) y Alcuss. Conciliación con el glosario: #94. Cuáles son jugables: #64.
-- **Escala** (ADR 0007, 0008): chunk (64×64 tiles) < **Bosque** (4–16 chunks, forma y número aleatorios) < área (6–12 Bosques) < **subregión** (grupo de áreas; cada color del mapa; nombre propuesto, #100) < región (de decenas a un centenar de áreas) < Sur Lenfi.
+- **Escala** (ADR 0007, 0008): chunk (64×64 tiles; **80×80 desde la 0.4**, ADR 0014) < **Bosque** (4–16 chunks, forma y número aleatorios) < área (6–12 Bosques) < **subregión** (grupo de áreas; cada color del mapa; nombre propuesto, #100) < región (de decenas a un centenar de áreas) < Sur Lenfi.
 - **Tipos de Bosque** (ADR 0008):
   - Con Nujio: un solo tipo de árbol (coníferas, cactus, palmeras, espinosos, copas redondas…) y una combinación de colores definida por su Nujio. El Bosque contiguo puede ser totalmente distinto, incluso monocromo.
   - Nuevos Bosques: se parecen a los bosques de nuestro mundo.
   - El límite entre Bosques se ve por el color de la vegetación.
   - Colores: solo los 32 de la paleta del proyecto. Lo "sin límite" son las combinaciones entre Bosques (ADR 0008, confirmaciones). Tipos para el MVP: #86. Otros tipos: #61.
 - **Villas** (ADR 0008): 1 de cada 5 Bosques tiene villa, dentro de un solo chunk. Algunos caminos tienen letreros de piedra que indican hacia una villa (#87, #90). El Nujio está en el centro del Bosque (chunk más central); si hay villa, la villa ocupa ese chunk y el Nujio está en su centro.
-- Generación: lo que se visita se genera al entrar, con la seed de la partida. Si vuelves dentro de la misma partida, todo sigue como lo dejaste. Con mucho tiempo, lo orgánico puede crecer o desaparecer y la gente moverse (#65). Otra partida genera lugares distintos.
+- Generación: lo que se visita se genera al entrar, con la seed de la partida (desde la 0.4, la región entera se genera al crear la partida sobre la autoría del dueño y se cachea; las villas con nombre y los lugares clave son fijos, ADR 0014). Si vuelves dentro de la misma partida, todo sigue como lo dejaste. Con mucho tiempo, lo orgánico puede crecer o desaparecer y la gente moverse (#65). Otra partida genera lugares distintos.
 - **Origen:** el jugador elige región y área de origen al empezar (ADR 0005, 0008). Le da conocimiento automático del área y sus Bosques. Cuanto más lejos del punto inicial, más complicado el viaje (#56, #57, #66).
 - **Viaje** (ADR 0007):
   - Movimiento libre dentro del Bosque inicial.
