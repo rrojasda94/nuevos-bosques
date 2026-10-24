@@ -47,8 +47,14 @@ Palabras del dueño: "una vez vencido al botarrama los demas botarramas deberian
 ### Memoria del Bosque
 | Variable (por Bosque) | Cambio | Efecto |
 |---|---|---|
-| **hostilidad** | +1 por Botarramas vencido | Peaje +2 por nivel; `vision_radius` de sus Botarramas +2 por nivel (tope +6) |
-| **relación** (−100…100) | −10 por victoria; +1 al pagar | Base de los umbrales de amistad (PR 2) |
+| **hostilidad** | +1 por Botarramas vencido; +1 por robo de fruto; **−1 por cada pago con ofrenda** (sin bajar de 0) | Peaje +2 por nivel; `vision_radius` de sus Botarramas +2 por nivel (tope +6) |
+| **relación** (−100…100) | −10 por victoria; −20 por robo de fruto; +1 al pagar | Base de los umbrales de amistad (PR 3) |
+
+- **El Bosque olvida con ofrendas** (dueño, #147: "el bosque olvida con ofrendas, si pagas pues bien"):
+  - Pagar con una **ofrenda** baja la hostilidad 1.
+  - Pagar con **Luz** deja el Bosque pagado, pero **no borra** la hostilidad.
+- **Los Botarramas disueltos no reaparecen** (#147).
+- Pagar el peaje también permite tomar **1 fruto por Momento** en ese Bosque (`bosques-y-relacion.md`, "Fruto").
 
 ### Combate (1 contra 1; los grupos llegan en el PR 6 de la 0.3)
 - Por turnos, **primero el jugador**. Narración mensaje a mensaje, estilo Pokémon.
@@ -95,7 +101,7 @@ Con el límite de Luz suelta en 10, a partir de hostilidad 2–3 solo se puede p
 ## Casos límite
 - **Bosque forzado al que vuelves por otro tramo**: el Botarramas de ese tramo te intercepta y te pide N (con la hostilidad ya subida).
 - **Pagar con hostilidad alta**: N puede superar tu Luz suelta. Solo te quedan la ofrenda (+ Luz), pelear o retroceder.
-- **Vencer a todos los Botarramas de un Bosque**: el Bosque queda sin guardias activos y se cruza libre, pero con hostilidad y relación muy malas. Si reaparecen: #147.
+- **Vencer a todos los Botarramas de un Bosque**: el Bosque queda sin guardias activos y se cruza libre, pero con hostilidad y relación muy malas. Los Botarramas disueltos **no reaparecen** (#147). Para tomar fruto sin robar hay que pagar igualmente.
 - **Ofrecer Luz con justo N**: te quedas sin Luz suelta; el pago es válido.
 - **Ofrecer Luz contra el Ofomni**: desactivada (mensaje `battle_ofrenda_blocked_ofomni` o equivalente).
 - **Huir de un Botarramas**: no cambia la hostilidad ni la relación.
@@ -108,6 +114,6 @@ Propuestas, a confirmar con el dueño:
 - El dueño siente que "el Bosque recuerda" (pregunta directa).
 
 ## Preguntas abiertas
-- ¿La hostilidad baja con el tiempo o con ofrendas? ¿El estado "forzado" caduca? ¿Reaparecen los Botarramas disueltos? (#147, #120)
+- ~~¿La hostilidad baja? ¿Reaparecen los Botarramas?~~ Resuelta (#147): baja con ofrendas (−1 por pago con ofrenda) y los disueltos no reaparecen. **Sigue abierto**: ¿el estado "forzado" caduca? (Lo cubre en parte la caducidad del pago del PR 3.)
 - Ajuste del Ofomni (#148).
 - Combinación de N con los estados de Bosque y la relación (PR 2 y 3; `bosques-y-relacion.md`).

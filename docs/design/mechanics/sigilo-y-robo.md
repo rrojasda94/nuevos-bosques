@@ -28,7 +28,7 @@ Palabras del dueño:
 2. **Armas equipadas**: si el jugador las lleva, el Bosque **no le deja pasar** y tiene que **vencer a los enemigos constantemente**. Precisión (2026-10-24): "Las armas deberían poder estar o equipadas o desequipadas de la mano principal". **Desequipada, no cierra el paso.**
 3. **Percepción de los Únicos**: tienen radio de visión, velocidad y distancia de encuentro (`monstruos.md`, regla general). Las máscaras y los artefactos de camuflaje actúan sobre esa percepción.
 4. **Robo**: dentro de un Bosque, **robar un objeto** estando **sin protección** o **a la vista de otro Único** **despierta a los Ofomni**.
-   - **Primer caso definido** (dueño, 0.3: "solo puedes tomar 1 fruto por Momento, sino es un robo al boque"): **tomar un segundo fruto en el mismo Momento es robo**. Ya implementado: hostilidad +1 y relación −20 con ese Bosque (`bosques-y-relacion.md`, "Fruto").
+   - **Primer caso definido** (dueño, 0.3: "solo puedes tomar 1 fruto por Momento, sino es un robo al boque"): **es robo tomar un segundo fruto del mismo Bosque en el mismo Momento, o cualquier fruto de un Bosque cuyo peaje no has pagado** (#149: "si pagas tu peaje puedes tomar un fruto por momento. Pero si en otro arbol del mismo bosque tomas un futo, es robo"). Ya implementado: hostilidad +1 y relación −20 con ese Bosque (`bosques-y-relacion.md`, "Fruto").
    - En este PR se añade que despierte a los Ofomni que persiguen.
    - Los perseguidores son `ofomni` **apaciguables** (`monstruos.md`), no el `ofomni_descarriado` de la misión.
 5. **Persecución**: los Ofomni **persiguen al jugador por el Bosque hasta la frontera**.
@@ -51,7 +51,7 @@ Palabras del dueño:
 - **Ofomni perseguidores**: más rápidos que los Botarramas, que renquean. No pasan de la frontera.
 
 ## Interacción con otros sistemas
-- **Inventario y equipo** (#113): máscaras, talismanes y armas necesitan ranuras de equipo o un estado de "equipado".
+- **Inventario y equipo** (#113, **confirmado**): bolsa de 12 casillas estilo Minecraft y 3 ranuras de equipo: **mano principal** (arma), **máscara** y **talismán**. Las máscaras y los talismanes de sigilo se equipan en sus ranuras.
 - **Ofrendas** (`ofrendas-v1.md`): conviven con los talismanes. ¿Un talismán es una ofrenda que no se gasta?
 - **Botarramas** (`monstruos.md`): detección y radio según lo que se lleva.
 - **Ofomni** (`monstruos.md`, `mision-ofomni.md`): pasa de enemigo de misión a perseguidor tras un robo.
@@ -81,4 +81,4 @@ Palabras del dueño:
 - **#130** (en parte: el fruto extra del mismo Momento es robo): qué más cuenta como robar (¿frutos, objetos de refugios, ofrendas dejadas por otros?) y qué es "estar sin protección".
 - **#131** (en parte): el arma se equipa o se desequipa de la mano principal, y desequipada no cierra el paso. Falta saber cuánto cuesta equipar o desequipar y su efecto en combate.
 - **#132**: duración y efecto de las máscaras y los artefactos que camuflan la Luz. ¿Se gastan? ¿Cada forma de máscara sirve para ciertos Bosques? ¿De dónde salen (villas, sarua)?
-- Inventario y equipo (#113).
+- ~~Inventario y equipo (#113).~~ Confirmado: 12 casillas y 3 ranuras.

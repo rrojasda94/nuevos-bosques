@@ -9,7 +9,8 @@
 >   - vencer a un Botarramas deja el Bosque "forzado" y sube su hostilidad;
 >   - pagar lo deja "pagado";
 >   - "Ofrecer Luz" paga el peaje y termina la pelea.
-> - Frutos: 1 por Momento; el segundo es robo.
+> - Frutos: 1 por Momento y por Bosque, solo si pagaste su peaje (o es el natal). El segundo, o el de un Bosque no pagado, es robo.
+> - El Bosque olvida con ofrendas: cada pago con ofrenda baja 1 la hostilidad. Los Botarramas disueltos no reaparecen.
 > - Ofomni descarriado (misión, no apaciguable) frente a Ofomni normal (apaciguable).
 >
 > **Versión 0.2.0 "Primer encargo"** (publicada; fichas con valores provisionales):
@@ -72,7 +73,7 @@ Antes de implementarse necesitan fuente, sumidero y qué pasa si se agotan:
   - Que al principio sea difícil ir lejos es intencionado.
   - Valores provisionales en [`mechanics/cruce-y-combate-v2.md`](mechanics/cruce-y-combate-v2.md) (peaje N = 3 + d + 2 × hostilidad). Abiertas: #107–#109.
 - **Luz suelta** (ADR 0010): tiene un límite (ejemplo: 10). Por encima, la Luz requiere ofrendas. Las ofrendas también se pueden ofrecer en combate "para que el Único se vaya", y eso abre el paso igual que vencer (#112). Excedente sobre el límite: #115.
-- **Inventario**: provisionalmente, una lista sin límite (0.2.0). Sin decidir entre cuadrícula (Diablo), slots (Minecraft) o peso (Kingdom Come: Deliverance) (#113).
+- **Inventario** (confirmado, #113): estilo Minecraft, una bolsa de **12 casillas** más **3 ranuras de equipo** (mano principal, máscara, talismán). Llega en el PR 5 de la 0.3; en la 0.2.0 era una lista sin límite.
 - **Riutash** (ADR 0012): expuesto, −30% de los PV máx. (nunca mata); en refugio, +50% de los PV que faltan. Avisos 60 s y 15 s antes ([`mechanics/tiempo-y-riutash.md`](mechanics/tiempo-y-riutash.md)).
 - **Orientación** (0.2.0): caminos principales con letreros hacia la villa natal, refugios junto a los caminos, mapa (M) y brújula ([`mechanics/navegacion.md`](mechanics/navegacion.md)). El letrero se lee con **E** y abre un diálogo con una flecha que sigue el camino, el tiempo estimado hasta llegar y el nombre tentativo de la villa.
 - **Noche** (Momento de Riumna): tono plateado de luz de luna; los colores resaltan de otra forma, no se oscurecen (post-proceso, excepción a la paleta anotada en ADR 0012).
