@@ -87,6 +87,10 @@ func _on_npc_talked(npc_id: StringName) -> void:
 		QuestLogic.OFFERED:
 			_dialogue.finished.connect(_ask_accept, CONNECT_ONE_SHOT)
 		QuestLogic.COMPLETED:
+			# Con la bolsa llena, el sfida guarda la recompensa hasta que vuelvas con sitio.
+			if not AdventureRules.can_take_reward(data.get("reward", {})):
+				EventBus.notice_requested.emit(Texts.get_text("bag_full"))
+				return
 			AdventureRules.apply_quest_reward(QuestLogic.claim_reward(q, QUEST))
 			QuestLogic.commit(QUEST, q, QuestLogic.COMPLETED)
 			EventBus.notice_requested.emit(Texts.get_text("fama_gained"))

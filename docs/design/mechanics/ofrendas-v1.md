@@ -1,7 +1,7 @@
 # Ficha: Ofrendas v1
 
 > Dueño: `game-designer`. Versión 0.2.0 "Primer encargo". Fuentes: ADR 0010 (ofrendas, Luz suelta y su límite, uso en combate), glosario §5 (Sarua: "objetos para entregar Luz, talismanes de viaje").
-> **Valores y nombres PROVISIONALES**, en `data/items/ofrendas.json`. `narrative-writer` puede renombrarlas. Implementación: `rpg-systems-dev` (PR 7).
+> **Valores y nombres PROVISIONALES**, en `data/items/items.json` (kind `ofrenda`). `narrative-writer` puede renombrarlas. Implementación: `rpg-systems-dev` (PR 7).
 
 ## Objetivo
 Dar al jugador una forma de guardar Luz por encima del límite de Luz suelta, y una decisión de gestión: cada ofrenda se gasta **entera**.

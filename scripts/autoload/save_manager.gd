@@ -39,7 +39,8 @@ func load_game(slot: int) -> Error:
 	# y ningún Botarramas visto; v7: el nivel que corresponde a la XP guardada y ningún refugio
 	# saqueado; v9: ningún Bosque forzado, hostilidad y relación a 0, y el Ofomni de la misión
 	# pasa a ofomni_descarriado; v10: todos los frutales con fruto y ningún fruto tomado en el
-	# Momento en ningún Bosque).
+	# Momento en ningún Bosque); v11: la lista de ofrendas "inventory" pasa a la bolsa de casillas y
+	# el arma inicial va equipada (GameState._load_inventory).
 	GameState.from_dict(data)
 	EventBus.game_loaded.emit(slot)
 	return OK

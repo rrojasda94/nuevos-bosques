@@ -1,0 +1,90 @@
+{
+  "bag_size": 12,
+  "start_equipped": {
+    "main_hand": "lanza_de_adoc",
+    "mask": "",
+    "talisman": ""
+  },
+  "start_bag": [
+    { "id": "mascara_de_corteza", "qty": 1 },
+    { "id": "talisman_de_semillas", "qty": 1 }
+  ],
+  "items": [
+    {
+      "id": "cuenta_de_barro",
+      "kind": "ofrenda",
+      "name": "Cuenta de barro",
+      "description": "Cuenta de barro con un signo sarua. Guarda poca Luz.",
+      "stack_max": 1,
+      "luz": 3,
+      "source": "refuge"
+    },
+    {
+      "id": "trenza_votiva",
+      "kind": "ofrenda",
+      "name": "Trenza votiva",
+      "description": "Fibras del Bosque trenzadas por un sarua.",
+      "stack_max": 1,
+      "luz": 4,
+      "source": "refuge"
+    },
+    {
+      "id": "talisman_de_viaje",
+      "kind": "ofrenda",
+      "name": "Talismán de viaje",
+      "description": "Los sarua los hacen para quien cruza Bosques.",
+      "stack_max": 1,
+      "luz": 5,
+      "source": "villa"
+    },
+    {
+      "id": "cuenco_ritual",
+      "kind": "ofrenda",
+      "name": "Cuenco ritual",
+      "description": "Cuenco de piedra para dejar Luz ante un Nujio.",
+      "stack_max": 1,
+      "luz": 6,
+      "source": "quest"
+    },
+    {
+      "id": "figura_sarua",
+      "kind": "ofrenda",
+      "name": "Figura sarua",
+      "description": "Figura tallada en piedra. Guarda mucha Luz.",
+      "stack_max": 1,
+      "luz": 8,
+      "source": "quest"
+    },
+    {
+      "id": "fruto",
+      "kind": "fruit",
+      "name": "Fruto del Bosque",
+      "description": "Cura un cuarto de tus PV. Solo se puede comer en su Bosque: sacarlo de él daña tu relación.",
+      "stack_max": 5
+    },
+    {
+      "id": "lanza_de_adoc",
+      "kind": "weapon",
+      "name": "Lanza de adoc",
+      "description": "La lanza de tu oficio. Con ella en la mano, ningún Bosque te deja pasar en paz.",
+      "stack_max": 1,
+      "atk_bonus": 2
+    },
+    {
+      "id": "mascara_de_corteza",
+      "kind": "mask",
+      "name": "Máscara de corteza",
+      "description": "Una cara de corteza que oculta la tuya.",
+      "stack_max": 1,
+      "camouflage": 0
+    },
+    {
+      "id": "talisman_de_semillas",
+      "kind": "talisman",
+      "name": "Talismán de semillas",
+      "description": "Semillas ensartadas que apagan un poco tu Luz.",
+      "stack_max": 1,
+      "camouflage": 0
+    }
+  ]
+}

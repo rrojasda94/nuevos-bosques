@@ -9,47 +9,77 @@ layer = 8
 script = ExtResource("1_inv")
 
 [node name="Root" type="Panel" parent="."]
-offset_left = 40.0
-offset_top = 20.0
-offset_right = 280.0
-offset_bottom = 160.0
+offset_left = 6.0
+offset_top = 4.0
+offset_right = 314.0
+offset_bottom = 176.0
 theme = ExtResource("2_theme")
 
 [node name="Title" type="Label" parent="Root"]
 layout_mode = 0
 offset_left = 8.0
-offset_top = 4.0
-offset_right = 232.0
-offset_bottom = 16.0
+offset_top = 3.0
+offset_right = 300.0
+offset_bottom = 15.0
 theme_type_variation = &"TitleLabel"
+
+[node name="Grid" type="Control" parent="Root"]
+layout_mode = 0
+offset_left = 8.0
+offset_top = 18.0
+offset_right = 94.0
+offset_bottom = 82.0
+
+[node name="EquipTitle" type="Label" parent="Root"]
+layout_mode = 0
+offset_left = 8.0
+offset_top = 84.0
+offset_right = 94.0
+offset_bottom = 96.0
+theme_type_variation = &"TitleLabel"
+
+[node name="EquipRow" type="Control" parent="Root"]
+layout_mode = 0
+offset_left = 8.0
+offset_top = 96.0
+offset_right = 72.0
+offset_bottom = 116.0
+
+[node name="EquipList" type="Label" parent="Root"]
+layout_mode = 0
+offset_left = 8.0
+offset_top = 119.0
+offset_right = 100.0
+offset_bottom = 152.0
 
 [node name="Stats" type="Label" parent="Root"]
 layout_mode = 0
-offset_left = 8.0
-offset_top = 22.0
-offset_right = 112.0
-offset_bottom = 122.0
+offset_left = 104.0
+offset_top = 18.0
+offset_right = 300.0
+offset_bottom = 90.0
 
-[node name="OfrendasTitle" type="Label" parent="Root"]
+[node name="ItemName" type="Label" parent="Root"]
 layout_mode = 0
-offset_left = 120.0
-offset_top = 22.0
-offset_right = 232.0
-offset_bottom = 34.0
+offset_left = 104.0
+offset_top = 94.0
+offset_right = 300.0
+offset_bottom = 106.0
 theme_type_variation = &"TitleLabel"
 
-[node name="Ofrendas" type="Label" parent="Root"]
+[node name="ItemDesc" type="Label" parent="Root"]
 layout_mode = 0
-offset_left = 120.0
-offset_top = 36.0
-offset_right = 232.0
-offset_bottom = 122.0
+offset_left = 104.0
+offset_top = 107.0
+offset_right = 300.0
+offset_bottom = 152.0
+autowrap_mode = 3
 
 [node name="Hint" type="Label" parent="Root"]
 layout_mode = 0
 offset_left = 8.0
-offset_top = 124.0
-offset_right = 232.0
-offset_bottom = 136.0
+offset_top = 156.0
+offset_right = 300.0
+offset_bottom = 168.0
 theme_type_variation = &"HintLabel"
 horizontal_alignment = 2

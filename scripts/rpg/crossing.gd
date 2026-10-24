@@ -28,7 +28,8 @@ var _map_key: String = ""
 var _battle: Node
 ## Misión del combate en curso (&"" = combate de borde).
 var _quest_id: StringName = &""
-## Submenú de ofrendas abierto: índices de GameState.inventory de cada opción (sin la de volver).
+## Submenú de ofrendas abierto: índices de AdventureRules.bag_ofrendas() de cada opción (sin la
+## de volver).
 var _ofrenda_choices: Array[int] = []
 var _in_submenu: bool = false
 
@@ -77,7 +78,7 @@ func _open_main_menu() -> void:
 		"Enfrentar al Botarramas",
 		"Retroceder",
 	]
-	var has_ofrenda: bool = not Ofrendas.payable(GameState.inventory, GameState.luz, _cost).is_empty()
+	var has_ofrenda: bool = not Ofrendas.payable(AdventureRules.bag_ofrendas(), GameState.luz, _cost).is_empty()
 	var enabled: Array[bool] = [GameState.luz >= _cost, has_ofrenda, true, true]
 	_options.set_options(texts, enabled)
 
@@ -102,11 +103,12 @@ static func ofrenda_option(item: Dictionary, cost: int) -> String:
 
 func _open_submenu() -> void:
 	_in_submenu = true
-	_ofrenda_choices = Ofrendas.payable(GameState.inventory, GameState.luz, _cost)
+	var ofrendas: Array = AdventureRules.bag_ofrendas()
+	_ofrenda_choices = Ofrendas.payable(ofrendas, GameState.luz, _cost)
 	var texts: Array[String] = []
 	var enabled: Array[bool] = []
 	for i: int in _ofrenda_choices:
-		texts.append(ofrenda_option(GameState.inventory[i], _cost))
+		texts.append(ofrenda_option(ofrendas[i], _cost))
 		enabled.append(true)
 	texts.append(TEXT_BACK)
 	enabled.append(true)

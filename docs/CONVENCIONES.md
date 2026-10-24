@@ -37,7 +37,7 @@ Las palabras genéricas van en inglés aunque existan en español: `chunk`, `reg
 | Script `.gd` | `snake_case.gd`, igual que su `class_name` en snake | `battle_logic.gd` → `BattleLogic` |
 | Escena `.tscn` | Mismo nombre que su script raíz | `battle.tscn` + `battle.gd` |
 | Recurso `.tres` | `snake_case.tres` | `adoc_base.tres` |
-| Datos `.json` | `snake_case.json`. Catálogos pequeños: un archivo con lista de entradas (`data/items/ofrendas.json`); entidades grandes: un archivo por id (`data/world/regions/valle_del_sara.json`) | |
+| Datos `.json` | `snake_case.json`. Catálogos pequeños: un archivo con lista de entradas (`data/items/items.json`); entidades grandes: un archivo por id (`data/world/regions/valle_del_sara.json`) | |
 | Test | `tests/unit/<dominio>/test_<archivo>.gd` | `tests/unit/rpg/test_battle_logic.gd` |
 | Asset gráfico | `<tipo>_<nombre>[_<variante>].png` | `tileset_bosque_conifera.png`, `sprite_adoc_walk.png` |
 | Audio | `<music\|sfx>_<nombre>.ogg`; los SFX cortos pueden ser `.wav` | `sfx_hit.wav`, `music_forest.ogg` |

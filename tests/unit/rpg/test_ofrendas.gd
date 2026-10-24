@@ -14,7 +14,7 @@ func before_each() -> void:
 
 func _give(ids: Array) -> void:
 	for id: String in ids:
-		GameState.inventory.append(Ofrendas.make_item(StringName(id)))
+		InventoryLogic.add(GameState.bag, StringName(id))
 
 
 func test_catalog_values() -> void:
@@ -31,13 +31,13 @@ func test_can_pay_with_loose_luz_but_not_combining() -> void:
 	assert_eq(Ofrendas.luz_needed(3, 4), 1)
 	assert_eq(Ofrendas.luz_needed(8, 4), 0, "sin cambio: no devuelve nada")
 	_give(["cuenta_de_barro", "cuenta_de_barro"])
-	assert_eq(Ofrendas.payable(GameState.inventory, 0, 6), [] as Array[int], "dos ofrendas no se combinan")
+	assert_eq(Ofrendas.payable(AdventureRules.bag_ofrendas(), 0, 6), [] as Array[int], "dos ofrendas no se combinan")
 
 
 func test_payable_lists_one_per_id_from_smallest() -> void:
 	_give(["figura_sarua", "cuenta_de_barro", "trenza_votiva", "cuenta_de_barro"])
-	assert_eq(Ofrendas.payable(GameState.inventory, 0, 4), [2, 0] as Array[int], "trenza (4) y figura (8)")
-	assert_eq(Ofrendas.payable(GameState.inventory, 1, 4), [1, 2, 0] as Array[int], "con 1 de Luz, también la cuenta")
+	assert_eq(Ofrendas.payable(AdventureRules.bag_ofrendas(), 0, 4), [2, 0] as Array[int], "trenza (4) y figura (8)")
+	assert_eq(Ofrendas.payable(AdventureRules.bag_ofrendas(), 1, 4), [1, 2, 0] as Array[int], "con 1 de Luz, también la cuenta")
 	assert_eq(Ofrendas.payable([], 10, 4), [] as Array[int])
 
 
@@ -45,7 +45,7 @@ func test_toll_with_ofrenda_loses_it_whole_without_change() -> void:
 	_give(["cuenta_de_barro", "figura_sarua"])
 	GameState.luz = 2
 	assert_true(AdventureRules.pay_toll_with_ofrenda(5, 4, 1))
-	assert_eq(GameState.inventory, [{ "id": "cuenta_de_barro", "luz": 3 }], "la figura se deja entera")
+	assert_eq(AdventureRules.bag_ofrendas(), [{ "id": "cuenta_de_barro", "luz": 3 }], "la figura se deja entera")
 	assert_eq(GameState.luz, 2, "el excedente (4) se pierde: no hay cambio")
 	assert_true(GameState.open_bosques.has(5), "abre el paso")
 
@@ -54,13 +54,13 @@ func test_toll_with_ofrenda_completed_with_luz() -> void:
 	_give(["cuenta_de_barro"])
 	GameState.luz = 0
 	assert_false(AdventureRules.pay_toll_with_ofrenda(5, 4, 0), "3 sin Luz no basta")
-	assert_eq(GameState.inventory.size(), 1)
+	assert_eq(AdventureRules.bag_ofrendas().size(), 1)
 	assert_false(GameState.open_bosques.has(5))
 	GameState.luz = 1
 	assert_true(AdventureRules.pay_toll_with_ofrenda(5, 4, 0))
 	assert_eq(GameState.luz, 0, "3 + 1 de Luz suelta")
-	assert_eq(GameState.inventory, [])
-	assert_false(AdventureRules.pay_toll_with_ofrenda(6, 4, 0), "índice fuera del inventario")
+	assert_eq(AdventureRules.bag_ofrendas(), [])
+	assert_false(AdventureRules.pay_toll_with_ofrenda(6, 4, 0), "índice fuera de las ofrendas de la bolsa")
 
 
 func test_crossing_option_text() -> void:
@@ -86,7 +86,7 @@ func test_battle_ofrenda_appeases_botarramas_and_opens_path() -> void:
 	assert_eq(msgs[1].text, "El Único se aparta. El paso queda abierto.")
 	assert_eq(AdventureRules.finish_battle(logic, 3), &"appeased")
 	assert_true(GameState.open_bosques.has(3), "el paso queda abierto")
-	assert_eq(GameState.inventory, [{ "id": "cuenco_ritual", "luz": 6 }])
+	assert_eq(AdventureRules.bag_ofrendas(), [{ "id": "cuenco_ritual", "luz": 6 }])
 	assert_eq(GameState.luz, 4)
 	assert_eq(GameState.xp, 0, "no da XP")
 	assert_signal_emitted_with_parameters(EventBus, "battle_ended", [3, &"appeased"])
@@ -140,21 +140,16 @@ func test_refuge_loot_only_once_per_game() -> void:
 	var item: Dictionary = AdventureRules.loot_refuge(coord)
 	assert_false(item.is_empty())
 	assert_true([3, 4].has(int(item.luz)), "valor 3–4")
-	assert_eq(GameState.inventory, [item])
+	assert_eq(AdventureRules.bag_ofrendas(), [Ofrendas.make_item(StringName(str(item.id)))])
+	assert_true(bool(item.taken))
 	assert_true(AdventureRules.is_refuge_looted(coord))
 	assert_eq(AdventureRules.loot_refuge(coord), {}, "segunda vez: no queda nada")
-	assert_eq(GameState.inventory.size(), 1)
+	assert_eq(AdventureRules.bag_ofrendas().size(), 1)
 	var empty := _refuge_without_loot(42)
 	assert_eq(AdventureRules.loot_refuge(empty), {})
 	assert_false(AdventureRules.is_refuge_looted(empty))
 	GameState.new_game(42)
 	assert_false(AdventureRules.is_refuge_looted(coord), "partida nueva: se puede volver a recoger")
-
-
-func test_inventory_lines() -> void:
-	assert_eq(Screen.ofrenda_lines([]), ["Ninguna"] as Array[String])
-	_give(["cuenco_ritual", "cuenta_de_barro", "cuenta_de_barro"])
-	assert_eq(Screen.ofrenda_lines(GameState.inventory), ["Cuenta de barro (3) x2", "Cuenco ritual (6)"] as Array[String])
 
 
 func _refuge_with_loot(seed_value: int) -> Vector2i:

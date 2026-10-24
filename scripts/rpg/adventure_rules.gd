@@ -4,8 +4,8 @@ extends RefCounted
 ## entre Bosques (con Luz o con una ofrenda, ofrendas-v1.md), memoria del Bosque (hostilidad y
 ## relación: vencer a un Botarramas fuerza el Bosque sin abrirlo y encarece su peaje), Únicos (los Botarramas de borde),
 ## combate de misión (Ofomni descarriado), resultado de un combate (con monstruos fatales según el Momento,
-## monstruos.md), recompensa de misión, hallazgos en refugios, villa dañada, descanso en una villa
-## y efecto del riutash (ADR 0012). Escribe en GameState y avisa por EventBus. Los
+## monstruos.md), recompensa de misión, hallazgos en refugios, bolsa y equipo (el arma equipada
+## suma ATQ), villa dañada, descanso en una villa y efecto del riutash (ADR 0012). Escribe en GameState y avisa por EventBus. Los
 ## números viven en data/combat/balance.json y, los del riutash, en data/world/time.json.
 
 const BALANCE_PATH: String = "res://data/combat/balance.json"
@@ -64,6 +64,59 @@ static func xp_to_next(xp: int) -> int:
 static func adoc_stats(level: int) -> Dictionary:
 	var row: Dictionary = _level_table()[clampi(level, 1, max_level()) - 1]
 	return { "max_hp": int(row.max_hp), "atk": int(row.atk), "def": int(row.def) }
+
+
+# --- Equipo (roadmap-0.3.md #113, sigilo-y-robo.md) ---------------------------------------------
+
+## Arma equipada en la mano principal (&"" = ninguna).
+static func weapon() -> StringName:
+	return InventoryLogic.equipped_in(GameState.equipped, InventoryLogic.SLOT_MAIN_HAND)
+
+
+## El Adoc lleva un arma equipada. Para el sigilo: con el arma equipada, el Bosque no le deja pasar
+## (sigilo-y-robo.md, regla 2); desequipada, no cierra el paso.
+static func is_armed() -> bool:
+	return weapon() != &""
+
+
+## ATQ que suma el arma equipada (0 sin arma).
+static func weapon_atk_bonus() -> int:
+	return Items.atk_bonus(weapon())
+
+
+## Stats con los que pelea el Adoc ahora: los de su nivel más el ATQ del arma equipada.
+static func adoc_combat_stats() -> Dictionary:
+	var stats: Dictionary = adoc_stats(GameState.level)
+	stats.atk = int(stats.atk) + weapon_atk_bonus()
+	return stats
+
+
+## Equipa el objeto de la casilla `index` de la bolsa (el que había en su ranura vuelve a la bolsa).
+## false si no se puede (casilla vacía, objeto que no se equipa o sin sitio para el anterior).
+static func equip_from_bag(index: int) -> bool:
+	var id: StringName = InventoryLogic.id_at(GameState.bag, index)
+	var slot: StringName = InventoryLogic.slot_for(id)
+	var previous: StringName = InventoryLogic.equipped_in(GameState.equipped, slot)
+	if not InventoryLogic.equip(GameState.bag, GameState.equipped, index):
+		return false
+	if previous != &"":
+		EventBus.item_unequipped.emit(slot, previous)
+	EventBus.item_equipped.emit(slot, id)
+	return true
+
+
+## Desequipa una ranura (su objeto vuelve a la bolsa). false si estaba vacía o la bolsa está llena.
+static func unequip_slot(slot: StringName) -> bool:
+	var id: StringName = InventoryLogic.equipped_in(GameState.equipped, slot)
+	if not InventoryLogic.unequip(GameState.bag, GameState.equipped, slot):
+		return false
+	EventBus.item_unequipped.emit(slot, id)
+	return true
+
+
+## Ofrendas de la bolsa como lista { id, luz } (una por unidad), la que usan el peaje y el combate.
+static func bag_ofrendas() -> Array:
+	return Ofrendas.from_bag(GameState.bag)
 
 
 ## Niveles que se alcanzan al pasar de `xp` a `xp + gained`, en orden (vacío si ninguno).
@@ -265,15 +318,17 @@ static func pay_toll(bosque_id: int, cost: int) -> bool:
 	return true
 
 
-## Paga el peaje con la ofrenda `index` del inventario (ofrendas-v1.md): se deja entera, se
-## completa con Luz suelta si no llega y el excedente se pierde. Abre el paso. false si no alcanza.
+## Paga el peaje con la ofrenda `index` de bag_ofrendas() (ofrendas-v1.md): se deja entera (sale
+## de la bolsa), se completa con Luz suelta si no llega y el excedente se pierde. Abre el paso.
+## false si no alcanza.
 static func pay_toll_with_ofrenda(bosque_id: int, cost: int, index: int) -> bool:
-	if index < 0 or index >= GameState.inventory.size():
+	var ofrendas: Array = bag_ofrendas()
+	if index < 0 or index >= ofrendas.size():
 		return false
-	var value: int = int(GameState.inventory[index].get("luz", 0))
+	var value: int = int(ofrendas[index].luz)
 	if not Ofrendas.can_pay(value, GameState.luz, cost):
 		return false
-	GameState.inventory.remove_at(index)
+	InventoryLogic.remove(GameState.bag, StringName(str(ofrendas[index].id)))
 	set_luz(GameState.luz - Ofrendas.luz_needed(value, cost))
 	_paid(bosque_id, true)
 	return true
@@ -285,11 +340,11 @@ static func start_battle(bosque_id: int, d: int, monster_id: StringName = &"bota
 	var key: String = str(bosque_id)
 	var attempt: int = int(GameState.battle_attempts.get(key, 0))
 	GameState.battle_attempts[key] = attempt + 1
-	var logic := BattleLogic.new(balance(), adoc_stats(GameState.level), GameState.hp, GameState.luz,
+	var logic := BattleLogic.new(balance(), adoc_combat_stats(), GameState.hp, GameState.luz,
 		make_monster(monster_id, d), battle_seed(GameState.seed_value, bosque_id, attempt))
 	_prepare(logic, monster_config(monster_id), d)
 	logic.toll = toll_for(bosque_id, d)
-	logic.ofrendas = GameState.inventory.duplicate(true)
+	logic.ofrendas = bag_ofrendas()
 	EventBus.battle_started.emit(bosque_id)
 	return logic
 
@@ -317,7 +372,7 @@ static func start_quest_battle(quest_id: StringName, d: int) -> BattleLogic:
 	GameState.quests[quest_id] = q
 	var target: StringName = StringName(str(QuestLogic.data(quest_id).get("target", "")))
 	var rng_seed: int = ChunkGenerator.hash_ints([GameState.seed_value, String(quest_id).hash(), attempt, SALT_QUEST_BATTLE])
-	var logic := BattleLogic.new(balance(), adoc_stats(GameState.level), GameState.hp, GameState.luz,
+	var logic := BattleLogic.new(balance(), adoc_combat_stats(), GameState.hp, GameState.luz,
 		make_monster(target, d), rng_seed)
 	# Sin Bosque que cobre: no hay peaje que ofrecer. El Ofomni descarriado, además, no acepta pagos.
 	_prepare(logic, monster_config(target), d)
@@ -369,30 +424,27 @@ static func _apply_result(logic: BattleLogic) -> StringName:
 	return &"fled"
 
 
-## Quita del inventario la ofrenda entregada en combate (la misma posición si sigue ahí; si no,
-## la primera con su id).
+## Quita de la bolsa la ofrenda entregada en combate (una unidad de su id).
 static func _remove_offered(logic: BattleLogic) -> void:
 	if logic.ofrenda_index < 0 or logic.ofrenda_index >= logic.ofrendas.size():
 		return
-	var id: String = str(logic.ofrendas[logic.ofrenda_index].id)
-	var inv: Array = GameState.inventory
-	if logic.ofrenda_index < inv.size() and str(inv[logic.ofrenda_index].get("id", "")) == id:
-		inv.remove_at(logic.ofrenda_index)
-		return
-	for i: int in inv.size():
-		if str(inv[i].get("id", "")) == id:
-			inv.remove_at(i)
-			return
+	InventoryLogic.remove(GameState.bag, StringName(str(logic.ofrendas[logic.ofrenda_index].id)))
 
 
-## Recompensa de una misión (mision-ofomni.md): Luz al tope, una ofrenda al inventario como
-## { id, luz }, XP y fama. `reward` es el bloque "reward" del JSON de la misión. Si la XP sube de
-## nivel, lo anuncia en el HUD (fuera del combate no hay narración).
+## La ofrenda de la recompensa (si la hay) cabe en la bolsa. Si no, quien la da espera a que haya
+## sitio (QuestRunner avisa "Tu bolsa está llena" y no la entrega).
+static func can_take_reward(reward: Dictionary) -> bool:
+	return not reward.has("ofrenda") or InventoryLogic.can_add(GameState.bag, StringName(str(reward.ofrenda)))
+
+
+## Recompensa de una misión (mision-ofomni.md): Luz al tope, una ofrenda a la bolsa, XP y fama.
+## `reward` es el bloque "reward" del JSON de la misión (el valor en Luz sale del catálogo). Si la
+## XP sube de nivel, lo anuncia en el HUD (fuera del combate no hay narración).
 static func apply_quest_reward(reward: Dictionary) -> void:
 	if bool(reward.get("refill_luz_to_max", false)):
 		set_luz(luz_max())
 	if reward.has("ofrenda"):
-		GameState.inventory.append({ "id": str(reward.ofrenda), "luz": int(reward.get("ofrenda_luz", 0)) })
+		InventoryLogic.add(GameState.bag, StringName(str(reward.ofrenda)))
 	GameState.fama += int(reward.get("fama", 0))
 	var lines: PackedStringArray = []
 	for level: int in gain_xp(int(reward.get("xp", 0))):
@@ -419,15 +471,17 @@ static func is_refuge_looted(coord: Vector2i) -> bool:
 	return GameState.looted_refuges.has(coord)
 
 
-## Recoge el hallazgo del refugio del chunk: lo añade al inventario y lo marca, una sola vez por
-## partida. Devuelve el elemento { id, luz } o {} si no había nada o ya se recogió.
+## Recoge el hallazgo del refugio del chunk: lo añade a la bolsa y lo marca, una sola vez por
+## partida. Devuelve { id, luz, taken } o {} si no había nada o ya se recogió. Con la bolsa llena,
+## taken = false: el objeto se queda y el refugio no se marca como saqueado.
 static func loot_refuge(coord: Vector2i) -> Dictionary:
 	var id: StringName = refuge_ofrenda(GameState.seed_value, coord)
 	if id == &"" or is_refuge_looted(coord):
 		return {}
 	var item: Dictionary = Ofrendas.make_item(id)
-	GameState.inventory.append(item)
-	GameState.looted_refuges.append(coord)
+	item.taken = InventoryLogic.add(GameState.bag, id)
+	if item.taken:
+		GameState.looted_refuges.append(coord)
 	return item
 
 

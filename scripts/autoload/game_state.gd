@@ -8,8 +8,10 @@ extends Node
 ## refugios saqueados (progresion-adoc.md, ofrendas-v1.md). v8: monstruos vencidos. v9: el Bosque
 ## recuerda (0.3): Bosques forzados, hostilidad y relación por Bosque; el Ofomni de la misión pasa a
 ## ofomni_descarriado. v10: frutales vaciados y frutos tomados en el Momento por Bosque
-## (FruitRules). Las versiones anteriores se cargan con valores por defecto.
-const SAVE_VERSION: int = 10
+## (FruitRules). v11: bolsa de casillas y equipo (roadmap-0.3.md #113) en lugar de la lista de
+## ofrendas; al migrar, las ofrendas pasan a la bolsa y el arma inicial va equipada. Las versiones
+## anteriores se cargan con valores por defecto.
+const SAVE_VERSION: int = 11
 ## Migración a v9: el Ofomni de la misión pasó de "ofomni" a "ofomni_descarriado" (y su etiqueta
 ## de brújula, de "Ofomni" a "Ofomni descarriado").
 const LEGACY_OFOMNI_ID: String = "ofomni"
@@ -66,8 +68,10 @@ var buildings: Array = []
 var citizens: Array = []
 ## Party RPG: [ { "id": "hero", "level": 1, "xp": 0, "hp": 10 } ]
 var party: Array = []
-## Inventario (ofrendas-v1.md): lista de ofrendas [ { "id": "cuenco_ritual", "luz": 6 } ].
-var inventory: Array = []
+## Bolsa (InventoryLogic): Items.bag_size() casillas, cada una {} (vacía) o { "id", "qty" }.
+var bag: Array = []
+## Equipo (InventoryLogic): { "main_hand", "mask", "talisman" } → id del objeto o "".
+var equipped: Dictionary = {}
 ## Misiones: { &"quest_id": estado de QuestLogic.new_quest() }.
 var quests: Dictionary = {}
 ## La villa natal quedó dañada (misión del Ofomni fallida). En la 0.2.0 solo es una marca.
@@ -117,7 +121,10 @@ func new_game(new_seed: int = 0, new_region: StringName = &"valle_del_sara") -> 
 	buildings = []
 	citizens = []
 	party = []
-	inventory = []
+	bag = InventoryLogic.new_bag(Items.bag_size())
+	for item: Dictionary in Items.start_bag():
+		InventoryLogic.add(bag, StringName(str(item.id)), int(item.get("qty", 1)))
+	equipped = InventoryLogic.sanitize_equipped(Items.start_equipped())
 	quests = {}
 	villa_damaged = false
 	fama = 0
@@ -155,7 +162,8 @@ func to_dict() -> Dictionary:
 		"buildings": buildings,
 		"citizens": citizens,
 		"party": party,
-		"inventory": inventory,
+		"bag": bag,
+		"equipped": equipped,
 		"quests": quests,
 		"villa_damaged": villa_damaged,
 		"xp": xp,
@@ -222,13 +230,7 @@ func from_dict(data: Dictionary) -> void:
 	buildings = data.get("buildings", [])
 	citizens = data.get("citizens", [])
 	party = data.get("party", [])
-	# v5 o anterior: el inventario era un diccionario vacío y las misiones no existían.
-	inventory = []
-	var items: Variant = data.get("inventory", [])
-	if items is Array:
-		for item: Variant in items:
-			if item is Dictionary and item.has("id"):
-				inventory.append({ "id": str(item.id), "luz": int(item.get("luz", 0)) })
+	_load_inventory(data)
 	quests = {}
 	var saved_quests: Variant = data.get("quests", {})
 	if saved_quests is Dictionary:
@@ -269,6 +271,24 @@ func from_dict(data: Dictionary) -> void:
 				if old_version and monster == LEGACY_OFOMNI_ID:
 					monster = QUEST_OFOMNI_ID
 				seen_monsters[str(id)] = { "monster": monster, "bosque_id": int(e.get("bosque_id", -1)), "chunk": [c.x, c.y] }
+
+
+## Bolsa y equipo. v11: tal cual (saneados). v10 o anterior: la lista de ofrendas "inventory"
+## [{ id, luz }] pasa a la bolsa (si hubiera más de las que caben, las sobrantes se pierden) y el
+## equipo es el inicial (el arma del Adoc equipada). En v5 o anterior "inventory" era un
+## diccionario vacío.
+func _load_inventory(data: Dictionary) -> void:
+	if data.has("bag"):
+		bag = InventoryLogic.sanitize_bag(data.bag, Items.bag_size())
+		equipped = InventoryLogic.sanitize_equipped(data.get("equipped", {}))
+		return
+	bag = InventoryLogic.new_bag(Items.bag_size())
+	var items: Variant = data.get("inventory", [])
+	if items is Array:
+		for item: Variant in items:
+			if item is Dictionary and item.has("id"):
+				InventoryLogic.add(bag, StringName(str(item.id)))
+	equipped = InventoryLogic.sanitize_equipped(Items.start_equipped())
 
 
 ## Fija el objetivo de la brújula y del mapa. `label`: texto corto ya traducido ("Ofomni").
