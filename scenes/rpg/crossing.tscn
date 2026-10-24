@@ -17,16 +17,16 @@ layer = 5
 script = ExtResource("1_cross")
 
 [node name="Panel" type="Panel" parent="."]
-offset_left = 40.0
-offset_top = 104.0
-offset_right = 280.0
+offset_left = 30.0
+offset_top = 90.0
+offset_right = 290.0
 offset_bottom = 172.0
 theme_override_styles/panel = SubResource("StyleBox_panel")
 
 [node name="Title" type="Label" parent="Panel"]
 offset_left = 6.0
 offset_top = 4.0
-offset_right = 234.0
+offset_right = 254.0
 offset_bottom = 18.0
 theme_override_colors/font_color = Color(0.996, 0.906, 0.38, 1)
 theme_override_font_sizes/font_size = 8
@@ -34,8 +34,8 @@ text = "El Bosque te observa. Su Nujio exige Luz."
 
 [node name="Options" type="VBoxContainer" parent="Panel"]
 offset_left = 8.0
-offset_top = 22.0
-offset_right = 234.0
-offset_bottom = 64.0
+offset_top = 20.0
+offset_right = 254.0
+offset_bottom = 80.0
 theme_override_constants/separation = 2
 script = ExtResource("2_menu")

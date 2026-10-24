@@ -227,7 +227,19 @@ func _interact() -> void:
 		Interaction.Kind.SIGN:
 			_dialogue.show_lines([_sign_line(target.cell)])
 		Interaction.Kind.REFUGE:
-			_dialogue.show_lines([Texts.get_text("refuge_empty")])
+			_dialogue.show_lines(_refuge_lines())
+
+
+## Refugio (ofrendas-v1.md): si guarda una ofrenda se recoge una vez; después, "No queda nada".
+func _refuge_lines() -> Array:
+	var coord: Vector2i = _chunk.coord
+	if AdventureRules.refuge_ofrenda(GameState.seed_value, coord) == &"":
+		return [Texts.get_text("refuge_empty")]
+	var item: Dictionary = AdventureRules.loot_refuge(coord)
+	if item.is_empty():
+		return [Texts.get_text("refuge_looted")]
+	var found: String = "%s (%d)" % [Ofrendas.display_name(StringName(str(item.id))), int(item.luz)]
+	return [Texts.get_text("refuge_found") % found, Texts.get_text("refuge_empty")]
 
 
 func _on_edge_reached(direction: Vector2i) -> void:

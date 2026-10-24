@@ -1,16 +1,20 @@
 class_name OptionMenu
 extends VBoxContainer
 ## Lista vertical de opciones con cursor, para teclado o mando (ui_up/ui_down/ui_accept/ui_cancel).
-## Las opciones desactivadas se ven en gris y el cursor las salta. Quien la contiene le pasa los
-## eventos con handle(). Suena al mover el cursor y al aceptar (Sfx).
+## Las opciones desactivadas se ven en gris y el cursor las salta (o, con skip_disabled = false,
+## se pueden marcar y aceptarlas devuelve DISABLED, para que quien la usa explique por qué).
+## Quien la contiene le pasa los eventos con handle(). Suena al mover el cursor y al aceptar (Sfx).
 
 const NONE: int = -1
 const CANCEL: int = -2
+## Se aceptó una opción desactivada (solo con skip_disabled = false); `index` dice cuál.
+const DISABLED: int = -3
 const COLOR_ON := Color("ffffff")
 const COLOR_OFF := Color("5a6988")
 const COLOR_CURSOR := Color("fee761")
 
 var index: int = 0
+var skip_disabled: bool = true
 var _texts: Array[String] = []
 var _enabled: Array[bool] = []
 
@@ -29,7 +33,7 @@ func set_options(texts: Array[String], enabled: Array[bool], keep_cursor: bool =
 		label.add_theme_constant_override(&"line_spacing", -2)
 		add_child(label)
 	index = previous if keep_cursor and previous < texts.size() else 0
-	if not _enabled[index]:
+	if not _enabled[index] and skip_disabled:
 		_move(1)
 	_redraw()
 
@@ -43,7 +47,7 @@ func handle(event: InputEvent) -> int:
 		_move(1)
 	elif event.is_action_pressed(&"ui_accept"):
 		if not _enabled[index]:
-			return NONE
+			return NONE if skip_disabled else DISABLED
 		Sfx.play(&"menu_accept")
 		return index
 	elif event.is_action_pressed(&"ui_cancel"):
@@ -56,7 +60,7 @@ func handle(event: InputEvent) -> int:
 func _move(step: int) -> void:
 	for i: int in _texts.size():
 		var next: int = posmod(index + step * (i + 1), _texts.size())
-		if _enabled[next]:
+		if _enabled[next] or not skip_disabled:
 			index = next
 			break
 	_redraw()

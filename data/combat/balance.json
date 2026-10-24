@@ -1,11 +1,24 @@
 {
   "$comment": "Valores de combate y cruce entre Bosques (slice de Aventura). Estructura: rpg-systems-dev; valores: game-designer (docs/design/mechanics/cruce-y-combate-v1.md). d = distancia en saltos de adyacencia entre Bosques desde el Bosque inicial hasta el Bosque al que se intenta entrar.",
   "adoc": {
-    "max_hp": 30,
-    "atk": 6,
-    "def": 3,
+    "$comment": "Luz del Adoc. Sus PV máx., ATQ y DEF dependen del nivel (bloque levels).",
     "start_luz": 10,
     "luz_max": 10
+  },
+  "levels": {
+    "$comment": "Niveles del Adoc (progresion-adoc.md), uno por fila desde el nivel 1: XP acumulada para alcanzarlo y stats en ese nivel. El último es el tope. Al subir, los PV actuales suben lo mismo que los máximos.",
+    "table": [
+      { "xp": 0, "max_hp": 30, "atk": 6, "def": 3 },
+      { "xp": 10, "max_hp": 34, "atk": 7, "def": 3 },
+      { "xp": 25, "max_hp": 38, "atk": 7, "def": 4 },
+      { "xp": 45, "max_hp": 42, "atk": 8, "def": 4 },
+      { "xp": 70, "max_hp": 46, "atk": 9, "def": 4 },
+      { "xp": 100, "max_hp": 50, "atk": 9, "def": 5 },
+      { "xp": 140, "max_hp": 54, "atk": 10, "def": 5 },
+      { "xp": 190, "max_hp": 58, "atk": 11, "def": 5 },
+      { "xp": 250, "max_hp": 62, "atk": 11, "def": 6 },
+      { "xp": 320, "max_hp": 66, "atk": 12, "def": 6 }
+    ]
   },
   "unico": {
     "hp_base": 18,
@@ -37,6 +50,11 @@
   "xp": {
     "victory_base": 4,
     "victory_per_d": 3
+  },
+  "refuge_loot": {
+    "$comment": "Hallazgos en refugios (ofrendas-v1.md): un refugio de cada one_in guarda una ofrenda del catálogo con ese source (determinista por seed y chunk).",
+    "one_in": 3,
+    "source": "refuge"
   },
   "monsters": {
     "$comment": "Monstruos del mundo (monstruos.md, mision-ofomni.md), una entrada por id. Genéricos: vision_radius (casillas, Chebyshev: a qué distancia te ve), step_time (s por casilla: su velocidad) y engage_distance (casillas, Chebyshev: a qué distancia empieza el encuentro; 1 = adyacente, con diagonal). Reposo: idle_wander (casillas de ida y vuelta) e idle_step_time. leash: casillas máximas desde su puesto, y distancia del jugador a la que deja de perseguir. max_outside: casillas que puede salir de su chunk. engage_cooldown: segundos sin ver al jugador tras retroceder o huir (y al aparecer). retreat_cells: casillas que retrocede el jugador. stats: bloque de fórmulas según d. fatal_at: Momentos en que perder es game over. special_every y special_factor: ataque especial cada N ataques con multiplicador de daño (0 = sin especial). texts: claves de data/text/sistema.json para narrar sus ataques.",

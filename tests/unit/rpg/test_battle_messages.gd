@@ -14,7 +14,7 @@ const UNICO: Dictionary = { "name": "Único serpiente", "max_hp": 22, "atk": 5, 
 
 
 func _logic(luz: int = 10, unico: Dictionary = UNICO, rng_seed: int = 7) -> BattleLogic:
-	return BattleLogic.new(BALANCE, 30, luz, unico, rng_seed)
+	return BattleLogic.new(BALANCE, BALANCE.adoc, 30, luz, unico, rng_seed)
 
 
 func test_one_message_per_action_in_order_with_bar_state() -> void:
@@ -56,7 +56,7 @@ func test_victory_messages_and_luz_cap() -> void:
 	assert_eq(msgs[0].unico_hp, 0)
 	assert_eq(msgs[1].text, "El Único vuelve a la Luz del Bosque. (+1 Luz)")
 	assert_eq(msgs[1].luz, 3)
-	var capped := BattleLogic.new(BALANCE, 30, 10, weak, 7)
+	var capped := BattleLogic.new(BALANCE, BALANCE.adoc, 30, 10, weak, 7)
 	capped.luz = 12  # Luz al tope tras pagar 2: simulado para comprobar el texto.
 	var at_cap: Array[Dictionary] = Battle.messages_for(capped.play_turn(BattleLogic.Action.OFFER_LUZ), BALANCE)
 	assert_eq(at_cap[1].text, "El Único vuelve a la Luz del Bosque.", "al tope no se anuncia +1")

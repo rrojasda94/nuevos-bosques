@@ -1,0 +1,55 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/rpg/inventory_screen.gd" id="1_inv"]
+[ext_resource type="Theme" path="res://assets/ui/theme.tres" id="2_theme"]
+
+[node name="InventoryScreen" type="CanvasLayer"]
+process_mode = 3
+layer = 8
+script = ExtResource("1_inv")
+
+[node name="Root" type="Panel" parent="."]
+offset_left = 40.0
+offset_top = 20.0
+offset_right = 280.0
+offset_bottom = 160.0
+theme = ExtResource("2_theme")
+
+[node name="Title" type="Label" parent="Root"]
+layout_mode = 0
+offset_left = 8.0
+offset_top = 4.0
+offset_right = 232.0
+offset_bottom = 16.0
+theme_type_variation = &"TitleLabel"
+
+[node name="Stats" type="Label" parent="Root"]
+layout_mode = 0
+offset_left = 8.0
+offset_top = 22.0
+offset_right = 112.0
+offset_bottom = 122.0
+
+[node name="OfrendasTitle" type="Label" parent="Root"]
+layout_mode = 0
+offset_left = 120.0
+offset_top = 22.0
+offset_right = 232.0
+offset_bottom = 34.0
+theme_type_variation = &"TitleLabel"
+
+[node name="Ofrendas" type="Label" parent="Root"]
+layout_mode = 0
+offset_left = 120.0
+offset_top = 36.0
+offset_right = 232.0
+offset_bottom = 122.0
+
+[node name="Hint" type="Label" parent="Root"]
+layout_mode = 0
+offset_left = 8.0
+offset_top = 124.0
+offset_right = 232.0
+offset_bottom = 136.0
+theme_type_variation = &"HintLabel"
+horizontal_alignment = 2

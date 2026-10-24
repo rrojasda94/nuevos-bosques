@@ -26,7 +26,7 @@ func after_all() -> void:
 
 
 func test_new_game_starts_with_balance_values() -> void:
-	assert_eq(GameState.hp, int(_b.adoc.max_hp))
+	assert_eq(GameState.hp, int(_b.levels.table[0].max_hp))
 	assert_eq(GameState.luz, int(_b.adoc.start_luz))
 	assert_eq(GameState.open_bosques, [] as Array[int])
 

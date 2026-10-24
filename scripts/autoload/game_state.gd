@@ -4,9 +4,10 @@ extends Node
 ## v2: chunk_coord y player_cell (ADR 0006). v3: luz, hp, open_bosques y battle_attempts
 ## (ADR 0009). v4: reloj de Aventura, clock_momento y clock_elapsed (ADR 0012). v5: chunks
 ## explorados y objetivo de la brújula (navegacion.md). v6: misiones (mision-ofomni.md), inventario
-## como lista de ofrendas, villa dañada, XP, fama y Botarramas vistos. Las versiones anteriores se
-## cargan con valores por defecto.
-const SAVE_VERSION: int = 6
+## como lista de ofrendas, villa dañada, XP, fama y Botarramas vistos. v7: nivel del Adoc y
+## refugios saqueados (progresion-adoc.md, ofrendas-v1.md). Las versiones anteriores se cargan con
+## valores por defecto.
+const SAVE_VERSION: int = 7
 
 var rng := RandomNumberGenerator.new()
 var seed_value: int = 0
@@ -56,9 +57,13 @@ var inventory: Array = []
 var quests: Dictionary = {}
 ## La villa natal quedó dañada (misión del Ofomni fallida). En la 0.2.0 solo es una marca.
 var villa_damaged: bool = false
-## XP acumulada y fama del Adoc (progresion-adoc.md; los niveles llegan en el PR 7).
+## XP acumulada, nivel (1 a AdventureRules.max_level()) y fama del Adoc (progresion-adoc.md).
+## El nivel lo sube AdventureRules.gain_xp.
 var xp: int = 0
+var level: int = 1
 var fama: int = 0
+## Chunks cuyo refugio ya se ha saqueado (hallazgos, ofrendas-v1.md): una vez por partida.
+var looted_refuges: Array[Vector2i] = []
 ## Última posición vista de cada Botarramas, para el mapa:
 ## { "id del puesto": { "monster", "bosque_id", "chunk": [x, y] } }.
 var seen_monsters: Dictionary = {}
@@ -74,6 +79,8 @@ func new_game(new_seed: int = 0, new_region: StringName = &"valle_del_sara") -> 
 	chunk = {}
 	chunk_coord = Vector2i(-1, -1)
 	player_cell = Vector2i(-1, -1)
+	xp = 0
+	level = 1
 	luz = AdventureRules.start_luz()
 	hp = AdventureRules.max_hp()
 	open_bosques = []
@@ -87,8 +94,8 @@ func new_game(new_seed: int = 0, new_region: StringName = &"valle_del_sara") -> 
 	inventory = []
 	quests = {}
 	villa_damaged = false
-	xp = 0
 	fama = 0
+	looted_refuges = []
 	seen_monsters = {}
 
 
@@ -120,7 +127,9 @@ func to_dict() -> Dictionary:
 		"quests": quests,
 		"villa_damaged": villa_damaged,
 		"xp": xp,
+		"level": level,
 		"fama": fama,
+		"looted_refuges": looted_refuges.map(func(c: Vector2i) -> Array: return [c.x, c.y]),
 		"seen_monsters": seen_monsters,
 	}
 
@@ -138,6 +147,9 @@ func from_dict(data: Dictionary) -> void:
 	chunk_coord = _to_vector2i(data.get("chunk_coord", [-1, -1]), Vector2i(-1, -1))
 	player_cell = _to_vector2i(data.get("player_cell", [-1, -1]), Vector2i(-1, -1))
 	luz = clampi(int(data.get("luz", AdventureRules.start_luz())), 0, AdventureRules.luz_max())
+	# Antes que los PV: su máximo depende del nivel. Sin nivel (v6 o anterior), el de su XP.
+	xp = maxi(0, int(data.get("xp", 0)))
+	level = clampi(int(data.get("level", AdventureRules.level_for_xp(xp))), 1, AdventureRules.max_level())
 	hp = clampi(int(data.get("hp", AdventureRules.max_hp())), 1, AdventureRules.max_hp())
 	open_bosques = []
 	for id: Variant in data.get("open_bosques", []):
@@ -177,8 +189,12 @@ func from_dict(data: Dictionary) -> void:
 		for id: Variant in saved_quests:
 			quests[StringName(str(id))] = QuestLogic.sanitize(saved_quests[id])
 	villa_damaged = bool(data.get("villa_damaged", false))
-	xp = maxi(0, int(data.get("xp", 0)))
 	fama = maxi(0, int(data.get("fama", 0)))
+	looted_refuges = []
+	for value: Variant in data.get("looted_refuges", []):
+		var c: Vector2i = _to_vector2i(value, Vector2i(-1, -1))
+		if c.x >= 0 and c.y >= 0 and not looted_refuges.has(c):
+			looted_refuges.append(c)
 	seen_monsters = {}
 	var seen: Variant = data.get("seen_monsters", {})
 	if seen is Dictionary:

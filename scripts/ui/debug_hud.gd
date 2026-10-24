@@ -1,7 +1,7 @@
 extends CanvasLayer
-## HUD de depuración del vertical slice: PV y Luz del Adoc, seed, chunk, Bosque y día, Momento y
-## tiempo hasta el riutash (WorldClock), más avisos temporales. El último aviso del riutash parpadea
-## y se queda fijo hasta que pasa. Solo escucha EventBus y lee GameState y WorldClock.
+## HUD de depuración del vertical slice: nivel, PV y Luz del Adoc, seed, chunk, Bosque y día,
+## Momento y tiempo hasta el riutash (WorldClock), más avisos temporales. El último aviso del
+## riutash parpadea y se queda fijo hasta que pasa. Solo escucha EventBus y lee GameState y WorldClock.
 
 const NOTICE_TIME: float = 3.0
 const NOTICE_REST: String = "Descansas en la villa"
@@ -30,6 +30,7 @@ func _ready() -> void:
 	EventBus.bosque_border_reached.connect(_on_bosque_border_reached)
 	EventBus.luz_changed.connect(func(_l: int) -> void: _refresh())
 	EventBus.hp_changed.connect(func(_h: int, _m: int) -> void: _refresh())
+	EventBus.character_leveled_up.connect(func(_id: StringName, _l: int) -> void: _refresh())
 	EventBus.rested_in_villa.connect(func() -> void: _show_notice(NOTICE_REST))
 	EventBus.riutash_warning.connect(_on_riutash_warning)
 	EventBus.riutash_passed.connect(_on_riutash_passed)
@@ -67,8 +68,8 @@ func _on_chunk_entered(_coord: Vector2i, bosque_id: int, bosque_size: int) -> vo
 
 
 func _refresh() -> void:
-	_label.text = "PV %d/%d   Luz %d/%d\nSeed %d  Chunk (%d, %d)  Día %d\nBosque #%d (%d chunks)  Shift corre  R seed\n%s" % [
-		GameState.hp, AdventureRules.max_hp(), GameState.luz, AdventureRules.luz_max(), GameState.seed_value, GameState.chunk_coord.x, GameState.chunk_coord.y, GameState.day,
+	_label.text = "Nv %d   PV %d/%d   Luz %d/%d\nSeed %d  Chunk (%d, %d)  Día %d\nBosque #%d (%d chunks)  Shift corre  R seed  I inventario\n%s" % [
+		GameState.level, GameState.hp, AdventureRules.max_hp(), GameState.luz, AdventureRules.luz_max(), GameState.seed_value, GameState.chunk_coord.x, GameState.chunk_coord.y, GameState.day,
 		_bosque_id, _bosque_size, _clock_line(),
 	]
 

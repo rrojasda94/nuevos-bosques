@@ -35,10 +35,12 @@ signal citizen_arrived(citizen_id: StringName)
 # --- RPG ---
 signal expedition_started(bosque_id: int)
 signal expedition_completed(bosque_id: int, loot: Dictionary, days_spent: int)
-## Combate contra el Único de un Bosque (ADR 0009). result: &"victory", &"defeat" o &"fled".
+## Combate contra el Único de un Bosque (ADR 0009). result: &"victory", &"defeat", &"fled",
+## &"appeased" (se fue con una ofrenda, ofrendas-v1.md) o &"game_over".
 signal battle_started(bosque_id: int)
 signal battle_ended(bosque_id: int, result: StringName)
-## Fin del menú del borde de un Bosque. outcome: &"paid" o &"won" (paso abierto: se cruza),
+## Fin del menú del borde de un Bosque. outcome: &"paid" (con Luz, con una ofrenda o con una
+## ofrenda en combate) o &"won" (paso abierto: se cruza),
 ## &"retreated" o &"fled" (se vuelve atrás), &"defeated" (se despierta en el Nujio inicial),
 ## &"game_over" (derrota contra un monstruo fatal: partida nueva).
 signal crossing_resolved(bosque_id: int, outcome: StringName)
@@ -55,6 +57,7 @@ signal quest_battle_requested(quest_id: StringName)
 signal quest_battle_resolved(quest_id: StringName, outcome: StringName)
 ## Aviso temporal en el HUD (p. ej. "El Nujio vuelve a oír al Ofomni").
 signal notice_requested(text: String)
+## El personaje sube de nivel (progresion-adoc.md). Una vez por nivel; id &"adoc".
 signal character_leveled_up(character_id: StringName, level: int)
 signal game_ended(reason: StringName)
 
