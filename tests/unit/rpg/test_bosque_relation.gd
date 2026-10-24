@@ -81,13 +81,13 @@ func test_expired_payment_returns_a_forced_bosque_to_forced_and_reactivates_bota
 	_win(_target)
 	assert_true(AdventureRules.pay_toll(_target, 0))
 	assert_false(AdventureRules.is_forced(_target), "pagado: no cuenta como forzado")
-	assert_false(field._can_detect(m), "pasivo mientras dura el pago")
+	assert_false(field.can_detect(m), "pasivo mientras dura el pago")
 	_pass_riutash()
 	_pass_riutash()
 	AdventureRules.expire_tolls()
 	assert_true(AdventureRules.is_forced(_target), "vuelve a forzado")
 	assert_true(AdventureRules.is_passable(_target, _home))
-	assert_true(field._can_detect(m), "sus Botarramas vuelven a vigilar")
+	assert_true(field.can_detect(m), "sus Botarramas vuelven a vigilar")
 
 
 func test_payment_is_permanent_with_high_friendship() -> void:

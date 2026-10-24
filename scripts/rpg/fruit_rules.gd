@@ -12,9 +12,12 @@ extends RefCounted
 ## - Guardar (dueño: "puedes elegir solo coger el fruto y almacenarlo en el inventario para
 ##   consumirlo dentro del bosque luego. no puedes sacar un fruto de su bosque sino dañas su
 ##   relación"): el fruto va a la bolsa con su Bosque de origen, sin curar. Cuenta igual para el
-##   límite por Momento y para el robo. Solo se come dentro de su Bosque de origen. Al entrar en
-##   otro Bosque con él, la relación con el de origen baja relation_per_fruit_taken_out por fruto,
-##   una vez por salida (la casilla queda marcada "out" hasta volver a su Bosque).
+##   límite por Momento y para el robo. Al entrar en otro Bosque con él, la relación con el de
+##   origen baja relation_per_fruit_taken_out por fruto, una vez por salida (la casilla queda
+##   marcada "out" hasta volver a su Bosque).
+## - Comer fuera (dueño, 0.3: "Puedes comer el fruto del bosque en otro lado pero [...] esto
+##   perjudica tu relación con dicho bosque"): se puede comer en cualquier sitio; fuera de su
+##   Bosque de origen la relación con él baja además relation_per_fruit_eaten_away.
 ## Escribe en GameState (emptied_fruit_trees, fruit_taken, bag). No dibuja ni abre diálogos: la
 ## exploración decide qué mostrar. Los números viven en data/combat/balance.json (bloque fruit).
 
@@ -78,20 +81,34 @@ static func take(coord: Vector2i, cell: Vector2i, bosque_id: int, home: int, sto
 	return { "healed": GameState.hp - before, "stored": store, "theft": theft }
 
 
-## El fruto de la casilla `index` se puede comer en el Bosque `bosque_id` (solo en su origen).
-static func can_eat(index: int, bosque_id: int) -> bool:
-	return InventoryLogic.id_at(GameState.bag, index) == Items.FRUIT_ID and bosque_id >= 0 		and InventoryLogic.origin_at(GameState.bag, index) == bosque_id
+## La casilla `index` de la bolsa tiene un fruto, que se puede comer en cualquier sitio.
+static func can_eat(index: int, _bosque_id: int = -1) -> bool:
+	return InventoryLogic.id_at(GameState.bag, index) == Items.FRUIT_ID
 
 
-## Come un fruto guardado (casilla `index`) estando en el Bosque `bosque_id`. Devuelve los PV
-## ganados, o -1 si no se puede (no es fruto o no es de este Bosque).
-static func eat_from_bag(index: int, bosque_id: int) -> int:
-	if not can_eat(index, bosque_id):
-		return -1
+## Comer ahora el fruto de la casilla `index` en el Bosque `bosque_id` sería comerlo lejos de su
+## Bosque de origen (y bajaría la relación con él).
+static func is_eaten_away(index: int, bosque_id: int) -> bool:
+	if not can_eat(index):
+		return false
+	var origin: int = InventoryLogic.origin_at(GameState.bag, index)
+	return origin >= 0 and origin != bosque_id
+
+
+## Come un fruto guardado (casilla `index`) estando en el Bosque `bosque_id`. Fuera de su Bosque de
+## origen, la relación con él baja relation_per_fruit_eaten_away. Devuelve { "healed": PV ganados,
+## "away_from": Bosque de origen si se comió lejos de él (-1 si no) }, o {} si no es un fruto.
+static func eat_from_bag(index: int, bosque_id: int) -> Dictionary:
+	if not can_eat(index):
+		return {}
+	var away_from: int = InventoryLogic.origin_at(GameState.bag, index) if is_eaten_away(index, bosque_id) else -1
 	var before: int = GameState.hp
 	InventoryLogic.remove_at(GameState.bag, index)
 	AdventureRules.set_hp(GameState.hp + heal_amount(AdventureRules.max_hp()))
-	return GameState.hp - before
+	if away_from >= 0:
+		AdventureRules.change_relation(away_from,
+			int(AdventureRules.balance().bosque_memory.get("relation_per_fruit_eaten_away", 0)))
+	return { "healed": GameState.hp - before, "away_from": away_from }
 
 
 ## El Adoc entra en un chunk del Bosque `bosque_id`. Los frutos de otro origen que aún no se habían

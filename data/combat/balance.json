@@ -30,6 +30,17 @@
     "def_max": 4,
     "d_max": 6
   },
+  "unico_aledra": {
+    "$comment": "Fórmulas de Aledra según d (más fuerte que un Botarramas). Provisionales: game-designer.",
+    "hp_base": 26,
+    "hp_per_d": 5,
+    "atk_base": 6,
+    "atk_per_d": 1,
+    "def_base": 2,
+    "def_per_d": 0.5,
+    "def_max": 5,
+    "d_max": 6
+  },
   "attack": {
     "roll_min": -1,
     "roll_max": 2,
@@ -42,7 +53,7 @@
     "per_d": 1
   },
   "bosque_memory": {
-    "$comment": "El Bosque recuerda (reglas del dueño 0.3): cada Botarramas vencido suma 1 de hostilidad a su Bosque. Peaje = 3 + d + hostility_toll x hostilidad, como mucho toll_max. vision_radius de sus Botarramas + hostility_vision x hostilidad, como mucho + vision_max_bonus. Relación (-relation_max .. relation_max): relation_per_kill por victoria, relation_per_payment al pagar con Luz (o Ofrecer Luz en combate; con una ofrenda suma su valor, bloque bosque_relation). Robo (p. ej. un fruto sin derecho, FruitRules): hostility_per_theft a la hostilidad y relation_per_theft a la relación. relation_per_fruit_taken_out: por cada fruto guardado que sacas de su Bosque de origen (una vez por salida). Provisionales: game-designer.",
+    "$comment": "El Bosque recuerda (reglas del dueño 0.3): cada Botarramas vencido suma 1 de hostilidad a su Bosque. Peaje = 3 + d + hostility_toll x hostilidad, como mucho toll_max. vision_radius de sus Botarramas + hostility_vision x hostilidad, como mucho + vision_max_bonus. Relación (-relation_max .. relation_max): relation_per_kill por victoria, relation_per_payment al pagar con Luz (o Ofrecer Luz en combate; con una ofrenda suma su valor, bloque bosque_relation). Robo (p. ej. un fruto sin derecho, FruitRules): hostility_per_theft a la hostilidad y relation_per_theft a la relación. relation_per_fruit_taken_out: por cada fruto guardado que sacas de su Bosque de origen (una vez por salida). relation_per_fruit_eaten_away: al comer un fruto guardado fuera de su Bosque de origen (además de lo de sacarlo). Provisionales: game-designer.",
     "hostility_toll": 2,
     "toll_max": 10,
     "hostility_vision": 2,
@@ -52,6 +63,7 @@
     "hostility_per_theft": 1,
     "relation_per_theft": -20,
     "relation_per_fruit_taken_out": -5,
+    "relation_per_fruit_eaten_away": -5,
     "relation_max": 100
   },
   "bosque_relation": {
@@ -89,6 +101,31 @@
     "$comment": "Frutos del Bosque (bosques-y-relacion.md, sección Fruto). Provisional. heal_pct: % de los PV máximos que cura un fruto (redondeo hacia arriba). Un fruto por Momento y por Bosque, si el Bosque da permiso (natal o peaje pagado); otro del mismo Bosque en el mismo Momento, o cualquiera sin permiso, es robo (efectos en bosque_memory: hostility_per_theft y relation_per_theft).",
     "heal_pct": 25
   },
+  "ofomni_guard": {
+    "$comment": "Ofomni que guardan su Bosque (sigilo-y-robo.md, feedback del dueño 0.3). Provisionales: game-designer. Persecución por robo: con un robo a la vista (alert_chance, de momento 1.0: sin sigilo todavía) aparecen entre chase_count_min y chase_count_max ofomni del Bosque robado (como mucho chase_count_max a la vez), fuera de la vista inmediata (más allá de spawn_view casillas en x o en y) y a spawn_max_distance casillas (Chebyshev) o menos; persiguen dentro de ese Bosque y se rinden al salir de él. Confinamiento de la primera misión: con la misión del sfida ofrecida y sin aceptar, acercarse a confine_distance casillas o menos de la frontera del Bosque natal (contando el paso que la cruza) hace que sus Ofomni te devuelvan a la plaza de la villa.",
+    "alert_chance": 1.0,
+    "chase_count_min": 1,
+    "chase_count_max": 2,
+    "spawn_view": [10, 6],
+    "spawn_max_distance": 14,
+    "confine_distance": 3
+  },
+  "bosque_hunt": {
+    "$comment": "El Bosque envía Únicos mientras estás dentro sin haber pagado (forzado o cerrado; feedback del dueño 0.3). Cada base_seconds − per_hostility_seconds × hostilidad segundos de reloj (como mínimo min_seconds) aparece un cazador fuera de la vista inmediata (las mismas distancias que ofomni_guard) que te persigue. kinds: tipos, alternando desde uno elegido por seed. Como mucho max_hunters a la vez. Paran al pagar o al salir del Bosque. Provisionales: game-designer.",
+    "base_seconds": 90,
+    "per_hostility_seconds": 15,
+    "min_seconds": 30,
+    "max_hunters": 2,
+    "kinds": ["botarramas", "ofomni"]
+  },
+  "patrols": {
+    "$comment": "Únicos que rondan por dentro de cada Bosque con Nujio (feedback del dueño 0.3). Entre count_min y count_max por Bosque, cada uno en un chunk del Bosque y de un tipo de kinds (por seed y Bosque). night_only: tipos que solo están fuera de noche (Riumna). min_hub_distance: casillas mínimas (Chebyshev) de su puesto al hub (la plaza de la villa). Rondan patrol_wander casillas (dato de cada monstruo) y te miran pasar; en un Bosque sin pagar persiguen si te ven. Provisionales: game-designer.",
+    "count_min": 1,
+    "count_max": 2,
+    "kinds": ["botarramas", "ofomni", "aledra"],
+    "night_only": ["aledra"],
+    "min_hub_distance": 10
+  },
   "monsters": {
     "$comment": "Monstruos del mundo (monstruos.md, mision-ofomni.md), una entrada por id. Genéricos: vision_radius (casillas, Chebyshev: a qué distancia te ve), step_time (s por casilla: su velocidad) y engage_distance (casillas, Chebyshev: a qué distancia empieza el encuentro; 1 = adyacente, con diagonal). Reposo: idle_wander (casillas de ida y vuelta) e idle_step_time. leash: casillas máximas desde su puesto, y distancia del jugador a la que deja de perseguir. max_outside: casillas que puede salir de su chunk. engage_cooldown: segundos sin ver al jugador tras retroceder o huir (y al aparecer). retreat_cells: casillas que retrocede el jugador. stats: bloque de fórmulas según d. fatal_at: Momentos en que perder es game over. special_every y special_factor: ataque especial cada N ataques con multiplicador de daño (0 = sin especial). appeasable: acepta Luz u ofrendas para irse (por defecto true). hp_factor: multiplica sus PV (por defecto 1). texts: claves de data/text/sistema.json para narrar sus ataques (attack, warning, special, special_defended) y para explicar por qué no acepta pagos (offer_luz_blocked, ofrenda_blocked).",
     "botarramas": {
@@ -105,6 +142,7 @@
       "engage_cooldown": 3.0,
       "retreat_cells": 2,
       "post_depth": 3,
+      "patrol_wander": 5,
       "appeasable": true,
       "fatal_at": [],
       "special_every": 0,
@@ -138,15 +176,16 @@
       }
     },
     "ofomni": {
-      "$comment": "Ofomni de un Bosque con Nujio: un Único que sirve a su Bosque y se apacigua con Luz u ofrendas, como un Botarramas. Aún no aparece en el mundo (perseguidores por robo, sigilo-y-robo.md). Valores provisionales, copiados del descarriado sin rebaja de PV.",
+      "$comment": "Ofomni de un Bosque con Nujio: un Único que sirve a su Bosque y se apacigua con Luz u ofrendas, como un Botarramas. Aparece en el mundo como perseguidor tras un robo (bloque ofomni_guard, sigilo-y-robo.md): algo más rápido que un Botarramas (0.2 frente a 0.24 s por casilla; el jugador va a 0.16). Valores provisionales, sin rebaja de PV.",
       "name_key": "monster_ofomni",
       "stats": "unico",
       "appeasable": true,
-      "vision_radius": 8,
-      "step_time": 0.3,
+      "vision_radius": 10,
+      "step_time": 0.2,
       "engage_distance": 2,
       "idle_wander": 2,
       "idle_step_time": 0.8,
+      "patrol_wander": 5,
       "leash": 64,
       "max_outside": 0,
       "engage_cooldown": 3.0,
@@ -159,6 +198,33 @@
         "warning": "ofomni_whips_warning",
         "special": "ofomni_whips_hit",
         "special_defended": "ofomni_whips_defended"
+      }
+    },
+    "aledra": {
+      "$comment": "Aledra (monstruos.md): serpiente que solo ronda de noche (patrols.night_only) y es fatal de noche (fatal_at riumna: perder es game over). Más fuerte que un Botarramas (bloque unico_aledra). No acepta Luz ni ofrendas: se la vence o se huye. Antes de un combate de noche se avisa y se puede huir sin pelear. Provisionales: game-designer.",
+      "name_key": "monster_aledra",
+      "stats": "unico_aledra",
+      "appeasable": false,
+      "vision_radius": 9,
+      "step_time": 0.22,
+      "engage_distance": 1,
+      "idle_wander": 3,
+      "patrol_wander": 6,
+      "idle_step_time": 0.7,
+      "leash": 64,
+      "max_outside": 0,
+      "engage_cooldown": 3.0,
+      "retreat_cells": 3,
+      "fatal_at": ["riumna"],
+      "special_every": 4,
+      "special_factor": 2.0,
+      "texts": {
+        "attack": "aledra_bite",
+        "warning": "aledra_coils_warning",
+        "special": "aledra_crush",
+        "special_defended": "aledra_crush_defended",
+        "offer_luz_blocked": "battle_offer_luz_blocked_aledra",
+        "ofrenda_blocked": "battle_ofrenda_blocked_aledra"
       }
     }
   }

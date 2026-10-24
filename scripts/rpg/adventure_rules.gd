@@ -550,6 +550,41 @@ static func finish_battle(logic: BattleLogic, bosque_id: int) -> StringName:
 	return outcome
 
 
+## Final de un combate directo contra un Único de dentro del Bosque (perseguidor por robo, cazador,
+## uno que ronda o uno al que el Adoc se enfrenta a voluntad). Apaciguarlo (Ofrecer Luz u ofrenda)
+## paga el peaje de su Bosque, como con un Botarramas; en el Bosque natal (que no cobra paso) solo
+## cuenta para la relación, sin abrir nada. Vencerlo: unico_defeated. Mismos resultados que
+## finish_battle.
+static func finish_unico_battle(logic: BattleLogic, bosque_id: int, home: int, offends: bool = false) -> StringName:
+	var outcome: StringName = _apply_result(logic)
+	if outcome == &"appeased":
+		var value: int = -1
+		if logic.ofrenda_index >= 0 and logic.ofrenda_index < logic.ofrendas.size():
+			value = int(logic.ofrendas[logic.ofrenda_index].luz)
+		if bosque_id != home:
+			_paid(bosque_id, value)
+		elif value >= 0:
+			_ofrenda_given(bosque_id, value)
+		else:
+			change_relation(bosque_id, int(_memory().relation_per_payment))
+	elif outcome == &"victory":
+		unico_defeated(bosque_id, home, offends)
+	EventBus.battle_ended.emit(bosque_id, outcome)
+	return outcome
+
+
+## Un Único de dentro del Bosque ha sido vencido: el Bosque lo recuerda (+1 de hostilidad) y la
+## relación baja relation_per_kill, como con un Botarramas. Con `offends` (se le atacó a voluntad
+## con el paso abierto), un Bosque pagado que no sea el natal pasa a forzado: el pago se pierde.
+static func unico_defeated(bosque_id: int, home: int, offends: bool = false) -> void:
+	GameState.bosque_hostility[str(bosque_id)] = hostility(bosque_id) + 1
+	change_relation(bosque_id, int(_memory().relation_per_kill))
+	if offends and bosque_id != home and is_open(bosque_id):
+		GameState.open_until.erase(str(bosque_id))
+		if not GameState.forced_bosques.has(bosque_id):
+			GameState.forced_bosques.append(bosque_id)
+
+
 ## Combate de misión contra su monstruo (`target` del JSON de la misión, p. ej. el Ofomni descarriado) con su d
 ## fija. No abre Bosques y su contador de intentos (semilla) es el de la misión.
 static func start_quest_battle(quest_id: StringName, d: int) -> BattleLogic:
@@ -755,8 +790,8 @@ static func loot_refuge(coord: Vector2i) -> Dictionary:
 ## Robo al Bosque `bosque_id` (hoy: tomar fruto sin permiso o un segundo fruto del mismo Bosque
 ## en el mismo Momento, FruitRules).
 ## El Bosque lo recuerda: hostilidad + hostility_per_theft (1) y relación + relation_per_theft
-## (−20), bloque bosque_memory. Avisa con bosque_robbed: ahí se engancha la persecución de los
-## Ofomni por robo (otro PR).
+## (−20), bloque bosque_memory. Avisa con bosque_robbed: la exploración despierta a los Ofomni que
+## persiguen (OfomniGuard).
 static func record_theft(bosque_id: int) -> void:
 	GameState.bosque_hostility[str(bosque_id)] = hostility(bosque_id) + int(_memory().hostility_per_theft)
 	change_relation(bosque_id, int(_memory().relation_per_theft))

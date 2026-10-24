@@ -184,11 +184,11 @@ func test_open_bosque_makes_its_botarramas_passive() -> void:
 	field._home = home
 	var m: OverworldMonster = autofree(OverworldMonster.new())
 	m.bosque_id = neighbour
-	assert_true(field._can_detect(m), "Bosque cerrado: detecta")
+	assert_true(field.can_detect(m), "Bosque cerrado: detecta")
 	AdventureRules.pay_toll(neighbour, 0)
-	assert_false(field._can_detect(m), "Bosque abierto: pasivo")
+	assert_false(field.can_detect(m), "Bosque abierto: pasivo")
 	var ofomni: OverworldMonster = autofree(OverworldMonster.new())
-	assert_true(field._can_detect(ofomni), "el Ofomni no guarda Bosques: siempre detecta")
+	assert_true(field.can_detect(ofomni), "el Ofomni no guarda Bosques: siempre detecta")
 
 
 func test_passive_botarramas_does_not_block_and_defeated_dissolves() -> void:

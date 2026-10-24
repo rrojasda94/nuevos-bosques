@@ -53,9 +53,15 @@ signal item_unequipped(slot: StringName, item_id: StringName)
 ## El Adoc descansa en una villa (PV al máximo).
 signal rested_in_villa
 ## El Adoc ha robado al Bosque (p. ej. un fruto sin permiso o un segundo fruto del mismo Bosque
-## en el Momento, FruitRules). Aquí se
-## engancha la persecución de los Ofomni por robo (otro PR).
+## en el Momento, FruitRules). La exploración despierta a los Ofomni que le persiguen (OfomniGuard).
 signal bosque_robbed(bosque_id: int)
+## Combate directo contra un Único que va por dentro de su Bosque (Crossing): un Ofomni que
+## persigue tras un robo, un cazador que envía el Bosque, uno que ronda, o uno al que el Adoc se
+## enfrenta a voluntad (E). monster_id: id de datos (balance.json, monsters). offends: el Bosque
+## tenía el paso abierto y atacar a su Único le ofende (si gana, el Bosque pasa a forzado).
+signal unico_battle_requested(bosque_id: int, monster_id: StringName, offends: bool)
+## Fin de ese combate. outcome: &"victory", &"appeased", &"defeat", &"fled" o &"game_over".
+signal unico_battle_resolved(bosque_id: int, outcome: StringName)
 ## La relación con un Bosque ha cambiado (bosques-y-relacion.md). relation: el valor nuevo
 ## (-100 .. 100).
 signal bosque_relation_changed(bosque_id: int, relation: int)
