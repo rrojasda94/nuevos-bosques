@@ -16,6 +16,8 @@ signal choice(index: int)
 
 ## Letras por segundo. AJUSTAR AQUÍ la velocidad del texto (combate y diálogos).
 const TEXT_SPEED: float = 45.0
+## Suena el blip de letra (Sfx "text_blip") una vez cada BLIP_EVERY letras escritas.
+const BLIP_EVERY: int = 2
 ## Parpadeo de la flecha: periodo y parte del periodo en que se ve.
 const BLINK_PERIOD: float = 0.6
 const BLINK_ON: float = 0.4
@@ -127,10 +129,13 @@ func handle(event: InputEvent) -> bool:
 
 func _process(delta: float) -> void:
 	if _queue.is_typing:
+		var before: int = _queue.visible_chars
 		if _queue.tick(delta, TEXT_SPEED, _text.get_total_character_count()):
 			_on_typed()
 		else:
 			_text.visible_characters = _queue.visible_chars
+			if _queue.visible_chars / BLIP_EVERY != before / BLIP_EVERY:
+				Sfx.play(&"text_blip")
 	elif _queue.is_active:
 		_blink += delta
 		_more.visible = fmod(_blink, BLINK_PERIOD) < BLINK_ON

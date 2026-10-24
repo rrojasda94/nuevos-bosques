@@ -1,7 +1,8 @@
 class_name Npc
 extends Node2D
-## Personaje no jugador en exploración: una casilla que bloquea el paso, un sprite procedural de
-## 16x16 (patrón de PlayerWalker._make_texture) y un id de datos (data/npcs/<id>.json). Lo que
+## Personaje no jugador en exploración: una casilla que bloquea el paso, un sprite de 16x16 (la
+## hoja SFIDA_SHEET de 2 fotogramas de reposo o, si falta, el placeholder procedural de
+## make_texture) y un id de datos (data/npcs/<id>.json). Lo que
 ## dice lo decide NpcDialogue. También calcula dónde espera el sfida en la villa natal.
 
 const TILE_SIZE: int = 16
@@ -16,6 +17,12 @@ const SFIDA_COLORS: Dictionary = {
 	"skin": Color("e8b796"),
 }
 
+## Hoja del sfida (docs/art/specs/primera-pasada.md): 2 fotogramas de reposo, mirando abajo.
+const SFIDA_SHEET: String = "res://assets/sprites/sprite_sfida_idle.png"
+const SHEET_FRAMES: int = 2
+## Segundos de cada fotograma de reposo.
+const IDLE_FRAME_TIME: float = 0.8
+
 var npc_id: StringName = &""
 var cell: Vector2i = Vector2i.ZERO
 
@@ -25,8 +32,17 @@ func setup(id: StringName, at: Vector2i, facing: Vector2i = Vector2i.DOWN) -> vo
 	cell = at
 	position = PlayerWalker.cell_to_position(at)
 	var sprite := Sprite2D.new()
-	sprite.texture = make_texture(SFIDA_COLORS, facing)
 	add_child(sprite)
+	if not ResourceLoader.exists(SFIDA_SHEET):
+		sprite.texture = make_texture(SFIDA_COLORS, facing)
+		return
+	sprite.texture = load(SFIDA_SHEET)
+	sprite.hframes = SHEET_FRAMES
+	var timer := Timer.new()
+	timer.wait_time = IDLE_FRAME_TIME
+	timer.autostart = true
+	timer.timeout.connect(func() -> void: sprite.frame = (sprite.frame + 1) % SHEET_FRAMES)
+	add_child(timer)
 
 
 ## Casilla de aparición del Adoc en su villa: justo al sur del Nujio.

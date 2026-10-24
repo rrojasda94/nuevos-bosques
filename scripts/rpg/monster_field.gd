@@ -11,7 +11,8 @@ signal engaged(monster: OverworldMonster)
 
 const BOTARRAMAS: StringName = &"botarramas"
 const OFOMNI: StringName = &"ofomni"
-## Tamaño del sprite en píxeles: Botarramas algo mayor que una casilla; el Ofomni, el doble.
+## Tamaño del placeholder procedural en píxeles (sin PNG): Botarramas algo mayor que una casilla;
+## el Ofomni, el doble. Con PNG manda el tamaño del PNG (16x24 y 32x32).
 const BOTARRAMAS_PX: int = 22
 const OFOMNI_PX: int = 32
 ## Distancia mínima al jugador al colocar al Ofomni.
@@ -49,7 +50,8 @@ func populate(bosques: BosqueMap, home: int, coord: Vector2i, chunk_at: Callable
 		var at: Vector2i = offset + BotarramasPosts.post_cell(chunk, GameState.seed_value, p.side, int(cfg.post_depth))
 		var axis: Vector2i = Vector2i.DOWN if p.side.x != 0 else Vector2i.RIGHT
 		var tex: Texture2D = _texture(UnicoArt.Kind.BOTARRAMAS, bosques.styles[p.bosque_id], BOTARRAMAS_PX)
-		_add(BOTARRAMAS, p.id, p.bosque_id, at, Rect2i(offset, Vector2i(ChunkData.SIZE, ChunkData.SIZE)), axis, cfg, tex)
+		_add(BOTARRAMAS, p.id, p.bosque_id, at, Rect2i(offset, Vector2i(ChunkData.SIZE, ChunkData.SIZE)), axis, cfg, tex,
+			UnicoArt.frames_for(UnicoArt.Kind.BOTARRAMAS))
 
 
 ## Pone al Ofomni en el chunk actual cerca de `cell`, a OFOMNI_MIN_GAP o más del jugador.
@@ -60,7 +62,7 @@ func spawn_ofomni(quest_key: String, cell: Vector2i, chunk: ChunkData, style: Di
 	var at: Vector2i = _free_cell_near(cell, chunk)
 	var tex: Texture2D = _texture(UnicoArt.Kind.EYES, style, OFOMNI_PX)
 	var m: OverworldMonster = _add(OFOMNI, quest_key, -1, at, Rect2i(Vector2i.ZERO, Vector2i(ChunkData.SIZE, ChunkData.SIZE)),
-		Vector2i.RIGHT, cfg, tex)
+		Vector2i.RIGHT, cfg, tex, UnicoArt.frames_for(UnicoArt.Kind.EYES))
 	m.cooldown = float(cfg.engage_cooldown)
 
 
@@ -151,9 +153,9 @@ func _free_cell_near(cell: Vector2i, chunk: ChunkData) -> Vector2i:
 
 
 func _add(id: StringName, monster_key: String, bosque_id: int, at: Vector2i, rect: Rect2i, axis: Vector2i,
-		cfg: Dictionary, tex: Texture2D) -> OverworldMonster:
+		cfg: Dictionary, tex: Texture2D, frames: int = 1) -> OverworldMonster:
 	var m := OverworldMonster.new()
-	m.setup(id, monster_key, bosque_id, at, rect, axis, cfg, tex)
+	m.setup(id, monster_key, bosque_id, at, rect, axis, cfg, tex, frames)
 	add_child(m)
 	_monsters.append(m)
 	return m
@@ -162,5 +164,6 @@ func _add(id: StringName, monster_key: String, bosque_id: int, at: Vector2i, rec
 func _texture(kind: UnicoArt.Kind, style: Dictionary, px: int) -> Texture2D:
 	var k: String = "%d:%d:%d:%d" % [kind, int(style.get("leaf", 0)), int(style.get("trunk", 0)), px]
 	if not _textures.has(k):
-		_textures[k] = UnicoArt.texture(kind, style, px)
+		var sheet: Texture2D = UnicoArt.sprite_sheet(kind, style)
+		_textures[k] = sheet if sheet != null else UnicoArt.texture(kind, style, px)
 	return _textures[k]

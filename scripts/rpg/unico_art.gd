@@ -1,6 +1,8 @@
 class_name UnicoArt
 extends RefCounted
-## Placeholder de los monstruos (ADR 0009, v1.1): dibujados por código con la combinación de
+## Arte de los monstruos. Botarramas y Ofomni usan los PNG de pixel-artist recoloreados con su
+## Bosque (sprite_sheet, battle_texture); si falta el PNG, y para el resto de tipos, queda el
+## placeholder (ADR 0009, v1.1): dibujados por código con la combinación de
 ## colores de su Bosque (hojas y tronco) y un aura. Los guardianes de borde son siempre Botarramas
 ## (monstruos.md: ave sin plumas que renquea) y el Ofomni de la misión es el ojo con tentáculos
 ## (EYES). El resto de siluetas quedan para monstruos futuros.
@@ -8,6 +10,19 @@ extends RefCounted
 
 enum Kind { QUADRUPED, SERPENT, HORNED, EYES, BIRD, BOTARRAMAS }
 const AURA := Color("fee761")
+
+## Arte de pixel-artist (docs/art/specs/primera-pasada.md): hoja de 2 fotogramas en horizontal por
+## tipo. Si falta el PNG se usa el placeholder procedural de texture().
+const SPRITES: Dictionary = {
+	Kind.BOTARRAMAS: "res://assets/sprites/sprite_botarramas_walk.png",
+	Kind.EYES: "res://assets/sprites/sprite_ofomni_idle.png",
+}
+const SPRITE_FRAMES: int = 2
+## Colores clave de los PNG de monstruos: se sustituyen por la hoja clara, la hoja oscura y el
+## tronco del Bosque (PlaceholderTileset.LEAVES / TRUNKS). Iguales que en tools/art/make_sprites.py.
+const KEY_LIGHT := Color("c0cbdc")
+const KEY_DARK := Color("8b9bb4")
+const KEY_TRUNK := Color("5a6988")
 
 ## Ojos por tipo: [u, v, radio], en fracciones del tamaño.
 const EYES: Array = [
@@ -27,6 +42,65 @@ const FANGS: Array = [
 	[],
 	[],
 ]
+
+
+static func has_sprite(kind: Kind) -> bool:
+	return SPRITES.has(kind) and ResourceLoader.exists(SPRITES[kind])
+
+
+## Fotogramas de la hoja del mundo: SPRITE_FRAMES con PNG, 1 con el placeholder.
+static func frames_for(kind: Kind) -> int:
+	return SPRITE_FRAMES if has_sprite(kind) else 1
+
+
+## Hoja del PNG recoloreada con el Bosque de `style`, o null si no hay PNG.
+static func sprite_sheet(kind: Kind, style: Dictionary) -> Texture2D:
+	if not has_sprite(kind):
+		return null
+	var img: Image = (load(SPRITES[kind]) as Texture2D).get_image()
+	return ImageTexture.create_from_image(recolor(img, style))
+
+
+## Monstruo para el combate en un cuadro de `px` x `px`: el primer fotograma del PNG ampliado a
+## escala entera y apoyado abajo en el centro; sin PNG, el placeholder procedural.
+static func battle_texture(kind: Kind, style: Dictionary, px: int) -> Texture2D:
+	if not has_sprite(kind):
+		return texture(kind, style, px)
+	var img: Image = recolor((load(SPRITES[kind]) as Texture2D).get_image(), style)
+	var w: int = img.get_width() / SPRITE_FRAMES
+	var h: int = img.get_height()
+	var frame: Image = img.get_region(Rect2i(0, 0, w, h))
+	var scale: int = maxi(1, mini(px / w, px / h))
+	frame.resize(w * scale, h * scale, Image.INTERPOLATE_NEAREST)
+	var out := Image.create(px, px, false, Image.FORMAT_RGBA8)
+	out.blit_rect(frame, Rect2i(Vector2i.ZERO, frame.get_size()), Vector2i((px - frame.get_width()) / 2, px - frame.get_height()))
+	return ImageTexture.create_from_image(out)
+
+
+## Colores clave -> colores del Bosque de `style` (claves en RGBA32).
+static func recolor_map(style: Dictionary) -> Dictionary:
+	var leaf: Array = PlaceholderTileset.LEAVES[int(style.get("leaf", 0))]
+	return {
+		KEY_LIGHT.to_rgba32(): leaf[1],
+		KEY_DARK.to_rgba32(): leaf[0],
+		KEY_TRUNK.to_rgba32(): PlaceholderTileset.TRUNKS[int(style.get("trunk", 0))],
+	}
+
+
+## Copia de `img` con los colores clave cambiados por los del Bosque; el resto (contorno, ojos)
+## se queda igual.
+static func recolor(img: Image, style: Dictionary) -> Image:
+	var out := img.duplicate() as Image
+	if out.is_compressed():
+		out.decompress()
+	out.convert(Image.FORMAT_RGBA8)
+	var mapping: Dictionary = recolor_map(style)
+	for y: int in out.get_height():
+		for x: int in out.get_width():
+			var c: Color = out.get_pixel(x, y)
+			if c.a > 0.0 and mapping.has(c.to_rgba32()):
+				out.set_pixel(x, y, mapping[c.to_rgba32()])
+	return out
 
 
 ## Monstruo de `px` x `px` píxeles: cuerpo con los colores del Bosque, contorno, ojos, colmillos y

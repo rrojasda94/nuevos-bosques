@@ -2,6 +2,8 @@ class_name PlayerWalker
 extends Node2D
 ## Personaje de exploración: se mueve por casillas con un tween entre casillas (RPG clásico).
 ## No conoce el mapa: pregunta a `is_walkable` y avisa con `edge_reached` al intentar salir del chunk.
+## Sprite: la hoja SHEET_PATH (4 direcciones x 2 fotogramas, cambia de fotograma en cada paso); si
+## falta el PNG, el placeholder procedural de _make_texture.
 
 signal edge_reached(direction: Vector2i)
 signal stepped(cell: Vector2i)
@@ -13,6 +15,12 @@ const RUN_MULTIPLIER: float = 2.0
 ## Píxeles que sube el sprite a mitad de paso (rebote de andar).
 const STEP_BOB: float = 1.0
 const TILE_SIZE: int = 16
+## Hoja del Adoc (docs/art/specs/primera-pasada.md): una fila por dirección, 2 fotogramas.
+const SHEET_PATH: String = "res://assets/sprites/sprite_adoc_walk.png"
+const SHEET_ROWS: Array[Vector2i] = [Vector2i.DOWN, Vector2i.UP, Vector2i.LEFT, Vector2i.RIGHT]
+const SHEET_FRAMES: int = 2
+## Suena el paso (Sfx "step") uno de cada STEP_SOUND_EVERY pasos, para no cansar.
+const STEP_SOUND_EVERY: int = 2
 
 const ACTIONS: Dictionary = {
 	&"move_up": Vector2i.UP,
@@ -30,14 +38,30 @@ var facing: Vector2i = Vector2i.DOWN
 var _held: Array[StringName] = []
 var _tween: Tween
 var _textures: Dictionary = {}
+var _has_sheet: bool = false
+var _frame: int = 0
+var _steps: int = 0
 
 @onready var _sprite: Sprite2D = $Sprite2D
 
 
 func _ready() -> void:
-	for dir: Vector2i in ACTIONS.values():
-		_textures[dir] = _make_texture(dir)
-	_sprite.texture = _textures[facing]
+	_has_sheet = ResourceLoader.exists(SHEET_PATH)
+	if _has_sheet:
+		_sprite.texture = load(SHEET_PATH)
+		_sprite.hframes = SHEET_FRAMES
+		_sprite.vframes = SHEET_ROWS.size()
+	else:
+		for dir: Vector2i in ACTIONS.values():
+			_textures[dir] = _make_texture(dir)
+	_update_sprite()
+
+
+func _update_sprite() -> void:
+	if _has_sheet:
+		_sprite.frame_coords = Vector2i(_frame, SHEET_ROWS.find(facing))
+	else:
+		_sprite.texture = _textures[facing]
 
 
 func place_at(new_cell: Vector2i) -> void:
@@ -85,7 +109,7 @@ func _try_step() -> void:
 	var dir: Vector2i = ACTIONS[_held.back()]
 	if dir != facing:
 		facing = dir
-		_sprite.texture = _textures[facing]
+		_update_sprite()
 	var target: Vector2i = cell + dir
 	if not ChunkData.in_bounds(target):
 		edge_reached.emit(dir)
@@ -93,6 +117,11 @@ func _try_step() -> void:
 	if not is_walkable.call(target):
 		return
 	cell = target
+	_frame = (_frame + 1) % SHEET_FRAMES
+	_update_sprite()
+	_steps += 1
+	if _steps % STEP_SOUND_EVERY == 0:
+		Sfx.play(&"step")
 	var time: float = STEP_TIME
 	if Input.is_action_pressed(&"run"):
 		time /= RUN_MULTIPLIER
@@ -108,6 +137,18 @@ func _on_step_finished() -> void:
 	stepped.emit(cell)
 	# Encadenar el siguiente paso en el mismo frame evita un tirón entre casillas.
 	_try_step()
+
+
+## El Adoc de espaldas (combate): primer fotograma de la fila "arriba" de la hoja, o el placeholder.
+static func back_texture() -> Texture2D:
+	if not ResourceLoader.exists(SHEET_PATH):
+		return _make_texture(Vector2i.UP)
+	var sheet: Texture2D = load(SHEET_PATH)
+	var atlas := AtlasTexture.new()
+	atlas.atlas = sheet
+	var size := Vector2(sheet.get_width() / SHEET_FRAMES, sheet.get_height() / SHEET_ROWS.size())
+	atlas.region = Rect2(Vector2(0, size.y * SHEET_ROWS.find(Vector2i.UP)), size)
+	return atlas
 
 
 ## Sprite de placeholder 16x16 con colores de la paleta: túnica roja, pelo castaño.

@@ -2,7 +2,7 @@ class_name OptionMenu
 extends VBoxContainer
 ## Lista vertical de opciones con cursor, para teclado o mando (ui_up/ui_down/ui_accept/ui_cancel).
 ## Las opciones desactivadas se ven en gris y el cursor las salta. Quien la contiene le pasa los
-## eventos con handle().
+## eventos con handle(). Suena al mover el cursor y al aceptar (Sfx).
 
 const NONE: int = -1
 const CANCEL: int = -2
@@ -36,14 +36,20 @@ func set_options(texts: Array[String], enabled: Array[bool], keep_cursor: bool =
 
 ## Devuelve el índice elegido con ui_accept, CANCEL con ui_cancel o NONE.
 func handle(event: InputEvent) -> int:
+	var before: int = index
 	if event.is_action_pressed(&"ui_up", true):
 		_move(-1)
 	elif event.is_action_pressed(&"ui_down", true):
 		_move(1)
 	elif event.is_action_pressed(&"ui_accept"):
-		return index if _enabled[index] else NONE
+		if not _enabled[index]:
+			return NONE
+		Sfx.play(&"menu_accept")
+		return index
 	elif event.is_action_pressed(&"ui_cancel"):
 		return CANCEL
+	if index != before:
+		Sfx.play(&"menu_move")
 	return NONE
 
 

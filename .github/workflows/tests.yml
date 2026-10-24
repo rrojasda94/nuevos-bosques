@@ -12,6 +12,9 @@ jobs:
       GODOT_VERSION: 4.7.2
     steps:
       - uses: actions/checkout@v4
+        with:
+          # Los PNG y WAV van en Git LFS: sin ellos los tests de arte fallan.
+          lfs: true
       - name: Instalar Godot
         run: |
           curl -fsSL "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip" -o godot.zip

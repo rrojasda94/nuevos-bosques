@@ -14,6 +14,7 @@ Todos los cambios que nota el jugador. Formato [Keep a Changelog](https://keepac
 - Combate contra el Ofomni: ataca con latigazos y cada tercer ataque usa el Latigazo múltiple (triple de daño). Lo anuncia un turno antes, y Defender lo deja en la mitad.
 - Botarramas: aves sin plumas que renquean con los colores de su Bosque. Guardan cada tramo de frontera de un Bosque cerrado, junto a su puerta o camino. Te ven a 10 casillas, salen a por ti hasta 4 casillas fuera de su Bosque y, al alcanzarte, abren el menú del borde (pagar Luz, enfrentarlos o retroceder). Si retrocedes o huyes, te apartas dos casillas y te dejan en paz unos segundos. Pagar o vencer abre el Bosque y sus Botarramas se quedan quietos. En el mapa (M) aparecen donde los viste por última vez.
 - Las victorias dan experiencia (4 + 3 por cada salto de distancia). Los niveles llegan más adelante.
+- Primeros sprites de pixel art y efectos de sonido: el Adoc (lenfi de trenza negra y ropa de protector) anda con dos fotogramas por dirección, el sfida respira con su túnica de oficiante y una pizca de Luz entre las manos, los Botarramas renquean y el Ofomni mueve los tentáculos, los dos con los colores de su Bosque, también en el combate. Suenan los pasos, las letras de los diálogos, el menú, los golpes y latigazos del combate, los avisos del riutash y su destello.
 
 ### Cambiado
 - Los letreros ya no se leen solos al pisarlos ni al pasar al lado.
