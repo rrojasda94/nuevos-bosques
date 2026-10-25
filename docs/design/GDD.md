@@ -10,7 +10,9 @@
 > - **Garelino dentro de Aventura** ([`mechanics/dos-caminos.md`](mechanics/dos-caminos.md)):
 >   - El adoc pasa de **fiel** a **en duda** con la Senda, y a **garelino** en un encuentro con los garelinos y una ledai. Los ledai de la Tarca de Trastas son como profetas de Garel / Estrella Azul.
 >   - Al unirse a los Nuevos Bosques, el adoc se vuelve **magra**: los Bosques viejos y nuevos no son compatibles.
->   - Como garelino: reúne un grupo y **persuade villas** (necesidad, diálogo, fuerza sin matar, regalar Piedras). **Tala Bosques muertos** (él o su grupo) y **siembra Piedras de los Nuevos Bosques** donde el Bosque de Nujio ya no está.
+>   - Como garelino: reúne un grupo (quedarse sin miembros es solo un retroceso) y **persuade villas** (necesidad, diálogo, fuerza sin matar, regalar Piedras). La villa natal también se puede convertir, pero es difícil. **Tala Bosques muertos** (él o su grupo) y **siembra Piedras de los Nuevos Bosques** donde el Bosque de Nujio ya no está.
+>   - Los Bosques con Nujio solo aceptan el peaje de un garelino si lleva un **artefacto que oculte su Luz**; sin él, lo atacan.
+> - **IA de combate** ([`mechanics/ia-de-combate.md`](mechanics/ia-de-combate.md)): orden de turnos por Agilidad (con Apresurar y Esperar), filas delante y detrás, roles atacante, defensor y apoyo, perfiles de enemigo y órdenes al grupo (Atacar / Defender / Libre).
 >   - Puede **redimirse** con un gran costo (incluye pedir asilo de magra).
 >   - Los finales por camino quedan aparcados.
 >   - El modo Garelino suelto queda como "empezar ya garelino", para más adelante.

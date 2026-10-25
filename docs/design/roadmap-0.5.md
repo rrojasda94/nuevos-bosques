@@ -11,7 +11,8 @@
 > | 2 | Senda, puntos y skills (Sombra / Confianza) **y estado de bando** (fiel / en duda / garelino) | `moralidad-y-progresion.md`, `dos-caminos.md` | 0.3 |
 > | 3 | Garelinos: enemigo humano no letal, campamentos y ataques a Bosques | `monstruos.md` | 0.3 (combate en grupo, estados de Bosque) |
 > | 4 | Encuentro con los garelinos y cambio de bando (mecánica, con textos genéricos) | `dos-caminos.md` | 2, 3 |
-> | 5 | Grupo garelino: reclutar, miembros que se retiran, Piedras | `dos-caminos.md` | 3, 4 |
+> | 4b | **IA de combate**: iniciativa (AGI, Apresurar, Esperar), formación delante/detrás, roles (atacante, defensor, apoyo), perfiles de enemigo y órdenes al grupo. PR propio antes del grupo garelino: lo usan los garelinos enemigos (PR 3), los aliados adoc y el grupo (PR 5) | `ia-de-combate.md` | 3; 0.3 (combate en grupo) |
+> | 5 | Grupo garelino: reclutar, miembros que se retiran, Piedras | `dos-caminos.md` | 3, 4, **4b** |
 > | 6 | Persuadir villas (4 vías, convicción, necesidades) y contrapersuasión del fiel | `dos-caminos.md`, `npcs-y-villas.md` | 1, 5 |
 > | 7 | Talar Bosques muertos (tú o tu grupo) y sembrar Piedras (Nuevos Bosques); Humores por exposición; magra | `dos-caminos.md`, `bosques-y-relacion.md` | 5; 0.3 (estados) |
 > | 8 | Salvar los Bosques (lado fiel) y encargos compartidos con otros adoc | `bosques-y-relacion.md`, `otros-adoc.md` | 1, 3 |

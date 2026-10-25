@@ -31,6 +31,16 @@ Respuestas a las preguntas del coordinador:
 | Nombres | **No aprobados** (Oridna, Urdan, Avessa, Tiunel). Se usan roles genéricos hasta que el dueño ponga nombres. |
 | Hoja de ruta | **Confirmado**: la 0.5 se llama "Dos caminos", con el orden propuesto; los artesanos y el Iserald pasan a la 0.6. |
 
+### Respuestas a #168–#171 (2026-10-25)
+> "1 si tienes artefactos que oculten tu Luz, pueden aceptar el peaje como normal o mas caro. En caso contrario te atacara y deberas avanzar por el bosque con cautela. 2 es solo un retroceso. Aqui deberiamos tener NPC inteligentes que tengan formaciones o sepan como atacar, defender, adelantar turnos, etc. 3 si 4 si, es dificil"
+
+| # | Decisión |
+|---|---|
+| #168 | Siendo garelino, el Bosque solo acepta el peaje si llevas un **artefacto que oculte tu Luz** (normal o más caro según el artefacto). Sin él, te ataca y hay que avanzar con cautela. |
+| #169 | Quedarse sin miembros es **solo un retroceso**. Además, **IA de combate** para NPC: formaciones, atacar, defender, adelantar turnos (`docs/design/mechanics/ia-de-combate.md`). |
+| #170 | La redención, **una sola vez** por partida. |
+| #171 | La villa natal **se puede convertir, pero es difícil**. |
+
 ## Consecuencias
 - ADR 0004: la fila "Garelino" de la tabla de modos queda acotada por este ADR. Las condiciones originales del modo (vence eliminando al Nujio y sembrando las primeras semillas; pierde al quedarse sin individuos) inspiran los objetivos del camino garelino (`dos-caminos.md`, "Finales").
 - Nuevo recurso: **Piedras de los Nuevos Bosques** (glosario §6 y §7), con fuente, sumidero y agotamiento en la ficha.
