@@ -68,6 +68,13 @@ signal bosque_relation_changed(bosque_id: int, relation: int)
 ## El paso pagado de un Bosque ha caducado tras un riutash: vuelve a cerrado (o a forzado) y sus
 ## Botarramas vuelven a exigir el pago.
 signal bosque_toll_expired(bosque_id: int)
+## El estado de un Bosque cambia durante la partida (BosqueStates; p. ej. sano -> enojado al caer
+## la relación). state: "sano", "enojado", "corrupto", "muerto" o "necesita_ayuda".
+signal bosque_state_changed(bosque_id: int, state: String)
+## El Adoc apaga el incendio del chunk de un Bosque que necesita ayuda (BosqueFires).
+signal bosque_fire_extinguished(bosque_id: int, chunk_coord: Vector2i)
+## El Adoc entra en un Bosque distinto del anterior (la exploración avisa de su estado).
+signal bosque_entered(bosque_id: int, state: String)
 ## El Adoc deja una ofrenda ante el Nujio de un Bosque (sin pagar peaje con ella).
 signal bosque_ofrenda_left(bosque_id: int, item_id: StringName)
 ## El jugador empieza a hablar con un NPC (E). Las misiones lo escuchan (PR 6).

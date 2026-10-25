@@ -9,7 +9,10 @@ extends RefCounted
 ## combate de misión (Ofomni descarriado), resultado de un combate (con monstruos fatales según el Momento,
 ## monstruos.md), reaparición tras una derrota no fatal junto al Nujio aliado más cercano
 ## (cruce-y-combate-v2.md), recompensa de misión, hallazgos en refugios, bolsa y equipo (el arma equipada
-## suma ATQ), villa dañada, descanso en una villa y efecto del riutash (ADR 0012). Escribe en GameState y avisa por EventBus. Los
+## suma ATQ), villa dañada, descanso en una villa y efecto del riutash (ADR 0012). Los estados de
+## Bosque (BosqueStates) cambian el peaje (corrupto ×1,5; muerto y necesita_ayuda no cobran y su
+## borde está abierto; el enojado no acepta pagos) y la visión de sus Botarramas, y un Bosque que
+## cae a angry_candidate_at de relación se enoja. Escribe en GameState y avisa por EventBus. Los
 ## números viven en data/combat/balance.json y, los del riutash, en data/world/time.json.
 
 const BALANCE_PATH: String = "res://data/combat/balance.json"
@@ -196,6 +199,9 @@ static func change_relation(bosque_id: int, delta: int) -> void:
 	if value <= angry_candidate_at() and not GameState.angry_candidate.has(bosque_id):
 		GameState.angry_candidate.append(bosque_id)
 	EventBus.bosque_relation_changed.emit(bosque_id, value)
+	# Relación <= angry_candidate_at con la marca de candidato: el Bosque se enoja (BosqueStates).
+	if value <= angry_candidate_at() and is_angry_candidate(bosque_id):
+		BosqueStates.make_angry(bosque_id)
 
 
 # --- Relación con cada Bosque (bosques-y-relacion.md, #134 y #135) ------------------------------
@@ -233,13 +239,34 @@ static func relation_toll_factor(bosque_id: int) -> float:
 
 
 ## Peaje del Bosque a distancia d: 3 + d + hostility_toll × hostilidad (la hostilidad no lo sube por
-## encima de toll_max; si la distancia ya lo supera, se queda en el de d) y, sobre eso, el
-## multiplicador de la relación (redondeado, 1 como mínimo).
+## encima de toll_max; si la distancia ya lo supera, se queda en el de d) y, sobre eso, los
+## multiplicadores del estado (corrupto ×1,5, BosqueStates.toll_factor) y de la relación
+## (redondeado, 1 como mínimo). 0 si el estado no cobra (muerto, necesita_ayuda). El enojado tiene
+## precio pero no lo acepta (can_pay_toll).
 static func toll_for(bosque_id: int, d: int) -> int:
+	var state_factor: float = BosqueStates.toll_factor(bosque_state(bosque_id))
+	if state_factor <= 0.0:
+		return 0
 	var base: int = toll_cost(d)
 	var raised: int = base + int(_memory().hostility_toll) * hostility(bosque_id)
 	var with_hostility: int = maxi(base, mini(raised, int(_memory().toll_max)))
-	return maxi(1, roundi(with_hostility * relation_toll_factor(bosque_id)))
+	return maxi(1, roundi(with_hostility * state_factor * relation_toll_factor(bosque_id)))
+
+
+## Estado del Bosque en la partida (BosqueStates.state_of con el reparto de la partida actual).
+static func bosque_state(bosque_id: int) -> String:
+	return BosqueStates.state_of(bosque_id)
+
+
+## Se le puede pagar el paso al Bosque: no si está enojado ("no cobran entrada pero no eres
+## bienvenido") ni si no cobra (muerto, necesita_ayuda: ya está abierto).
+static func can_pay_toll(bosque_id: int) -> bool:
+	return bosque_id >= 0 and BosqueStates.can_pay(bosque_state(bosque_id))
+
+
+## El Bosque no cobra peaje por su estado y su borde está abierto (muerto, necesita_ayuda).
+static func is_free_pass(bosque_id: int) -> bool:
+	return bosque_id >= 0 and BosqueStates.is_free(bosque_state(bosque_id))
 
 
 ## El paso pagado del Bosque sigue abierto (no cuenta el Bosque inicial, que siempre lo está).
@@ -329,7 +356,7 @@ static func reward_bosque_mission(bosque_id: int) -> void:
 	change_relation(bosque_id, int(_relation_cfg().per_mission))
 
 
-## Defender el Bosque de un incendio o un ataque: relación + per_defense. Llegará con los estados.
+## Defender el Bosque de un incendio o un ataque: relación + per_defense (BosqueFires.extinguish).
 static func reward_bosque_defense(bosque_id: int) -> void:
 	change_relation(bosque_id, int(_relation_cfg().per_defense))
 
@@ -366,10 +393,13 @@ static func riutash_near_nujio(chunk: ChunkData, cell: Vector2i, bosque_id: int,
 
 
 ## Radio de visión de un Botarramas del Bosque: el de sus datos + hostility_vision × hostilidad,
-## con un extra de vision_max_bonus como mucho ("mira, observa").
+## con un extra de vision_max_bonus como mucho ("mira, observa"), más el del estado (enojado:
+## detectan más lejos) y menos lo que dé el sigilo del Adoc (gancho, hoy 0).
 static func vision_radius(bosque_id: int, base: int) -> int:
 	var m: Dictionary = _memory()
-	return base + mini(int(m.vision_max_bonus), int(m.hostility_vision) * hostility(bosque_id))
+	var radius: int = base + mini(int(m.vision_max_bonus), int(m.hostility_vision) * hostility(bosque_id))
+	radius += BosqueStates.vision_bonus(bosque_state(bosque_id)) - BosqueStates.stealth_vision_bonus()
+	return maxi(1, radius)
 
 
 ## Stats del Único del Bosque a distancia d (deterministas: solo dependen de d). `unico_name`:
@@ -440,9 +470,10 @@ static func is_passable(bosque_id: int, home: int) -> bool:
 	return is_paid(bosque_id, home) or is_forced(bosque_id)
 
 
-## El Bosque inicial o uno con el peaje pagado y sin caducar: sus Botarramas quedan pasivos.
+## El Bosque inicial, uno con el peaje pagado y sin caducar, o uno que no cobra por su estado
+## (muerto, necesita_ayuda): sus Botarramas quedan pasivos y da permiso para el fruto.
 static func is_paid(bosque_id: int, home: int) -> bool:
-	return bosque_id >= 0 and (bosque_id == home or is_open(bosque_id))
+	return bosque_id >= 0 and (bosque_id == home or is_open(bosque_id) or is_free_pass(bosque_id))
 
 
 ## Forzado: se venció a alguno de sus Botarramas sin pagar (o el pago ha caducado). Se cruza, pero
@@ -528,6 +559,8 @@ static func start_battle(bosque_id: int, d: int, monster_id: StringName = &"bota
 		make_monster(monster_id, d), battle_seed(GameState.seed_value, bosque_id, attempt))
 	_prepare(logic, monster_config(monster_id), d)
 	logic.toll = toll_for(bosque_id, d)
+	# Un Bosque enojado no acepta pagos; uno que no cobra no tiene peaje que ofrecer.
+	logic.accepts_payment = logic.accepts_payment and can_pay_toll(bosque_id)
 	logic.ofrendas = bag_ofrendas()
 	EventBus.battle_started.emit(bosque_id)
 	return logic
@@ -659,13 +692,13 @@ static func respawn_hp(max_value: int) -> int:
 
 
 ## Aliado para reaparecer: el Bosque natal, o uno con relación >= ally_relation que no esté
-## forzado (vencer a un Botarramas sin pagar no lo hace aliado).
+## forzado (vencer a un Botarramas sin pagar no lo hace aliado) ni muerto (no tiene Nujio).
 static func is_ally(bosque_id: int, home: int) -> bool:
 	if bosque_id < 0:
 		return false
 	if bosque_id == home:
 		return true
-	return relation(bosque_id) >= int(_respawn_cfg().ally_relation) and not is_forced(bosque_id)
+	return relation(bosque_id) >= int(_respawn_cfg().ally_relation) and not is_forced(bosque_id) 		and bosque_state(bosque_id) != BosqueStates.MUERTO
 
 
 ## Bosque en cuyo Nujio se despierta tras caer en el chunk `fell_at`: el más cercano (chunks,
@@ -678,6 +711,9 @@ static func respawn_target(map: BosqueMap, fell_at: Vector2i, home: int) -> int:
 	var last_paid: int = GameState.last_paid_bosque
 	for id: int in map.count():
 		if id != last_paid and not is_ally(id, home):
+			continue
+		# Sin Nujio (Bosque muerto) no hay junto a quién despertar.
+		if not map.has_nujio(id):
 			continue
 		var c: Vector2i = map.nujio_chunk[id]
 		var dist: int = absi(c.x - fell_at.x) + absi(c.y - fell_at.y)

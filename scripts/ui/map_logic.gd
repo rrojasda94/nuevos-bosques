@@ -98,6 +98,17 @@ static func visible_monsters(bosques: BosqueMap, seen: Dictionary, open_bosques:
 	return out
 
 
+## Estado de los Bosques explorados que no están sanos (bosques-y-relacion.md: "El letrero y el
+## mapa (M) podrían indicar el estado"): { Vector2i chunk explorado: estado } (BosqueStates).
+static func visible_states(bosques: BosqueMap, explored: Array[Vector2i]) -> Dictionary:
+	var out: Dictionary = {}
+	for c: Vector2i in visible_cells(bosques, explored):
+		var state: String = BosqueStates.state_of(bosques.bosque_at(c), bosques)
+		if state != "" and state != BosqueStates.SANO:
+			out[c] = state
+	return out
+
+
 ## Chunk de la villa natal (siempre se muestra en el mapa), o (-1, -1) si no hay.
 static func home_villa(bosques: BosqueMap) -> Vector2i:
 	if bosques.home_bosque < 0:

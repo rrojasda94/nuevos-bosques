@@ -18,6 +18,9 @@ extends Node2D
 ## El Bosque recuerda (BosqueHunt): dentro de un Bosque sin pagar, cada cierto tiempo envía un
 ## cazador. Por dentro rondan Únicos de varios tipos (BosquePatrols; Aledra solo de noche). Con E
 ## frente a un Único se le enfrenta a voluntad; de noche, antes de pelear con Aledra se avisa.
+## Estados de Bosque (BosqueStates): al entrar en un Bosque se avisa de su estado; la vegetación se
+## tiñe según el estado; en un Bosque muerto, un Único independiente pide Luz antes de atacar; en
+## uno que necesita ayuda arden algunos chunks (BosqueFires): el fuego bloquea y se apaga con E.
 
 const TILE_SIZE: int = 16
 ## Duración del fundido al cambiar de chunk.
@@ -54,6 +57,13 @@ var _chase := OfomniGuard.new()
 var _capturing: bool = false
 ## Cacería del Bosque sin pagar (no se guarda).
 var _hunt := BosqueHunt.new()
+## Fuego de los incendios dibujado: casilla de área -> chunk al que pertenece (BosqueFires). Bloquea.
+var _fires: Dictionary = {}
+## Casillas de fuego por chunk (caché de BosqueFires.fire_cells; los apagados se filtran al dibujar).
+var _fire_cache: Dictionary = {}
+var _fire_layer: Node2D
+## Último Bosque en el que se entró (para avisar de su estado al cambiar de Bosque).
+var _last_bosque: int = -1
 
 @onready var _terrain: TileMapLayer = $Terrain
 @onready var _nujios: Node2D = $Nujios
@@ -68,14 +78,20 @@ var _hunt := BosqueHunt.new()
 
 
 func _ready() -> void:
+	_fire_layer = Node2D.new()
+	_fire_layer.name = "Fires"
+	add_child(_fire_layer)
+	move_child(_fire_layer, _terrain.get_index() + 1)
 	_player.is_walkable = func(c: Vector2i) -> bool:
-		return _chunk != null and _chunk.is_walkable(c) and not _npcs.has(c) and not _field.occupied(c)
+		return _chunk != null and _chunk.is_walkable(c) and not _npcs.has(c) and not _field.occupied(c) \
+			and not _fires.has(c)
 	_player.edge_reached.connect(_on_edge_reached)
 	_player.stepped.connect(_on_player_stepped)
 	EventBus.crossing_resolved.connect(_on_crossing_resolved)
 	EventBus.quest_battle_resolved.connect(_on_quest_battle_resolved)
 	EventBus.unico_battle_resolved.connect(_on_unico_battle_resolved)
 	EventBus.bosque_robbed.connect(_on_bosque_robbed)
+	EventBus.bosque_state_changed.connect(_on_bosque_state_changed)
 	_field.player = _player
 	_field.area_walkable = _area_walkable
 	_field.can_engage = func() -> bool: return _fade.color.a <= 0.0
@@ -89,6 +105,8 @@ func _ready() -> void:
 func start() -> void:
 	_region = ChunkGenerator.load_region(GameState.region_id)
 	_cache.clear()
+	_fire_cache.clear()
+	_last_bosque = -1
 	_nujio_textures.clear()
 	_terrain.tile_set = PlaceholderTileset.make_tile_set()
 	_bosques = BosqueMap.for_region(GameState.seed_value, _region)
@@ -175,6 +193,14 @@ func _enter_chunk(coord: Vector2i, cell: Vector2i) -> void:
 	# Frutos guardados de otro Bosque: su Bosque de origen nota que te los llevas (FruitRules).
 	if FruitRules.bosque_entered(bosque_id) > 0:
 		EventBus.notice_requested.emit(Texts.get_text("fruit_taken_out"))
+	# Estado del Bosque al cruzar a otro (el corrupto avisa del Iserald).
+	if bosque_id != _last_bosque:
+		_last_bosque = bosque_id
+		var state: String = BosqueStates.state_of(bosque_id, _bosques)
+		EventBus.bosque_entered.emit(bosque_id, state)
+		var notice: String = BosqueStates.entry_notice(state)
+		if notice != "":
+			EventBus.notice_requested.emit(notice)
 	EventBus.chunk_entered.emit(coord, bosque_id, _bosques.size_of(bosque_id))
 	_fade.color.a = 1.0
 	create_tween().tween_property(_fade, "color:a", 0.0, TRANSITION_TIME)
@@ -192,7 +218,10 @@ func _get_chunk(coord: Vector2i) -> ChunkData:
 func _draw_area() -> void:
 	_terrain.clear()
 	_fruit_cells.clear()
+	_fires.clear()
 	for child: Node in _nujios.get_children():
+		child.queue_free()
+	for child: Node in _fire_layer.get_children():
 		child.queue_free()
 	var size: int = ChunkData.SIZE
 	var m: int = NEIGHBOUR_MARGIN
@@ -232,6 +261,10 @@ func _draw_chunk(chunk: ChunkData, bosque_id: int, offset: Vector2i, area: Rect2
 		sprite.texture = _nujio_texture(bosque_id)
 		sprite.position = Vector2((offset + chunk.nujio_rect.position) * TILE_SIZE)
 		_nujios.add_child(sprite)
+	for c: Vector2i in _active_fire_cells(chunk, bosque_id):
+		if area.has_point(c):
+			_fires[offset + c] = chunk.coord
+			_add_fire_sprite(offset + c)
 
 
 ## Frutal dibujado en la casilla `at` del TileMap: con fruto o vaciado (FruitRules).
@@ -252,13 +285,117 @@ func _refresh_fruit_trees() -> void:
 func _ensure_source(bosque_id: int) -> void:
 	var tile_set: TileSet = _terrain.tile_set
 	if not tile_set.has_source(bosque_id):
-		tile_set.add_source(PlaceholderTileset.make_source(_bosques.styles[bosque_id]), bosque_id)
+		tile_set.add_source(PlaceholderTileset.make_source(_bosques.styles[bosque_id],
+				BosqueStates.state_of(bosque_id, _bosques)), bosque_id)
 
 
 func _nujio_texture(bosque_id: int) -> Texture2D:
 	if not _nujio_textures.has(bosque_id):
-		_nujio_textures[bosque_id] = PlaceholderTileset.nujio_texture(_bosques.styles[bosque_id], _bosques.nujio_size[bosque_id])
+		_nujio_textures[bosque_id] = PlaceholderTileset.nujio_texture(_bosques.styles[bosque_id], _bosques.nujio_size[bosque_id],
+				BosqueStates.state_of(bosque_id, _bosques))
 	return _nujio_textures[bosque_id]
+
+
+## Un Bosque cambia de estado en la partida (p. ej. se enoja): se rehacen sus colores y se avisa
+## si es el Bosque en el que está el Adoc.
+func _on_bosque_state_changed(bosque_id: int, state: String) -> void:
+	if _bosques == null or _terrain.tile_set == null:
+		return
+	if _terrain.tile_set.has_source(bosque_id):
+		_terrain.tile_set.remove_source(bosque_id)
+	_nujio_textures.erase(bosque_id)
+	if _chunk != null:
+		_draw_area()
+		if bosque_id == _bosques.bosque_at(_chunk.coord):
+			var notice: String = BosqueStates.entry_notice(state)
+			if notice != "":
+				EventBus.notice_requested.emit(notice)
+
+
+# --- Incendios (BosqueFires) ----------------------------------------------------------------------
+
+## Casillas que arden en el chunk (del Bosque `bosque_id`), sin las de un incendio apagado.
+func _active_fire_cells(chunk: ChunkData, bosque_id: int) -> Array[Vector2i]:
+	var none: Array[Vector2i] = []
+	if BosqueFires.is_extinguished(chunk.coord):
+		return none
+	if not _fire_cache.has(chunk.coord):
+		var always: bool = _bosques.nujio_chunk[bosque_id] == chunk.coord
+		_fire_cache[chunk.coord] = BosqueFires.fire_cells(chunk, GameState.seed_value,
+				BosqueStates.state_of(bosque_id, _bosques), always)
+	return _fire_cache[chunk.coord]
+
+
+func _add_fire_sprite(at: Vector2i) -> void:
+	var frames := SpriteFrames.new()
+	frames.set_animation_speed(&"default", PlaceholderTileset.FIRE_FPS)
+	for tex: Texture2D in PlaceholderTileset.fire_frames():
+		frames.add_frame(&"default", tex)
+	var sprite := AnimatedSprite2D.new()
+	sprite.sprite_frames = frames
+	sprite.centered = false
+	sprite.position = Vector2(at * TILE_SIZE)
+	_fire_layer.add_child(sprite)
+	sprite.play(&"default")
+	# Cada fuego empieza en un fotograma distinto para que no parpadeen a la vez.
+	sprite.frame = posmod(at.x * 7 + at.y * 3, PlaceholderTileset.FIRE_FRAMES)
+
+
+## E frente al fuego: pregunta si apagarlo (con tiempo o con Luz) o dejarlo.
+func _interact_fire(coord: Vector2i) -> void:
+	var actions: Array[StringName] = [&"time"]
+	if GameState.luz >= BosqueFires.luz_cost():
+		actions.append(&"luz")
+	actions.append(&"leave")
+	var options: Array = []
+	for a: StringName in actions:
+		match a:
+			&"time":
+				options.append(Texts.get_text("fire_put_out_time"))
+			&"luz":
+				options.append(Texts.get_text("fire_put_out_luz") % BosqueFires.luz_cost())
+			_:
+				options.append(Texts.get_text("fire_leave"))
+	_dialogue.choice.connect(_on_fire_choice.bind(coord, actions), CONNECT_ONE_SHOT)
+	_dialogue.ask(Texts.get_text("fire_prompt"), options)
+
+
+func _on_fire_choice(index: int, coord: Vector2i, actions: Array[StringName]) -> void:
+	if index < 0 or index >= actions.size() or actions[index] == &"leave":
+		return
+	var bosque_id: int = _bosques.bosque_at(coord)
+	if not BosqueFires.extinguish(coord, bosque_id, actions[index] == &"luz"):
+		return
+	_draw_area()
+	_dialogue.show_lines([Texts.get_text("fire_put_out"),
+			Texts.get_text("nujio_relation_now") % AdventureRules.relation(bosque_id)])
+
+
+# --- Únicos independientes (Bosque muerto) ----------------------------------------------------------
+
+## Un Único independiente de un Bosque muerto sale al paso: pide 1-2 de Luz. Pagar lo deja tranquilo
+## este Momento; negarse (o no tener Luz) empieza el combate.
+func _ask_independent(monster: OverworldMonster) -> void:
+	_pending_monster = monster
+	var luz: int = BosqueStates.independent_luz(GameState.seed_value, monster.key, GameState.riutash_count)
+	var options: Array = [Texts.get_text("independent_pay") % luz, Texts.get_text("independent_refuse")]
+	_dialogue.choice.connect(_on_independent_choice.bind(monster, luz), CONNECT_ONE_SHOT)
+	_dialogue.ask(Texts.get_text("independent_prompt") % [AdventureRules.monster_name(monster.monster_id), luz], options)
+
+
+func _on_independent_choice(index: int, monster: OverworldMonster, luz: int) -> void:
+	if not is_instance_valid(monster):
+		_pending_monster = null
+		return
+	if index == 0 and BosqueStates.pay_independent(luz):
+		_pending_monster = null
+		_field.satisfy(monster)
+		monster.calm(float(monster.cfg.get("engage_cooldown", 3.0)))
+		EventBus.notice_requested.emit(Texts.get_text("independent_paid"))
+		return
+	if index == 0:
+		EventBus.notice_requested.emit(Texts.get_text("independent_no_luz"))
+	_request_unico_battle(monster, false)
 
 
 ## Índice de dirección (0 = este, sentido horario) hacia la villa del Bosque, o 0 si no hay.
@@ -301,6 +438,10 @@ func _interact() -> void:
 	var monster: OverworldMonster = _field.monster_at(_player.cell + _player.facing)
 	if monster != null:
 		_confront(monster)
+		return
+	var ahead: Vector2i = _player.cell + _player.facing
+	if _fires.has(ahead):
+		_interact_fire(_fires[ahead])
 		return
 	var target: Dictionary = Interaction.find(_chunk, _player.cell, _player.facing, _npcs)
 	match target.kind:
@@ -473,6 +614,8 @@ func _on_monster_engaged(monster: OverworldMonster) -> void:
 		EventBus.quest_battle_requested.emit(QuestRunner.QUEST)
 	elif monster.role == MonsterField.ROLE_GUARDIAN:
 		EventBus.bosque_border_reached.emit(monster.bosque_id)
+	elif _field.is_independent(monster):
+		_ask_independent(monster)
 	else:
 		_request_unico_battle(monster, false)
 
@@ -483,6 +626,9 @@ func _on_monster_engaged(monster: OverworldMonster) -> void:
 ## al Bosque si tenía el paso abierto.
 func _confront(monster: OverworldMonster) -> void:
 	var active: bool = _field.can_detect(monster)
+	if active and _field.is_independent(monster):
+		_ask_independent(monster)
+		return
 	if monster.role == MonsterField.ROLE_QUEST or (monster.role == MonsterField.ROLE_GUARDIAN and active) \
 			or monster.role == MonsterField.ROLE_CHASER or monster.role == MonsterField.ROLE_HUNTER:
 		_on_monster_engaged(monster)
@@ -659,6 +805,8 @@ func _game_over() -> void:
 func _area_walkable(c: Vector2i) -> bool:
 	var m: int = NEIGHBOUR_MARGIN
 	if _chunk == null or c.x < -m or c.y < -m or c.x >= ChunkData.SIZE + m or c.y >= ChunkData.SIZE + m:
+		return false
+	if _fires.has(c):
 		return false
 	var off := Vector2i(floori(c.x / float(ChunkData.SIZE)), floori(c.y / float(ChunkData.SIZE)))
 	var coord: Vector2i = _chunk.coord + off

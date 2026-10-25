@@ -18,6 +18,10 @@ extends Node2D
 ##   pagado.
 ## - ROLE_HUNTER: Único que el Bosque envía mientras estás dentro sin pagar (BosqueHunt).
 ## - ROLE_CAPTOR: Ofomni del Bosque natal que devuelve al Adoc a la villa. Solo se ve.
+## Estados de Bosque (BosqueStates): en un Bosque corrupto pagado, un Único que ronda a veces ataca
+## igual (emboscada, por Momento); en uno muerto, el Único que ronda a veces va por su cuenta y te
+## sale al paso a pedir Luz (la exploración pregunta; pagarle lo deja satisfecho este Momento); en
+## uno que necesita ayuda, sus Únicos son amistosos.
 ## Los perseguidores, cazadores y captores no se guardan; sus Ofomni llevan un aura de Luz que los
 ## distingue del descarriado. Ninguno de los que van por dentro sale del chunk (de su Bosque).
 
@@ -61,6 +65,8 @@ var _textures: Dictionary = {}
 var _serial: int = 0
 var _bosques: BosqueMap
 var _chunk: ChunkData
+## Únicos independientes (Bosque muerto) ya pagados: "clave:riutash" -> true. No se guarda.
+var _satisfied: Dictionary = {}
 
 
 func clear() -> void:
@@ -297,7 +303,34 @@ func can_detect(m: OverworldMonster) -> bool:
 			return false
 		ROLE_QUEST, ROLE_CHASER:
 			return true
-	return m.bosque_id < 0 or not AdventureRules.is_paid(m.bosque_id, _home)
+	if m.bosque_id < 0:
+		return true
+	var state: String = BosqueStates.state_of(m.bosque_id, _bosques)
+	if m.role == ROLE_PATROL and m.bosque_id != _home:
+		if state == BosqueStates.MUERTO:
+			return is_independent(m)
+		if state == BosqueStates.CORRUPTO and AdventureRules.is_paid(m.bosque_id, _home) 				and BosqueStates.ambushes(GameState.seed_value, m.key, GameState.riutash_count, state):
+			return true
+	if BosqueStates.has_friendly_unicos(state):
+		return false
+	return not AdventureRules.is_paid(m.bosque_id, _home)
+
+
+## Único de un Bosque muerto que este Momento va por su cuenta y pide Luz (y no se le ha pagado).
+func is_independent(m: OverworldMonster) -> bool:
+	if m == null or m.role != ROLE_PATROL or m.bosque_id < 0:
+		return false
+	var state: String = BosqueStates.state_of(m.bosque_id, _bosques)
+	return BosqueStates.is_independent(GameState.seed_value, m.key, GameState.riutash_count, state) 		and not _satisfied.has(_satisfied_key(m))
+
+
+## Se le pagó la Luz que pedía: deja de salir al paso este Momento.
+func satisfy(m: OverworldMonster) -> void:
+	_satisfied[_satisfied_key(m)] = true
+
+
+static func _satisfied_key(m: OverworldMonster) -> String:
+	return "%s:%d" % [m.key, GameState.riutash_count]
 
 
 func _process(delta: float) -> void:

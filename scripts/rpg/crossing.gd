@@ -4,6 +4,9 @@ extends CanvasLayer
 ## su Botarramas o retroceder. Lo abre el encuentro con un Botarramas o, como red de seguridad, empujar el borde.
 ## Si el Bosque recuerda Botarramas vencidos, el peaje sube y el título lo avisa con una línea más;
 ## si la relación con el Bosque cambia el peaje (bosques-y-relacion.md), otra con su multiplicador.
+## Estados de Bosque (BosqueStates): un Bosque enojado no acepta pagos (solo "Enfrentar" y
+## "Retroceder", con su aviso en el título); uno corrupto lo dice junto a su peaje ×1,5. Los que no
+## cobran (muerto, necesita_ayuda) tienen el borde abierto y el menú no se abre.
 ## También lleva el combate de misión (Ofomni descarriado, EventBus.quest_battle_requested) y el
 ## combate directo contra un Único de dentro del Bosque (EventBus.unico_battle_requested: Ofomni
 ## que persiguen tras un robo, cazadores, los que rondan o el que se enfrenta a voluntad; sin menú,
@@ -23,7 +26,7 @@ const TEXT_BACK: String = "Volver"
 ## para cada una de las siguientes (alto de línea del título): hostilidad, relación.
 const EXTRA_LINE: float = 10.0
 const NEXT_EXTRA_LINE: float = 15.0
-## Opciones del menú principal, en orden.
+## Opciones del menú principal (las que se muestran están en _actions, en orden).
 enum Option { PAY_LUZ, OFRENDA, FIGHT, RETREAT }
 
 var _bosque_id: int = -1
@@ -43,6 +46,8 @@ var _home: int = -1
 ## de volver).
 var _ofrenda_choices: Array[int] = []
 var _in_submenu: bool = false
+## Opciones del menú principal que se muestran (Option), en orden.
+var _actions: Array[int] = []
 
 @onready var _panel: Control = $Panel
 @onready var _title: Label = $Panel/Title
@@ -85,21 +90,45 @@ func _open_main_menu() -> void:
 	_options.offset_top = _options_top + extra
 	# El panel crece hacia arriba: abajo no cabe.
 	_panel.offset_top = _panel_top - extra
-	var texts: Array[String] = [
-		"Ofrecer %d Luz (tienes %d)" % [_cost, GameState.luz],
-		TEXT_OFRENDA_MENU,
-		"Enfrentar al Botarramas",
-		"Retroceder",
-	]
+	_actions = actions_for(_bosque_id)
+	var texts: Array[String] = []
+	var enabled: Array[bool] = []
 	var has_ofrenda: bool = not Ofrendas.payable(AdventureRules.bag_ofrendas(), GameState.luz, _cost).is_empty()
-	var enabled: Array[bool] = [GameState.luz >= _cost, has_ofrenda, true, true]
+	for action: int in _actions:
+		match action:
+			Option.PAY_LUZ:
+				texts.append("Ofrecer %d Luz (tienes %d)" % [_cost, GameState.luz])
+				enabled.append(GameState.luz >= _cost)
+			Option.OFRENDA:
+				texts.append(TEXT_OFRENDA_MENU)
+				enabled.append(has_ofrenda)
+			Option.FIGHT:
+				texts.append("Enfrentar al Botarramas")
+				enabled.append(true)
+			Option.RETREAT:
+				texts.append("Retroceder")
+				enabled.append(true)
 	_options.set_options(texts, enabled)
+
+
+## Opciones del menú del borde del Bosque: pagar (Luz u ofrenda), enfrentar y retroceder; si no
+## acepta pagos (enojado), solo enfrentar y retroceder.
+static func actions_for(bosque_id: int) -> Array[int]:
+	if not AdventureRules.can_pay_toll(bosque_id):
+		return [Option.FIGHT, Option.RETREAT]
+	return [Option.PAY_LUZ, Option.OFRENDA, Option.FIGHT, Option.RETREAT]
 
 
 ## Título del menú: el de siempre; si el Bosque recuerda Botarramas vencidos, su aviso; y si la
 ## relación multiplica el peaje, cuánto (con amistad alta, que el paso será permanente).
 static func title_for(bosque_id: int) -> String:
+	var state: String = AdventureRules.bosque_state(bosque_id)
+	if not AdventureRules.can_pay_toll(bosque_id):
+		var angry: PackedStringArray = [Texts.get_text("crossing_angry_title"), Texts.get_text("crossing_angry_line")]
+		return "\n".join(angry)
 	var lines: PackedStringArray = [TITLE]
+	if state == BosqueStates.CORRUPTO:
+		lines.append(Texts.get_text("crossing_corrupt_line") % format_factor(BosqueStates.toll_factor(state)))
 	if AdventureRules.hostility(bosque_id) > 0:
 		lines.append(Texts.get_text("crossing_bosque_remembers"))
 	var relation_text: String = relation_line_for(bosque_id)
@@ -162,6 +191,9 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	get_viewport().set_input_as_handled()
 	var choice: int = _options.handle(event)
+	# En el menú principal, el índice de la opción pasa a su Option (el enojado no muestra pagos).
+	if not _in_submenu and choice >= 0 and choice < _actions.size():
+		choice = _actions[choice]
 	if _in_submenu:
 		if choice == OptionMenu.CANCEL or choice == _ofrenda_choices.size():
 			_open_main_menu()

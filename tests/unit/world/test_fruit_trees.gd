@@ -29,25 +29,34 @@ func _region_without_fruit() -> Dictionary:
 	return r
 
 
-## Muestra de chunks por seed: el inicial, la villa natal, algunos con camino y otros repartidos.
+## Muestra de chunks por seed: el inicial, la villa natal, algunos con camino y otros repartidos,
+## solo de Bosques que dan fruto (estados de Bosque: los enojados, corruptos y muertos no tienen).
 func _sample(seed_value: int) -> Array[Vector2i]:
 	var map: BosqueMap = _map(seed_value)
 	var home: int = AdventureRules.home_bosque(map, _region)
 	var out: Array[Vector2i] = [ChunkGenerator.region_start_chunk(_region), map.nujio_chunk[home]]
-	for c: Vector2i in [Vector2i(0, 0), Vector2i(3, 4), Vector2i(6, 1), Vector2i(9, 9), Vector2i(11, 15), Vector2i(2, 12)]:
-		if not out.has(c):
+	for c: Vector2i in [Vector2i(0, 0), Vector2i(3, 4), Vector2i(6, 1), Vector2i(9, 9), Vector2i(11, 15), Vector2i(2, 12),
+			Vector2i(1, 8), Vector2i(10, 3), Vector2i(5, 6), Vector2i(8, 12)]:
+		if not out.has(c) and ChunkGenerator.bosque_gives_fruit(_region, map, map.bosque_at(c)):
 			out.append(c)
 	return out
 
 
 func test_fruit_params_in_region_json() -> void:
 	var p: Dictionary = ChunkGenerator.fruit_params(_region)
-	assert_eq(str(p.bosque_state), "sano", "todos los Bosques con Nujio, sanos de momento")
+	assert_false(p.has("bosque_state"), "el estado sale de BosqueMap.state, no de la región")
 	assert_true((p.states as Array).has("sano"))
+	assert_true((p.states as Array).has("necesita_ayuda"))
 	assert_eq([int(p.per_chunk[0]), int(p.per_chunk[1])], [3, 6])
-	assert_true(ChunkGenerator.bosque_gives_fruit(_region, _map(42), 0))
+	var home: int = _map(42).home_bosque
+	assert_eq(ChunkGenerator.bosque_state(_region, _map(42), home), "sano")
+	assert_true(ChunkGenerator.bosque_gives_fruit(_region, _map(42), home))
 	assert_false(ChunkGenerator.bosque_gives_fruit(_region, _map(42), -1), "fuera de la región no")
-	assert_false(ChunkGenerator.bosque_gives_fruit(_region_without_fruit(), _map(42), 0))
+	assert_false(ChunkGenerator.bosque_gives_fruit(_region_without_fruit(), _map(42), home))
+	for id: int in _map(42).count():
+		var state: String = _map(42).state_of(id)
+		assert_eq(ChunkGenerator.bosque_gives_fruit(_region, _map(42), id), state == "sano" or state == "necesita_ayuda",
+				"Bosque %d (%s)" % [id, state])
 
 
 func test_fruit_trees_are_deterministic() -> void:

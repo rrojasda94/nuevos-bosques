@@ -116,6 +116,21 @@ static func stat_lines() -> Array[String]:
 	return lines
 
 
+## Línea del estado del Bosque ("Bosque enojado"; "" fuera de la región).
+static func state_line(bosque_id: int) -> String:
+	if bosque_id < 0:
+		return ""
+	return Texts.get_text("inventory_bosque_state") % BosqueStates.display_name(AdventureRules.bosque_state(bosque_id))
+
+
+## Estado y relación del Bosque en una línea ("Bosque enojado: relación -60"; "" fuera de la región).
+static func state_relation_line(bosque_id: int) -> String:
+	if bosque_id < 0:
+		return ""
+	return Texts.get_text("inventory_bosque_state_relation") % [
+		BosqueStates.display_name(AdventureRules.bosque_state(bosque_id)), AdventureRules.relation(bosque_id)]
+
+
 ## Línea de la relación con un Bosque ("" fuera de la región).
 static func relation_line(bosque_id: int) -> String:
 	if bosque_id < 0:
@@ -241,7 +256,7 @@ func open() -> void:
 	if visible or get_tree().paused:
 		return
 	_bosque_id = _current_bosque()
-	_relation = relation_line(_bosque_id)
+	_relation = state_relation_line(_bosque_id)
 	var toll: String = toll_line(_bosque_id)
 	if toll != "":
 		_relation += "\n" + toll
