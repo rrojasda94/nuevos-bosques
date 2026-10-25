@@ -211,6 +211,7 @@ Propuestas, a confirmar con el dueño:
 | 2026-10-24 | "aumentar un poco el tamaño de los chunks" | Chunk de 80 (ADR 0014); tiempos de viaje revisados (§2) sin cambiar el reloj (§3). |
 | 2026-10-24 | "se ve muy repetitivo y se nota el patrón utilizado en forma de X y fractal"; "los arboles y los elementos decorativos se ven muy repetitivos" | Puntos de interés distintos por chunk, con pesos por latitud y sin repetir hitos entre vecinos (§4). La variedad de árboles y decoración es de `pixel-artist` (M2). |
 | 2026-10-24 | "tener aldeas y lugares bien definidos" | Villas con nombre en el CSV. Aldeas procedurales: opción C, decidida el 2026-10-25 (§6). |
+| 2026-10-25 | "tambien deberia tener algunos afluentes el río Sara. Estos bajan de las montañas y colinas que el vale del Sara tiene al oeste las Urd Gumnavis y al este las Gumnada Gumnavis. Pon tres afluentes al este y 4 al oeste. Que respeten un poco el mapa de las subregiones" | 7 afluentes de río estrecho pintados en `agua.png` con `tools/world/paint_afluentes.py`, cada uno nace en una cumbre de las Urd Gumnavis (4, oeste) o de las Gumnada Gumnavis (3, este) y sigue un límite de subregión del mapa a mano. Detalle en `docs/design/world/sur-lenfi.md` §Afluentes del Sara. |
 | _playtest M19_ | | |
 
 ## Decisiones a confirmar con el dueño

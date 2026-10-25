@@ -24,7 +24,9 @@
 - **Costa**: todo el borde sur, desde Safis (oeste) hasta Alciss (este). Safis forma una península hacia el sur en el extremo oeste.
 - **Lago Ungol** (confirmado): la gran masa blanca alargada del este, **al sur de Naca**.
 - **Cordillera de Ungol** (confirmado): está al sur del lago Ungol. *(lectura)* Se corresponde con las montañas densas de Balasu y del norte de Ness y Sass, en la orilla sur del lago. En esa cordillera **no hay lenfi**. En el resto de subregiones, como Ness y Alciss, **sí hay lenfi en varios lugares** (dueño, #98).
-- **Río Sara** (confirmado): la línea que cruza Cassie de norte a sur hasta la costa. **Las líneas que se le unen son sus afluentes.** *(lectura)* Los afluentes visibles bajan por los límites de Tossie, Ostie y Vastie y por el límite de Vastie con Cassie.
+- **Río Sara** (confirmado): la línea que cruza Cassie de norte a sur hasta la costa. **Las líneas que se le unen son sus afluentes.** *(lectura)* Los afluentes visibles bajan por los límites de Tossie, Ostie y Vastie y por el límite de Vastie con Cassie. Afluentes pintados en la autoría: ver [Afluentes del Sara](#afluentes-del-sara).
+- **Urd Gumnavis** (confirmado, dueño 2026-10-25): las montañas y colinas **al oeste** del Valle del Sara. De ellas bajan afluentes del Sara.
+- **Gumnada Gumnavis** (confirmado, dueño 2026-10-25): las montañas y colinas **al este** del Valle del Sara. De ellas bajan afluentes del Sara.
 - **Marca azul**: en la costa de Cassie, en la desembocadura del río Sara. *(lectura)* Posible Super Villa del Sara (glosario §5) (#96).
 
 ## Zonas del mapa (de oeste a este)
@@ -48,16 +50,35 @@
 |---|---|---|---|
 | **Lean** | Norte, oeste | Causie (E), Tossie (S), Dorias (O); al norte, la franja de montañas | Montañas en el norte. |
 | **Causie** | Norte, este | Lean (O), Alss (S), Nosie (E); posible contacto con Tossie en la esquina SO | Montañas en el norte y el este. |
-| **Tossie** | Norte-centro, oeste (bajo Lean) | Lean (N), Alss (E), Ostie (S y O); posible contacto con Dorias y Causie en las esquinas | Bordeada por un afluente del Sara *(lectura)*. |
+| **Tossie** | Norte-centro, oeste (bajo Lean) | Lean (N), Alss (E), Ostie (S y O); posible contacto con Dorias y Causie en las esquinas | Bordeada por afluentes del Sara: Oeste 1 al norte y Oeste 2 al sur (autoría). |
 | **Alss** | Norte-centro, este (bajo Causie) | Causie (N), Tossie (O), Vastie (S), Nosie (E); posible contacto con Ostie en la esquina SO | Montañas. |
-| **Ostie** | Centro, oeste | Tossie (N), Alss (NE, posible), Vastie (E), Cassie (S y O); posible contacto con Dorias en el NO | Afluente en su límite con Vastie *(lectura)*. |
-| **Vastie** | Centro, este | Ostie (O), Alss (N), Nosie (E), Cassie (S) | Muy montañosa. Afluentes en sus límites con Ostie y con Cassie *(lectura)*. |
+| **Ostie** | Centro, oeste | Tossie (N), Alss (NE, posible), Vastie (E), Cassie (S y O); posible contacto con Dorias en el NO | El Sara en su límite con Vastie; afluente Oeste 3 en su límite con Cassie (autoría). |
+| **Vastie** | Centro, este | Ostie (O), Alss (N), Nosie (E), Cassie (S) | Muy montañosa. Afluentes Este 2 (límite con Alss) y Este 3 (límite con Cassie) (autoría). |
 | **Cassie** | Sur; llega a la costa. Tiene además una franja estrecha al oeste, entre Dorias y Ostie | Ostie (N), Vastie (N/NE), Dorias (O), Nosie (E), Cabuta (SE, en la costa); al sur, la costa | **El río Sara la cruza** de norte a sur hasta la desembocadura (marca azul). Algunas montañas. |
 
 **Norte y sur del Valle del Sara** (para "más agreste al norte; sur más plano con claros ribereños", ADR 0007):
 - Norte: Lean, Causie, Tossie, Alss.
 - Centro: Ostie, Vastie. Vastie es muy montañosa pese a estar en el centro.
 - Sur: Cassie.
+
+## Afluentes del Sara
+> Dueño, 2026-10-25: "tambien deberia tener algunos afluentes el río Sara. Estos bajan de las montañas y colinas que el vale del Sara tiene al oeste las Urd Gumnavis y al este las Gumnada Gumnavis. Pon tres afluentes al este y 4 al oeste. Que respeten un poco el mapa de las subregiones que tenemos en la imagen hecha a mano del mapa del sur lenfi."
+
+Confirmado: **4 afluentes al oeste** (de las Urd Gumnavis) y **3 al este** (de las Gumnada Gumnavis). Están pintados en `data/world/regions/valle_del_sara/agua.png` como río estrecho, con algún vado, y salen de `tools/world/paint_afluentes.py` (puntos de control editables). Cada uno nace en una cumbre pequeña junto al borde de la región, con colinas alrededor (`altura.png`), y donde cruza un camino lleva puente (`caminos.png`). El trazado sigue los límites del mapa a mano *(lectura)*, pasado a la escala de la autoría (el Valle del Sara del mapa → 12×16 chunks, 240×320 px):
+
+| Afluente | Baja de | Límite que sigue (mapa a mano) | Nace (px, chunk) | Llega al Sara (px, chunk) |
+|---|---|---|---|---|
+| Oeste 1 | Urd Gumnavis | Lean–Tossie (borde norte de Tossie) | (4, 30), chunk (0, 1) | (116, 56), chunk (5, 2) |
+| Oeste 2 | Urd Gumnavis | Tossie–Ostie (borde sur de Tossie) | (4, 62), chunk (0, 3) | (99, 100), chunk (4, 5) |
+| Oeste 3 | Urd Gumnavis | Ostie–Cassie (por la franja occidental de Cassie) | (4, 128), chunk (0, 6) | (91, 170), chunk (4, 8) |
+| Oeste 4 | Urd Gumnavis | Ninguno: el mapa solo dibuja 3 al oeste. Cruza el sur de Cassie, lejos de las villas | (4, 232), chunk (0, 11) | (83, 249), chunk (4, 12) |
+| Este 1 | Gumnada Gumnavis | Causie–Alss | (235, 36), chunk (11, 1) | (117, 88), chunk (5, 4) |
+| Este 2 | Gumnada Gumnavis | Alss–Vastie | (235, 104), chunk (11, 5) | (120, 125), chunk (5, 6) |
+| Este 3 | Gumnada Gumnavis | Vastie–Cassie | (235, 160), chunk (11, 8) | (93, 194), chunk (4, 9) |
+
+Notas:
+- El tramo alto del Sara en el mapa baja por el límite Lean–Causie y después por Tossie–Alss y Ostie–Vastie; el Sara de la autoría ya iba por esa franja central y no se ha movido.
+- Pendiente de confirmar con el dueño: dónde va el cuarto afluente del oeste, si alguno debe ser navegable y sus nombres.
 
 ## Alcuss: subregiones
 | Subregión | Posición (lectura del mapa) | Lenfi |
@@ -81,6 +102,6 @@ Las regiones del glosario §8 (Nan, Gumna, Ungol, Amuss, Hagat, Uta, Sanag, Suna
 - Nombre del nivel "subregión" (#100).
 - Cuántas áreas tiene cada subregión y cómo se dividen (#101).
 - Nivel de Safis, Dorias, Nosie, Naca, Balasu y Cabuta (#102).
-- Ríos grandes (navegables) y estrechos (#74). Pasos (#88).
+- Ríos grandes (navegables) y estrechos (#74). Pasos (#88). Los afluentes del Sara son estrechos de momento.
 - Significado de la marca azul (#96).
 - Ubicación de las regiones del glosario como grupos de áreas (#94, "más adelante").
