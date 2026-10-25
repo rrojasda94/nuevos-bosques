@@ -113,7 +113,7 @@ static func eat_from_bag(index: int, bosque_id: int) -> Dictionary:
 
 ## El Adoc entra en un chunk del Bosque `bosque_id`. Los frutos de otro origen que aún no se habían
 ## sacado bajan la relación con su Bosque (relation_per_fruit_taken_out por fruto) y quedan
-## marcados; los de este Bosque se desmarcan (volver a sacarlos penaliza otra vez). No
+## marcados (y la Senda baja por cada uno); los de este Bosque se desmarcan (volver a sacarlos penaliza otra vez). No
 ## desaparecen. Devuelve cuántos frutos se acaban de sacar.
 static func bosque_entered(bosque_id: int) -> int:
 	var per: int = int(AdventureRules.balance().bosque_memory.get("relation_per_fruit_taken_out", 0))
@@ -129,6 +129,8 @@ static func bosque_entered(bosque_id: int) -> int:
 			slot.out = true
 			AdventureRules.change_relation(origin, per * int(slot.qty))
 			taken_out += int(slot.qty)
+	# Sacar frutos guardados de su Bosque baja la Senda (fruit_taken_out por fruto).
+	Senda.record(Senda.FRUIT_TAKEN_OUT, taken_out)
 	return taken_out
 
 

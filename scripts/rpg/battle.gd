@@ -9,7 +9,8 @@ extends CanvasLayer
 ## "Ofrenda" abre un submenú con las ofrendas que alcanzan el peaje (ofrendas-v1.md). Contra un
 ## rival que no acepta pagos (appeasable: false, como el Ofomni descarriado) las dos salen en gris
 ## y, al elegirlas, explican por qué. Tras la
-## victoria se anuncian la XP y cada nivel nuevo (progresion-adoc.md).
+## victoria se anuncian la XP y cada nivel nuevo (progresion-adoc.md), con el aviso de los puntos
+## para crecer, y el botín de la skill Botín. El Golpe fuerte (skill) se narra en su ataque.
 ## Combate en grupo (monstruos.md, otros-adoc.md): con varios enemigos, el Único grande da paso a una
 ## fila de hasta 4, cada uno con su número y una barra de PV pequeña, y la caja de arriba muestra el
 ## grupo, cuántos quedan y la suma de sus PV; Atacar abre un submenú de objetivo (el cursor empieza
@@ -256,6 +257,7 @@ static func texts_for(logic: BattleLogic) -> Dictionary:
 	out.ally_names = logic.allies.map(func(a: Dictionary) -> String: return str(a.name))
 	out.group_name = str(out.get("plural", logic.unico_name))
 	out.is_group = logic.is_group()
+	out.luz_max = logic.luz_max
 	return out
 
 
@@ -285,6 +287,8 @@ static func messages_for(events: Array[Dictionary], balance: Dictionary, texts: 
 				else:
 					m.text = TEXT_ATTACK % e.amount
 					m.flash = &"unico"
+				if e.get("strong", false):
+					m.text = Texts.get_text("battle_strong_hit") + " " + m.text
 			&"ally_attack":
 				m.text = Texts.get_text("battle_ally_attack") % [_name(ally_names, actor), _name(enemy_names, target), e.amount]
 				m.flash = &"enemy" if group else &"unico"
@@ -346,7 +350,7 @@ static func messages_for(events: Array[Dictionary], balance: Dictionary, texts: 
 				m.text = str(texts.get("warning", TEXT_SPECIAL_WARNING))
 			&"victory":
 				# La Luz suelta tiene tope: con la Luz al máximo no se anuncia el +1.
-				var gained: int = mini(int(balance.victory_luz), int(balance.adoc.luz_max) - int(e.luz))
+				var gained: int = mini(int(balance.victory_luz), int(texts.get("luz_max", balance.adoc.luz_max)) - int(e.luz))
 				var victory_text: String = Texts.get_text("battle_group_victory") if group else TEXT_VICTORY
 				m.text = victory_text + (TEXT_VICTORY_LUZ % gained if gained > 0 else "")
 				m.luz = int(e.luz) + maxi(0, gained)
@@ -357,6 +361,10 @@ static func messages_for(events: Array[Dictionary], balance: Dictionary, texts: 
 					out.append({ "text": Texts.get_text("xp_gained") % int(e.xp) })
 				for level: Variant in e.get("level_ups", []):
 					out.append({ "text": Texts.get_text("level_up") % int(level) })
+				if not (e.get("level_ups", []) as Array).is_empty():
+					out.append({ "text": Texts.get_text("growth_points_hint") })
+				if str(e.get("loot", "")) != "":
+					out.append({ "text": Texts.get_text("battle_loot") % Ofrendas.display_name(StringName(str(e.loot))) })
 				continue
 			&"ofrenda":
 				m.text = Texts.get_text("battle_ofrenda_used") % Ofrendas.display_name(StringName(str(e.get("id", ""))))
@@ -591,7 +599,7 @@ func _open_menu() -> void:
 func _set_bars(state: Dictionary, animate: bool) -> void:
 	var l: BattleLogic = _logic
 	_set_mini_bars(state, animate)
-	_adoc_stats.text = "Adoc   PV %d/%d   Luz %d/%d" % [state.adoc_hp, l.adoc_max_hp, state.luz, int(l.balance.adoc.luz_max)]
+	_adoc_stats.text = "Adoc   PV %d/%d   Luz %d/%d" % [state.adoc_hp, l.adoc_max_hp, state.luz, l.luz_max]
 	_tween_bar(_adoc_bar, roundf(BAR_WIDTH * int(state.adoc_hp) / l.adoc_max_hp), animate)
 	if not l.is_group():
 		_unico_hp.text = "PV %d/%d" % [state.unico_hp, l.unico_max_hp]
