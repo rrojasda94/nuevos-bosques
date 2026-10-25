@@ -1,0 +1,7 @@
+{
+  "$comment": "Movimiento libre en 8 direcciones (ADR 0014 §2). Estructura: engine-architect; valores PROVISIONALES del ADR, los ajusta game-designer. Velocidades en px/s; corner_assist_px en px; hitbox [ancho, alto] en px, centrada en x y apoyada en los pies.",
+  "walk_speed": 100,
+  "run_speed": 200,
+  "corner_assist_px": 5,
+  "hitbox": [10, 6]
+}
