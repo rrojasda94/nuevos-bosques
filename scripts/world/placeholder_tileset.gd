@@ -7,6 +7,10 @@ extends RefCounted
 ## siendo procedural (nujio_texture). Solo usa colores de assets/palettes/palette_nuevos_bosques.gpl.
 ## Atlas: columna = ChunkData.Tile, fila = variante (ver variant_for). Las casillas de agua tienen
 ## un segundo fotograma de animación en la columna tile + Tile.size().
+## Estados de Bosque (bosques-y-relacion.md, "Cómo se ve"): la vegetación de un Bosque enojado,
+## corrupto o muerto se recolorea con la paleta (state_color): hojas más oscuras y rojizas, un
+## matiz enfermo violáceo, o seca y gris. El fuego de los incendios es un sprite animado aparte
+## (fire_frames).
 
 const TILE: int = 16
 ## Filas del atlas: 16 máscaras de borde x 2 variantes (ver variant_for).
@@ -65,6 +69,41 @@ const FRUIT_SPACING: int = 4
 ## Las filas 0-1 del frutal tienen fruto; sumando esto (filas 2-3) se dibuja vaciado.
 const FRUIT_EMPTY_VARIANT: int = 2
 
+## Paleta completa (assets/palettes/palette_nuevos_bosques.gpl), para recolorear por estado.
+const PALETTE: Array[Color] = [
+	Color("be4a2f"), Color("d77643"), Color("ead4aa"), Color("e4a672"), Color("b86f50"), Color("733e39"),
+	Color("3e2731"), Color("a22633"), Color("e43b44"), Color("f77622"), Color("feae34"), Color("fee761"),
+	Color("63c74d"), Color("3e8948"), Color("265c42"), Color("193c3e"), Color("124e89"), Color("0099db"),
+	Color("2ce8f5"), Color("ffffff"), Color("c0cbdc"), Color("8b9bb4"), Color("5a6988"), Color("3a4466"),
+	Color("262b44"), Color("181425"), Color("ff0044"), Color("68386c"), Color("b55088"), Color("f6757a"),
+	Color("e8b796"), Color("c28569"),
+]
+## Colores de un Bosque muerto: grises y pardos secos.
+const DEAD_COLORS: Array[Color] = [
+	Color("262b44"), Color("3a4466"), Color("5a6988"), Color("8b9bb4"), Color("c0cbdc"),
+	Color("3e2731"), Color("733e39"), Color("c28569"),
+]
+## Casillas que cambian de color con el estado del Bosque (la vegetación y el suelo natural).
+const STATE_TINTED_TILES: Array[int] = [
+	ChunkData.Tile.GRASS, ChunkData.Tile.CLEARING, ChunkData.Tile.TREE, ChunkData.Tile.FRUIT_TREE,
+	ChunkData.Tile.ROCKY, ChunkData.Tile.REFUGE,
+]
+## Colores de un Bosque corrupto: violetas enfermos mezclados con verdes apagados.
+const CORRUPT_COLORS: Array[Color] = [
+	Color("3e2731"), Color("68386c"), Color("b55088"), Color("193c3e"), Color("265c42"), Color("3e8948"),
+	Color("f6757a"),
+]
+## Tinte de cada estado: hacia qué color se lleva (antes de buscar el más cercano de la paleta).
+const ANGRY_TINT := Color("a22633")
+const CORRUPT_TINT := Color("68386c")
+const DEAD_TINT := Color("733e39")
+## Fuego: fotogramas y velocidad (fotogramas por segundo).
+const FIRE_FRAMES: int = 3
+const FIRE_FPS: float = 6.0
+const FIRE_COLORS: Array[Color] = [Color("a22633"), Color("e43b44"), Color("f77622"), Color("feae34"), Color("fee761")]
+
+static var _fire_frames: Array[Texture2D] = []
+
 enum Shape { ROUND, CONIFER, PALM, CACTUS, THORNY, WILLOW }
 const SHAPE_COUNT: int = 6
 const SHAPE_NAMES: Array[String] = ["copa redonda", "conífera", "palmera", "cactus", "espinoso", "sauce"]
@@ -98,8 +137,9 @@ static func make_tile_set() -> TileSet:
 
 
 
-## Atlas de un Bosque con estilo `style` (ver BosqueMap.styles).
-static func make_source(style: Dictionary) -> TileSetAtlasSource:
+## Atlas de un Bosque con estilo `style` (ver BosqueMap.styles). `state`: estado del Bosque
+## (BosqueStates); enojado, corrupto y muerto recolorean la vegetación (state_color).
+static func make_source(style: Dictionary, state: String = "") -> TileSetAtlasSource:
 	var count: int = ChunkData.Tile.size()
 	var image := Image.create(TILE * count * ANIM_FRAMES, TILE * VARIANTS, false, Image.FORMAT_RGBA8)
 	for tile: int in count:
@@ -109,6 +149,10 @@ static func make_source(style: Dictionary) -> TileSetAtlasSource:
 				var o := Vector2i((tile + frame * count) * TILE, variant * TILE)
 				if not TerrainTileset.paint(image, tile, variant, o, style, frame):
 					paint_tile(image, tile, legacy_variant(tile, variant) + frame, o, style)
+	if is_tinted_state(state):
+		var cache: Dictionary = {}
+		for tile: int in STATE_TINTED_TILES:
+			tint_rect(image, Rect2i(tile * TILE, 0, TILE, TILE * VARIANTS), state, cache)
 	var source := TileSetAtlasSource.new()
 	source.texture = ImageTexture.create_from_image(image)
 	source.texture_region_size = Vector2i(TILE, TILE)
@@ -124,9 +168,88 @@ static func make_source(style: Dictionary) -> TileSetAtlasSource:
 	return source
 
 
-## Textura del Nujio: la misma silueta y paleta del Bosque, a tamaño n x n casillas.
-static func nujio_texture(style: Dictionary, n: int) -> Texture2D:
-	return ImageTexture.create_from_image(_tree_image(style, n * TILE, false))
+## Textura del Nujio: la misma silueta y paleta del Bosque, a tamaño n x n casillas, con el tinte
+## de su estado (el corrupto, con su aura extraña).
+static func nujio_texture(style: Dictionary, n: int, state: String = "") -> Texture2D:
+	var img: Image = _tree_image(style, n * TILE, false)
+	if is_tinted_state(state):
+		tint_rect(img, Rect2i(Vector2i.ZERO, img.get_size()), state, {})
+	return ImageTexture.create_from_image(img)
+
+
+## El estado cambia los colores del Bosque.
+static func is_tinted_state(state: String) -> bool:
+	return state == BosqueMap.STATE_ENOJADO or state == BosqueMap.STATE_CORRUPTO or state == BosqueMap.STATE_MUERTO
+
+
+## Color de un píxel en un Bosque con ese estado, siempre de la paleta. Transparente y contorno no
+## cambian. Enojado: más oscuro y rojizo. Corrupto: hacia el violeta (matiz enfermo). Muerto: gris
+## y pardo (seco), solo con DEAD_COLORS.
+static func state_color(c: Color, state: String) -> Color:
+	if c.a == 0.0 or c == OUTLINE:
+		return c
+	var target: Color = c
+	var pool: Array[Color] = PALETTE
+	match state:
+		BosqueMap.STATE_ENOJADO:
+			target = c.darkened(0.35).lerp(ANGRY_TINT, 0.15)
+		BosqueMap.STATE_CORRUPTO:
+			target = c.lerp(CORRUPT_TINT, 0.5)
+			pool = CORRUPT_COLORS
+		BosqueMap.STATE_MUERTO:
+			var l: float = c.get_luminance()
+			target = Color(l, l, l).lerp(DEAD_TINT, 0.2)
+			pool = DEAD_COLORS
+		_:
+			return c
+	var best: Color = pool[0]
+	var best_d: float = INF
+	for p: Color in pool:
+		var d: float = _rgb_distance(p, target)
+		if d < best_d:
+			best_d = d
+			best = p
+	return Color(best.r, best.g, best.b, c.a)
+
+
+## Recolorea `rect` de `img` con state_color. `cache`: color original (RGBA32) -> color nuevo.
+static func tint_rect(img: Image, rect: Rect2i, state: String, cache: Dictionary) -> void:
+	for y: int in range(rect.position.y, rect.end.y):
+		for x: int in range(rect.position.x, rect.end.x):
+			var c: Color = img.get_pixel(x, y)
+			if c.a == 0.0:
+				continue
+			var k: int = c.to_rgba32()
+			if not cache.has(k):
+				cache[k] = state_color(c, state)
+			img.set_pixel(x, y, cache[k])
+
+
+## Fotogramas del fuego (16 x 16, fondo transparente, colores de la paleta): llamas que suben y
+## bajan sobre una base de ceniza.
+static func fire_frames() -> Array[Texture2D]:
+	if not _fire_frames.is_empty():
+		return _fire_frames
+	for f: int in FIRE_FRAMES:
+		var img := Image.create(TILE, TILE, false, Image.FORMAT_RGBA8)
+		var heights: Array[int] = []
+		for x: int in TILE:
+			var edge: float = 1.0 - absf(x - 7.5) / 8.0
+			heights.append(roundi(3 + edge * 9 + ChunkGenerator.hash_ints([x, f, 17]) % 4))
+		for x: int in TILE:
+			var h: int = clampi((heights[maxi(0, x - 1)] + heights[x] * 2 + heights[mini(TILE - 1, x + 1)]) / 4, 1, TILE - 1)
+			for k: int in h:
+				var y: int = TILE - 1 - k
+				var t: float = float(k) / h
+				var core: float = 1.0 - absf(x - 7.5) / 8.0
+				var idx: int = clampi(roundi((1.0 - t) * 2.0 + core * 2.5) - 1, 0, FIRE_COLORS.size() - 1)
+				img.set_pixel(x, y, FIRE_COLORS[idx])
+			img.set_pixel(x, TILE - 1 - h, OUTLINE)
+		img.fill_rect(Rect2i(0, TILE - 2, TILE, 2), Color("3e2731"))
+		for x: int in range(1 + f, TILE, 4):
+			img.set_pixel(x, TILE - 2, Color("5a6988"))
+		_fire_frames.append(ImageTexture.create_from_image(img))
+	return _fire_frames
 
 
 ## Variante visual de la casilla `cell` del chunk (fila del atlas):

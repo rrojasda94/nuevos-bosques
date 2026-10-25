@@ -7,6 +7,10 @@ extends RefCounted
 ## Red de caminos principales (ADR 0006): árbol de expansión sobre la adyacencia de Bosques,
 ## enraizado en el Bosque natal, más un ROAD_EXTRA_PERCENT de aristas extra (ciclos). Cada arista
 ## se traduce en chunks contiguos entre los dos chunks de Nujio. Se calcula una vez por mapa.
+## Estados de Bosque (bosques-y-relacion.md, #133): cada Bosque nace sano, enojado, corrupto,
+## muerto o necesita_ayuda según la seed y el bloque "bosque_states" de la región. El natal y sus
+## vecinos a safe_distance o menos son siempre sanos; los muertos no tienen Nujio (ni villa). Los
+## cambios durante la partida no viven aquí: BosqueStates los guarda en GameState.
 
 const MIN_SIZE: int = 4
 const MAX_SIZE: int = 16
@@ -32,6 +36,23 @@ const ROAD_EXTRA_PERCENT: int = 15
 ## sale ~1 de cada 2-3 chunks); `max_distance`: ningún chunk queda más lejos de un refugio.
 const DEFAULT_REFUGES: Dictionary = { "per_bosque": 1, "min_spacing": 2, "max_distance": 2 }
 const SALT_REFUGE_ORDER: int = 19
+const SALT_STATE_ORDER: int = 57
+const SALT_STATE_COUNT: int = 58
+## Estados de Bosque (bosques-y-relacion.md, modelo de datos: `state`).
+const STATE_SANO: String = "sano"
+const STATE_ENOJADO: String = "enojado"
+const STATE_CORRUPTO: String = "corrupto"
+const STATE_MUERTO: String = "muerto"
+const STATE_NECESITA_AYUDA: String = "necesita_ayuda"
+const STATES: Array[String] = [STATE_SANO, STATE_ENOJADO, STATE_CORRUPTO, STATE_MUERTO, STATE_NECESITA_AYUDA]
+## Reparto de estados (bloque "bosque_states" de la región). `safe_distance`: el natal y los
+## Bosques a esta distancia o menos (saltos de adyacencia) son siempre sanos. `necesita_ayuda`,
+## `corrupto` y `muerto`: [mín, máx] Bosques con ese estado (los muertos, solo entre los que no
+## tienen villa). `enojado_percent`: % de los candidatos que quedan que nacen enojados. El resto,
+## sanos. Si no hay candidatos suficientes, salen menos.
+const DEFAULT_STATES: Dictionary = {
+	"safe_distance": 1, "necesita_ayuda": [1, 2], "corrupto": [1, 2], "muerto": [1, 2], "enojado_percent": 25,
+}
 
 var grid_size: Vector2i = Vector2i.ZERO
 ## Id de Bosque por chunk (fila a fila). Los ids van de 0 a count() - 1.
@@ -52,19 +73,22 @@ var _road_sides: Dictionary = {}  # Vector2i -> Array[Vector2i]
 var _road_distance: Dictionary = {}  # Vector2i -> int (chunks de camino hasta la villa natal)
 var _road_home_side: Dictionary = {}  # Vector2i -> Vector2i (lado del siguiente tramo a casa)
 var _refuges: Dictionary = {}  # Vector2i -> true (chunks con refugio)
+## Estado de generación de cada Bosque (índice = id): uno de STATES.
+var state: Array[String] = []
 
 
 ## Reparto de la región `region` (JSON) con su Bosque inicial (el de start_chunk) con villa.
 static func for_region(seed_value: int, region: Dictionary) -> BosqueMap:
 	return build(seed_value, ChunkGenerator.region_size(region), ChunkGenerator.region_start_chunk(region),
-			region.get("refuges", {}))
+			region.get("refuges", {}), region.get("bosque_states", {}))
 
 
 ## `home_chunk`: chunk inicial de la partida. Su Bosque tiene siempre villa (el lugar natal del
 ## Adoc, ADR 0009), fuera del sorteo de 1 de cada VILLA_ODDS; el resto no cambia.
 ## `refuges`: parámetros del reparto de refugios (DEFAULT_REFUGES si faltan).
+## `states`: parámetros del reparto de estados (DEFAULT_STATES si faltan).
 static func build(seed_value: int, size: Vector2i, home_chunk: Vector2i = Vector2i(-1, -1),
-		refuges: Dictionary = {}) -> BosqueMap:
+		refuges: Dictionary = {}, states: Dictionary = {}) -> BosqueMap:
 	var map := BosqueMap.new()
 	map.grid_size = size
 	map.ids.resize(size.x * size.y)
@@ -80,6 +104,7 @@ static func build(seed_value: int, size: Vector2i, home_chunk: Vector2i = Vector
 		map.home_bosque = map.bosque_at(home_chunk)
 	else:
 		map.home_bosque = map.bosque_at(size / 2)
+	map._assign_states(seed_value, DEFAULT_STATES.merged(states, true))
 	map._build_roads(seed_value)
 	map._assign_refuges(seed_value, DEFAULT_REFUGES.merged(refuges, true))
 	return map
@@ -105,6 +130,17 @@ func chunks_of(bosque_id: int) -> Array[Vector2i]:
 	if bosque_id >= 0 and bosque_id < _groups.size():
 		out.assign(_groups[bosque_id])
 	return out
+
+
+## Estado de generación del Bosque ("" fuera de la región). El de la partida (con los cambios)
+## lo da BosqueStates.state_of.
+func state_of(bosque_id: int) -> String:
+	return state[bosque_id] if bosque_id >= 0 and bosque_id < state.size() else ""
+
+
+## El Bosque tiene Nujio: todos menos los muertos.
+func has_nujio(bosque_id: int) -> bool:
+	return bosque_id >= 0 and bosque_id < count() and state_of(bosque_id) != STATE_MUERTO
 
 
 func _in_grid(c: Vector2i) -> bool:
@@ -282,6 +318,45 @@ func _assign_traits(seed_value: int) -> void:
 		var hn: int = ChunkGenerator.hash_ints([seed_value, id, SALT_NUJIO])
 		nujio_chunk.append(central_chunk(id))
 		nujio_size.append(NUJIO_MIN + (hn >> 8) % (NUJIO_MAX - NUJIO_MIN + 1))
+
+
+## Reparto determinista de estados. Candidatos: los Bosques a más de safe_distance del natal, en
+## orden de hash. Por orden se reparten necesita_ayuda, corrupto y muerto (este, sin villa: un
+## Bosque muerto no tiene Nujio) y, de los que quedan, enojado_percent % pasan a enojados. El
+## resto (y el natal con sus vecinos) son sanos.
+func _assign_states(seed_value: int, params: Dictionary) -> void:
+	state.resize(count())
+	state.fill(STATE_SANO)
+	var safe: int = int(params.safe_distance)
+	var candidates: Array[int] = []
+	var keys: Dictionary = {}
+	for id: int in count():
+		if id == home_bosque or (home_bosque >= 0 and distance(home_bosque, id) <= safe):
+			continue
+		candidates.append(id)
+		keys[id] = ChunkGenerator.hash_ints([seed_value, id, SALT_STATE_ORDER])
+	candidates.sort_custom(func(a: int, b: int) -> bool: return keys[a] < keys[b] or (keys[a] == keys[b] and a < b))
+	var kinds: Array[String] = [STATE_NECESITA_AYUDA, STATE_CORRUPTO, STATE_MUERTO]
+	for k: int in kinds.size():
+		var kind: String = kinds[k]
+		var range_n: Array = params.get(kind, [0, 0])
+		var lo: int = int(range_n[0])
+		var hi: int = maxi(lo, int(range_n[1]))
+		var wanted: int = lo + ChunkGenerator.hash_ints([seed_value, k, SALT_STATE_COUNT]) % (hi - lo + 1)
+		for id: int in candidates:
+			if wanted <= 0:
+				break
+			if state[id] != STATE_SANO or (kind == STATE_MUERTO and has_villa[id]):
+				continue
+			state[id] = kind
+			wanted -= 1
+	var rest: Array[int] = []
+	for id: int in candidates:
+		if state[id] == STATE_SANO:
+			rest.append(id)
+	var angry: int = roundi(rest.size() * float(params.enojado_percent) / 100.0)
+	for i: int in mini(angry, rest.size()):
+		state[rest[i]] = STATE_ENOJADO
 
 
 func neighbours_of(bosque_id: int) -> Array[int]:

@@ -121,6 +121,11 @@ func test_nujio_is_6_to_8_tiles_and_reachable_on_foot() -> void:
 		for id in range(0, map.count(), 3):
 			var chunk := ChunkGenerator.generate(s, map.nujio_chunk[id], _region, map)
 			var rect := chunk.nujio_rect
+			if not map.has_nujio(id):
+				# Bosque muerto (estados de Bosque): sin Nujio.
+				assert_eq(rect.size, Vector2i.ZERO, "seed %d Bosque %d: muerto, sin Nujio" % [s, id])
+				assert_eq(chunk.tiles.count(ChunkData.Tile.NUJIO), 0)
+				continue
 			assert_true(rect.size.x >= 6 and rect.size.x <= 8 and rect.size.x == rect.size.y, "seed %d Bosque %d: Nujio %s" % [s, id, rect.size])
 			assert_eq(chunk.tiles.count(ChunkData.Tile.NUJIO), rect.size.x * rect.size.y)
 			assert_eq(map.bosque_at(map.nujio_chunk[id]), id, "el Nujio está en su Bosque")

@@ -131,8 +131,8 @@ func test_refuge_sits_next_to_the_nujio_in_bosques_without_villa() -> void:
 			var chunk := ChunkGenerator.generate(s, c, _region, map)
 			var cells := _refuge_cells(chunk)
 			assert_eq(cells.size(), 1, "seed %d Bosque %d: refugio en el chunk de Nujio" % [s, id])
-			if cells.is_empty() or map.has_villa[id]:
-				continue  # En la villa, la plaza ya cuenta como descanso junto al Nujio.
+			if cells.is_empty() or map.has_villa[id] or not map.has_nujio(id):
+				continue  # En la villa, la plaza ya cuenta como descanso junto al Nujio; el muerto no tiene.
 			var gap := ChunkGenerator._nujio_gap(chunk.nujio_rect, cells[0])
 			assert_between(gap, 1, ChunkGenerator.REFUGE_NUJIO_REACH, "seed %d Bosque %d: a %d casillas del Nujio" % [s, id, gap])
 

@@ -3,7 +3,8 @@ extends CanvasLayer
 ## rejilla de chunks: los explorados con el color de hoja de su Bosque y el resto en niebla. Encima,
 ## los caminos principales vistos, la villa natal, las villas y refugios vistos, los Botarramas
 ## vistos (en su última posición; grises si su Bosque está abierto), el objetivo (si lo hay) y el
-## jugador, que parpadea. Se cierra con M o Esc. Este nodo sigue activo en pausa
+## jugador, que parpadea. Los Bosques explorados que no están sanos llevan una marca del color de
+## su estado en la esquina de cada chunk (MapLogic.visible_states), con su fila en la leyenda. Se cierra con M o Esc. Este nodo sigue activo en pausa
 ## (process_mode ALWAYS). Solo lee GameState; qué se ve lo decide MapLogic.
 
 ## Lado de cada celda (un chunk) en píxeles. La región de 12×16 chunks ocupa 120×160.
@@ -21,6 +22,11 @@ const PLAYER_COLOR := Color("e43b44")
 const OBJECTIVE_COLOR := Color("f6757a")
 const MONSTER_COLOR := Color("b55088")
 const MONSTER_PASSIVE_COLOR := Color("8b9bb4")
+## Marca de estado de Bosque (esquina superior derecha de cada chunk explorado).
+const STATE_COLORS: Dictionary = {
+	"enojado": Color("e43b44"), "corrupto": Color("b55088"), "muerto": Color("c0cbdc"), "necesita_ayuda": Color("f77622"),
+}
+const STATE_MARK: int = 3
 
 var _bosques: BosqueMap
 var _blink_on: bool = true
@@ -105,6 +111,11 @@ func _build_legend() -> void:
 		{ "icon": PixelIcons.PLAYER, "color": PLAYER_COLOR, "text": Texts.get_text("map_legend_player") },
 		{ "icon": [] as Array[String], "color": FOG_COLOR, "text": Texts.get_text("map_legend_fog") },
 	]
+	var seen_states: Array = MapLogic.visible_states(_bosques, GameState.explored_chunks).values()
+	for state: String in STATE_COLORS:
+		if seen_states.has(state):
+			_legend.append({ "icon": [] as Array[String], "color": STATE_COLORS[state], "mark": true,
+					"text": Texts.get_text("map_legend_state_" + state) })
 	if not GameState.seen_monsters.is_empty():
 		_legend.append({ "icon": PixelIcons.MONSTER, "color": MONSTER_COLOR, "text": Texts.get_text("map_legend_botarramas") })
 	if GameState.has_objective():
@@ -132,12 +143,15 @@ func _on_canvas_draw() -> void:
 	if _bosques == null:
 		return
 	var explored: Array[Vector2i] = GameState.explored_chunks
-	# Rejilla: niebla o color de hoja del Bosque.
+	var states: Dictionary = MapLogic.visible_states(_bosques, explored)
+	# Rejilla: niebla o color de hoja del Bosque (con el tinte de su estado, como en el mundo).
 	for y: int in _bosques.grid_size.y:
 		for x: int in _bosques.grid_size.x:
 			var c := Vector2i(x, y)
 			var leaf: int = MapLogic.cell_leaf(_bosques, explored, c)
 			var color: Color = FOG_COLOR if leaf < 0 else (PlaceholderTileset.LEAVES[leaf] as Array)[0]
+			if states.has(c):
+				color = PlaceholderTileset.state_color(color, states[c])
 			_canvas.draw_rect(_cell_rect(c), color)
 	# Caminos: del centro de cada celda vista hacia cada lado por el que sale.
 	var roads: Dictionary = MapLogic.visible_roads(_bosques, explored)
@@ -146,6 +160,9 @@ func _on_canvas_draw() -> void:
 		for side: Vector2i in roads[c]:
 			var block := Rect2(center, Vector2(2, 2))
 			_canvas.draw_rect(block.merge(Rect2(center + Vector2(side * (CELL / 2)), Vector2(2, 2))), ROAD_COLOR)
+	for c: Vector2i in states:
+		var r: Rect2 = _cell_rect(c)
+		_canvas.draw_rect(Rect2(r.position + Vector2(r.size.x - STATE_MARK, 0), Vector2(STATE_MARK, STATE_MARK)), STATE_COLORS.get(states[c], FOG_COLOR))
 	for c: Vector2i in MapLogic.visible_refuges(_bosques, explored):
 		PixelIcons.draw(_canvas, PixelIcons.REFUGE, _cell_rect(c).position + Vector2(CELL - 6, CELL - 5), REFUGE_COLOR)
 	for c: Vector2i in MapLogic.visible_villas(_bosques, explored):
@@ -171,6 +188,9 @@ func _draw_legend_icons() -> void:
 		icon.assign(entry.icon)
 		if not icon.is_empty():
 			PixelIcons.draw_centered(_canvas, icon, center, entry.color)
+		elif bool(entry.get("mark", false)):
+			_canvas.draw_rect(Rect2(center - Vector2(4, 4), Vector2(CELL - 1, CELL - 1)), Color("3e8948"))
+			_canvas.draw_rect(Rect2(center + Vector2(CELL - 5 - STATE_MARK, -4), Vector2(STATE_MARK, STATE_MARK)), entry.color)
 		elif entry.color == ROAD_COLOR:
 			_canvas.draw_rect(Rect2(center + Vector2(-4, -1), Vector2(9, 2)), ROAD_COLOR)
 		else:

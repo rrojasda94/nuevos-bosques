@@ -118,6 +118,27 @@
     "max_hunters": 2,
     "kinds": ["botarramas", "ofomni"]
   },
+  "bosque_states": {
+    "$comment": "Efectos de los estados de Bosque (bosques-y-relacion.md, #133; el reparto por seed está en el JSON de la región). toll_factor: multiplica el peaje (0 = no cobra: borde abierto, Únicos pasivos y permiso para el fruto). can_pay: false = no se puede pagar (el menú del borde solo ofrece enfrentar o retroceder y sus Únicos no aceptan Luz ni ofrendas). enojado: patrol_factor multiplica los Únicos que rondan; el primer cazador llega a los hunt_first_seconds de entrar y luego cada intervalo × hunt_interval_factor, con max_hunters_bonus cazadores más a la vez; sus Botarramas ven vision_bonus casillas más. corrupto: ambush_chance = probabilidad por Único y por Momento de que te ataque aunque hayas pagado; iserald_risk: avisa al entrar. muerto: patrol_count Únicos que rondan en todo el Bosque; independent_chance = probabilidad por Momento de que ese Único vaya por su cuenta y te pida independent_luz [mín, máx] de Luz (si no pagas, te ataca). necesita_ayuda: friendly_unicos (no persiguen), allies_in_battle (gancho del combate en grupo, PR 7, sin uso aún) y fire: chunk_percent = % de sus chunks con incendio (el central siempre), cells = [mín, máx] casillas de fuego, apagarlo cuesta time_seconds de reloj o luz_cost de Luz y sube la relación bosque_relation.per_defense. Provisionales: game-designer.",
+    "sano": { "toll_factor": 1.0 },
+    "enojado": {
+      "toll_factor": 1.0,
+      "can_pay": false,
+      "patrol_factor": 2,
+      "hunt_first_seconds": 8,
+      "hunt_interval_factor": 0.5,
+      "max_hunters_bonus": 1,
+      "vision_bonus": 4
+    },
+    "corrupto": { "toll_factor": 1.5, "ambush_chance": 0.35, "iserald_risk": true },
+    "muerto": { "toll_factor": 0, "patrol_count": 1, "independent_chance": 0.5, "independent_luz": [1, 2] },
+    "necesita_ayuda": {
+      "toll_factor": 0,
+      "friendly_unicos": true,
+      "allies_in_battle": 1,
+      "fire": { "chunk_percent": 40, "cells": [3, 5], "time_seconds": 30, "luz_cost": 1 }
+    }
+  },
   "patrols": {
     "$comment": "Únicos que rondan por dentro de cada Bosque con Nujio (feedback del dueño 0.3). Entre count_min y count_max por Bosque, cada uno en un chunk del Bosque y de un tipo de kinds (por seed y Bosque). night_only: tipos que solo están fuera de noche (Riumna). min_hub_distance: casillas mínimas (Chebyshev) de su puesto al hub (la plaza de la villa). Rondan patrol_wander casillas (dato de cada monstruo) y te miran pasar; en un Bosque sin pagar persiguen si te ven. Provisionales: game-designer.",
     "count_min": 1,

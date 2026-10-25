@@ -9,6 +9,9 @@ extends RefCounted
 ## - interval = base_seconds − per_hostility_seconds × hostilidad, como mínimo min_seconds.
 ## - Como mucho max_hunters a la vez. Dejan de salir al pagar (apaciguar a uno paga el Bosque) o al
 ##   salir del Bosque; cambiar de chunk dentro del Bosque se los lleva detrás.
+## - Bosque enojado (BosqueStates): el primer cazador llega a los hunt_first_seconds de entrar, el
+##   intervalo se multiplica por hunt_interval_factor y caben max_hunters_bonus cazadores más. Un
+##   Bosque que no cobra (muerto, necesita_ayuda) cuenta como pagado: no caza.
 ## Una instancia lleva la cacería en curso; no se guarda (al cargar no hay cazadores y el reloj de
 ## la cacería empieza de cero). Números en data/combat/balance.json (bloque bosque_hunt).
 
@@ -28,15 +31,22 @@ static func config() -> Dictionary:
 	return AdventureRules.balance().get("bosque_hunt", {})
 
 
-## Segundos entre cazadores con esa hostilidad.
-static func interval(hostility: int) -> float:
+## Segundos entre cazadores con esa hostilidad y ese estado de Bosque (enojado: más a menudo).
+static func interval(hostility: int, state: String = "") -> float:
 	var cfg: Dictionary = config()
-	return maxf(float(cfg.get("min_seconds", 30)),
+	var base: float = maxf(float(cfg.get("min_seconds", 30)),
 		float(cfg.get("base_seconds", 90)) - float(cfg.get("per_hostility_seconds", 15)) * hostility)
+	return BosqueStates.hunt_interval(state, base)
 
 
-static func max_hunters() -> int:
-	return int(config().get("max_hunters", 2))
+## Segundos hasta el primer cazador de una estancia (enojado: hunt_first_seconds; si no, interval).
+static func first_delay(hostility: int, state: String = "") -> float:
+	var first: float = BosqueStates.hunt_first_seconds(state)
+	return first if first >= 0.0 else interval(hostility, state)
+
+
+static func max_hunters(state: String = "") -> int:
+	return int(config().get("max_hunters", 2)) + BosqueStates.max_hunters_bonus(state)
 
 
 ## El Bosque caza al Adoc: está dentro (`bosque`) y no lo ha pagado (el natal nunca caza).
@@ -69,10 +79,12 @@ func tick(delta: float, bosque: int, home: int, seed_value: int) -> StringName:
 		clear()
 		bosque_id = bosque
 	elapsed += delta
-	if elapsed < interval(AdventureRules.hostility(bosque)):
+	var state: String = AdventureRules.bosque_state(bosque)
+	var wait: float = first_delay(AdventureRules.hostility(bosque), state) if sent == 0 		else interval(AdventureRules.hostility(bosque), state)
+	if elapsed < wait:
 		return &""
 	elapsed = 0.0
-	if active.size() >= max_hunters():
+	if active.size() >= max_hunters(state):
 		return &""
 	var kind: StringName = hunter_kind(seed_value, bosque, sent)
 	sent += 1

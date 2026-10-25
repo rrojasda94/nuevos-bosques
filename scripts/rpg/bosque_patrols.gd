@@ -7,7 +7,9 @@ extends RefCounted
 ## - Los de tipo nocturno (`night_only`, Aledra) solo están fuera en el Momento de Riumna.
 ## - Rondan alrededor de su puesto (patrol_wander de sus datos) y miran pasar al jugador; si su
 ##   Bosque no está pagado, persiguen al verle (MonsterField.can_detect).
-## Números en data/combat/balance.json (bloque patrols).
+## - El estado del Bosque cambia cuántos rondan (BosqueStates.patrol_count): el enojado, el doble;
+##   el muerto, uno solo en todo el Bosque.
+## Números en data/combat/balance.json (bloques patrols y bosque_states).
 
 const SALT_COUNT: int = 41
 const SALT_CHUNK: int = 43
@@ -32,6 +34,7 @@ static func patrols_of(map: BosqueMap, seed_value: int, bosque_id: int) -> Array
 	var lo: int = int(cfg.get("count_min", 1))
 	var hi: int = maxi(lo, int(cfg.get("count_max", 2)))
 	var n: int = lo + ChunkGenerator.hash_ints([seed_value, bosque_id, SALT_COUNT]) % (hi - lo + 1)
+	n = BosqueStates.patrol_count(BosqueStates.state_of(bosque_id, map), n)
 	var chunks: Array[Vector2i] = map.chunks_of(bosque_id)
 	if chunks.is_empty() or kinds.is_empty():
 		return out

@@ -20,6 +20,8 @@ extends RefCounted
 ## - Frutales (FRUIT_TREE) en los Bosques que dan fruto (bloque "fruit" de la región): unos pocos
 ##   árboles por chunk junto a claros y senderos, siempre con una casilla vecina alcanzable desde
 ##   el hub. Se eligen entre los TREE ya generados, así que no cambian por dónde se anda.
+## - Bosques muertos (BosqueMap.state, bosques-y-relacion.md): sin Nujio. Su chunk central tiene el
+##   claro, pero donde estaría el Nujio solo queda pedregal (decadencia); no hay frutales.
 
 const REGION_DIR: String = "res://data/world/regions/"
 ## Radio del claro central (punto de aparición seguro).
@@ -72,12 +74,11 @@ const DEFAULT_RIVERS: Dictionary = {
 	"stream_width": 0.0, "stream_until": 0.0,
 	"riverside_clearing_from": 2.0, "riverside_band": 3.0,
 }
-## Frutales (bosques-y-relacion.md, sección Fruto). `bosque_state`: estado provisional de todos los
-## Bosques con Nujio hasta que existan los estados por Bosque; `states`: estados que dan fruto;
-## `per_chunk`: [mín, máx] frutales por chunk; `min_spacing`: distancia mínima (Chebyshev) entre
-## dos frutales del mismo chunk.
+## Frutales (bosques-y-relacion.md, sección Fruto). `states`: estados de Bosque (BosqueMap.state)
+## que dan fruto; `per_chunk`: [mín, máx] frutales por chunk; `min_spacing`: distancia mínima
+## (Chebyshev) entre dos frutales del mismo chunk.
 const DEFAULT_FRUIT: Dictionary = {
-	"bosque_state": "sano", "states": ["sano", "necesita_ayuda"],
+	"states": ["sano", "necesita_ayuda"],
 	"per_chunk": [3, 6], "min_spacing": 5,
 }
 ## Casillas libres de frutales alrededor de la plaza de la villa (además de la plaza).
@@ -102,7 +103,9 @@ static func generate(seed_value: int, coord: Vector2i, region: Dictionary = {}, 
 
 	# Rasgos del Bosque: Nujio, villa y letreros.
 	var bosque_id: int = bosques.bosque_at(coord) if bosques != null else -1
-	var has_nujio: bool = bosque_id >= 0 and bosques.nujio_chunk[bosque_id] == coord
+	var is_center: bool = bosque_id >= 0 and bosques.nujio_chunk[bosque_id] == coord
+	# Un Bosque muerto no tiene Nujio: su chunk central se genera como uno sin Nujio, con restos.
+	var has_nujio: bool = is_center and bosques.has_nujio(bosque_id)
 	var nujio_n: int = bosques.nujio_size[bosque_id] if has_nujio else 0
 	var villa: bool = has_nujio and bosques.has_villa[bosque_id]
 	var center: Vector2i = ChunkData.center()
@@ -130,6 +133,8 @@ static func generate(seed_value: int, coord: Vector2i, region: Dictionary = {}, 
 	elif has_nujio:
 		_carve_clearing(chunk, center, nujio_n / 2 + 3, ChunkData.Tile.CLEARING)
 		_place_nujio(chunk, center, nujio_n)
+	elif is_center:
+		_place_dead_nujio(chunk, center, bosques.nujio_size[bosque_id])
 	else:
 		_carve_clearing(chunk, center, CENTER_CLEARING_RADIUS, ChunkData.Tile.CLEARING)
 
@@ -159,12 +164,24 @@ static func fruit_params(region: Dictionary) -> Dictionary:
 	return DEFAULT_FRUIT.merged(region.get("fruit", {}), true)
 
 
-## Estado del Bosque para los frutales. Provisional: todos los Bosques con Nujio tienen el
-## `bosque_state` de la región (hoy "sano"); los estados por Bosque llegan en otro PR.
-static func bosque_state(region: Dictionary, bosques: BosqueMap, bosque_id: int) -> String:
+## Estado de generación del Bosque (BosqueMap.state, por seed). Decide los frutales y el Nujio.
+## Los cambios de estado durante la partida (BosqueStates) no regeneran el chunk.
+static func bosque_state(_region: Dictionary, bosques: BosqueMap, bosque_id: int) -> String:
 	if bosques == null or bosque_id < 0:
 		return ""
-	return str(fruit_params(region).bosque_state)
+	return bosques.state_of(bosque_id)
+
+
+## Chunk central de un Bosque muerto: el claro de siempre y, donde estaría el Nujio, pedregal
+## (se pisa). Decadencia visible sin Nujio (bosques-y-relacion.md).
+static func _place_dead_nujio(chunk: ChunkData, center: Vector2i, n: int) -> void:
+	_carve_clearing(chunk, center, n / 2 + 3, ChunkData.Tile.CLEARING)
+	var rect := Rect2i(center - Vector2i(n / 2, n / 2), Vector2i(n, n))
+	for y: int in range(rect.position.y, rect.end.y):
+		for x: int in range(rect.position.x, rect.end.x):
+			var c := Vector2i(x, y)
+			if (c - center).length_squared() <= (n / 2) * (n / 2) + 1:
+				chunk.set_tile(c, ChunkData.Tile.ROCKY)
 
 
 ## El Bosque da fruto según su estado (sano y necesita_ayuda, bosques-y-relacion.md).

@@ -36,11 +36,18 @@
     "riverside_band": 3.0
   },
   "fruit": {
-    "$comment": "Frutales (bosques-y-relacion.md, sección Fruto; ADR 0006). bosque_state: estado provisional de todos los Bosques con Nujio hasta que haya estados por Bosque. states: estados que dan fruto. per_chunk: [mín, máx] frutales por chunk. min_spacing: casillas mínimas (Chebyshev) entre dos frutales del mismo chunk. Valores provisionales de game-designer.",
-    "bosque_state": "sano",
+    "$comment": "Frutales (bosques-y-relacion.md, sección Fruto; ADR 0006). states: estados de Bosque (bloque bosque_states) que dan fruto. per_chunk: [mín, máx] frutales por chunk. min_spacing: casillas mínimas (Chebyshev) entre dos frutales del mismo chunk. Valores provisionales de game-designer.",
     "states": ["sano", "necesita_ayuda"],
     "per_chunk": [3, 6],
     "min_spacing": 5
+  },
+  "bosque_states": {
+    "$comment": "Reparto de estados de Bosque por seed (bosques-y-relacion.md, #133; BosqueMap). safe_distance: el Bosque natal y los que están a esta distancia o menos (saltos de adyacencia) nacen siempre sanos. necesita_ayuda, corrupto y muerto: [mín, máx] Bosques de la región con ese estado (los muertos, sin villa: no tienen Nujio). enojado_percent: % de los demás candidatos que nacen enojados. El resto, sanos. Valores provisionales de game-designer.",
+    "safe_distance": 1,
+    "necesita_ayuda": [1, 2],
+    "corrupto": [1, 2],
+    "muerto": [1, 2],
+    "enojado_percent": 25
   },
   "refuges": {
     "$comment": "Reparto de refugios (navegacion.md, tiempo-y-riutash.md, bosques-y-relacion.md; ADR 0006). per_bosque: mínimo de refugios por Bosque (el primero en su chunk de Nujio, a <= 3 casillas del Nujio si no hay villa). min_spacing: distancia mínima en chunks (Manhattan) entre refugios del reparto general; 2 = nunca en chunks vecinos, sale ~1 de cada 2-3 chunks, con camino o sin él. max_distance: ningún chunk queda a más de estos chunks de un refugio. Valores provisionales de game-designer.",

@@ -235,8 +235,8 @@ func test_exploration_releases_shelter_check_on_exit() -> void:
 
 # --- Guardado --------------------------------------------------------------------------------------
 
-func test_save_version_13_keeps_last_paid_bosque() -> void:
-	assert_eq(GameState.SAVE_VERSION, 13)
+func test_save_keeps_last_paid_bosque() -> void:
+	assert_gte(GameState.SAVE_VERSION, 13)
 	AdventureRules.pay_toll(_a, 0)
 	assert_eq(int(GameState.to_dict().last_paid_bosque), _a)
 	assert_eq(SaveManager.save_game(SAVE_SLOT), OK)

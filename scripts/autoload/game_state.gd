@@ -15,9 +15,12 @@ extends Node
 ## lo pagado queda abierto hasta el segundo riutash desde la carga (o para siempre con amistad
 ## alta). v13: último Bosque al que se pagó peaje (last_paid_bosque), destino de reaparición tras
 ## una derrota (cruce-y-combate-v2.md); al migrar, el pagado más reciente que siga abierto (el de
-## caducidad más tardía; si solo hay permanentes, el de id más bajo) o ninguno. Las versiones
-## anteriores se cargan con valores por defecto.
-const SAVE_VERSION: int = 13
+## caducidad más tardía; si solo hay permanentes, el de id más bajo) o ninguno. v14: estados de
+## Bosque (bosques-y-relacion.md, #133): cambios de estado en la partida (bosque_state_overrides) e
+## incendios apagados (extinguished_fires); al migrar, ningún incendio apagado y los candidatos a
+## enojarse con la relación aún en el umbral pasan a enojados (BosqueStates.make_angry). Las
+## versiones anteriores se cargan con valores por defecto.
+const SAVE_VERSION: int = 14
 ## Migración a v9: el Ofomni de la misión pasó de "ofomni" a "ofomni_descarriado" (y su etiqueta
 ## de brújula, de "Ofomni" a "Ofomni descarriado").
 const LEGACY_OFOMNI_ID: String = "ofomni"
@@ -58,8 +61,13 @@ var last_paid_bosque: int = -1
 ## paso caduca, el Bosque vuelve a estar forzado (AdventureRules.is_forced).
 var forced_bosques: Array[int] = []
 ## Bosques que han llegado a una relación muy baja (bosque_relation.angry_candidate_at): candidatos
-## a volverse enojados en el PR de estados. La marca se queda aunque la relación mejore.
+## a volverse enojados (BosqueStates.make_angry). La marca se queda aunque la relación mejore.
 var angry_candidate: Array[int] = []
+## Cambios de estado de Bosque durante la partida { "id": "enojado" } (BosqueStates). Mandan sobre
+## el estado de generación (BosqueMap.state, que no se guarda: sale de la seed).
+var bosque_state_overrides: Dictionary = {}
+## Chunks cuyo incendio (Bosque que necesita ayuda) ya se apagó (BosqueFires): no vuelven a arder.
+var extinguished_fires: Array[Vector2i] = []
 ## El Bosque recuerda: Botarramas vencidos por Bosque { "id": n }. Sube su peaje y su visión.
 var bosque_hostility: Dictionary = {}
 ## Relación con cada Bosque { "id": -100 .. 100 } (bosques-y-relacion.md). Empieza en 0.
@@ -131,6 +139,8 @@ func new_game(new_seed: int = 0, new_region: StringName = &"valle_del_sara") -> 
 	last_paid_bosque = -1
 	forced_bosques = []
 	angry_candidate = []
+	bosque_state_overrides = {}
+	extinguished_fires = []
 	bosque_hostility = {}
 	bosque_relation = {}
 	battle_attempts = {}
@@ -172,6 +182,8 @@ func to_dict() -> Dictionary:
 		"last_paid_bosque": last_paid_bosque,
 		"forced_bosques": forced_bosques,
 		"angry_candidate": angry_candidate,
+		"bosque_state_overrides": bosque_state_overrides,
+		"extinguished_fires": extinguished_fires.map(func(c: Vector2i) -> Array: return [c.x, c.y]),
 		"bosque_hostility": bosque_hostility,
 		"bosque_relation": bosque_relation,
 		"battle_attempts": battle_attempts,
@@ -254,6 +266,22 @@ func from_dict(data: Dictionary) -> void:
 		for key: String in bosque_relation:
 			if int(bosque_relation[key]) <= AdventureRules.angry_candidate_at() and not angry_candidate.has(int(key)):
 				angry_candidate.append(int(key))
+	extinguished_fires = []
+	for value: Variant in data.get("extinguished_fires", []):
+		var c: Vector2i = _to_vector2i(value, Vector2i(-1, -1))
+		if c.x >= 0 and c.y >= 0 and not extinguished_fires.has(c):
+			extinguished_fires.append(c)
+	bosque_state_overrides = {}
+	var overrides: Variant = data.get("bosque_state_overrides", {})
+	if overrides is Dictionary:
+		for key: Variant in overrides:
+			if BosqueMap.STATES.has(str(overrides[key])) and int(str(key)) >= 0:
+				bosque_state_overrides[str(int(str(key)))] = str(overrides[key])
+	# v13 o anterior: sin estados; los candidatos a enojarse que siguen en el umbral se enojan.
+	if int(data.get("save_version", 1)) < 14:
+		for id: int in angry_candidate:
+			if int(bosque_relation.get(str(id), 0)) <= AdventureRules.angry_candidate_at():
+				BosqueStates.make_angry(id)
 	battle_attempts = {}
 	var attempts: Dictionary = data.get("battle_attempts", {})
 	for key: Variant in attempts:
