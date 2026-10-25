@@ -11,6 +11,10 @@ extends RefCounted
 ## muerto o necesita_ayuda según la seed y el bloque "bosque_states" de la región. El natal y sus
 ## vecinos a safe_distance o menos son siempre sanos; los muertos no tienen Nujio (ni villa). Los
 ## cambios durante la partida no viven aquí: BosqueStates los guarda en GameState.
+## Mundo 2.0 (ADR 0014 §5): build_planned() es el reparto que usa RegionPlan. Añade Bosques clave
+## pintados (bosques.png + lugares.csv), villas del CSV (la natal sustituye a start_chunk), áreas
+## (ADR 0007: 6-12 Bosques), aldeas (opción C de mundo-2.md §6) y caminos pintados. build() y
+## for_region() siguen exactamente igual: el juego actual los usa.
 
 const MIN_SIZE: int = 4
 const MAX_SIZE: int = 16
@@ -53,6 +57,17 @@ const STATES: Array[String] = [STATE_SANO, STATE_ENOJADO, STATE_CORRUPTO, STATE_
 const DEFAULT_STATES: Dictionary = {
 	"safe_distance": 1, "necesita_ayuda": [1, 2], "corrupto": [1, 2], "muerto": [1, 2], "enojado_percent": 25,
 }
+## Área (ADR 0007): grupo contiguo de AREA_MIN a AREA_MAX Bosques. Ni los datos ni el código
+## anterior la definían por geometría, así que build_planned() la reparte así (ver
+## docs/design/world/generation.md). Los nombres de área ("areas" del JSON) no se asignan aquí.
+const AREA_MIN: int = 6
+const AREA_MAX: int = 12
+## Aldeas (mundo-2.md §6, opción C): `chance` por Bosque sin villa con nombre ni vecino de una,
+## como mucho `max_per_area` por área. Los Bosques muertos no tienen aldea (no tienen Nujio).
+const DEFAULT_ALDEAS: Dictionary = { "max_per_area": 2 }
+const SALT_AREA: int = 121
+const SALT_ALDEA: int = 122
+const SALT_ALDEA_ORDER: int = 123
 
 var grid_size: Vector2i = Vector2i.ZERO
 ## Id de Bosque por chunk (fila a fila). Los ids van de 0 a count() - 1.
@@ -75,6 +90,17 @@ var _road_home_side: Dictionary = {}  # Vector2i -> Vector2i (lado del siguiente
 var _refuges: Dictionary = {}  # Vector2i -> true (chunks con refugio)
 ## Estado de generación de cada Bosque (índice = id): uno de STATES.
 var state: Array[String] = []
+## Solo en build_planned() (vacíos en build()):
+## Por Bosque: índice del Bosque clave en lugares.csv (RegionAuthoring.bosque_places()), o -1.
+var key_index: PackedInt32Array = PackedInt32Array()
+## Por Bosque: tiene una aldea (villa procedural sin nombre propio).
+var has_aldea: Array[bool] = []
+## Por Bosque: su área (0..area_count - 1).
+var area_of: PackedInt32Array = PackedInt32Array()
+var area_count: int = 0
+var _locked: Dictionary = {}  # Vector2i -> true: chunk que no se cede (pintado o con villa)
+var _anchors: Dictionary = {}  # Vector2i -> true: chunk con villa o de Bosque clave
+var _painted_roads: Dictionary = {}  # Vector2i(a, b) -> true: aristas unidas ya por caminos pintados
 
 
 ## Reparto de la región `region` (JSON) con su Bosque inicial (el de start_chunk) con villa.
@@ -107,6 +133,62 @@ static func build(seed_value: int, size: Vector2i, home_chunk: Vector2i = Vector
 	map._assign_states(seed_value, DEFAULT_STATES.merged(states, true))
 	map._build_roads(seed_value)
 	map._assign_refuges(seed_value, DEFAULT_REFUGES.merged(refuges, true))
+	return map
+
+
+## Reparto del Mundo 2.0 (RegionPlan, ADR 0014 §5). `params`:
+## - `key_chunks`: Array (uno por Bosque clave, en el orden de lugares.csv) de Array[Vector2i] con
+##   sus chunks pintados. Esos chunks son fijos; si son menos de MIN_SIZE, el Bosque crece hasta
+##   MIN_SIZE por chunks libres de alrededor.
+## - `key_nujio`: Array[Vector2i], chunk del Nujio de cada Bosque clave (la fila del CSV).
+## - `villa_chunks`: Array[Vector2i], chunks de las villas con nombre, la natal primero. Cada una
+##   empieza su propio Bosque, así que dos villas no comparten Bosque salvo que no quepa otra cosa.
+##   El Bosque con villa la tiene (sin el sorteo de 1 de cada VILLA_ODDS) y su Nujio va en ella.
+## - `home_chunk`: chunk de la villa natal (raíz de la red de caminos).
+## - `refuges`, `states`: como en build().
+## - `procedural_villa_chance` (0 = sin aldeas) y `aldeas` ({ max_per_area }).
+## - `painted_road_sides`: Dictionary chunk -> Array[Vector2i] de lados con camino pintado. Se
+##   suman a road_sides() y la red procedural no duplica los tramos que ya unen.
+static func build_planned(seed_value: int, size: Vector2i, params: Dictionary) -> BosqueMap:
+	var map := BosqueMap.new()
+	map.grid_size = size
+	map.ids.resize(size.x * size.y)
+	map.ids.fill(-1)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = ChunkGenerator.hash_ints([seed_value, SALT_BOSQUE])
+	var key_chunks: Array = params.get("key_chunks", [])
+	var key_nujio: Array = params.get("key_nujio", [])
+	var villa_chunks: Array = params.get("villa_chunks", [])
+	var key_first: Array[Vector2i] = map._grow_planned(rng, key_chunks, villa_chunks)
+	map._fix_small_groups_planned()
+	map._compact()
+	map._assign_traits(seed_value)
+	map.key_index.resize(map.count())
+	map.key_index.fill(-1)
+	for k: int in key_first.size():
+		var id: int = map.bosque_at(key_first[k])
+		if id < 0 or map.key_index[id] >= 0:
+			continue
+		map.key_index[id] = k
+		var nujio: Vector2i = key_nujio[k] if k < key_nujio.size() else Vector2i(-1, -1)
+		if map.bosque_at(nujio) == id:
+			map.nujio_chunk[id] = nujio
+	map.has_villa.fill(false)
+	for v: Vector2i in villa_chunks:
+		var id: int = map.bosque_at(v)
+		if id < 0 or map.has_villa[id]:
+			continue
+		map.has_villa[id] = true
+		if map.key_index[id] < 0:
+			map.nujio_chunk[id] = v
+	var home_chunk: Vector2i = params.get("home_chunk", Vector2i(-1, -1))
+	map.home_bosque = map.bosque_at(home_chunk) if map._in_grid(home_chunk) else map.bosque_at(size / 2)
+	map._assign_states(seed_value, DEFAULT_STATES.merged(params.get("states", {}), true))
+	map._assign_areas(seed_value)
+	map._assign_aldeas(seed_value, float(params.get("procedural_villa_chance", 0.0)),
+			DEFAULT_ALDEAS.merged(params.get("aldeas", {}), true))
+	map._build_roads_planned(seed_value, params.get("painted_road_sides", {}))
+	map._assign_refuges(seed_value, DEFAULT_REFUGES.merged(params.get("refuges", {}), true))
 	return map
 
 
@@ -180,6 +262,214 @@ func _grow(rng: RandomNumberGenerator) -> void:
 		_groups.append(group)
 
 
+## Crecimiento del Mundo 2.0: 1) chunks pintados de los Bosques clave; 2) un chunk por villa con
+## nombre (fuera de los Bosques clave); 3) los Bosques clave pequeños crecen hasta MIN_SIZE;
+## 4) cada villa crece hasta su objetivo; 5) el resto, como _grow. Devuelve, por Bosque clave, un
+## chunk suyo (o (-1, -1) si no tiene ninguno libre) para encontrarlo tras _compact.
+func _grow_planned(rng: RandomNumberGenerator, key_chunks: Array, villa_chunks: Array) -> Array[Vector2i]:
+	var key_first: Array[Vector2i] = []
+	var key_ids: Array[int] = []
+	for k: int in key_chunks.size():
+		var bosque_id: int = _groups.size()
+		var group: Array[Vector2i] = []
+		for c: Vector2i in key_chunks[k]:
+			if _in_grid(c) and bosque_at(c) == -1:
+				_set_id(c, bosque_id)
+				group.append(c)
+				_locked[c] = true
+				_anchors[c] = true
+		_groups.append(group)
+		key_ids.append(bosque_id)
+		key_first.append(group[0] if not group.is_empty() else Vector2i(-1, -1))
+	var villa_ids: Array[int] = []
+	for v: Vector2i in villa_chunks:
+		if not _in_grid(v):
+			continue
+		_locked[v] = true
+		_anchors[v] = true
+		if bosque_at(v) != -1:
+			continue
+		var fresh: Array[Vector2i] = [v]
+		_set_id(v, _groups.size())
+		villa_ids.append(_groups.size())
+		_groups.append(fresh)
+	for bosque_id: int in key_ids:
+		_grow_group(bosque_id, MIN_SIZE, rng)
+	for bosque_id: int in villa_ids:
+		_grow_group(bosque_id, rng.randi_range(GROW_MIN, GROW_MAX), rng)
+	var order: Array[Vector2i] = []
+	for y: int in grid_size.y:
+		for x: int in grid_size.x:
+			order.append(Vector2i(x, y))
+	for i: int in range(order.size() - 1, 0, -1):
+		var j: int = rng.randi_range(0, i)
+		var tmp: Vector2i = order[i]
+		order[i] = order[j]
+		order[j] = tmp
+	for start: Vector2i in order:
+		if bosque_at(start) != -1:
+			continue
+		var fresh: Array[Vector2i] = [start]
+		_set_id(start, _groups.size())
+		_groups.append(fresh)
+		_grow_group(_groups.size() - 1, rng.randi_range(GROW_MIN, GROW_MAX), rng)
+	return key_first
+
+
+## Añade al grupo chunks libres vecinos (al azar con `rng`) hasta `target` o hasta no poder más.
+func _grow_group(bosque_id: int, target: int, rng: RandomNumberGenerator) -> void:
+	var group: Array = _groups[bosque_id]
+	var frontier: Array[Vector2i] = []
+	for c: Vector2i in group:
+		frontier.append_array(_free_neighbours(c))
+	while group.size() < target and not frontier.is_empty():
+		var c: Vector2i = frontier.pop_at(rng.randi() % frontier.size())
+		if bosque_at(c) != -1:
+			continue
+		_set_id(c, bosque_id)
+		group.append(c)
+		frontier.append_array(_free_neighbours(c))
+
+
+## Grupo con villa con nombre o Bosque clave: dos de estos solo se fusionan si no queda otra.
+func _is_anchored(bosque_id: int) -> bool:
+	for c: Vector2i in _groups[bosque_id]:
+		if _anchors.has(c):
+			return true
+	return false
+
+
+## Como _fix_small_groups, sin juntar dos grupos con villa o clave y sin ceder chunks fijos. Un
+## grupo pequeño sin villa se fusiona con el vecino más pequeño en el que quepa; uno con villa
+## primero roba chunks del borde a sus vecinos grandes.
+func _fix_small_groups_planned() -> void:
+	for bosque_id: int in _groups.size():
+		var group: Array = _groups[bosque_id]
+		if group.is_empty() or group.size() >= MIN_SIZE:
+			continue
+		var neighbours: Array[int] = _neighbour_ids(bosque_id)
+		if neighbours.is_empty():
+			continue
+		var anchored: bool = _is_anchored(bosque_id)
+		var into: int = -1
+		for n: int in neighbours:
+			if size_of(n) + group.size() <= MAX_SIZE and not (anchored and _is_anchored(n)):
+				into = n
+				break
+		if into >= 0 and not anchored:
+			_merge(bosque_id, into)
+			continue
+		while group.size() < MIN_SIZE and _steal_one(bosque_id):
+			pass
+		if group.size() < MIN_SIZE:
+			_merge(bosque_id, into if into >= 0 else neighbours[0])
+
+
+## Áreas (ADR 0007: 6-12 Bosques contiguos). Desde el Bosque natal y luego por id, cada área
+## crece en anchura por los vecinos sin área hasta un objetivo por hash en AREA_MIN..AREA_MAX. Las
+## que se quedan por debajo de AREA_MIN (rodeadas) se unen al área vecina más pequeña, aunque
+## pase de AREA_MAX: una región pequeña no siempre se puede partir exacta.
+func _assign_areas(seed_value: int) -> void:
+	area_of.resize(count())
+	area_of.fill(-1)
+	var areas: Array = []
+	var starts: Array[int] = []
+	if home_bosque >= 0:
+		starts.append(home_bosque)
+	for id: int in count():
+		starts.append(id)
+	for start: int in starts:
+		if area_of[start] >= 0:
+			continue
+		var a: int = areas.size()
+		var target: int = AREA_MIN + ChunkGenerator.hash_ints([seed_value, a, SALT_AREA]) % (AREA_MAX - AREA_MIN + 1)
+		var members: Array[int] = [start]
+		area_of[start] = a
+		var head: int = 0
+		while head < members.size() and members.size() < target:
+			var id: int = members[head]
+			head += 1
+			var near: Array[int] = _neighbour_ids(id)
+			near.sort()
+			for n: int in near:
+				if members.size() >= target:
+					break
+				if area_of[n] < 0:
+					area_of[n] = a
+					members.append(n)
+		areas.append(members)
+	for a: int in areas.size():
+		var members: Array = areas[a]
+		if members.is_empty() or members.size() >= AREA_MIN or areas.size() == 1:
+			continue
+		var best: int = -1
+		for id: int in members:
+			for n: int in _neighbour_ids(id):
+				var other: int = area_of[n]
+				if other == a:
+					continue
+				var size_other: int = (areas[other] as Array).size()
+				if best < 0 or size_other < (areas[best] as Array).size() or (size_other == (areas[best] as Array).size() and other < best):
+					best = other
+		if best < 0:
+			continue
+		for id: int in members:
+			area_of[id] = best
+			(areas[best] as Array).append(id)
+		members.clear()
+	var renumber: Dictionary = {}
+	for a: int in areas.size():
+		if not (areas[a] as Array).is_empty():
+			renumber[a] = renumber.size()
+	for id: int in count():
+		area_of[id] = renumber[area_of[id]]
+	area_count = renumber.size()
+
+
+## Bosques de un área, por id.
+func bosques_of_area(area: int) -> Array[int]:
+	var out: Array[int] = []
+	for id: int in area_of.size():
+		if area_of[id] == area:
+			out.append(id)
+	return out
+
+
+## Aldeas (mundo-2.md §6, opción C): en orden de hash, cada Bosque con Nujio (no muerto), sin villa
+## con nombre y que no es vecino de uno con villa con nombre tiene aldea con probabilidad `chance`,
+## hasta `max_per_area` por área.
+func _assign_aldeas(seed_value: int, chance: float, params: Dictionary) -> void:
+	has_aldea.resize(count())
+	has_aldea.fill(false)
+	if chance <= 0.0:
+		return
+	var near_villa: Dictionary = {}
+	for id: int in count():
+		if has_villa[id]:
+			near_villa[id] = true
+			for n: int in _neighbour_ids(id):
+				near_villa[n] = true
+	var order: Array[int] = []
+	var keys: Dictionary = {}
+	for id: int in count():
+		order.append(id)
+		keys[id] = ChunkGenerator.hash_ints([seed_value, id, SALT_ALDEA_ORDER])
+	order.sort_custom(func(a: int, b: int) -> bool: return keys[a] < keys[b] or (keys[a] == keys[b] and a < b))
+	var cap: int = int(params.max_per_area)
+	var threshold: int = roundi(clampf(chance, 0.0, 1.0) * 1000.0)
+	var per_area: Dictionary = {}
+	for id: int in order:
+		if near_villa.has(id) or not has_nujio(id):
+			continue
+		if ChunkGenerator.hash_ints([seed_value, id, SALT_ALDEA]) % 1000 >= threshold:
+			continue
+		var area: int = area_of[id] if id < area_of.size() else 0
+		if int(per_area.get(area, 0)) >= cap:
+			continue
+		per_area[area] = int(per_area.get(area, 0)) + 1
+		has_aldea[id] = true
+
+
 func _free_neighbours(c: Vector2i) -> Array[Vector2i]:
 	var out: Array[Vector2i] = []
 	for d: Vector2i in ChunkData.SIDES:
@@ -234,7 +524,7 @@ func _steal_one(bosque_id: int) -> bool:
 		if size_of(other) <= MIN_SIZE:
 			continue
 		for c: Vector2i in (_groups[other] as Array).duplicate():
-			if not _touches(c, bosque_id):
+			if _locked.has(c) or not _touches(c, bosque_id):
 				continue
 			var rest: Array = (_groups[other] as Array).duplicate()
 			rest.erase(c)
@@ -518,7 +808,84 @@ func _build_roads(seed_value: int) -> void:
 		for i: int in route.size() - 1:
 			_add_road_side(route[i], route[i + 1] - route[i])
 			_add_road_side(route[i + 1], route[i] - route[i + 1])
-	# Distancia por camino a la villa natal y lado del siguiente tramo hacia casa.
+	_build_road_distance()
+
+
+## Red del Mundo 2.0: los lados con camino pintado más la red de _build_roads (Prim desde el
+## Bosque natal + ROAD_EXTRA_PERCENT de ciclos). Una arista cuyos dos Nujios ya están unidos por
+## caminos pintados pesa 0 y no se traza (no se duplica el camino del dueño).
+func _build_roads_planned(seed_value: int, painted_sides: Dictionary) -> void:
+	for c: Vector2i in painted_sides:
+		for side: Vector2i in painted_sides[c]:
+			if _in_grid(c) and _in_grid(c + side):
+				_add_road_side(c, side)
+	if home_bosque < 0:
+		return
+	# Componentes de chunks unidos por caminos pintados.
+	var comp: Dictionary = {}
+	for y: int in grid_size.y:
+		for x: int in grid_size.x:
+			var start := Vector2i(x, y)
+			if comp.has(start) or not _road_sides.has(start):
+				continue
+			var label: int = comp.size()
+			comp[start] = label
+			var queue: Array[Vector2i] = [start]
+			var head: int = 0
+			while head < queue.size():
+				var c: Vector2i = queue[head]
+				head += 1
+				for d: Vector2i in _road_sides[c]:
+					if not comp.has(c + d):
+						comp[c + d] = label
+						queue.append(c + d)
+	var joined := func(a: int, b: int) -> bool:
+		return comp.has(nujio_chunk[a]) and comp.has(nujio_chunk[b]) and comp[nujio_chunk[a]] == comp[nujio_chunk[b]]
+	var in_tree: Dictionary = { home_bosque: true }
+	var tree: Dictionary = {}
+	while in_tree.size() < count():
+		var best := Vector2i(-1, -1)
+		var best_w: int = 1 << 62
+		for a: int in in_tree:
+			for b: int in _neighbour_ids(a):
+				if in_tree.has(b):
+					continue
+				var w: int = 0 if joined.call(a, b) else _edge_weight(seed_value, a, b, SALT_ROAD)
+				if w < best_w or (w == best_w and _edge(a, b) < best):
+					best_w = w
+					best = Vector2i(a, b)
+		if best.x < 0:
+			break
+		in_tree[best.y] = true
+		tree[_edge(best.x, best.y)] = true
+	for a: int in count():
+		for b: int in _neighbour_ids(a):
+			var e: Vector2i = _edge(a, b)
+			if a > b or tree.has(e) or joined.call(a, b):
+				continue
+			if _edge_weight(seed_value, a, b, SALT_ROAD_EXTRA) % 100 < ROAD_EXTRA_PERCENT:
+				tree[e] = true
+	for e: Vector2i in tree:
+		road_edges.append(e)
+	road_edges.sort_custom(func(p: Vector2i, q: Vector2i) -> bool: return p.x < q.x or (p.x == q.x and p.y < q.y))
+	for e: Vector2i in road_edges:
+		if joined.call(e.x, e.y):
+			_painted_roads[e] = true
+			continue
+		var route: Array[Vector2i] = _chunk_route(seed_value, e.x, e.y)
+		for i: int in route.size() - 1:
+			_add_road_side(route[i], route[i + 1] - route[i])
+			_add_road_side(route[i + 1], route[i] - route[i + 1])
+	_build_road_distance()
+
+
+## La arista de road_edges la cubren caminos pintados (no se trazó).
+func is_painted_road_edge(edge: Vector2i) -> bool:
+	return _painted_roads.has(_edge(edge.x, edge.y))
+
+
+## Distancia por camino a la villa natal y lado del siguiente tramo hacia casa.
+func _build_road_distance() -> void:
 	var home: Vector2i = nujio_chunk[home_bosque]
 	_road_distance[home] = 0
 	var queue: Array[Vector2i] = [home]

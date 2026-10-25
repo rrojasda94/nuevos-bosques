@@ -6,6 +6,12 @@
   "size_chunks": [12, 16],
   "start_chunk": [6, 13],
   "authoring": "valle_del_sara/",
+  "procedural_villa_chance": 0.2,
+  "aldeas": {
+    "$comment": "Aldeas (villas procedurales sin nombre fijo; mundo-2.md §6, opción C, decidida por el dueño el 2026-10-25). procedural_villa_chance: probabilidad por Bosque sin villa con nombre ni vecino de uno con villa con nombre. max_per_area: como mucho tantas por área (área = 6-12 Bosques contiguos, ADR 0007; la reparte BosqueMap.build_planned). houses: [mín, máx] casas de 4×3. Lo aplica RegionPlan (M5).",
+    "max_per_area": 2,
+    "houses": [2, 4]
+  },
   "relief": {
     "north_base": 0.55,
     "south_base": -0.45,
