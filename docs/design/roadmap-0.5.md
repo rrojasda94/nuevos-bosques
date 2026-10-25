@@ -7,7 +7,7 @@
 >
 > | # | PR | Fichas | Depende de |
 > |---|---|---|---|
-> | 1 | Población de villas y diálogos (Ildo, Ista, Sfida…) | `npcs-y-villas.md` | 0.4 (villas con nombre) |
+> | 1 | **Villas vivas y diálogos**: prioridad de oficios por tamaño de villa (obligatorios: Pholua, Ildo, Sfida, Folas/Folat, Sarua), cada oficiante en su sitio, rutinas por Momento (de día trabajan, de noche duermen en las casas), diálogos por oficio | `npcs-y-villas.md` | 0.4 (villas con nombre y colocación en el Mundo 2.0) |
 > | 2 | Senda, puntos y skills (Sombra / Confianza) **y estado de bando** (fiel / en duda / garelino) | `moralidad-y-progresion.md`, `dos-caminos.md` | 0.3 |
 > | 3 | Garelinos: enemigo humano no letal, campamentos y ataques a Bosques | `monstruos.md` | 0.3 (combate en grupo, estados de Bosque) |
 > | 4 | Encuentro con los garelinos y cambio de bando (mecánica, con textos genéricos) | `dos-caminos.md` | 2, 3 |
@@ -18,7 +18,9 @@
 > | 8 | Salvar los Bosques (lado fiel) y encargos compartidos con otros adoc | `bosques-y-relacion.md`, `otros-adoc.md` | 1, 3 |
 > | 9 | Redención (con asilo de magra). Los finales quedan aparcados | `dos-caminos.md` | 6, 7, 8 |
 >
-> **Se mueve a la 0.6**: favores de los Sarua, artesanos y materiales, e Iserald con el combate de grupo grande (en la 0.5 el Iserald solo puede desatarse por una siembra, y lo sensato es huir). La personalización del adoc pasa a la 1.0, con el menú de inicio.
+> **Se mueve a la 0.6**: favores de los Sarua, artesanos y materiales, e Iserald con el combate de grupo grande. En la 0.5 el Iserald puede desatarse al dañar un Bosque, y lo sensato es huir. La personalización del adoc pasa a la 1.0, con el menú de inicio.
+>
+> **Propuesta para la 0.6 (después del Mundo 2.0)**: **interiores y lugares especiales** (`mechanics/lugares-e-interiores.md`): casas por dentro, refugios por dentro, **tarcas** (cuevas amplias) y **sicabis** (lugares sagrados sin armas que regeneran Luz y conectan con la Luz y el Bosque). Dependen del Mundo 2.0.
 
 > Dueño: `game-designer`. **Reparto confirmado por el dueño** ("1. si"): recoge la ronda de jugabilidad del dueño que no cabe en la 0.3.
 >

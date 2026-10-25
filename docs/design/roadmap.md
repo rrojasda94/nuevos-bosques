@@ -63,5 +63,6 @@ Sin orden cerrado. Se planificará al terminar la 0.5 (versiones 0.6 a 0.9 y 1.0
 - **Música** chiptune por Momento y por tipo de Bosque (`audio-designer`).
 - **Steam**: GodotSteam, logros, Steam Cloud (solo los guardados; la caché del mundo no), Steam Input, página de la tienda y builds por tag (`release-manager`).
 - **Modos Supervivencia y Garelino** (ADR 0004 y 0005): gestión de villa por días y el modo de los fanáticos. Son la parte más grande de este bloque y probablemente se repartan en varias versiones.
+- **Interiores y lugares especiales** (propuesta para la 0.6): casas y refugios por dentro, tarcas y **sicabis** (lugares sagrados sin armas que regeneran Luz) (`mechanics/lugares-e-interiores.md`). Con la 0.6, también los favores de Sarua, los artesanos y el Iserald (ver `roadmap-0.5.md`).
 - **Más regiones** del Sur Lenfi, pintadas por el dueño con el formato de autoría de la 0.4.
 - Pulido y equilibrio por playtest; inglés queda para la 1.x (GDD).

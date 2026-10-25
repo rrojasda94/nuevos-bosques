@@ -19,25 +19,57 @@ Palabras del dueño (2026-10-24): "Deberia haber más npc. [...] Algunas villas 
 
 ## Reglas
 
-### Población de una villa (lista de oficiantes por seed, #118)
-- Cada villa genera una **lista de oficiantes** por seed. Responde a #118.
-- **Siempre**: **Ildo** (guía la villa) y **Sfida** (conexión con el Nujio; en la villa natal es quien da la misión del Ofomni).
-- **Probables** (cada uno con probabilidad independiente, provisional):
+### Población de una villa: prioridad de oficios (#118)
+Palabras del dueño (2026-10-25): "las villas tienen gente, tienen lugares para dormir. [...] Puedes determinar con ello cuales son los niveles de prioridad de una villa en cuanto a oficios. Como por ejemplo toda villa debe tener alguien que recolecte los frutos, debes tener los oficiantes principales: ildo, sfida, folat. Debe haber un sarua. Despues ya puede variar un poco las especializaciones de cada villa. Pero debe notarse como un espacio vivo."
 
-| Oficio (glosario §5) | Función en el glosario | Servicio en el juego (propuesta) | Probabilidad |
-|---|---|---|---|
-| **Sarua** | Artesanos rituales: objetos para entregar Luz, talismanes de viaje | Favores a cambio de ofrendas. Fabrica **talismanes** y **máscaras** (confirmado) | 50% |
-| **Paruas** | Hacer funcional: utensilios de todo tipo | **Artesano de equipo**: armas para la mano principal y su mejora (confirmado) | 35% |
-| **Dumno** | Estudioso del cuerpo, cura personas y seres | Cura las **heridas graves** (ADR 0010) | 40% |
-| **Rogoc** | Viajeros designados: piden ayuda, llevan información, comercian | Informa de Bosques cercanos (estado, misiones) y vende alguna ofrenda | 40% |
-| **Pholua** | Recolectores y repartidores de la comida del Bosque | Explica las reglas del fruto (1 por Momento, no sacarlo) | 50% |
-| **Underil** | Narrador; viaja con historias de los Nujio | Diálogo de ambiente | 25% |
-| **Adoc** | Protectores | Otros adoc de la villa: encargos compartidos (`otros-adoc.md`). La villa natal los tiene "en otras misiones" al empezar | 30% |
-| **Ista** | Dictamina lo justo; valúa Luz y Piedras | Precios de la villa (multiplicador −5…+5, glosario §6) | 25% |
+- Cada villa genera por seed su lista de oficiantes **según la prioridad**. Todo NPC de villa tiene oficio: en el glosario §5, cada lenfi tiene uno asignado.
+- **Tamaño de villa** (el glosario da de 20 a 1000–2000 habitantes; en el juego, NPC visibles representativos):
+  - **pequeña**: 6–8 NPC;
+  - **mediana**: 10–14;
+  - **grande**: 16–20.
 
-- Más adelante, el resto de oficios (Ledai, Folas, Turos, Jiulua) cuando tengan mecánica.
-- **Jelios** (soldados) solo aparecen en la era de los Nuevos Bosques (glosario §5): fuera de las villas con Nujio.
-- Cada NPC es un sprite placeholder con color de oficio y un nombre tentativo, de la misma lista que los nombres de villa (`narrative-writer`).
+| Prioridad | Oficio (glosario §5) | Función (glosario) | Servicio en el juego | Pequeña | Mediana | Grande |
+|---|---|---|---|---|---|---|
+| **Obligatorio** | **Ildo** | Heredero de los Originales; decide y guía la villa | Persuasión y contrapersuasión (`dos-caminos.md`); encargos de villa | 1 | 1 | 1 |
+| **Obligatorio** | **Sfida** | Conoce la Luz; interpreta riutash y sueños; conexión con el Nujio | Misiones (Ofomni), visiones, rastro | 1 | 1 | 1–2 |
+| **Obligatorio** | **Folas / Folat** (grafía doble en el glosario: "Folas" en §5 Oficios, "Folat" en §5 Villa) | Pone en palabras las señales del Nujio, el Bosque y los Humores | Explica el estado del Bosque, sus señales y los Humores cercanos | 1 | 1 | 1–2 |
+| **Obligatorio** | **Sarua** | Artesanos rituales: objetos para entregar Luz, talismanes de viaje | Favores por ofrendas; máscaras y talismanes | 1 | 1 | 2 |
+| **Obligatorio** | **Pholua** | Recolectores y repartidores de la comida del Bosque | Reglas del fruto; lugar de los frutales | 1 | 2 | 3 |
+| **Habitual** | **Ista** | Dictamina lo justo; valúa Luz y Piedras | Precios (multiplicador −5…+5, glosario §6) | 0–1 | 1 | 1 |
+| **Habitual** | **Adoc** | Protectores; especialistas en armas | Otros adoc (`otros-adoc.md`) | 0–1 | 1–2 | 2–3 |
+| **Habitual** | **Dumno** | Estudia el cuerpo y cura | Cura heridas graves (ADR 0010) | 0–1 | 1 | 1–2 |
+| **Habitual** | **Rogoc** | Viajeros designados: piden ayuda, informan, comercian | Información de Bosques; trueque (metal) | 0–1 | 1 | 1–2 |
+| **Habitual** | **Paruas** | Hacer funcional: utensilios | Armas (artesano) | 0–1 | 1 | 1–2 |
+| **Especialización** | **Turos** | Sabios de los Humores; manipulan el clima a favor de la aldea | Avisa o aleja Humores (más adelante) | 0 | 0–1 | 0–1 |
+| **Especialización** | **Jiulua** | En aldeas que recolectan agua | Solo en villas junto a agua | 0 | 0–1 | 0–1 |
+| **Especialización** | **Underil** | Narrador; viaja con historias de los Nujio | Ambiente, historias | 0 | 0–1 | 1 |
+| **Especialización** | **Ledai** | Buscadores de los Originales; en esta era, como profetas de Estrella Azul (dueño) | En villas con convicción garelina alta o convertidas | 0 | 0–1 | 0–1 |
+| Fuera de las villas con Nujio | **Jelios** | Soldados de la era de los Nuevos Bosques | Grupos garelinos y villas convertidas | — | — | — |
+
+- **Reglas de reparto**:
+  1. Se colocan siempre los obligatorios.
+  2. Después, los habituales hasta llenar el tamaño, cada uno con un 60% (pequeña), 85% (mediana) o 100% (grande).
+  3. Al final, 1–2 especializaciones según el entorno de la villa (agua → Jiulua; Bosque con Humores frecuentes → Turos; convicción garelina → Ledai).
+
+### Villa viva: rutinas, lugares y diálogos (más adelante; PR 1 de la 0.5)
+- **Lugar de cada oficiante** (de día):
+  - el Sfida, junto al Nujio;
+  - el Pholua, entre los frutales;
+  - el Sarua, en su taller al aire libre (glosario: "el resto de estructuras de la villa son al aire libre");
+  - el Paruas, junto a su taller de utensilios;
+  - el Ildo, en la plaza;
+  - el Ista, cerca del Ildo;
+  - el Dumno, en una casa con enfermos;
+  - el Rogoc, a la entrada de la villa o de viaje (a veces no está);
+  - los adoc, de misión o en la plaza.
+- **Rutinas por Momento**:
+  - **Gietos (día)**: trabajan en su sitio.
+  - **Riutash**: se reúnen junto al Nujio. Glosario §5: el conocimiento del oficio se recibe en un riutash frente al Nujio.
+  - **Riumna (noche)**: duermen en las **casas**, que son dormitorios. Glosario §5: casas de barro o piedra, sin puertas cerradas, ventanas pequeñas, sin propiedad privada, solo asignada. De noche solo se puede hablar con el Sfida (vela al Nujio).
+- **Lugares para dormir**: el jugador duerme en la casa que le asignan en una villa (si lo aceptan) o en la plaza (refugio). Enlaza con dormir y Pensamiento (`bosques-y-relacion.md`).
+- **Diálogos según el oficio**: cada oficio tiene una frase de ambiente por Momento y una por estado de su Bosque (sano, enojado…). Textos de `narrative-writer`, en pausa mientras la historia esté aparcada.
+- Cada NPC es un sprite placeholder con color de oficio y un nombre tentativo (lista de `narrative-writer`, pendiente de aprobación del dueño).
+- **Dependencia**: la colocación en el mapa (plaza, frutales, casas) depende del **Mundo 2.0** (0.4, otra sesión).
 
 ### Sarua: ofrendas a cambio de favores
 - Al hablar con un Sarua (E) se pide un **favor**. Hay como máximo **1 favor activo por Sarua**.
