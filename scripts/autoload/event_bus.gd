@@ -66,6 +66,10 @@ signal item_broken(item_id: StringName)
 ## enfrenta a voluntad (E). monster_id: id de datos (balance.json, monsters). offends: el Bosque
 ## tenía el paso abierto y atacar a su Único le ofende (si gana, el Bosque pasa a forzado).
 signal unico_battle_requested(bosque_id: int, monster_id: StringName, offends: bool)
+## Combate en grupo (Crossing; monstruos.md, otros-adoc.md): contra `count` monstruos `monster_id`
+## del Bosque (un grupo de reparep) y, si `encounter_id` no está vacío, con el adoc de ese encuentro
+## (AdocEncounters) como aliado. Su fin es unico_battle_resolved.
+signal group_battle_requested(bosque_id: int, monster_id: StringName, count: int, offends: bool, encounter_id: String)
 ## Fin de ese combate. outcome: &"victory", &"appeased", &"defeat", &"fled" o &"game_over".
 signal unico_battle_resolved(bosque_id: int, outcome: StringName)
 ## La relación con un Bosque ha cambiado (bosques-y-relacion.md). relation: el valor nuevo

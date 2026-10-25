@@ -9,12 +9,17 @@ extends RefCounted
 ##   Bosque no está pagado, persiguen al verle (MonsterField.can_detect).
 ## - El estado del Bosque cambia cuántos rondan (BosqueStates.patrol_count): el enojado, el doble;
 ##   el muerto, uno solo en todo el Bosque.
-## Números en data/combat/balance.json (bloques patrols y bosque_states).
+## - Grupos de reparep (reparep_group_of): uno por Bosque que los tenga, de 2 a 4, de noche o
+##   siempre en los Bosques corruptos, muertos o que necesitan ayuda.
+## Números en data/combat/balance.json (bloques patrols, reparep_groups y bosque_states).
 
 const SALT_COUNT: int = 41
 const SALT_CHUNK: int = 43
 const SALT_KIND: int = 47
 const SALT_CELL: int = 53
+const SALT_REPAREP: int = 59
+const SALT_REPAREP_CHUNK: int = 61
+const SALT_REPAREP_COUNT: int = 63
 ## Intentos para encontrar una casilla de puesto.
 const CELL_TRIES: int = 400
 
@@ -45,13 +50,46 @@ static func patrols_of(map: BosqueMap, seed_value: int, bosque_id: int) -> Array
 	return out
 
 
-## Únicos que rondan ahora el chunk `coord` en el Momento `momento` (Aledra, solo de noche).
+## Únicos que rondan ahora el chunk `coord` en el Momento `momento` (Aledra, solo de noche), y el
+## grupo de reparep del Bosque si está aquí y fuera (reparep_group_of).
 static func patrols_in(map: BosqueMap, seed_value: int, coord: Vector2i, momento: StringName) -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
-	for p: Dictionary in patrols_of(map, seed_value, map.bosque_at(coord)):
+	var bosque_id: int = map.bosque_at(coord)
+	for p: Dictionary in patrols_of(map, seed_value, bosque_id):
 		if p.chunk == coord and is_out(p.monster, momento):
 			out.append(p)
+	var group: Dictionary = reparep_group_of(map, seed_value, bosque_id)
+	if not group.is_empty() and group.chunk == coord and (not group.night or momento == TimeConfig.RIUMNA):
+		out.append(group)
 	return out
+
+
+## Grupo de reparep que ronda el Bosque (bloque reparep_groups; monstruos.md, #128 provisional): {}
+## si no tiene. { "id", "monster", "bosque_id", "chunk", "count", "night" }. Nunca en el natal. En los
+## Bosques corruptos, muertos o que necesitan ayuda (always_states) está siempre fuera; en el resto,
+## solo de noche ("night": true) y solo en night_percent de cada 100 Bosques.
+static func reparep_group_of(map: BosqueMap, seed_value: int, bosque_id: int) -> Dictionary:
+	var cfg: Dictionary = AdventureRules.balance().get("reparep_groups", {})
+	if cfg.is_empty() or bosque_id < 0 or bosque_id == map.home_bosque:
+		return {}
+	var chunks: Array[Vector2i] = map.chunks_of(bosque_id)
+	if chunks.is_empty():
+		return {}
+	var always: bool = (cfg.get("always_states", []) as Array).has(BosqueStates.state_of(bosque_id, map))
+	if not always and ChunkGenerator.hash_ints([seed_value, bosque_id, SALT_REPAREP]) % 100 >= int(cfg.get("night_percent", 0)):
+		return {}
+	var id: String = "reparep:%d" % bosque_id
+	var monster: StringName = StringName(str(cfg.get("monster", "reparep")))
+	var lo: int = int(cfg.get("count_min", 2))
+	var hi: int = maxi(lo, int(cfg.get("count_max", lo)))
+	return {
+		"id": id,
+		"monster": monster,
+		"bosque_id": bosque_id,
+		"chunk": chunks[ChunkGenerator.hash_ints([seed_value, bosque_id, SALT_REPAREP_CHUNK]) % chunks.size()],
+		"count": lo + ChunkGenerator.hash_ints([seed_value, id.hash(), SALT_REPAREP_COUNT]) % (hi - lo + 1),
+		"night": not always,
+	}
 
 
 ## El Único de ese tipo está fuera en ese Momento: los de night_only, solo en Riumna.

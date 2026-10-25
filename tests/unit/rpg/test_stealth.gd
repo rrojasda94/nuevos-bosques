@@ -37,6 +37,7 @@ func before_each() -> void:
 	WorldClock.set_process(false)
 	WorldClock.shelter_check = Callable()
 	GameState.new_game(42)
+	_arm_spear()
 
 
 func after_each() -> void:
@@ -125,7 +126,7 @@ func test_camouflage_reduces_vision_and_adds_up_with_a_cap() -> void:
 
 func test_weapon_in_hand_cancels_camouflage() -> void:
 	_wear([CORTEZA, SEMILLAS])
-	assert_true(AdventureRules.is_armed(), "la lanza empieza equipada")
+	assert_true(AdventureRules.is_armed(), "con la lanza en la mano")
 	assert_eq(Stealth.gear_camouflage(), 9)
 	assert_eq(Stealth.camouflage(), 0, "con el arma en la mano, tu Luz te delata")
 	assert_false(Stealth.is_hidden())
@@ -458,7 +459,7 @@ func test_hud_icons_follow_the_state() -> void:
 # --- Guardado ------------------------------------------------------------------------------------------
 
 func test_save_v15_keeps_sneaked_bosques_exposure_and_uses() -> void:
-	assert_eq(GameState.SAVE_VERSION, 15)
+	assert_gte(GameState.SAVE_VERSION, 15)
 	_unarm()
 	_wear([CENIZA])
 	AdventureRules.sneak_into(_target)
@@ -510,3 +511,11 @@ func _notice_contains(text: String) -> bool:
 		if str(params[0]).contains(text):
 			return true
 	return false
+
+
+## Pone la lanza en la mano (desde la 0.3 una partida nueva la empieza guardada en la bolsa).
+func _arm_spear() -> void:
+	for i in GameState.bag.size():
+		if InventoryLogic.id_at(GameState.bag, i) == &"lanza_de_adoc":
+			AdventureRules.equip_from_bag(i)
+			return

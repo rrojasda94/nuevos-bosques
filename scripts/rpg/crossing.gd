@@ -12,7 +12,8 @@ extends CanvasLayer
 ## También lleva el combate de misión (Ofomni descarriado, EventBus.quest_battle_requested) y el
 ## combate directo contra un Único de dentro del Bosque (EventBus.unico_battle_requested: Ofomni
 ## que persiguen tras un robo, cazadores, los que rondan o el que se enfrenta a voluntad; sin menú,
-## se puede apaciguar pagando el peaje del Bosque si el Único lo acepta).
+## se puede apaciguar pagando el peaje del Bosque si el Único lo acepta) y el combate en grupo
+## (EventBus.group_battle_requested: un grupo de reparep, con aliados si los hay).
 ## Mientras está abierto (o dura el combate) el árbol se pausa; este nodo y el combate siguen
 ## activos (process_mode ALWAYS). Al terminar emite EventBus.crossing_resolved (o
 ## quest_battle_resolved) y la exploración cruza, retrocede o despierta al Adoc junto a un Nujio aliado.
@@ -44,6 +45,8 @@ var _chase: bool = false
 ## Ese combate ofende al Bosque (tenía el paso abierto).
 var _offends: bool = false
 var _home: int = -1
+## Ropa de los adoc aliados del combate en curso, en orden (la escena los dibuja con ella).
+var _ally_kinds: Array = []
 ## Submenú de ofrendas abierto: índices de AdventureRules.bag_ofrendas() de cada opción (sin la
 ## de volver).
 var _ofrenda_choices: Array[int] = []
@@ -65,6 +68,7 @@ func _ready() -> void:
 	EventBus.bosque_border_reached.connect(_on_bosque_border_reached)
 	EventBus.quest_battle_requested.connect(_on_quest_battle_requested)
 	EventBus.unico_battle_requested.connect(_on_unico_battle_requested)
+	EventBus.group_battle_requested.connect(_on_group_battle_requested)
 
 
 func _on_bosque_border_reached(bosque_id: int) -> void:
@@ -243,6 +247,13 @@ func _on_quest_battle_requested(quest_id: StringName) -> void:
 ## Combate directo contra un Único `monster_id` del Bosque `bosque_id`: a la d del Bosque (como
 ## mínimo 1) y con su peaje como precio para apaciguarlo.
 func _on_unico_battle_requested(bosque_id: int, monster_id: StringName, offends: bool) -> void:
+	_on_group_battle_requested(bosque_id, monster_id, 1, offends, "")
+
+
+## Combate directo contra un grupo (`count` monstruos `monster_id`, los reparep) y, con
+## `encounter_id`, con el adoc de ese encuentro como aliado (AdocEncounters). Los Únicos del Bosque
+## que necesita ayuda se suman solos (AdventureRules.bosque_allies).
+func _on_group_battle_requested(bosque_id: int, monster_id: StringName, count: int, offends: bool, encounter_id: String) -> void:
 	if bosque_id < 0 or _panel.visible or _battle != null:
 		return
 	var region: Dictionary = ChunkGenerator.load_region(GameState.region_id)
@@ -254,7 +265,14 @@ func _on_unico_battle_requested(bosque_id: int, monster_id: StringName, offends:
 	_chase = true
 	_offends = offends
 	get_tree().paused = true
-	var logic: BattleLogic = AdventureRules.start_battle(bosque_id, _distance, monster_id)
+	var allies: Array[Dictionary] = []
+	_ally_kinds = []
+	if encounter_id != "":
+		var e: Dictionary = AdocEncounters.encounter_of(_map, GameState.seed_value, bosque_id)
+		if not e.is_empty() and str(e.id) == encounter_id:
+			allies.append(AdocEncounters.ally_of(e))
+			_ally_kinds.append(e.get("clothes", {}))
+	var logic: BattleLogic = AdventureRules.start_battle(bosque_id, _distance, monster_id, count, allies)
 	_open_battle(logic, _map.styles[bosque_id], UnicoArt.kind_for(monster_id))
 
 
@@ -262,7 +280,8 @@ func _open_battle(logic: BattleLogic, style: Dictionary, kind: UnicoArt.Kind) ->
 	_battle = BATTLE_SCENE.instantiate()
 	add_child(_battle)
 	_battle.finished.connect(_on_battle_finished)
-	_battle.begin(logic, style, kind)
+	_battle.begin(logic, style, kind, _ally_kinds)
+	_ally_kinds = []
 
 
 func _on_battle_finished(logic: BattleLogic) -> void:

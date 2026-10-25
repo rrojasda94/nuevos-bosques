@@ -27,6 +27,10 @@ extends Node2D
 ## "¡Te han visto!": el camuflaje se rompe un rato y te persigue. Robar camuflado solo despierta a
 ## los Ofomni si un Único lo ve. Con el arma en la mano, ningún Bosque salvo el natal te deja pasar
 ## en paz ("El Bosque siente tu arma."). Los talismanes de viaje aceleran el paso.
+## Combate en grupo: los grupos de reparep (BosquePatrols) se ven como un icono de varios cangrejos
+## y su encuentro es un combate contra todos. Otros adoc (AdocEncounters): en algunos Bosques hay un
+## adoc a punto de pelear; con E, "Ayudar" (combate con él como aliado; si se gana, relación y fama)
+## o "Seguir tu camino".
 
 const TILE_SIZE: int = 16
 ## Duración del fundido al cambiar de chunk.
@@ -74,6 +78,10 @@ var _last_bosque: int = -1
 var _entry_notices: PackedStringArray = []
 ## El último robo no lo vio nadie (camuflado y sin Únicos a la vista).
 var _theft_unseen: bool = false
+## Encuentro con otro adoc del chunk actual ({} si no hay) y su nodo; el del combate en curso.
+var _encounter: Dictionary = {}
+var _encounter_npc: AdocNpc
+var _pending_encounter: Dictionary = {}
 
 @onready var _terrain: TileMapLayer = $Terrain
 @onready var _nujios: Node2D = $Nujios
@@ -185,6 +193,7 @@ func _enter_chunk(coord: Vector2i, cell: Vector2i) -> void:
 	_draw_area()
 	_place_npcs()
 	_field.populate(_bosques, _home_bosque, coord, _get_chunk)
+	_place_adoc_encounter()
 	if not _player.is_walkable.call(cell):
 		cell = _chunk.hub
 	GameState.player_cell = cell
@@ -453,12 +462,85 @@ func _place_npcs() -> void:
 	_npcs[at] = npc.npc_id
 
 
+## Otro adoc a punto de pelear en este chunk (AdocEncounters): él y su rival, uno junto al otro.
+func _place_adoc_encounter() -> void:
+	_encounter = {}
+	_encounter_npc = null
+	var welcome: bool = AdventureRules.is_welcome(_bosques.bosque_at(_chunk.coord), _home_bosque)
+	var e: Dictionary = AdocEncounters.encounter_in(_bosques, GameState.seed_value, _chunk.coord, welcome)
+	if e.is_empty():
+		return
+	var free: Callable = func(c: Vector2i) -> bool:
+		return _chunk.is_walkable(c) and not _npcs.has(c) and _field.monster_at(c) == null and not _fires.has(c)
+	var at: Array[Vector2i] = AdocEncounters.cells(_chunk, GameState.seed_value, str(e.id), free)
+	if at.is_empty():
+		return
+	var facing: Vector2i = (at[1] - at[0]).sign()
+	var npc := AdocNpc.new()
+	npc.setup(e, at[0], facing)
+	_npc_layer.add_child(npc)
+	_npcs[at[0]] = AdocEncounters.NPC_ID
+	_field.spawn_duel(e, at[1], _bosques.styles[int(e.bosque_id)])
+	_encounter = e
+	_encounter_npc = npc
+
+
+## E frente al otro adoc o a su rival: "Ayudar" o "Seguir tu camino".
+func _ask_adoc_encounter() -> void:
+	if _encounter.is_empty():
+		return
+	var e: Dictionary = _encounter
+	_dialogue.choice.connect(_on_adoc_encounter_choice.bind(e), CONNECT_ONE_SHOT)
+	_dialogue.ask(AdocEncounters.prompt(e), [Texts.get_text("adoc_encounter_help"), Texts.get_text("adoc_encounter_pass")])
+
+
+func _on_adoc_encounter_choice(index: int, e: Dictionary) -> void:
+	if index != 0:
+		AdocEncounters.resolve(str(e.id), AdocEncounters.PASSED)
+		_dialogue.show_lines([Texts.get_text("adoc_encounter_passed") % str(e.name)])
+		return
+	_pending_encounter = e
+	_pending_monster = null
+	EventBus.group_battle_requested.emit(int(e.bosque_id), e.enemy, int(e.count), false, str(e.id))
+
+
+## Fin del combate de ayuda: agradecimiento y recompensa, o el adoc se retira. El encuentro ya no
+## vuelve; él y su rival se van (al ganar, el rival se deshace en luz).
+func _finish_adoc_encounter(outcome: StringName) -> void:
+	var e: Dictionary = _pending_encounter
+	_pending_encounter = {}
+	var lines: PackedStringArray = AdocEncounters.finish(e, outcome)
+	if outcome == &"defeat" or outcome == &"game_over":
+		if outcome == &"defeat":
+			_respawn()
+		else:
+			_game_over()
+		if not lines.is_empty():
+			EventBus.notice_requested.emit("\n".join(lines))
+		return
+	_field.remove_duel(outcome == &"victory")
+	if is_instance_valid(_encounter_npc):
+		_npcs.erase(_encounter_npc.cell)
+		var npc: AdocNpc = _encounter_npc
+		var tween: Tween = npc.create_tween()
+		tween.tween_interval(2.0)
+		tween.tween_property(npc, "modulate:a", 0.0, 0.6)
+		tween.tween_callback(npc.queue_free)
+	_encounter = {}
+	_encounter_npc = null
+	if not lines.is_empty():
+		_dialogue.show_lines(Array(lines))
+
+
 ## E: habla con el NPC de delante, o lee el letrero o examina el refugio (delante o debajo).
 func _interact() -> void:
 	# Durante el fundido de entrada no: el diálogo pausa el árbol y lo dejaría a oscuras.
 	if _chunk == null or _player.is_moving() or _fade.color.a > 0.0:
 		return
 	var monster: OverworldMonster = _field.monster_at(_player.cell + _player.facing)
+	if monster != null and monster.role == MonsterField.ROLE_DUEL:
+		_ask_adoc_encounter()
+		return
 	if monster != null:
 		_confront(monster)
 		return
@@ -468,6 +550,8 @@ func _interact() -> void:
 		return
 	var target: Dictionary = Interaction.find(_chunk, _player.cell, _player.facing, _npcs)
 	match target.kind:
+		Interaction.Kind.NPC when target.npc_id == AdocEncounters.NPC_ID:
+			_ask_adoc_encounter()
 		Interaction.Kind.NPC:
 			# Primero las líneas (según el estado de la misión) y luego el aviso, que aplica sus efectos.
 			_dialogue.show_lines(NpcDialogue.lines_for(target.npc_id))
@@ -721,6 +805,9 @@ func _on_confront_choice(index: int, monster: OverworldMonster, offends: bool) -
 ## avisa primero y deja huir sin pelear.
 func _request_unico_battle(monster: OverworldMonster, offends: bool) -> void:
 	var fatal_at: Array = monster.cfg.get("fatal_at", [])
+	if monster.count > 1:
+		EventBus.group_battle_requested.emit(monster.bosque_id, monster.monster_id, monster.count, offends, "")
+		return
 	if not AdventureRules.is_fatal(fatal_at, GameState.clock_momento):
 		EventBus.unico_battle_requested.emit(monster.bosque_id, monster.monster_id, offends)
 		return
@@ -746,6 +833,9 @@ func _on_fatal_choice(index: int, monster: OverworldMonster, offends: bool) -> v
 ## perseguidores y cazadores (los que rondan quedan pasivos); perder despierta junto a un Nujio y
 ## acaba la persecución; huir aleja al Adoc y el Único vuelve un rato a su sitio.
 func _on_unico_battle_resolved(_bosque_id: int, outcome: StringName) -> void:
+	if not _pending_encounter.is_empty():
+		_finish_adoc_encounter(outcome)
+		return
 	var monster: OverworldMonster = _pending_monster
 	_pending_monster = null
 	match outcome:

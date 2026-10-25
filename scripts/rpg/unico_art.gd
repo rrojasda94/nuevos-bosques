@@ -8,7 +8,13 @@ extends RefCounted
 ## (EYES). El resto de siluetas quedan para monstruos futuros.
 ## Lo sustituirá el arte de pixel-artist; los nombres reales son de narrative-writer.
 
-enum Kind { QUADRUPED, SERPENT, HORNED, EYES, BIRD, BOTARRAMAS }
+enum Kind { QUADRUPED, SERPENT, HORNED, EYES, BIRD, BOTARRAMAS, REPAREP }
+## Reparep (cangrejo fantasmal): opacidad del cuerpo y cuánto se aclara su color claro hacia el
+## blanco. Placeholder procedural hasta el arte de pixel-artist (ver docs/art/specs).
+const GHOST_ALPHA: float = 0.78
+const GHOST_PALE: float = 0.45
+## Tamaño de cada cangrejo en el icono de grupo del mundo (group_texture).
+const GROUP_CRAB_PX: int = 15
 const AURA := Color("fee761")
 
 ## Arte de pixel-artist (docs/art/specs/primera-pasada.md): hoja de 2 fotogramas en horizontal por
@@ -32,6 +38,7 @@ const EYES: Array = [
 	[[0.38, 0.38, 0.06], [0.6, 0.36, 0.075], [0.48, 0.53, 0.05], [0.67, 0.53, 0.04], [0.31, 0.55, 0.04], [0.5, 0.24, 0.04]],
 	[[0.46, 0.28, 0.03], [0.54, 0.28, 0.03]],
 	[[0.3, 0.19, 0.035]],
+	[[0.4, 0.24, 0.05], [0.6, 0.24, 0.05]],
 ]
 ## Colmillos por tipo: [u, v] (punta hacia abajo). La boca es una línea que los une.
 const FANGS: Array = [
@@ -39,6 +46,7 @@ const FANGS: Array = [
 	[[0.46, 0.3], [0.54, 0.3]],
 	[[0.46, 0.29], [0.54, 0.29]],
 	[[0.41, 0.67], [0.5, 0.68], [0.59, 0.67]],
+	[],
 	[],
 	[],
 ]
@@ -54,6 +62,8 @@ static func kind_for(monster_id: StringName) -> Kind:
 			return Kind.EYES
 		&"aledra":
 			return Kind.SERPENT
+		&"reparep":
+			return Kind.REPAREP
 	return Kind.QUADRUPED
 
 
@@ -144,7 +154,37 @@ static func texture(kind: Kind, style: Dictionary, px: int) -> Texture2D:
 	for e: Array in EYES[kind]:
 		_draw_eye(img, Vector2(e[0], e[1]) * px, maxf(2.0, e[2] * px))
 	_ring(img, 2, AURA, true)
+	if kind == Kind.REPAREP:
+		_ghost(img, leaf[1])
 	return ImageTexture.create_from_image(img)
+
+
+## Icono de un grupo de `count` reparep para el mundo (un solo monstruo que se ve como varios
+## cangrejos juntos: el número se cuenta a la vista), en un cuadro de `px` x `px`.
+static func group_texture(style: Dictionary, count: int, px: int) -> Texture2D:
+	var crab: Image = texture(Kind.REPAREP, style, GROUP_CRAB_PX).get_image()
+	var out := Image.create(px, px, false, Image.FORMAT_RGBA8)
+	var c: int = GROUP_CRAB_PX
+	var spots: Array[Vector2i] = [Vector2i(0, px - c), Vector2i(px - c, px - c), Vector2i((px - c) / 2, px - c - c / 2 - 2), Vector2i((px - c) / 2, 0)]
+	if count <= 1:
+		spots = [Vector2i((px - c) / 2, px - c)]
+	for i: int in clampi(count, 1, spots.size()):
+		out.blend_rect(crab, Rect2i(Vector2i.ZERO, crab.get_size()), spots[i])
+	return ImageTexture.create_from_image(out)
+
+
+## Cangrejo fantasmal: el cuerpo se vuelve semitransparente y su color claro, pálido.
+static func _ghost(img: Image, light: Color) -> void:
+	var pale: Color = light.lerp(PlaceholderTileset.WHITE, GHOST_PALE)
+	for y: int in img.get_height():
+		for x: int in img.get_width():
+			var p: Color = img.get_pixel(x, y)
+			if p.a <= 0.0 or p == AURA or p == PlaceholderTileset.WHITE or p == PlaceholderTileset.OUTLINE:
+				continue
+			if p == light:
+				p = pale
+			p.a = GHOST_ALPHA
+			img.set_pixel(x, y, p)
 
 
 ## 0 = vacío, 1 = color oscuro, 2 = color claro (hojas del Bosque), 3 = tronco (cuernos, patas...).
@@ -238,6 +278,21 @@ static func _body(kind: Kind, p: Vector2) -> int:
 			# Cuerpo desplumado: piel clara con granos oscuros.
 			if _ellipse(p, Vector2(0.52, 0.56), Vector2(0.22, 0.16)):
 				return 1 if fmod(p.x * 17.0, 1.0) < 0.25 and fmod(p.y * 17.0, 1.0) < 0.25 else 2
+		Kind.REPAREP:
+			# Pinzas y caparazón de cangrejo; patas y tallos de los ojos en color tronco.
+			for side: float in [-1.0, 1.0]:
+				if _ellipse(p, Vector2(0.5 + side * 0.36, 0.3), Vector2(0.1, 0.08)):
+					return 2 if p.y < 0.28 else 1
+				if _seg(p, Vector2(0.5 + side * 0.22, 0.52), Vector2(0.5 + side * 0.34, 0.36)) < 0.035:
+					return 3
+				for k: int in 3:
+					var y0: float = 0.6 + k * 0.06
+					if _seg(p, Vector2(0.5 + side * 0.24, y0), Vector2(0.5 + side * (0.38 + k * 0.03), y0 + 0.2)) < 0.025:
+						return 3
+				if _seg(p, Vector2(0.5 + side * 0.1, 0.45), Vector2(0.5 + side * 0.1, 0.28)) < 0.02:
+					return 3
+			if _ellipse(p, Vector2(0.5, 0.58), Vector2(0.27, 0.16)):
+				return 2 if p.y < 0.53 else 1
 	return 0
 
 

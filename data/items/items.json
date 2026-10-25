@@ -1,11 +1,12 @@
 {
   "bag_size": 12,
   "start_equipped": {
-    "main_hand": "lanza_de_adoc",
+    "main_hand": "",
     "mask": "",
     "talisman": ""
   },
   "start_bag": [
+    { "id": "lanza_de_adoc", "qty": 1 },
     { "id": "mascara_de_corteza", "qty": 1 },
     { "id": "talisman_de_semillas", "qty": 1 },
     { "id": "mascara_de_musgo", "qty": 1 },
