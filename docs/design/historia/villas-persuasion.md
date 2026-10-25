@@ -1,5 +1,8 @@
 # Persuasión de villas: muestras de diálogo
 
+> **BORRADOR APARCADO, no canon** (dueño, 2026-10-25: historia en pausa). La persuasión como **mecánica** sigue en `docs/design/mechanics/dos-caminos.md`.
+> **Nombres NO aprobados**: Oridna → la ledai; Urdan → un adoc veterano; Avessa → el Ildo vecino; Tiunel → el Sfida.
+
 > Dueño: `narrative-writer`. Estado: **PROPUESTA**. Rama garelina del arco ([`arco-dos-caminos.md`](arco-dos-caminos.md), Acto IV-b, hito 3).
 > Las cuatro vías son del dueño: resolver su necesidad, diálogo y argumentos, fuerza del grupo (sin matar) y regalar Piedras. Cuánto cuenta cada vía, qué umbrales hay y qué pasa en el mundo al convencer una villa lo decide `game-designer`. Aquí solo hay texto y su intención.
 > Formato: `Speaker: texto`. Cada mensaje cabe en **2 líneas de 38 caracteres** como mucho. Los `id` son propuestos para `data/quests/` o `data/npcs/`.

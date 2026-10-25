@@ -6,12 +6,13 @@
 >
 > **Hoja de ruta general**: [`roadmap.md`](roadmap.md). Orden del dueño: 0.3 "El Bosque recuerda" (dinámicas) → 0.4 "Mundo 2.0" (mapa y movimiento) → 0.5 "Los otros adoc" → hacia la 1.0 en Steam.
 >
-> **Versión 0.5 "Dos caminos"** (propuesta de nombre y orden, ADR 0015; antes "Los otros adoc"): hoja de ruta en [`roadmap-0.5.md`](roadmap-0.5.md).
+> **Versión 0.5 "Dos caminos"** (confirmada, ADR 0015; antes "Los otros adoc"): hoja de ruta en [`roadmap-0.5.md`](roadmap-0.5.md). **Historia en pausa**: primero mecánicas, jugabilidad y desarrollo de personaje. `historia/` es un borrador aparcado.
 > - **Garelino dentro de Aventura** ([`mechanics/dos-caminos.md`](mechanics/dos-caminos.md)):
->   - El adoc pasa de **fiel** a **en duda** con la Senda, y a **garelino** en un encuentro de historia con los garelinos.
->   - Como garelino: reúne un grupo, **persuade villas** (necesidad, diálogo, fuerza sin matar, regalar Piedras) y **siembra Piedras de los Nuevos Bosques** junto a Nujio muertos o debilitados (con riesgo de Iserald).
->   - Puede **redimirse** con un gran costo.
->   - Finales por camino.
+>   - El adoc pasa de **fiel** a **en duda** con la Senda, y a **garelino** en un encuentro con los garelinos y una ledai. Los ledai de la Tarca de Trastas son como profetas de Garel / Estrella Azul.
+>   - Al unirse a los Nuevos Bosques, el adoc se vuelve **magra**: los Bosques viejos y nuevos no son compatibles.
+>   - Como garelino: reúne un grupo y **persuade villas** (necesidad, diálogo, fuerza sin matar, regalar Piedras). **Tala Bosques muertos** (él o su grupo) y **siembra Piedras de los Nuevos Bosques** donde el Bosque de Nujio ya no está.
+>   - Puede **redimirse** con un gran costo (incluye pedir asilo de magra).
+>   - Los finales por camino quedan aparcados.
 >   - El modo Garelino suelto queda como "empezar ya garelino", para más adelante.
 > - Más NPC en las villas, por oficio: [`mechanics/npcs-y-villas.md`](mechanics/npcs-y-villas.md). Los Sarua dan ofrendas a cambio de favores y hacen máscaras y talismanes; los Paruas hacen armas.
 > - Otros adoc, **siempre aliados** (no hacen daño), con afinidad según la Senda: [`mechanics/otros-adoc.md`](mechanics/otros-adoc.md). Como aliados en combate ya en la 0.3, PR 7.

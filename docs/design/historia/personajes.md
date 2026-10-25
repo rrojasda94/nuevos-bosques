@@ -1,5 +1,14 @@
 # Personajes recurrentes del arco "Dos caminos"
 
+> **BORRADOR APARCADO, no canon** (dueño, 2026-10-25: "por ahora no se cuales podrian ser las historias. Centremonos en mecanicas, jugabilidad, desarrollo de personaje y de ahi buscamos crear la historia del juego.").
+> **Nombres NO aprobados** (dueño: "No"). Léanse como roles genéricos hasta que el dueño ponga nombres:
+> - Oridna → **la ledai** (de la Tarca de Trastas);
+> - Urdan → **un adoc veterano**;
+> - Avessa → **el Ildo vecino**;
+> - Tiunel → sin nombre (**el Sfida**).
+>
+> Lore confirmado: los ledai de esta era son como **profetas**, al menos los de la Tarca de Trastas, donde está Garel / Estrella Azul, y cualquiera puede hacerse garelino y seguir a los ledai.
+
 > Dueño: `narrative-writer`. Estado: **PROPUESTA**. Todos los nombres propios de este archivo son PROPUESTA y deben aprobarse y registrarse en el glosario antes de usarse en el juego (regla del agente). El glosario es del dueño: no se ha tocado.
 > Arco: [`arco-dos-caminos.md`](arco-dos-caminos.md).
 
