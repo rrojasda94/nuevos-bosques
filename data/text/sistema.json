@@ -221,5 +221,7 @@
   "far_quest_route_changed": "La ruta de tu salvoconducto cambia.",
   "compass_far_quest": "Llamada",
   "map_legend_far_quest": "Llamada lejana",
-  "map_legend_far_route": "Salvoconducto"
+  "map_legend_far_route": "Salvoconducto",
+  "world_loading_title": "Creando el mundo…",
+  "world_loading_hint": "Preparando los alrededores de tu villa"
 }

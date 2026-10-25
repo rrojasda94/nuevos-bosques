@@ -1,0 +1,47 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/world_loading.gd" id="1_loading"]
+[ext_resource type="Theme" path="res://assets/ui/theme.tres" id="2_theme"]
+
+[node name="WorldLoading" type="CanvasLayer"]
+layer = 2
+script = ExtResource("1_loading")
+
+[node name="Root" type="Control" parent="."]
+layout_mode = 3
+anchors_preset = 0
+offset_right = 320.0
+offset_bottom = 180.0
+theme = ExtResource("2_theme")
+
+[node name="Background" type="Panel" parent="Root"]
+layout_mode = 0
+offset_right = 320.0
+offset_bottom = 180.0
+theme_type_variation = &"MapPanel"
+
+[node name="Title" type="Label" parent="Root"]
+layout_mode = 0
+offset_left = 40.0
+offset_top = 70.0
+offset_right = 280.0
+offset_bottom = 82.0
+theme_type_variation = &"TitleLabel"
+horizontal_alignment = 1
+
+[node name="Bar" type="Control" parent="Root"]
+layout_mode = 0
+offset_left = 80.0
+offset_top = 88.0
+offset_right = 240.0
+offset_bottom = 94.0
+mouse_filter = 2
+
+[node name="Hint" type="Label" parent="Root"]
+layout_mode = 0
+offset_left = 40.0
+offset_top = 100.0
+offset_right = 280.0
+offset_bottom = 112.0
+theme_type_variation = &"HintLabel"
+horizontal_alignment = 1
