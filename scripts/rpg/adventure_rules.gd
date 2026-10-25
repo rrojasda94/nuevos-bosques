@@ -12,7 +12,9 @@ extends RefCounted
 ## suma ATQ), villa dañada, descanso en una villa y efecto del riutash (ADR 0012). Los estados de
 ## Bosque (BosqueStates) cambian el peaje (corrupto ×1,5; muerto y necesita_ayuda no cobran y su
 ## borde está abierto; el enojado no acepta pagos) y la visión de sus Botarramas, y un Bosque que
-## cae a angry_candidate_at de relación se enoja. Escribe en GameState y avisa por EventBus. Los
+## cae a angry_candidate_at de relación se enoja. Sigilo (Stealth, sigilo-y-robo.md): con un arma
+## en la mano ningún Bosque salvo el natal te deja pasar en paz (is_welcome), colarse deja el
+## Bosque colado (sneak_into) y la máscara pesada resta DEF. Escribe en GameState y avisa por EventBus. Los
 ## números viven en data/combat/balance.json y, los del riutash, en data/world/time.json.
 
 const BALANCE_PATH: String = "res://data/combat/balance.json"
@@ -93,11 +95,34 @@ static func weapon_atk_bonus() -> int:
 	return Items.atk_bonus(weapon())
 
 
-## Stats con los que pelea el Adoc ahora: los de su nivel más el ATQ del arma equipada.
+## Stats con los que pelea el Adoc ahora: los de su nivel más el ATQ del arma equipada y menos la
+## DEF que restan las máscaras pesadas (Stealth.def_penalty, sin bajar de 0).
 static func adoc_combat_stats() -> Dictionary:
 	var stats: Dictionary = adoc_stats(GameState.level)
 	stats.atk = int(stats.atk) + weapon_atk_bonus()
+	stats.def = maxi(0, int(stats.def) - Stealth.def_penalty())
 	return stats
+
+
+## Con el arma en la mano, el Bosque `bosque_id` no le deja pasar en paz (sigilo-y-robo.md, regla
+## 2: "Llevar armas equipadas hace que el bosque no te deje pasar"). El natal, sí; y los que no
+## cobran (muerto: sin Nujio; necesita_ayuda: te ayuda), que tienen el borde abierto. `home` < 0:
+## el natal de la partida actual.
+static func is_armed_against(bosque_id: int, home: int = -1) -> bool:
+	if not is_armed() or bosque_id < 0 or is_free_pass(bosque_id):
+		return false
+	return bosque_id != (home if home >= 0 else current_home())
+
+
+## Bosque natal de la partida actual (seed y región de GameState).
+static func current_home() -> int:
+	return home_bosque(MapLogic.current_bosques(), ChunkGenerator.load_region(GameState.region_id))
+
+
+## El Bosque deja pasar en paz: está pagado (o es el natal, o no cobra) y el Adoc no va armado
+## contra él. Si no, sus Únicos le tratan como a quien no ha pagado: le ven, le persiguen y le cazan.
+static func is_welcome(bosque_id: int, home: int) -> bool:
+	return is_paid(bosque_id, home) and not is_armed_against(bosque_id, home)
 
 
 ## Equipa el objeto de la casilla `index` de la bolsa (el que había en su ranura vuelve a la bolsa).
@@ -394,12 +419,13 @@ static func riutash_near_nujio(chunk: ChunkData, cell: Vector2i, bosque_id: int,
 
 ## Radio de visión de un Botarramas del Bosque: el de sus datos + hostility_vision × hostilidad,
 ## con un extra de vision_max_bonus como mucho ("mira, observa"), más el del estado (enojado:
-## detectan más lejos) y menos lo que dé el sigilo del Adoc (gancho, hoy 0).
+## detectan más lejos) y menos el camuflaje del Adoc (Stealth). Sin camuflaje, 1 como mínimo; con
+## él puede llegar a 0 (solo te ve si te echa encima, a su engage_distance).
 static func vision_radius(bosque_id: int, base: int) -> int:
 	var m: Dictionary = _memory()
 	var radius: int = base + mini(int(m.vision_max_bonus), int(m.hostility_vision) * hostility(bosque_id))
-	radius += BosqueStates.vision_bonus(bosque_state(bosque_id)) - BosqueStates.stealth_vision_bonus()
-	return maxi(1, radius)
+	radius += BosqueStates.vision_bonus(bosque_state(bosque_id))
+	return Stealth.vision_against(maxi(1, radius), BosqueStates.stealth_vision_bonus())
 
 
 ## Stats del Único del Bosque a distancia d (deterministas: solo dependen de d). `unico_name`:
@@ -465,9 +491,52 @@ static func home_bosque(map: BosqueMap, region: Dictionary) -> int:
 	return map.bosque_at(ChunkGenerator.region_start_chunk(region))
 
 
-## Se puede cruzar su frontera: el Bosque inicial, uno pagado o uno forzado.
+## Se puede cruzar su frontera: el Bosque inicial, uno pagado, uno forzado o uno en el que el Adoc
+## se ha colado y en el que sigue.
 static func is_passable(bosque_id: int, home: int) -> bool:
-	return is_paid(bosque_id, home) or is_forced(bosque_id)
+	return is_paid(bosque_id, home) or is_forced(bosque_id) or is_sneaked(bosque_id)
+
+
+# --- Colarse (Stealth, sigilo-y-robo.md) ---------------------------------------------------------
+
+## El Adoc se ha colado en el Bosque y sigue dentro (lo hayan visto o no).
+static func is_sneaked(bosque_id: int) -> bool:
+	return bosque_id >= 0 and GameState.sneaked_bosques.has(str(bosque_id))
+
+
+## Colado y sin que ningún Único le haya visto dentro: el Bosque no le caza.
+static func is_sneaking_unseen(bosque_id: int) -> bool:
+	return is_sneaked(bosque_id) and not bool(GameState.sneaked_bosques[str(bosque_id)])
+
+
+## Se cuela en el Bosque cerrado `bosque_id`: queda colado (ni pagado ni forzado) y cada objeto
+## equipado que se rompe gasta un uso. Avisa con bosque_sneaked (e item_broken por cada objeto
+## que se deshace). Devuelve los ids de los objetos rotos. No comprueba si se puede
+## (Stealth.can_sneak_into).
+static func sneak_into(bosque_id: int) -> Array[StringName]:
+	GameState.sneaked_bosques[str(bosque_id)] = false
+	var broken: Array[StringName] = Stealth.spend_uses()
+	EventBus.bosque_sneaked.emit(bosque_id)
+	for id: StringName in broken:
+		EventBus.item_broken.emit(id)
+	return broken
+
+
+## Un Único ha visto al Adoc: el camuflaje se rompe un rato y, si estaba colado en ese Bosque,
+## el Bosque ya sabe que está dentro (le caza). Avisa con adoc_spotted.
+static func spotted(bosque_id: int) -> void:
+	Stealth.expose()
+	if is_sneaked(bosque_id):
+		GameState.sneaked_bosques[str(bosque_id)] = true
+	EventBus.adoc_spotted.emit(bosque_id)
+
+
+## El Adoc está en el Bosque `bosque_id`: deja de estar colado en los demás (hay que volver a
+## colarse para entrar otra vez).
+static func leave_sneaked(bosque_id: int) -> void:
+	for key: String in GameState.sneaked_bosques.keys():
+		if int(key) != bosque_id:
+			GameState.sneaked_bosques.erase(key)
 
 
 ## El Bosque inicial, uno con el peaje pagado y sin caducar, o uno que no cobra por su estado
@@ -650,6 +719,8 @@ static func _prepare(logic: BattleLogic, cfg: Dictionary, d: int) -> void:
 	# Acepta Luz u ofrendas para irse salvo que sus datos digan lo contrario (el Ofomni descarriado).
 	logic.accepts_payment = is_appeasable(cfg)
 	logic.fatal = is_fatal(cfg.get("fatal_at", []), GameState.clock_momento)
+	# Sin arma se pelea con el ATQ base (y el combate lo avisa: "Peleas sin arma").
+	logic.unarmed = not is_armed()
 	logic.victory_xp = victory_xp(d)
 	logic.level_ups = levels_gained(GameState.xp, logic.victory_xp)
 

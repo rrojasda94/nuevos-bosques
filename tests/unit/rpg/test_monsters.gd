@@ -37,7 +37,10 @@ func test_sees_within_vision_radius_only_if_it_can_detect() -> void:
 	assert_true(MonsterSteering.sees(Vector2i(10, 10), Vector2i(20, 0), true, CFG), "Chebyshev 10")
 	assert_false(MonsterSteering.sees(Vector2i(10, 10), Vector2i(21, 10), true, CFG))
 	assert_false(MonsterSteering.sees(Vector2i(10, 10), Vector2i(12, 10), false, CFG), "Bosque abierto: no ve")
-	assert_false(MonsterSteering.is_camouflaged(), "en la 0.2.0 no hay camuflaje")
+	var blind: Dictionary = CFG.duplicate()
+	blind.vision_radius = 0
+	assert_false(MonsterSteering.sees(Vector2i(10, 10), Vector2i(11, 10), true, blind), "visión 0 (camuflaje): no ve")
+	assert_true(MonsterSteering.engages(Vector2i(10, 10), Vector2i(11, 10), true, blind), "pero de cerca te encuentra")
 
 
 func test_engage_distance_is_per_monster() -> void:
@@ -176,6 +179,7 @@ func test_post_cell_is_deterministic_reachable_and_near_the_gate() -> void:
 
 func test_open_bosque_makes_its_botarramas_passive() -> void:
 	GameState.new_game(42)
+	GameState.equipped.main_hand = ""  # con el arma en la mano, ningún Bosque pagado es pasivo (test_stealth)
 	var region := ChunkGenerator.load_region(&"valle_del_sara")
 	var map := BosqueMap.for_region(42, region)
 	var home: int = AdventureRules.home_bosque(map, region)
@@ -193,6 +197,7 @@ func test_open_bosque_makes_its_botarramas_passive() -> void:
 
 func test_passive_botarramas_does_not_block_and_defeated_dissolves() -> void:
 	GameState.new_game(42)
+	GameState.equipped.main_hand = ""  # con el arma en la mano, ningún Bosque pagado es pasivo (test_stealth)
 	var region := ChunkGenerator.load_region(&"valle_del_sara")
 	var map := BosqueMap.for_region(42, region)
 	var home: int = AdventureRules.home_bosque(map, region)

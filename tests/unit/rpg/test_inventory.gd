@@ -33,7 +33,7 @@ func test_catalog_has_every_kind() -> void:
 	assert_eq(Items.atk_bonus(LANZA), 2)
 	assert_eq(Items.kind_of(MASK), Items.KIND_MASK)
 	assert_eq(Items.kind_of(TALISMAN), Items.KIND_TALISMAN)
-	assert_eq(int(Items.entry(MASK).camouflage), 0, "efecto como dato, aún sin usar")
+	assert_eq(Items.camouflage(MASK), 6, "efecto como dato (Stealth)")
 	assert_eq(Items.bag_size(), 12)
 	for e: Dictionary in Items.all():
 		assert_true(e.has("name") and e.has("description") and e.has("stack_max"), str(e.id))
@@ -45,7 +45,7 @@ func test_new_game_bag_and_equipment() -> void:
 	assert_eq(InventoryLogic.equipped_in(GameState.equipped, &"mask"), &"")
 	assert_eq(InventoryLogic.count(GameState.bag, MASK), 1, "máscara provisional para probar")
 	assert_eq(InventoryLogic.count(GameState.bag, TALISMAN), 1)
-	assert_eq(InventoryLogic.free_slots(GameState.bag), 10)
+	assert_eq(InventoryLogic.free_slots(GameState.bag), 7, "3 máscaras y 2 talismanes provisionales para probar")
 	assert_true(AdventureRules.is_armed())
 
 
@@ -62,7 +62,7 @@ func test_add_stacks_up_to_stack_max() -> void:
 
 func test_ofrendas_take_one_slot_each() -> void:
 	assert_true(InventoryLogic.add(GameState.bag, &"cuenta_de_barro", 2))
-	assert_eq(InventoryLogic.free_slots(GameState.bag), 8, "stack_max 1: una casilla por ofrenda")
+	assert_eq(InventoryLogic.free_slots(GameState.bag), 5, "stack_max 1: una casilla por ofrenda")
 	assert_false(InventoryLogic.add(GameState.bag, &"no_existe"), "id fuera del catálogo")
 
 

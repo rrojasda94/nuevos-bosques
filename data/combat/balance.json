@@ -102,7 +102,7 @@
     "heal_pct": 25
   },
   "ofomni_guard": {
-    "$comment": "Ofomni que guardan su Bosque (sigilo-y-robo.md, feedback del dueño 0.3). Provisionales: game-designer. Persecución por robo: con un robo a la vista (alert_chance, de momento 1.0: sin sigilo todavía) aparecen entre chase_count_min y chase_count_max ofomni del Bosque robado (como mucho chase_count_max a la vez), fuera de la vista inmediata (más allá de spawn_view casillas en x o en y) y a spawn_max_distance casillas (Chebyshev) o menos; persiguen dentro de ese Bosque y se rinden al salir de él. Confinamiento de la primera misión: con la misión del sfida ofrecida y sin aceptar, acercarse a confine_distance casillas o menos de la frontera del Bosque natal (contando el paso que la cruza) hace que sus Ofomni te devuelvan a la plaza de la villa.",
+    "$comment": "Ofomni que guardan su Bosque (sigilo-y-robo.md, feedback del dueño 0.3). Provisionales: game-designer. Persecución por robo: con un robo a la vista (alert_chance, 1.0; camuflado, solo si un Único del Bosque lo ve: bloque stealth) aparecen entre chase_count_min y chase_count_max ofomni del Bosque robado (como mucho chase_count_max a la vez), fuera de la vista inmediata (más allá de spawn_view casillas en x o en y) y a spawn_max_distance casillas (Chebyshev) o menos; persiguen dentro de ese Bosque y se rinden al salir de él. Confinamiento de la primera misión: con la misión del sfida ofrecida y sin aceptar, acercarse a confine_distance casillas o menos de la frontera del Bosque natal (contando el paso que la cruza) hace que sus Ofomni te devuelvan a la plaza de la villa.",
     "alert_chance": 1.0,
     "chase_count_min": 1,
     "chase_count_max": 2,
@@ -119,7 +119,7 @@
     "kinds": ["botarramas", "ofomni"]
   },
   "bosque_states": {
-    "$comment": "Efectos de los estados de Bosque (bosques-y-relacion.md, #133; el reparto por seed está en el JSON de la región). toll_factor: multiplica el peaje (0 = no cobra: borde abierto, Únicos pasivos y permiso para el fruto). can_pay: false = no se puede pagar (el menú del borde solo ofrece enfrentar o retroceder y sus Únicos no aceptan Luz ni ofrendas). enojado: patrol_factor multiplica los Únicos que rondan; el primer cazador llega a los hunt_first_seconds de entrar y luego cada intervalo × hunt_interval_factor, con max_hunters_bonus cazadores más a la vez; sus Botarramas ven vision_bonus casillas más. corrupto: ambush_chance = probabilidad por Único y por Momento de que te ataque aunque hayas pagado; iserald_risk: avisa al entrar. muerto: patrol_count Únicos que rondan en todo el Bosque; independent_chance = probabilidad por Momento de que ese Único vaya por su cuenta y te pida independent_luz [mín, máx] de Luz (si no pagas, te ataca). necesita_ayuda: friendly_unicos (no persiguen), allies_in_battle (gancho del combate en grupo, PR 7, sin uso aún) y fire: chunk_percent = % de sus chunks con incendio (el central siempre), cells = [mín, máx] casillas de fuego, apagarlo cuesta time_seconds de reloj o luz_cost de Luz y sube la relación bosque_relation.per_defense. Provisionales: game-designer.",
+    "$comment": "Efectos de los estados de Bosque (bosques-y-relacion.md, #133; el reparto por seed está en el JSON de la región). toll_factor: multiplica el peaje (0 = no cobra: borde abierto, Únicos pasivos y permiso para el fruto). can_pay: false = no se puede pagar (el menú del borde solo ofrece enfrentar o retroceder y sus Únicos no aceptan Luz ni ofrendas). enojado: patrol_factor multiplica los Únicos que rondan; el primer cazador llega a los hunt_first_seconds de entrar y luego cada intervalo × hunt_interval_factor, con max_hunters_bonus cazadores más a la vez; sus Botarramas ven vision_bonus casillas más. Con camuflaje alto o velocidad (bloque stealth), sus cazadores tardan stealth_hunt_factor veces más. corrupto: ambush_chance = probabilidad por Único y por Momento de que te ataque aunque hayas pagado; iserald_risk: avisa al entrar. muerto: patrol_count Únicos que rondan en todo el Bosque; independent_chance = probabilidad por Momento de que ese Único vaya por su cuenta y te pida independent_luz [mín, máx] de Luz (si no pagas, te ataca). necesita_ayuda: friendly_unicos (no persiguen), allies_in_battle (gancho del combate en grupo, PR 7, sin uso aún) y fire: chunk_percent = % de sus chunks con incendio (el central siempre), cells = [mín, máx] casillas de fuego, apagarlo cuesta time_seconds de reloj o luz_cost de Luz y sube la relación bosque_relation.per_defense. Provisionales: game-designer.",
     "sano": { "toll_factor": 1.0 },
     "enojado": {
       "toll_factor": 1.0,
@@ -128,7 +128,8 @@
       "hunt_first_seconds": 8,
       "hunt_interval_factor": 0.5,
       "max_hunters_bonus": 1,
-      "vision_bonus": 4
+      "vision_bonus": 4,
+      "stealth_hunt_factor": 2.0
     },
     "corrupto": { "toll_factor": 1.5, "ambush_chance": 0.35, "iserald_risk": true },
     "muerto": { "toll_factor": 0, "patrol_count": 1, "independent_chance": 0.5, "independent_luz": [1, 2] },
@@ -138,6 +139,15 @@
       "allies_in_battle": 1,
       "fire": { "chunk_percent": 40, "cells": [3, 5], "time_seconds": 30, "luz_cost": 1 }
     }
+  },
+  "stealth": {
+    "$comment": "Sigilo (sigilo-y-robo.md, propuestas provisionales de #131 y #132). La máscara y el talismán equipados suman su camouflage (items.json: casillas que se restan al vision_radius de los Únicos), como mucho camouflage_max; un arma en la mano principal lo anula. Colarse: con camuflaje y sin arma, si la visión de los Botarramas del Bosque vecino (con su hostilidad y su estado) queda en sneak_max_vision o menos, se cruza su frontera cerrada sin pagar y el Bosque queda colado (sin cazadores mientras no te vean, sin derecho a fruto). Si un Único te ve igualmente (a su engage_distance), el camuflaje se rompe exposed_seconds de reloj y el Único tarda seen_grace_seconds en echarse encima. Bosque enojado: con camuflaje alto (visión de un Botarramas base <= hidden_vision) o con velocidad, sus cazadores tardan bosque_states.enojado.stealth_hunt_factor veces más. speed_bonus_max: tope de la velocidad extra de los talismanes de viaje (fracción). Provisionales: game-designer.",
+    "camouflage_max": 14,
+    "sneak_max_vision": 1,
+    "hidden_vision": 2,
+    "exposed_seconds": 20.0,
+    "seen_grace_seconds": 0.8,
+    "speed_bonus_max": 0.5
   },
   "patrols": {
     "$comment": "Únicos que rondan por dentro de cada Bosque con Nujio (feedback del dueño 0.3). Entre count_min y count_max por Bosque, cada uno en un chunk del Bosque y de un tipo de kinds (por seed y Bosque). night_only: tipos que solo están fuera de noche (Riumna). min_hub_distance: casillas mínimas (Chebyshev) de su puesto al hub (la plaza de la villa). Rondan patrol_wander casillas (dato de cada monstruo) y te miran pasar; en un Bosque sin pagar persiguen si te ven. Provisionales: game-designer.",

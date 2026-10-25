@@ -26,6 +26,8 @@ func before_each() -> void:
 	# Otros tests dejan la comprobación de refugio de una exploración ya liberada.
 	WorldClock.shelter_check = Callable()
 	GameState.new_game(42)
+	# Sin arma en la mano: con ella ningún Bosque deja pasar en paz (eso se prueba en test_stealth).
+	GameState.equipped.main_hand = ""
 
 
 func after_each() -> void:

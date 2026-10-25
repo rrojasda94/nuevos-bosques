@@ -18,9 +18,11 @@ extends Node
 ## caducidad más tardía; si solo hay permanentes, el de id más bajo) o ninguno. v14: estados de
 ## Bosque (bosques-y-relacion.md, #133): cambios de estado en la partida (bosque_state_overrides) e
 ## incendios apagados (extinguished_fires); al migrar, ningún incendio apagado y los candidatos a
-## enojarse con la relación aún en el umbral pasan a enojados (BosqueStates.make_angry). Las
-## versiones anteriores se cargan con valores por defecto.
-const SAVE_VERSION: int = 14
+## enojarse con la relación aún en el umbral pasan a enojados (BosqueStates.make_angry). v15: sigilo
+## (sigilo-y-robo.md): Bosques colados (sneaked_bosques), segundos de camuflaje roto
+## (stealth_exposed) y usos de los objetos que se rompen (item_uses); al migrar, nada colado, el
+## camuflaje intacto y ningún uso gastado. Las versiones anteriores se cargan con valores por defecto.
+const SAVE_VERSION: int = 15
 ## Migración a v9: el Ofomni de la misión pasó de "ofomni" a "ofomni_descarriado" (y su etiqueta
 ## de brújula, de "Ofomni" a "Ofomni descarriado").
 const LEGACY_OFOMNI_ID: String = "ofomni"
@@ -66,6 +68,14 @@ var angry_candidate: Array[int] = []
 ## Cambios de estado de Bosque durante la partida { "id": "enojado" } (BosqueStates). Mandan sobre
 ## el estado de generación (BosqueMap.state, que no se guarda: sale de la seed).
 var bosque_state_overrides: Dictionary = {}
+## Bosques en los que el Adoc se ha colado sin pagar y en los que sigue (Stealth):
+## { "id": visto } con visto = true si un Único le ha visto dentro (entonces el Bosque le caza).
+## Se borran al salir de ellos. Mientras dura, la frontera se cruza.
+var sneaked_bosques: Dictionary = {}
+## Segundos que le quedan al camuflaje roto (te han visto). 0 = funciona.
+var stealth_exposed: float = 0.0
+## Cruces colados gastados por los objetos que se rompen { "id del objeto": n }.
+var item_uses: Dictionary = {}
 ## Chunks cuyo incendio (Bosque que necesita ayuda) ya se apagó (BosqueFires): no vuelven a arder.
 var extinguished_fires: Array[Vector2i] = []
 ## El Bosque recuerda: Botarramas vencidos por Bosque { "id": n }. Sube su peaje y su visión.
@@ -141,6 +151,9 @@ func new_game(new_seed: int = 0, new_region: StringName = &"valle_del_sara") -> 
 	angry_candidate = []
 	bosque_state_overrides = {}
 	extinguished_fires = []
+	sneaked_bosques = {}
+	stealth_exposed = 0.0
+	item_uses = {}
 	bosque_hostility = {}
 	bosque_relation = {}
 	battle_attempts = {}
@@ -184,6 +197,9 @@ func to_dict() -> Dictionary:
 		"angry_candidate": angry_candidate,
 		"bosque_state_overrides": bosque_state_overrides,
 		"extinguished_fires": extinguished_fires.map(func(c: Vector2i) -> Array: return [c.x, c.y]),
+		"sneaked_bosques": sneaked_bosques,
+		"stealth_exposed": stealth_exposed,
+		"item_uses": item_uses,
 		"bosque_hostility": bosque_hostility,
 		"bosque_relation": bosque_relation,
 		"battle_attempts": battle_attempts,
@@ -282,6 +298,20 @@ func from_dict(data: Dictionary) -> void:
 		for id: int in angry_candidate:
 			if int(bosque_relation.get(str(id), 0)) <= AdventureRules.angry_candidate_at():
 				BosqueStates.make_angry(id)
+	# v14 o anterior: sin sigilo (nada colado, camuflaje intacto, ningún uso gastado).
+	sneaked_bosques = {}
+	var sneaked: Variant = data.get("sneaked_bosques", {})
+	if sneaked is Dictionary:
+		for key: Variant in sneaked:
+			if int(str(key)) >= 0:
+				sneaked_bosques[str(int(str(key)))] = bool(sneaked[key])
+	stealth_exposed = maxf(0.0, float(data.get("stealth_exposed", 0.0)))
+	item_uses = {}
+	var uses: Variant = data.get("item_uses", {})
+	if uses is Dictionary:
+		for id: Variant in uses:
+			if Items.max_uses(StringName(str(id))) > int(uses[id]) and int(uses[id]) > 0:
+				item_uses[str(id)] = int(uses[id])
 	battle_attempts = {}
 	var attempts: Dictionary = data.get("battle_attempts", {})
 	for key: Variant in attempts:

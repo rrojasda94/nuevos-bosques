@@ -1,4 +1,4 @@
-[gd_scene load_steps=12 format=3]
+[gd_scene load_steps=13 format=3]
 
 [ext_resource type="Script" path="res://scripts/world/exploration.gd" id="1_expl"]
 [ext_resource type="Script" path="res://scripts/rpg/player_walker.gd" id="2_player"]
@@ -11,6 +11,7 @@
 [ext_resource type="Script" path="res://scripts/rpg/quest_runner.gd" id="9_quest"]
 [ext_resource type="PackedScene" path="res://scenes/rpg/inventory_screen.tscn" id="10_inventory"]
 [ext_resource type="PackedScene" path="res://scenes/ui/riutash_clock.tscn" id="11_clock"]
+[ext_resource type="Script" path="res://scripts/rpg/stealth_hud.gd" id="12_stealth"]
 
 [node name="Exploration" type="Node2D"]
 script = ExtResource("1_expl")
@@ -60,6 +61,16 @@ theme_override_constants/line_spacing = -2
 theme_override_font_sizes/font_size = 8
 horizontal_alignment = 1
 vertical_alignment = 2
+
+[node name="StealthHud" type="Control" parent="DebugHud"]
+layout_mode = 3
+anchors_preset = 0
+offset_left = 296.0
+offset_top = 15.0
+offset_right = 318.0
+offset_bottom = 24.0
+mouse_filter = 2
+script = ExtResource("12_stealth")
 
 [node name="Transition" type="CanvasLayer" parent="."]
 layer = 10

@@ -8,7 +8,9 @@ extends RefCounted
 ## - sano: sin efecto nuevo.
 ## - enojado: no se puede pagar (el menú del borde solo ofrece enfrentar o retroceder, y sus
 ##   Únicos no aceptan Luz ni ofrendas); más Únicos rondando, cazadores desde que entras y más a
-##   menudo, y sus Botarramas ven más lejos. Gancho del sigilo (0.3, PR 6): stealth_vision_bonus.
+##   menudo, y sus Botarramas ven más lejos. Sigilo (Stealth): el camuflaje resta visión
+##   (stealth_vision_bonus) y, con camuflaje alto o velocidad, sus cazadores tardan más
+##   (stealth_hunt_factor).
 ## - corrupto: peaje × toll_factor; sus Únicos a veces atacan aunque hayas pagado (ambushes, por
 ##   Único y por Momento); riesgo de Iserald (solo el aviso al entrar: el Iserald llega más tarde).
 ## - muerto: sin Nujio y sin peaje; un solo Único que ronda y que, a veces, es "independiente": te
@@ -127,11 +129,20 @@ static func vision_bonus(state: String) -> int:
 	return int(state_config(state).get("vision_bonus", 0))
 
 
-## Gancho del sigilo (sigilo-y-robo.md, PR 6): casillas que se restan a la visión de los Únicos
-## por velocidad o camuflaje del Adoc. Hoy siempre 0; "tener algo que aumente tu velocidad o te
-## camufle muy muy bien" es la otra forma de cruzar un Bosque enojado.
+## Casillas que se restan a la visión de los Únicos por el camuflaje del Adoc (Stealth.camouflage:
+## máscara y talismán, sin arma y sin que le hayan visto). 0 sin camuflaje.
 static func stealth_vision_bonus() -> int:
-	return 0
+	return Stealth.camouflage()
+
+
+## Multiplicador del tiempo hasta cada cazador en un Bosque con ese estado por el sigilo del Adoc:
+## "tener algo que aumente tu velocidad o te camufle muy muy bien" (enojado). Con camuflaje alto
+## (Stealth.hides_well) o con velocidad extra, stealth_hunt_factor; si no, 1.
+static func stealth_hunt_factor(state: String) -> float:
+	var factor: float = float(state_config(state).get("stealth_hunt_factor", 1.0))
+	if factor != 1.0 and (Stealth.hides_well() or Stealth.speed_bonus() > 0.0):
+		return factor
+	return 1.0
 
 
 ## Un Único del Bosque corrupto ataca este Momento aunque hayas pagado ("atacan a veces"):

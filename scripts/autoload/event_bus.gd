@@ -55,6 +55,12 @@ signal rested_in_villa
 ## El Adoc ha robado al Bosque (p. ej. un fruto sin permiso o un segundo fruto del mismo Bosque
 ## en el Momento, FruitRules). La exploración despierta a los Ofomni que le persiguen (OfomniGuard).
 signal bosque_robbed(bosque_id: int)
+## Sigilo (Stealth, sigilo-y-robo.md): el Adoc se ha colado sin pagar en un Bosque cerrado.
+signal bosque_sneaked(bosque_id: int)
+## Un Único del Bosque ha visto al Adoc camuflado (o colado): el camuflaje se rompe un rato.
+signal adoc_spotted(bosque_id: int)
+## Un objeto equipado que se rompe (max_uses) se ha deshecho y sale del equipo.
+signal item_broken(item_id: StringName)
 ## Combate directo contra un Único que va por dentro de su Bosque (Crossing): un Ofomni que
 ## persigue tras un robo, un cazador que envía el Bosque, uno que ronda, o uno al que el Adoc se
 ## enfrenta a voluntad (E). monster_id: id de datos (balance.json, monsters). offends: el Bosque

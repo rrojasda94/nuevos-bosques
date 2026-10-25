@@ -7,7 +7,9 @@ extends CanvasLayer
 ## Cursor con flechas, WASD o cruceta. Aceptar (ui_accept o E) equipa el objeto de la bolsa o
 ## desequipa la ranura, o come un fruto guardado (solo en su Bosque de origen: fuera, su casilla
 ## se ve apagada y lo explica); las ofrendas no se usan aquí (se dejan en un Bosque). Cancelar o
-## I cierra.
+## I cierra. La descripción de cada objeto empieza por sus efectos (ATQ, camuflaje, velocidad, DEF
+## que resta y usos que le quedan; Stealth.effects_text). Equipar el arma dentro de un Bosque que
+## no es el natal avisa de que el Bosque la siente (sigilo-y-robo.md).
 ## Pausa el árbol (y con él WorldClock) mientras está abierta; sigue activa en pausa (process_mode
 ## ALWAYS). Las reglas están en InventoryLogic y AdventureRules. Iconos de placeholder: un cuadro
 ## con el color de su tipo y la inicial (hasta que pixel-artist haga los sprites).
@@ -21,6 +23,7 @@ const TEXT_XP_MAX: String = "XP %d (nivel máximo)"
 const TEXT_HP: String = "PV %d/%d"
 const TEXT_ATK_DEF: String = "ATQ %d   DEF %d"
 const TEXT_ATK_BONUS_DEF: String = "ATQ %d (+%d)   DEF %d"
+const TEXT_DEF_PENALTY: String = " (−%d)"
 const TEXT_LUZ: String = "Luz suelta %d/%d"
 const TEXT_FAMA: String = "Fama %d"
 const TEXT_EMPTY_SLOT: String = "Casilla vacía"
@@ -29,7 +32,6 @@ const TEXT_SLOT_LINE: String = "%s: %s"
 const TEXT_SLOT_NAMES: Dictionary = { &"main_hand": "Mano", &"mask": "Máscara", &"talisman": "Talismán" }
 const TEXT_SLOT_EMPTY_DESC: String = "Nada equipado. Elige un objeto de la bolsa para equiparlo."
 const TEXT_OFRENDA_VALUE: String = "Luz %d. "
-const TEXT_ATK_VALUE: String = "ATQ +%d. "
 const TEXT_EQUIPPED: String = "Te equipas: %s."
 const TEXT_UNEQUIPPED: String = "Guardas: %s."
 const TEXT_OFRENDA_USE: String = "Las ofrendas se dejan ante un Nujio."
@@ -65,8 +67,9 @@ var _cursor: int = 0
 var _message: String = ""
 var _cells: Array[Panel] = []
 var _relation: String = ""
-## Bosque en el que está el Adoc al abrir (-1 si no se conoce).
+## Bosque en el que está el Adoc al abrir (-1 si no se conoce) y el natal.
 var _bosque_id: int = -1
+var _home: int = -1
 
 @onready var _root: Control = $Root
 @onready var _title: Label = $Root/Title
@@ -97,7 +100,8 @@ func is_open() -> bool:
 
 # --- Lógica de presentación (pura sobre GameState: la usan la pantalla y los tests) -------------
 
-## Líneas de estado del Adoc. El ATQ incluye el arma equipada (y muestra cuánto suma).
+## Líneas de estado del Adoc. El ATQ incluye el arma equipada (y muestra cuánto suma); la DEF, lo
+## que restan las máscaras pesadas.
 static func stat_lines() -> Array[String]:
 	var stats: Dictionary = AdventureRules.adoc_combat_stats()
 	var bonus: int = AdventureRules.weapon_atk_bonus()
@@ -107,10 +111,11 @@ static func stat_lines() -> Array[String]:
 	else:
 		lines.append(TEXT_XP % [GameState.xp, AdventureRules.xp_for_level(GameState.level + 1)])
 	lines.append(TEXT_HP % [GameState.hp, int(stats.max_hp)])
-	if bonus > 0:
-		lines.append(TEXT_ATK_BONUS_DEF % [int(stats.atk), bonus, int(stats.def)])
-	else:
-		lines.append(TEXT_ATK_DEF % [int(stats.atk), int(stats.def)])
+	var line: String = TEXT_ATK_BONUS_DEF % [int(stats.atk), bonus, int(stats.def)] if bonus > 0 \
+		else TEXT_ATK_DEF % [int(stats.atk), int(stats.def)]
+	if Stealth.def_penalty() > 0:
+		line += TEXT_DEF_PENALTY % Stealth.def_penalty()
+	lines.append(line)
 	lines.append(TEXT_LUZ % [GameState.luz, AdventureRules.luz_max()])
 	lines.append(TEXT_FAMA % GameState.fama)
 	return lines
@@ -193,13 +198,10 @@ static func fruit_eaten_text(result: Dictionary) -> String:
 	return text
 
 
-## Nombre y descripción del objeto (con su valor en Luz o su ATQ delante).
+## Descripción del objeto con su valor en Luz (ofrendas) o sus efectos delante (Stealth.effects_text:
+## ATQ, camuflaje, velocidad, DEF que resta y usos que le quedan).
 static func describe(id: StringName) -> String:
-	var prefix: String = ""
-	if Ofrendas.is_ofrenda(id):
-		prefix = TEXT_OFRENDA_VALUE % Items.luz_of(id)
-	elif Items.atk_bonus(id) > 0:
-		prefix = TEXT_ATK_VALUE % Items.atk_bonus(id)
+	var prefix: String = TEXT_OFRENDA_VALUE % Items.luz_of(id) if Ofrendas.is_ofrenda(id) else Stealth.effects_text(id)
 	return prefix + Items.description(id)
 
 
@@ -226,9 +228,10 @@ static func move_cursor(cursor: int, dir: Vector2i) -> int:
 
 
 ## Aceptar sobre el cursor: equipa (bolsa) o desequipa (ranura). Devuelve el aviso que se muestra
-## ("" si no pasa nada). `bosque_id`: Bosque en el que está el Adoc (para comer frutos). Escribe en
-## GameState a través de AdventureRules y FruitRules.
-static func activate(cursor: int, bosque_id: int = -1) -> String:
+## ("" si no pasa nada). `bosque_id`: Bosque en el que está el Adoc (para comer frutos y para avisar
+## de que el Bosque siente el arma; `home`: el natal). Escribe en GameState a través de
+## AdventureRules y FruitRules.
+static func activate(cursor: int, bosque_id: int = -1, home: int = -1) -> String:
 	if cursor >= BAG_CELLS:
 		var slot: StringName = slot_of(cursor)
 		var worn: StringName = InventoryLogic.equipped_in(GameState.equipped, slot)
@@ -246,7 +249,10 @@ static func activate(cursor: int, bosque_id: int = -1) -> String:
 		var result: Dictionary = FruitRules.eat_from_bag(cursor, bosque_id)
 		return "" if result.is_empty() else fruit_eaten_text(result)
 	if AdventureRules.equip_from_bag(cursor):
-		return TEXT_EQUIPPED % Items.display_name(id)
+		var text: String = TEXT_EQUIPPED % Items.display_name(id)
+		if Items.kind_of(id) == Items.KIND_WEAPON and AdventureRules.is_armed_against(bosque_id, home):
+			text += "\n" + Texts.get_text("bosque_feels_weapon")
+		return text
 	return Texts.get_text("bag_full")
 
 
@@ -256,6 +262,7 @@ func open() -> void:
 	if visible or get_tree().paused:
 		return
 	_bosque_id = _current_bosque()
+	_home = AdventureRules.home_bosque(_map, ChunkGenerator.load_region(GameState.region_id)) if _map != null else -1
 	_relation = state_relation_line(_bosque_id)
 	var toll: String = toll_line(_bosque_id)
 	if toll != "":
@@ -286,7 +293,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		close()
 		return
 	if event.is_action_pressed(&"ui_accept") or event.is_action_pressed(&"interact"):
-		_message = activate(_cursor, _bosque_id)
+		_message = activate(_cursor, _bosque_id, _home)
 		Sfx.play(&"menu_accept")
 		_refresh()
 		return

@@ -25,6 +25,9 @@ var lateral: Vector2i = Vector2i.RIGHT
 var state: MonsterSteering.State = MonsterSteering.State.IDLE
 ## Segundos que le quedan sin ver al jugador (tras retroceder o huir, o al aparecer).
 var cooldown: float = 0.0
+## Segundos que le quedan antes de poder empezar el encuentro, aunque ya persiga (sigilo: acaba de
+## ver al Adoc camuflado de cerca y le deja un instante para escapar).
+var engage_delay: float = 0.0
 ## Papel en el mundo (MonsterField.ROLE_*): guardián de frontera, ronda, perseguidor...
 var role: StringName = &"guardian"
 
@@ -62,6 +65,7 @@ func is_moving() -> bool:
 ## (p. ej. su Bosque está cerrado). `walkable`: casillas libres para él.
 func think(delta: float, player: Vector2i, can_detect: bool, walkable: Callable) -> void:
 	cooldown = maxf(0.0, cooldown - delta)
+	engage_delay = maxf(0.0, engage_delay - delta)
 	_wait -= delta
 	if is_moving() or _wait > 0.0:
 		return

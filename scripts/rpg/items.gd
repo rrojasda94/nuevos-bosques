@@ -3,8 +3,9 @@ extends RefCounted
 ## Catálogo de objetos (data/items/items.json): ofrendas, armas, máscaras y talismanes, con el
 ## tamaño de la bolsa y el equipo y la bolsa de una partida nueva. Cada objeto tiene id, kind
 ## (KIND_*), name, description, stack_max y campos por tipo (ofrenda: luz y source; arma:
-## atk_bonus; máscara y talismán: camouflage, que aún no se usa: llega con el sigilo,
-## sigilo-y-robo.md; fruto: se guarda con su Bosque de origen, FruitRules). Solo lee datos: el inventario está en InventoryLogic.
+## atk_bonus; máscara y talismán: camouflage, y opcionalmente speed_bonus, def_penalty y max_uses,
+## que usa el sigilo, Stealth y sigilo-y-robo.md; fruto: se guarda con su Bosque de origen,
+## FruitRules). Solo lee datos: el inventario está en InventoryLogic.
 
 const CATALOG_PATH: String = "res://data/items/items.json"
 const KIND_OFRENDA: StringName = &"ofrenda"
@@ -70,6 +71,26 @@ static func luz_of(id: StringName) -> int:
 ## ATQ que suma un arma equipada (0 si no lo es).
 static func atk_bonus(id: StringName) -> int:
 	return int(entry(id).get("atk_bonus", 0))
+
+
+## Casillas que resta a la visión de los Únicos una máscara o un talismán equipado (Stealth).
+static func camouflage(id: StringName) -> int:
+	return int(entry(id).get("camouflage", 0))
+
+
+## Velocidad extra al andar (fracción: 0.3 = un 30% más rápido; talismanes de viaje).
+static func speed_bonus(id: StringName) -> float:
+	return float(entry(id).get("speed_bonus", 0.0))
+
+
+## DEF que resta mientras se lleva equipado (0 si nada).
+static func def_penalty(id: StringName) -> int:
+	return int(entry(id).get("def_penalty", 0))
+
+
+## Cruces colados hasta que se rompe (0 = no se rompe).
+static func max_uses(id: StringName) -> int:
+	return int(entry(id).get("max_uses", 0))
 
 
 ## Casillas de la bolsa.

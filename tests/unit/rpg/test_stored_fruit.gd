@@ -65,7 +65,7 @@ func test_fruits_stack_by_origin() -> void:
 	assert_eq(InventoryLogic.count(GameState.bag, Items.FRUIT_ID), 7)
 	assert_eq(InventoryLogic.qty_at(GameState.bag, _fruit_index(HOME)), 5, "un montón de 5 y otro de 1")
 	assert_eq(InventoryLogic.qty_at(GameState.bag, _fruit_index(PAID)), 1, "otro origen, otra casilla")
-	assert_eq(InventoryLogic.free_slots(GameState.bag), 7)
+	assert_eq(InventoryLogic.free_slots(GameState.bag), 4, "12 - 5 objetos de partida nueva - 3 de frutos")
 
 
 func test_full_bag_can_only_eat() -> void:
