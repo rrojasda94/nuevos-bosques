@@ -130,6 +130,11 @@ El letrero y el mapa (M) podrían indicar el estado con texto o color (`navegaci
   - Al aceptar, el Bosque que llama no cobra peaje y se marca una **ruta por Bosques buenos** (estado sano o en necesidad de ayuda, o relación ≥ 30) hasta él. No tiene por qué ser la ruta más corta.
   - Mientras la misión siga activa, esos Bosques no cobran peaje.
   - Termina al completar o fallar la misión.
+- **Implementado** (PR 8 de la 0.3, valores provisionales en `balance.json`, bloques `sleep` y `far_quests`):
+  - Dormir con E en un refugio, la plaza de una villa o junto a su Nujio (`SleepRules`). De noche, hasta el riutash del amanecer, gratis y refugiado (en la villa cura del todo); de día, hasta el del atardecer por 1 de Luz cada 2 minutos (máximo 4), desactivado sin Luz. El Ofomni descarriado avanza lo saltado; los pagos caducan con el riutash; los cazadores no aparecen. Antes de dormir con la misión del Ofomni activa, se avisa.
+  - Visión de Pensamiento con probabilidad 1/2 por seed y día (una por día), si hay menos de 2 misiones lejanas activas: un Bosque a 3 saltos o más que necesita ayuda (apagar el incendio de su chunk central o vencer a su grupo de reparep) o corrupto (vencer a sus reparep: "su Nujio te llama"). Se acepta o no ("Acudir" / "Dejarlo pasar").
+  - Salvoconducto (`FarQuests`): el Bosque que llama y los de la ruta no cobran peaje y sus Botarramas dejan pasar como pagado, salvo con el arma en la mano. Ruta: la de menos saltos que solo pasa por Bosques buenos (sanos, que necesitan ayuda o con relación ≥ 30; nunca enojados). Se recalcula al salir de ella o si uno de sus Bosques deja de ser bueno. Sin ruta buena, solo el Bosque que llama.
+  - Completar: relación +25, fama +1 y 3 de Luz. Falla si el Bosque que llama se enoja o muere. Sin límite de tiempo (pendiente #106 / #136: duración del salvoconducto).
 
 ## Fruto
 - **Regla del dueño**: los Bosques **sanos** y los **en necesidad de ayuda** dan fruto. Glosario §3: el fruto es "solo alimento [...] contiene lo necesario para mantener vivo y sano a un ser".

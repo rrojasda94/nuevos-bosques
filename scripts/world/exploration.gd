@@ -31,6 +31,10 @@ extends Node2D
 ## y su encuentro es un combate contra todos. Otros adoc (AdocEncounters): en algunos Bosques hay un
 ## adoc a punto de pelear; con E, "Ayudar" (combate con él como aliado; si se gana, relación y fama)
 ## o "Seguir tu camino".
+## Dormir (SleepRules, bosques-y-relacion.md): con E en un refugio, en la plaza de una villa o junto a
+## su Nujio, "Dormir" salta hasta el próximo riutash (pasado refugiado): de noche, gratis y con
+## posible visión de Pensamiento (FarQuestRunner: misión lejana con salvoconducto); de día, cuesta
+## Luz. El Ofomni descarriado avanza lo saltado y los cazadores no aparecen mientras duermes.
 
 const TILE_SIZE: int = 16
 ## Duración del fundido al cambiar de chunk.
@@ -88,6 +92,8 @@ var _pending_encounter: Dictionary = {}
 @onready var _npc_layer: Node2D = $Npcs
 @onready var _field: MonsterField = $Monsters
 @onready var _quest: QuestRunner = $QuestRunner
+@onready var _far: FarQuestRunner = $FarQuestRunner
+@onready var _sleep_screen: SleepScreen = $SleepScreen
 @onready var _region_map: Node = $RegionMap
 @onready var _dialogue: DialogueBox = $Dialogue/DialogueBox
 @onready var _player: PlayerWalker = $Player
@@ -120,6 +126,7 @@ func _ready() -> void:
 	EventBus.item_unequipped.connect(_on_equipment_changed)
 	_quest.setup(_dialogue, _region_map)
 	_quest.ofomni_changed.connect(_sync_ofomni)
+	_far.setup(_dialogue)
 	_setup_riutash()
 
 
@@ -140,6 +147,7 @@ func start() -> void:
 	_entry_notices.clear()
 	_player.step_time = Stealth.step_time(PlayerWalker.STEP_TIME)
 	_quest.start(_bosques, _home_bosque, _get_chunk(_bosques.nujio_chunk[_home_bosque]))
+	_far.start(_bosques, _home_bosque, _get_chunk)
 	var coord: Vector2i = GameState.chunk_coord
 	if not AdventureRules.is_passable(_bosques.bosque_at(coord), _home_bosque):
 		_enter_home_villa()
@@ -559,25 +567,48 @@ func _interact() -> void:
 		Interaction.Kind.SIGN:
 			_dialogue.show_lines([_sign_line(target.cell)])
 		Interaction.Kind.REFUGE:
-			_dialogue.show_lines(_refuge_lines())
+			_interact_refuge(target.cell)
 		Interaction.Kind.FRUIT_TREE:
 			_interact_fruit_tree(target.cell)
 		Interaction.Kind.NUJIO:
 			_interact_nujio()
+		Interaction.Kind.REST:
+			_ask_sleep(_player.cell, Texts.get_text("rest_prompt"))
 
 
 ## Nujio (bosques-y-relacion.md): "Dejar una ofrenda" abre un submenú con las ofrendas de la bolsa
-## (una opción por tipo). Sin ofrendas, solo lo dice.
+## (una opción por tipo). Sin ofrendas, solo lo dice. Junto al Nujio de una villa, también "Dormir".
 func _interact_nujio() -> void:
-	if AdventureRules.bag_ofrenda_ids().is_empty():
+	var can_sleep: bool = SleepRules.can_sleep_at(_chunk, _player.cell)
+	var has_ofrendas: bool = not AdventureRules.bag_ofrenda_ids().is_empty()
+	if not has_ofrendas and not can_sleep:
 		_dialogue.show_lines([Texts.get_text("nujio_no_ofrendas")])
 		return
-	_dialogue.choice.connect(_on_nujio_choice, CONNECT_ONE_SHOT)
-	_dialogue.ask(Texts.get_text("nujio_prompt"), [Texts.get_text("nujio_leave_ofrenda"), Texts.get_text("nujio_back")])
+	var actions: Array[StringName] = []
+	if has_ofrendas:
+		actions.append(&"ofrenda")
+	if can_sleep:
+		actions.append(&"sleep")
+	actions.append(&"back")
+	var options: Array = actions.map(func(a: StringName) -> String:
+		match a:
+			&"ofrenda":
+				return Texts.get_text("nujio_leave_ofrenda")
+			&"sleep":
+				return Texts.get_text("sleep_option")
+		return Texts.get_text("nujio_back"))
+	_dialogue.choice.connect(_on_nujio_choice.bind(actions), CONNECT_ONE_SHOT)
+	var prompt: String = Texts.get_text("nujio_prompt" if has_ofrendas else "nujio_no_ofrendas")
+	_dialogue.ask(prompt, options)
 
 
-func _on_nujio_choice(index: int) -> void:
-	if index != 0:
+func _on_nujio_choice(index: int, actions: Array[StringName]) -> void:
+	if index < 0 or index >= actions.size():
+		return
+	if actions[index] == &"sleep":
+		_ask_sleep(_player.cell, Texts.get_text("rest_prompt"))
+		return
+	if actions[index] != &"ofrenda":
 		return
 	var ids: Array[StringName] = AdventureRules.bag_ofrenda_ids()
 	var options: Array = ids.map(func(id: StringName) -> String: return AdventureRules.nujio_ofrenda_option(id))
@@ -637,6 +668,24 @@ func _take_fruit(cell: Vector2i, store: bool) -> void:
 		if _chase.is_active():
 			lines.append(Texts.get_text("ofomni_chase_alert"))
 	_dialogue.show_lines(lines)
+
+
+## Refugio: "Dormir" (SleepRules), "Registrar el refugio" (hallazgos, _refuge_lines) o "Volver".
+func _interact_refuge(cell: Vector2i) -> void:
+	var actions: Array[StringName] = [&"sleep", &"search", &"back"]
+	var options: Array = [Texts.get_text("sleep_option"), Texts.get_text("refuge_search_option"), Texts.get_text("refuge_back_option")]
+	_dialogue.choice.connect(_on_refuge_choice.bind(cell, actions), CONNECT_ONE_SHOT)
+	_dialogue.ask(Texts.get_text("refuge_prompt"), options)
+
+
+func _on_refuge_choice(index: int, cell: Vector2i, actions: Array[StringName]) -> void:
+	if index < 0 or index >= actions.size():
+		return
+	match actions[index]:
+		&"sleep":
+			_ask_sleep(cell, Texts.get_text("refuge_prompt"))
+		&"search":
+			_dialogue.show_lines(_refuge_lines())
 
 
 ## Refugio (ofrendas-v1.md): si guarda una ofrenda se recoge una vez; después, "No queda nada".
@@ -1024,6 +1073,77 @@ func _unhandled_input(event: InputEvent) -> void:
 		picker.randomize()
 		GameState.new_game(picker.randi_range(1, 999_999_999), GameState.region_id)
 		start()
+
+
+# --- Dormir (SleepRules) y Pensamiento (FarQuestRunner) ---------------------------------------
+
+## Pregunta si dormir en `cell` (un refugio, la plaza o junto al Nujio de una villa). `place`: la
+## línea del lugar. De noche, hasta el amanecer y gratis; de día, "Gietos detesta el descanso" y el
+## coste en Luz (la opción se desactiva si no llega). Con la misión del Ofomni activa, lo avisa.
+func _ask_sleep(cell: Vector2i, place: String) -> void:
+	if not SleepRules.can_sleep_at(_chunk, cell):
+		return
+	var lines: PackedStringArray = [place]
+	var confirm: String = Texts.get_text("sleep_confirm")
+	if SleepRules.is_night():
+		lines.append(Texts.get_text("sleep_prompt_night"))
+	else:
+		var cost: int = SleepRules.cost_now()
+		lines = [Texts.get_text("sleep_prompt_day") % cost]
+		confirm = Texts.get_text("sleep_confirm_day") % cost
+		if not SleepRules.can_afford():
+			lines.append(Texts.get_text("sleep_no_luz") % GameState.luz)
+	if _quest.is_ofomni_active():
+		lines.append(Texts.get_text("sleep_ofomni_warning"))
+	_dialogue.choice.connect(_on_sleep_choice.bind(cell), CONNECT_ONE_SHOT)
+	_dialogue.ask("
+".join(lines), [confirm, Texts.get_text("sleep_cancel")], [SleepRules.can_afford(), true])
+
+
+func _on_sleep_choice(index: int, cell: Vector2i) -> void:
+	if index != 0 or not SleepRules.can_afford():
+		return
+	# Se duerme encima del refugio (si se le hablaba desde delante): ahí pasa el riutash a cubierto.
+	if cell != _player.cell:
+		_player.place_at(cell)
+		GameState.player_cell = cell
+	_sleep_screen.blacked_out.connect(_on_sleep_blacked_out, CONNECT_ONE_SHOT)
+	_sleep_screen.play(Texts.get_text("sleep_fade_night" if SleepRules.is_night() else "sleep_fade_day"))
+
+
+func _on_sleep_blacked_out() -> void:
+	var slept: Dictionary = sleep_now()
+	if slept.is_empty():
+		_sleep_screen.wake("")
+		return
+	var vision: Dictionary = slept.vision
+	if vision.is_empty():
+		_sleep_screen.wake(slept.wake_text)
+		return
+	_sleep_screen.finished.connect(_far.offer.bind(vision), CONNECT_ONE_SHOT)
+	_sleep_screen.show_vision(_far.vision_text(vision), slept.wake_text)
+
+
+## Duerme ya, sin pantalla (la pantalla la pone _on_sleep_blacked_out; los tests lo llaman
+## directamente): el Ofomni avanza lo saltado, el reloj pasa el riutash refugiado (cura y caducan
+## los pagos), en una villa los PV quedan al máximo y, de noche, puede haber visión. Los cazadores
+## no aparecen mientras tanto (su reloj solo corre explorando). Devuelve lo de SleepRules.sleep más
+## "vision" ({} si no hay) y "wake_text", o {} si no se puede dormir aquí o no llega la Luz.
+func sleep_now() -> Dictionary:
+	if _chunk == null or not SleepRules.can_sleep_at(_chunk, _player.cell):
+		return {}
+	var in_villa: bool = AdventureRules.is_villa_rest(_chunk, _player.cell)
+	var slept: Dictionary = SleepRules.sleep(in_villa, _quest.advance_time)
+	if slept.is_empty():
+		return {}
+	slept.vision = {}
+	if bool(slept.night):
+		slept.vision = _far.vision_after_sleep(int(slept.day), _bosques.bosque_at(_chunk.coord))
+		slept.wake_text = Texts.get_text("sleep_woke_villa" if in_villa else "sleep_woke_night")
+	else:
+		slept.wake_text = Texts.get_text("sleep_woke_day_villa" if in_villa else "sleep_woke_day") % int(slept.cost)
+	_resting = in_villa
+	return slept
 
 
 # --- Reloj y riutash (ADR 0012) -------------------------------------------------------------

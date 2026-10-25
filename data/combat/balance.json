@@ -187,6 +187,24 @@
     "relation_reward": 5,
     "fama_reward": 1
   },
+  "sleep": {
+    "$comment": "Dormir (bosques-y-relacion.md, 'Dormir y Pensamiento'; dueño: 'solo se debe dormir de noche, dormir de dia consume Luz. Gietos detesta el descanso.'). Se duerme con E en un refugio, en la plaza de una villa o junto a su Nujio. De noche se salta hasta el riutash del amanecer (gratis, pasado refugiado); de día, hasta el del atardecer y cuesta 1 de Luz suelta por cada day_seconds_per_luz segundos de reloj saltados (redondeo hacia arriba), como mucho day_luz_max; sin Luz suficiente no se puede. vision_chance: probabilidad de una visión de Pensamiento al dormir de noche (determinista por seed y día). Provisionales: game-designer.",
+    "day_seconds_per_luz": 120,
+    "day_luz_max": 4,
+    "vision_chance": 0.5
+  },
+  "far_quests": {
+    "$comment": "Misiones lejanas y salvoconducto (bosques-y-relacion.md, #136). Una visión de Pensamiento muestra un Bosque a min_hops saltos o más del Bosque donde duermes que pide ayuda: uno que necesita ayuda (apagar el incendio de su chunk central o vencer a su grupo de reparep) o uno corrupto cuyo Nujio te llama (vencer a su grupo de reparep). Tipos por estado en types_by_state. Como mucho max_active a la vez. Salvoconducto: mientras la misión está activa, el Bosque que llama y los de la ruta no cobran peaje y sus Botarramas dejan pasar como si estuvieran pagados (salvo con el arma en la mano). La ruta solo pasa por Bosques buenos: sanos, que necesitan ayuda o con relación >= good_relation (nunca enojados). Al completarla: relación + bosque_relation.per_mission con ese Bosque y la recompensa (fama y Luz suelta). Provisionales: game-designer.",
+    "min_hops": 3,
+    "max_active": 2,
+    "good_relation": 30,
+    "good_states": ["sano", "necesita_ayuda"],
+    "types_by_state": {
+      "necesita_ayuda": ["fire", "reparep"],
+      "corrupto": ["reparep"]
+    },
+    "reward": { "fama": 1, "luz": 3 }
+  },
   "monsters": {
     "$comment": "Monstruos del mundo (monstruos.md, mision-ofomni.md), una entrada por id. Genéricos: vision_radius (casillas, Chebyshev: a qué distancia te ve), step_time (s por casilla: su velocidad) y engage_distance (casillas, Chebyshev: a qué distancia empieza el encuentro; 1 = adyacente, con diagonal). Reposo: idle_wander (casillas de ida y vuelta) e idle_step_time. leash: casillas máximas desde su puesto, y distancia del jugador a la que deja de perseguir. max_outside: casillas que puede salir de su chunk. engage_cooldown: segundos sin ver al jugador tras retroceder o huir (y al aparecer). retreat_cells: casillas que retrocede el jugador. stats: bloque de fórmulas según d. fatal_at: Momentos en que perder es game over. special_every y special_factor: ataque especial cada N ataques con multiplicador de daño (0 = sin especial). appeasable: acepta Luz u ofrendas para irse (por defecto true). hp_factor: multiplica sus PV (por defecto 1). texts: claves de data/text/sistema.json para narrar sus ataques (attack, warning, special, special_defended; en un grupo, group para el ataque conjunto y plural para nombrar al grupo, y attack lleva el nombre de quien ataca) y para explicar por qué no acepta pagos (offer_luz_blocked, ofrenda_blocked).",
     "botarramas": {

@@ -22,9 +22,11 @@ extends Node
 ## (sigilo-y-robo.md): Bosques colados (sneaked_bosques), segundos de camuflaje roto
 ## (stealth_exposed) y usos de los objetos que se rompen (item_uses); al migrar, nada colado, el
 ## camuflaje intacto y ningún uso gastado. v16: combate en grupo (otros-adoc.md): encuentros con otros
-## adoc ya resueltos (adoc_encounters); al migrar, ninguno. Las versiones anteriores se cargan con
-## valores por defecto.
-const SAVE_VERSION: int = 16
+## adoc ya resueltos (adoc_encounters); al migrar, ninguno. v17: dormir y Pensamiento
+## (bosques-y-relacion.md, #136): misiones lejanas con su ruta de salvoconducto (far_quests) y día
+## de la última visión (last_vision_day); al migrar, ninguna misión lejana y ninguna visión. Las
+## versiones anteriores se cargan con valores por defecto.
+const SAVE_VERSION: int = 17
 ## Migración a v9: el Ofomni de la misión pasó de "ofomni" a "ofomni_descarriado" (y su etiqueta
 ## de brújula, de "Ofomni" a "Ofomni descarriado").
 const LEGACY_OFOMNI_ID: String = "ofomni"
@@ -130,6 +132,11 @@ var defeated_monsters: Array[String] = []
 ## Encuentros con otros adoc ya resueltos (AdocEncounters): { "adoc:<id del Bosque>": "helped" |
 ## "retired" | "passed" }. No vuelven a aparecer.
 var adoc_encounters: Dictionary = {}
+## Misiones lejanas (FarQuests, visiones de Pensamiento): [{ "state", "type", "bosque",
+## "target_chunk": [x, y], "route": [ids], "day" }]. Las activas dan salvoconducto.
+var far_quests: Array[Dictionary] = []
+## Día de la última visión de Pensamiento (0 = ninguna).
+var last_vision_day: int = 0
 ## Frutales sin fruto hasta el próximo riutash (FruitRules): Vector4i(chunk x, chunk y, casilla x,
 ## casilla y).
 var emptied_fruit_trees: Array[Vector4i] = []
@@ -184,6 +191,8 @@ func new_game(new_seed: int = 0, new_region: StringName = &"valle_del_sara") -> 
 	emptied_fruit_trees = []
 	fruit_taken = {}
 	adoc_encounters = {}
+	far_quests = []
+	last_vision_day = 0
 
 
 func to_dict() -> Dictionary:
@@ -234,6 +243,8 @@ func to_dict() -> Dictionary:
 		"emptied_fruit_trees": emptied_fruit_trees.map(func(k: Vector4i) -> Array: return [k.x, k.y, k.z, k.w]),
 		"fruit_taken": fruit_taken,
 		"adoc_encounters": adoc_encounters,
+		"far_quests": far_quests,
+		"last_vision_day": last_vision_day,
 	}
 
 
@@ -322,6 +333,15 @@ func from_dict(data: Dictionary) -> void:
 	if encounters is Dictionary:
 		for key: Variant in encounters:
 			adoc_encounters[str(key)] = str(encounters[key])
+	# v16 o anterior: ninguna misión lejana ni visión de Pensamiento.
+	far_quests = []
+	var saved_far: Variant = data.get("far_quests", [])
+	if saved_far is Array:
+		for raw: Variant in saved_far:
+			var fq: Dictionary = FarQuests.sanitize(raw)
+			if not fq.is_empty():
+				far_quests.append(fq)
+	last_vision_day = maxi(0, int(data.get("last_vision_day", 0)))
 	item_uses = {}
 	var uses: Variant = data.get("item_uses", {})
 	if uses is Dictionary:

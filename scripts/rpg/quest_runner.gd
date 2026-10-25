@@ -52,11 +52,22 @@ func ofomni_chunk() -> Vector2i:
 
 
 func _process(delta: float) -> void:
+	advance_time(delta)
+
+
+## La misión está activa: el Ofomni descarriado avanza con el reloj (también mientras duermes).
+func is_ofomni_active() -> bool:
+	return QuestLogic.state_of(quest()) == QuestLogic.ACTIVE
+
+
+## Avanza al Ofomni `seconds` segundos de reloj: cada frame y, de golpe, al dormir (SleepRules).
+## Si llega a la villa natal, la misión falla y la villa queda dañada.
+func advance_time(seconds: float) -> void:
 	var q: Dictionary = quest()
 	if _bosques == null or QuestLogic.state_of(q) != QuestLogic.ACTIVE:
 		return
 	var every: float = float(QuestLogic.data(QUEST).ofomni.advance_seconds)
-	var moves: int = QuestLogic.advance(q, delta, _bosques, GameState.seed_value, _home, every)
+	var moves: int = QuestLogic.advance(q, seconds, _bosques, GameState.seed_value, _home, every)
 	QuestLogic.commit(QUEST, q, QuestLogic.ACTIVE)
 	if QuestLogic.state_of(q) == QuestLogic.FAILED:
 		AdventureRules.damage_villa(float(QuestLogic.data(QUEST).ofomni.failed_luz_factor))
