@@ -60,6 +60,16 @@ Decisión del coordinador (delegada por el dueño), con un ajuste de `game-desig
 ### Automático por nivel (desde el nivel 2)
 - **+3 PV máx.**
 - **+1 ATQ** en los niveles impares (3, 5, 7, 9) y **+1 DEF** en los pares (2, 4, 6, 8, 10).
+- **Agilidad (AGI)**: 5 + ⌊nivel/2⌋, es decir, +1 en los niveles pares. Es **solo automática** (dueño, #174: "la agilidad se sube automaticamente con el nivel como la fuerza y otras mas"). Se usa en el orden de turnos (`ia-de-combate.md`).
+
+**Resumen de qué sube solo y qué recibe puntos**:
+| Stat | Automático por nivel | Con puntos |
+|---|---|---|
+| PV máx. | +3 | Vigor: +2 por punto |
+| ATQ | +1 en niveles impares | +1 por 3 puntos |
+| DEF | +1 en niveles pares | +1 por 3 puntos |
+| AGI | +1 en niveles pares | — (no lleva puntos) |
+| Límite de Luz suelta | — | +1 por punto |
 
 ### 3 puntos de stat por nivel, a mano
 | Gasto | Coste | Efecto |

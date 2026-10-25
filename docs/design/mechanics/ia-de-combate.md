@@ -20,7 +20,7 @@ Palabras del dueño (2026-10-25, sobre el grupo garelino): "Aqui deberiamos tene
 Escala desde el combate en grupo que ya existe: **1–4 enemigos** y **0–2 aliados**, y hasta **5 miembros** en el grupo garelino (más el jugador). El combate 1 contra 1 sigue igual: con un solo combatiente por lado, no hay formación.
 
 ## 1. Iniciativa (orden de turnos)
-- Cada combatiente tiene **Agilidad (AGI)**. Propuesta:
+- Cada combatiente tiene **Agilidad (AGI)**. En el adoc **sube automáticamente con el nivel**, sin puntos (dueño, #174: "no, la agilidad se sube automaticamente con el nivel como la fuerza y otras mas"). Valores propuestos:
   - adoc: 5 + ⌊nivel/2⌋;
   - Botarramas: 3 (renquea);
   - Ofomni: 6;
@@ -117,5 +117,5 @@ Una orden de grupo que dura hasta que se cambie. Cambiarla **no gasta turno** (u
 - El dueño siente que hay "formaciones" y que la IA "sabe atacar y defender" (pregunta directa).
 
 ## Preguntas abiertas
-- **#174**: ¿AGI como stat nuevo del adoc (con puntos al subir de nivel) o solo derivada del nivel?
+- ~~**#174**: ¿AGI con puntos o derivada del nivel?~~ Resuelta: automática con el nivel (5 + ⌊nivel/2⌋), sin puntos.
 - ¿Los Botarramas y el Ofomni usan filas cuando vienen acompañados? (Por ahora pelean solos.)
