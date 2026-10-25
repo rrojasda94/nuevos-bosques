@@ -31,6 +31,9 @@ El "juego enorme de enanos" es **probablemente Dwarf Fortress, a confirmar**.
 | **Garelino** | Comanda un grupo de fanáticos (garelinos) que buscan destruir los bosques dominados por un Nujio. Puede mejorar sus tropas, aprender habilidades y estrategias para acelerar la decadencia, y reclutar nuevos individuos. Se enfrenta a los Humores del mundo, a los Únicos que envía el bosque y a la resistencia de la población de la villa. | Eliminar al Nujio y sembrar las primeras semillas de los Nuevos Bosques. | Quedarse sin individuos. |
 | **Aventura** | Crea un personaje que viaja de lugar en lugar según las misiones que aparezcan (misiones para derrotar Únicos; las villas suelen llamar al adoc para combatirlos). Sube experiencia, aprende habilidades, gana objetos y fama. | Por definir ("debe ganar"; ver #31). Es un survival (nota de abajo). | La muerte del personaje es game over **si el monstruo es fatal** (nota "Derrota en Aventura"). |
 
+### Nota: Garelino dentro de Aventura (ADR 0015, 2026-10-25)
+El modo **Garelino** deja de ser solo un modo aparte: pasa a ser un **camino dentro de Aventura**, al que el adoc llega según su Senda y un encuentro de historia con los garelinos (ADR 0015, `docs/design/mechanics/dos-caminos.md`). El modo suelto queda, para más adelante, como "empezar ya en el bando garelino".
+
 ### Nota: derrota en Aventura (2026-10-23)
 Respuesta del dueño a la #126 ("si fallar un encargo no acaba la partida, ¿cuál es la misión de la partida en Aventura?"):
 

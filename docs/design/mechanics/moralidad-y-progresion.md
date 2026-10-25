@@ -124,6 +124,14 @@ Builds de nivel 3 (2 subidas = 6 puntos):
 
 - Los puntos de skill que no se pueden gastar (Senda neutral) se guardan.
 
+## Bandos (0.5 "Dos caminos", ADR 0015)
+- La Senda alimenta el **estado de bando** (`dos-caminos.md`):
+  - **fiel**;
+  - **en duda**: Senda ≤ −40;
+  - **garelino**: tras el encuentro de historia con los garelinos.
+- La rama **Sombra** encaja con el camino **garelino** (sigilo, poder, recursos) y la rama **Confianza** con el camino **fiel** (favores, aliados del Bosque).
+- Propuesta: **S4 Imponerse** sirve también para la vía de **fuerza** de la persuasión, e **intimidar** a una villa no cuesta Senda extra si se tiene S4. **C2 Rostro conocido** mejora la **contrapersuasión** del adoc fiel (diálogo: −20 en vez de −15).
+
 ## Conexión con lo que ya existe
 - **Hostilidad y relación** (por Bosque, ADR 0013): la Senda es global y las modifica.
 - **Fama**: no depende de la Senda.

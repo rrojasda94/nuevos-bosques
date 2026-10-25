@@ -30,6 +30,12 @@ Palabras del dueño (2026-10-24): "encontrarte con otros adoc, ayudarles a lucha
 - La skill de Confianza **C2 "Rostro conocido"** sube ese umbral a **≥ 100**: los adoc de afinidad dudosa aceptan.
 - El jugador no ve el número; el adoc lo dice en su diálogo (textos de `narrative-writer`).
 
+### Si el jugador es garelino (0.5 "Dos caminos", `dos-caminos.md`)
+- Los otros adoc **siguen sin hacer daño** (dueño: "No hacen daño").
+- **No quieren trabajar contigo**: la diferencia de Senda supera la afinidad casi siempre. Rechazan tu ayuda y no comparten encargos.
+- **Defienden villas de tu persuasión**: de vez en cuando, un adoc NPC visita una villa que estás convenciendo y le baja la convicción (−15).
+- Si te redimes (`dos-caminos.md`, "Redención"), la afinidad vuelve a contar con tu nueva Senda.
+
 ### Dónde aparecen
 - **En las villas**: según la lista de oficiantes (`npcs-y-villas.md`, Adoc 30%). En la villa natal están "en otras misiones" al empezar (`mision-ofomni.md`) y vuelven tras completar la misión del Ofomni (propuesta).
 - **En el mundo** (evento): un adoc NPC **luchando contra un Único o un grupo de reparep** cerca de un camino.

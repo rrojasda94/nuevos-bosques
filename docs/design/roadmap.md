@@ -9,7 +9,7 @@
 | 0.2.0 | Primer encargo | Publicada | `CHANGELOG.md` |
 | **0.3** | El Bosque recuerda | En curso | [`roadmap-0.3.md`](roadmap-0.3.md) |
 | **0.4** | Mundo 2.0 | Planificada (ADR 0014 aceptado) | [`roadmap-mundo-2.md`](roadmap-mundo-2.md) |
-| **0.5** | Los otros adoc | Planificada (reparto confirmado) | [`roadmap-0.5.md`](roadmap-0.5.md) |
+| **0.5** | Dos caminos (propuesta; antes "Los otros adoc") | Planificada; nombre y orden pendientes del dueño (ADR 0015) | [`roadmap-0.5.md`](roadmap-0.5.md) |
 | 0.6 – 0.9 | Hacia Steam | Por planificar | Este documento ("Después") |
 | 1.0 | Lanzamiento en Steam | — | Este documento ("Después") |
 
@@ -43,7 +43,9 @@ ADR 0014. Se empieza al cerrar la 0.3.
 
 **Qué verá el jugador**: un mundo con relieve (mesetas, riscos, escaleras, cascadas), moverse libre y fluido en 8 direcciones, sin parpadeos al cruzar chunks, villas con nombre y lugares fijos sobre el mapa del dueño, Bosques con árboles grandes, claros, lagunas y caminos que se notan, y mucha más variedad visual. Las partidas de la 0.3 no se pueden continuar.
 
-## 0.5 "Los otros adoc"
+## 0.5 "Dos caminos" (propuesta, ADR 0015)
+> Propuesta: la 0.5 combina "Los otros adoc" con el **camino garelino dentro de Aventura**: Senda y bando, encuentro de historia, grupo, persuasión de villas, siembra de Piedras, redención y finales. Orden propuesto en `roadmap-0.5.md`; los favores de Sarua, los artesanos y el Iserald pasarían a la 0.6. La lista siguiente es la anterior.
+
 **Pasos** (detalle en `roadmap-0.5.md`):
 1. NPC por oficio en las villas, con diálogos.
 2. Senda (violenta, neutral, respetuosa) y puntos de stat y skills (ramas Sombra y Confianza).
