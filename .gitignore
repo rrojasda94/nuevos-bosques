@@ -16,6 +16,8 @@ Thumbs.db
 
 # Builds
 builds/
+# Vistas previas de tools/world/preview_region.sh
+build/
 *.exe
 *.pck
 *.zip
