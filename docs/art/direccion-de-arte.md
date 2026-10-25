@@ -29,18 +29,19 @@ Es lo que más vende la atmósfera y casi todo se resuelve con código, sin dibu
 |---|---|---|
 | Copas y hierba que se mecen | Shader de desplazamiento por píxel entero (sin interpolar) | `engine-architect` + `pixel-artist` |
 | Motas de luz, polen, esporas | Partículas de 1 px con colores de paleta | `pixel-artist` |
-| Niebla baja | Capa de tiles de niebla con tramado (*dithering*), deslizándose lento | `pixel-artist` |
+| Niebla atmosférica | Bruma translúcida de un solo color, con alfa en pocos escalones, deslizándose lento. No debe tapar la visión | `pixel-artist` |
 | Sombras de copas | Capa de sombra animada sobre el suelo | `pixel-artist` |
 | Personajes en reposo | 2-4 fotogramas de respiración, no estatuas | `pixel-artist` |
-| Criaturas etéreas | Flotan con un vaivén seno; parpadeo entre 2-3 tonos del acento | `pixel-artist` |
+| Mitahir | Flotan con un vaivén seno; parpadeo entre 2-3 tonos del acento | `pixel-artist` |
 
 Regla: el movimiento es lento y en saltos de píxel entero. Nada de suavizados ni de giros.
 
-## Criaturas etéreas acompañantes
-Propuesta visual; su función en el juego la decide `game-designer` (posible encaje con los Otros adoc aliados o con la Luz).
-- Pequeñas (8×8 o 16×16), siluetas simples, ojos sin pupila o sin ojos.
-- Hechas casi solo del color de acento; pueden tener píxeles que aparecen y desaparecen.
-- Siguen al jugador con retraso y se dispersan cerca de peligro.
+## Mitahir
+Las criaturas etéreas del bosque son **mitahir** (glosario: espíritus traviesos, Luces creadas por los Hijos). No son acompañantes permanentes. Su función en el juego la decide `game-designer`.
+- **Errante:** a veces aparece uno, sigue al jugador un rato con retraso y luego se desvanece.
+- **Observadores:** si el jugador se queda quieto en un claro, aparecen otros en las copas de los árboles, uno a uno, y le miran. Al moverse, desaparecen.
+- Pequeños (8×8 o menos), siluetas simples; los observadores son solo un par de ojos.
+- Hechos casi solo del color de acento. Aparecen y se desvanecen parpadeando, sin fundidos.
 
 ## Combate estilo FF III (SNES)
 Hoy el combate es estilo Pokémon (monstruo en un cuadro de 96×96 y Adoc de espaldas). La propuesta:
@@ -53,11 +54,11 @@ Hoy el combate es estilo Pokémon (monstruo en un cuadro de 96×96 y Adoc de esp
 > Cambiar la presentación del combate cruza áreas: `game-designer` decide si llega también la barra de tiempo (ATB) de FF; `ui-ux-dev` maqueta la pantalla; se registra en un ADR antes de implementarse.
 
 ## Cambios pendientes en la guía
-- Permitir **niebla y luz como post-proceso** (hoy solo se permite la luz de luna, ADR 0012), o resolver la niebla solo con tramado.
+- **Niebla con transparencia** (aprobada por el dueño el 2026-10-25): excepción de atmósfera, como la luz de luna del ADR 0012. La niebla tramada tapaba demasiado.
 - Añadir tamaños de sprite de batalla y de fondos de batalla.
 
 ## Plan sin presupuesto
 1. Mejorar lo que no cuesta: movimiento sutil y partículas por código sobre los placeholders actuales.
-2. Una escena vertical de muestra: un claro del bosque con niebla, motas, un acompañante y el Adoc. Sirve de prueba de concepto y de captura.
+2. Una escena vertical de muestra: un claro del bosque con niebla, motas, mitahir y el Adoc. Sirve de prueba de concepto y de captura.
 3. Rehacer el combate en vista de perfil con placeholders (tras el ADR).
 4. Con presupuesto: contratar a un artista con este documento como brief y la escena del punto 2 como prueba pagada.
