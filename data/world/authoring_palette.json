@@ -1,0 +1,55 @@
+{
+  "$comment": "Paleta de autoría de regiones (ADR 0014 §4; guía: docs/design/world/autoria.md). Colores exactos #RRGGBB, opacos. Un píxel transparente (alfa 0) = sin pintar: decide el generador. Cualquier otro color o un alfa intermedio es un error (suele ser el suavizado del lápiz). Los colores de bosques.png no van aquí: cada Bosque clave declara el suyo en la columna color de lugares.csv. Estructura: world-gen-dev; los valores se pueden cambiar sin tocar código.",
+  "layers": {
+    "height": {
+      "file": "altura.png",
+      "colors": {
+        "level_0": "#303030",
+        "level_1": "#606060",
+        "level_2": "#909090",
+        "level_3": "#c0c0c0",
+        "peak": "#ffffff"
+      },
+      "names": {
+        "level_0": "nivel 0 (llano)",
+        "level_1": "nivel 1",
+        "level_2": "nivel 2",
+        "level_3": "nivel 3",
+        "peak": "cumbre (infranqueable)"
+      }
+    },
+    "water": {
+      "file": "agua.png",
+      "colors": {
+        "river_navigable": "#1e4fbe",
+        "river_narrow": "#4f8fff",
+        "lake": "#2aa8a8",
+        "sea": "#0e1e6e",
+        "ford": "#a0d8ff"
+      },
+      "names": {
+        "river_navigable": "río navegable",
+        "river_narrow": "río estrecho",
+        "lake": "lago",
+        "sea": "mar",
+        "ford": "vado o paso"
+      }
+    },
+    "roads": {
+      "file": "caminos.png",
+      "colors": {
+        "road": "#c08040",
+        "bridge": "#804020"
+      },
+      "names": {
+        "road": "camino",
+        "bridge": "puente"
+      }
+    },
+    "bosques": {
+      "file": "bosques.png",
+      "colors_from": "lugares.csv"
+    }
+  },
+  "places_file": "lugares.csv"
+}
