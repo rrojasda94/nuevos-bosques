@@ -2,13 +2,14 @@
 
 > Versión por versión: qué se hace y qué verá el jugador. El detalle de los PR está en la hoja de cada versión.
 > Orden fijado por el dueño (2026-10-24): "continúa con lo que tienes pendiente y las dinámicas del juego, luego arreglamos mapa y jugabilidad. crea una lista de pasos a futuro y en qué versión veríamos esos cambios."
+> **Cambio de orden (dueño, 2026-10-25):** el Mundo 2.0 iba a ir antes de cerrar lo que quedaba de la 0.3. Ese mismo día entró el último PR de la 0.3 (dormir, PR #49) y se publicó la 0.3.0 (PR #52), así que la 0.4 empieza ya.
 > Versionado: `MINOR` sube con cada hito jugable (`CONTRIBUTING.md`). La 1.0.0 es la primera versión en Steam.
 
 | Versión | Nombre | Estado | Hoja de ruta |
 |---|---|---|---|
 | 0.2.0 | Primer encargo | Publicada | `CHANGELOG.md` |
-| **0.3** | El Bosque recuerda | En curso | [`roadmap-0.3.md`](roadmap-0.3.md) |
-| **0.4** | Mundo 2.0 | Planificada (ADR 0014 aceptado) | [`roadmap-mundo-2.md`](roadmap-mundo-2.md) |
+| 0.3.0 | El Bosque recuerda | Publicada | [`roadmap-0.3.md`](roadmap-0.3.md) |
+| **0.4** | Mundo 2.0 | **En curso** | [`roadmap-mundo-2.md`](roadmap-mundo-2.md) |
 | **0.5** | Dos caminos (propuesta; antes "Los otros adoc") | Planificada; nombre y orden pendientes del dueño (ADR 0015) | [`roadmap-0.5.md`](roadmap-0.5.md) |
 | 0.6 – 0.9 | Hacia Steam | Por planificar | Este documento ("Después") |
 | 1.0 | Lanzamiento en Steam | — | Este documento ("Después") |
@@ -16,20 +17,15 @@
 ## 0.2.0 "Primer encargo" (publicada)
 Misión del Ofomni, tiempo real con pausa y riutash, caminos, letreros, refugios, mapa y brújula, niveles del adoc, ofrendas y primeros sprites y sonidos.
 
-## 0.3 "El Bosque recuerda" (en curso)
+## 0.3.0 "El Bosque recuerda" (publicada)
 **Hecho**: el Bosque recuerda (vencer o pagar, hostilidad, Ofrecer Luz), frutos, inventario de 12 casillas y 3 ranuras, relación con los Bosques y peaje que caduca, reaparición tras una derrota y tileset con arte real.
 
-**Pasos que quedan, en orden:**
-1. **Únicos en el mundo** (en curso): Ofomni perseguidores, el Bosque envía Únicos, enfrentar a voluntad, más variedad de Únicos y Aledra de noche.
-2. **Estados de Bosque**: sano, enojado, corrupto, muerto y necesita ayuda, con señales visuales y peaje según el estado.
-3. **Sigilo y robo**: máscaras, talismanes y armas; el robo despierta Ofomni que persiguen hasta la frontera.
-4. **Combate en grupo**: reparep y adoc aliados ("Ayudar / Seguir tu camino").
-5. **Dormir, Pensamiento y salvoconducto** para misiones lejanas.
+**Hecho después**: Únicos en el mundo (PR #39), estados de Bosque (PR #41), sigilo y robo (PR #42), combate en grupo (PR #44) y dormir, Pensamiento y salvoconducto (PR #49).
 
 **Qué verá el jugador**: Bosques que se comportan distinto según cómo los trates, Únicos que te buscan por el mundo (y de noche, Aledra), poder colarte sin ser visto o robar con consecuencias, peleas contra grupos con aliados, y dormir para saltar el tiempo y emprender viajes largos.
 
 ## 0.4 "Mundo 2.0"
-ADR 0014. Se empieza al cerrar la 0.3.
+ADR 0014. **En curso** desde el 2026-10-25.
 
 **Pasos** (detalle y paralelismo en `roadmap-mundo-2.md`):
 1. Ficha de diseño y spec de arte del mundo nuevo.
