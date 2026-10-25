@@ -126,7 +126,7 @@ bash tools/world/preview_region.sh valle_del_sara 42
 - Primero **valida** e imprime los errores en español, con las coordenadas en píxeles y el chunk. Ejemplo: `altura.png: color desconocido #2f2f2f en (12, 40) [chunk 0, 2].` Ve a ese píxel y píntalo con un color de la paleta.
 - Después escribe **`build/preview_valle_del_sara_42.png`**: la región a 1 píxel por casilla (960×1280 en el Valle del Sara), con la altura en verdes (más claro = más alto; las cumbres en blanco; a cuadros lo que no has pintado), el agua, los caminos, los Bosques clave con un velo de su color, la rejilla de chunks con sus coordenadas, los lugares con su nombre y los **errores rodeados en rojo**. La leyenda y la lista de lugares salen en la consola.
 - Si no hay errores dice `Autoría válida.`. Si hay errores, la imagen se escribe igual y el script termina con error.
-- El número del final es la **seed**. Hoy todavía no cambia la imagen: cuando llegue la generación de la región (hito M5 del roadmap del Mundo 2.0), la vista previa mostrará también lo que rellena el generador con esa seed.
+- El número del final es la **seed**. La vista previa dibuja encima lo que rellena el generador con esa seed (la pasada de región, `RegionPlan`): los Bosques con su frontera (velo de color; gris los muertos), los caminos de la red procedural (marrón claro), las puertas entre chunks (blanco = sendero, amarillo = camino, cian = abierta para que el Bosque se recorra a pie), los refugios (cuadro granate) y las **aldeas** (rombo naranja con su nombre tentativo). Lo que pintas manda: la altura y el agua pintadas no cambian con la seed, salvo el meandro del agua (±1 px).
 
 Si algo no funciona, Godot tiene que estar instalado (lo busca igual que `tools/test.sh`).
 

@@ -6,8 +6,11 @@ extends SceneTree
 ##    claras; las celdas sin pintar, a cuadros = decide el generador), agua, caminos, Bosques
 ##    clave (velo de su color), rejilla de chunks con sus coordenadas, lugares con su nombre y
 ##    los errores en rojo. La leyenda sale por consola.
-## La seed aún no cambia la imagen: la pasada de región (RegionPlan) llega en M5 y se enchufa en
-## _plan(). Mientras, se dibuja solo lo pintado.
+## 3. Con autoría legible, dibuja encima la pasada de región (RegionPlan, M5) de esa seed: altura
+##    y agua del plan (con lo procedural y el meandro), Bosques (velo del color de hoja; gris los
+##    muertos) con su frontera, caminos de la red procedural (marrón claro), puertas en los bordes
+##    (blanco = sendero, amarillo = camino, cian = abierta por el árbol del Bosque), refugios
+##    (cuadro granate) y aldeas (rombo naranja con su nombre), además de los lugares del CSV.
 ## Sale con 1 si hay errores de autoría (la imagen se escribe igual) y con 2 si no puede escribirla.
 
 const OUT_DIR: String = "res://build/"
@@ -56,17 +59,18 @@ func _initialize() -> void:
 	var region_id: StringName = StringName(args[0]) if args.size() > 0 else &"valle_del_sara"
 	var seed_value: int = args[1].to_int() if args.size() > 1 else 42
 	var authoring := RegionAuthoring.load_region(region_id)
-	var plan: Object = _plan(seed_value, region_id, authoring)
 	print("Región %s, seed %d: %d×%d px de autoría = %d×%d chunks." % [region_id, seed_value,
 			authoring.size_px.x, authoring.size_px.y, authoring.size_chunks().x, authoring.size_chunks().y])
-	if plan == null:
-		print("(La seed aún no cambia nada: la generación de la región llega con RegionPlan, M5. Se dibuja la autoría.)")
 	if authoring.size_px == Vector2i.ZERO:
 		for e: String in authoring.errors:
 			printerr("ERROR: " + e)
 		quit(2)
 		return
-	var img: Image = render(authoring)
+	var plan: RegionPlan = _plan(seed_value, region_id, authoring)
+	print("Pasada de región: %.0f ms; %d Bosques en %d áreas, %d villas con nombre y %d aldeas, %d refugios."
+			% [plan.build_usec / 1000.0, plan.bosques.count(), plan.bosques.area_count,
+			plan.villas().size() - plan.aldeas().size(), plan.aldeas().size(), plan.refuge_chunks().size()])
+	var img: Image = render(authoring, plan)
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(OUT_DIR))
 	# Que el editor no importe las vistas previas.
 	if not FileAccess.file_exists(OUT_DIR + ".gdignore"):
@@ -89,13 +93,139 @@ func _initialize() -> void:
 	quit(1)
 
 
-## M5 enchufa aquí la pasada de región: devolver RegionPlan.build(seed_value, region, authoring) y
-## dibujarlo en render() en vez de (o sobre) la autoría. Hasta entonces, null.
-func _plan(_seed_value: int, _region_id: StringName, _authoring: RegionAuthoring) -> Object:
-	return null
+## Pasada de región de la seed (M5).
+func _plan(seed_value: int, region_id: StringName, authoring: RegionAuthoring) -> RegionPlan:
+	return RegionPlan.build(seed_value, region_id, ChunkGenerator.load_region(region_id), authoring)
 
 
-static func render(a: RegionAuthoring) -> Image:
+## Autoría y, si se pasa, el plan de la seed encima.
+static func render(a: RegionAuthoring, plan: RegionPlan = null) -> Image:
+	if plan != null:
+		return _render_plan(a, plan)
+	return _render_authoring(a)
+
+
+const BOSQUE_BORDER: Color = Color("#141414")
+const PROCEDURAL_ROAD: Color = Color("#e0b070")
+const DOOR_PATH: Color = Color("#f4f4e0")
+const DOOR_ROAD: Color = Color("#ffd23c")
+const DOOR_FORCED: Color = Color("#40e0ff")
+const REFUGE_COLOR: Color = Color("#8a1c2c")
+const ALDEA_COLOR: Color = Color("#ff9f40")
+const DEAD_TINT: Color = Color("#8a8a8a")
+
+
+static func _render_plan(a: RegionAuthoring, plan: RegionPlan) -> Image:
+	var t: int = WorldCoords.MACRO
+	var size: Vector2i = plan.size_macro
+	var img := Image.create_empty(size.x * t, size.y * t, false, Image.FORMAT_RGBA8)
+	var palette: Dictionary = RegionAuthoring.load_palette()
+	var water_keys: Array[String] = RegionAuthoring.layer_keys("water")
+	var road_keys: Array[String] = RegionAuthoring.layer_keys("roads")
+	var map: BosqueMap = plan.bosques
+	var m: int = WorldCoords.MACROS_PER_CHUNK
+	for y: int in size.y:
+		for x: int in size.x:
+			var cell := Vector2i(x, y)
+			var level: int = plan.level_at(cell)
+			var color: Color = HEIGHT_COLORS[level + 1]
+			var b: int = map.bosque_at(WorldCoords.floor_div_v(cell, m))
+			if b >= 0:
+				if map.state_of(b) == BosqueMap.STATE_MUERTO:
+					color = color.lerp(DEAD_TINT, 0.6)
+				else:
+					color = color.lerp((PlaceholderTileset.LEAVES[map.styles[b].leaf] as Array)[1], 0.3)
+			var w: int = plan.water_at(cell)
+			if w != RegionAuthoring.Water.NONE:
+				color = RegionAuthoring.palette_color(palette, "water", water_keys[w])
+			var r: int = plan.road_at(cell)
+			if r != RegionAuthoring.Road.NONE:
+				color = RegionAuthoring.palette_color(palette, "roads", road_keys[r])
+			img.fill_rect(Rect2i(cell * t, Vector2i(t, t)), color)
+			var south: int = plan.level_at(cell + Vector2i.DOWN)
+			if w == RegionAuthoring.Water.NONE and r == RegionAuthoring.Road.NONE and south >= 0 and level > south:
+				img.fill_rect(Rect2i(cell * t + Vector2i(0, t - 1), Vector2i(t, 1)), color.darkened(0.45))
+	_draw_grid(img, a)
+	var chunk_tiles: int = WorldCoords.CHUNK
+	var half := Vector2i(chunk_tiles / 2, chunk_tiles / 2)
+	for cy: int in plan.size_chunks.y:
+		for cx: int in plan.size_chunks.x:
+			var c := Vector2i(cx, cy)
+			var origin: Vector2i = c * chunk_tiles
+			# Frontera de Bosque (3 px) al oeste y al norte.
+			if cx > 0 and map.bosque_at(c + Vector2i.LEFT) != map.bosque_at(c):
+				_fill_clipped(img, Rect2i(origin + Vector2i(-1, 0), Vector2i(3, chunk_tiles)), BOSQUE_BORDER)
+			if cy > 0 and map.bosque_at(c + Vector2i.UP) != map.bosque_at(c):
+				_fill_clipped(img, Rect2i(origin + Vector2i(0, -1), Vector2i(chunk_tiles, 3)), BOSQUE_BORDER)
+			# Caminos de la red procedural: del centro del chunk a la puerta del lado.
+			for side: Vector2i in plan.road_sides(c):
+				var d: Dictionary = plan.door(c, side)
+				if d.is_empty() or _painted_side(plan, c, side):
+					continue
+				_line(img, origin + half, origin + (d.cell as Vector2i), PROCEDURAL_ROAD, 3)
+	for cy: int in plan.size_chunks.y:
+		for cx: int in plan.size_chunks.x:
+			var c := Vector2i(cx, cy)
+			var origin: Vector2i = c * chunk_tiles
+			for side: Vector2i in [Vector2i.LEFT, Vector2i.UP]:
+				var d: Dictionary = plan.door(c, side)
+				if d.is_empty():
+					continue
+				var color: Color = DOOR_ROAD if d.road else (DOOR_FORCED if d.forced else DOOR_PATH)
+				var at: Vector2i = origin + (d.cell as Vector2i)
+				var span: int = maxi(int(d.width), 4)
+				var rect := Rect2i(at + Vector2i(-2, 0), Vector2i(5, span)) if side == Vector2i.LEFT 						else Rect2i(at + Vector2i(0, -2), Vector2i(span, 5))
+				_fill_clipped(img, rect.grow(1), SHADOW_COLOR)
+				_fill_clipped(img, rect, color)
+			if plan.has_refuge(c):
+				var rr := Rect2i(origin + Vector2i(chunk_tiles - 14, chunk_tiles - 14), Vector2i(7, 7))
+				_fill_clipped(img, rr.grow(1), SHADOW_COLOR)
+				_fill_clipped(img, rr, REFUGE_COLOR)
+	for p: Dictionary in a.places:
+		if a.in_map(p.cell):
+			_draw_place(img, p)
+	for v: Dictionary in plan.aldeas():
+		_draw_aldea(img, v)
+	for c: Vector2i in a.error_cells:
+		_outline(img, Rect2i(c * t - Vector2i(4, 4), Vector2i(t + 8, t + 8)), ERROR_COLOR)
+	return img
+
+
+## El lado del chunk lleva camino pintado (ya se ve en la capa de caminos).
+static func _painted_side(plan: RegionPlan, c: Vector2i, side: Vector2i) -> bool:
+	var m: int = WorldCoords.MACROS_PER_CHUNK
+	var d: Dictionary = plan.door(c, side)
+	var k: int = WorldCoords.floor_div(int(d.index), WorldCoords.MACRO)
+	var inside: Vector2i
+	if side.x != 0:
+		inside = Vector2i(c.x * m + (0 if side.x < 0 else m - 1), c.y * m + k)
+	else:
+		inside = Vector2i(c.x * m + k, c.y * m + (0 if side.y < 0 else m - 1))
+	return plan.road_at(inside) != RegionAuthoring.Road.NONE and plan.road_at(inside + side) != RegionAuthoring.Road.NONE
+
+
+## Línea en L (primero en x) de `width` px.
+static func _line(img: Image, from: Vector2i, to: Vector2i, color: Color, width: int) -> void:
+	var lo := Vector2i(mini(from.x, to.x), from.y)
+	_fill_clipped(img, Rect2i(lo - Vector2i(width / 2, width / 2), Vector2i(absi(to.x - from.x) + width, width)), color)
+	var top := Vector2i(to.x, mini(from.y, to.y))
+	_fill_clipped(img, Rect2i(top - Vector2i(width / 2, width / 2), Vector2i(width, absi(to.y - from.y) + width)), color)
+
+
+static func _draw_aldea(img: Image, v: Dictionary) -> void:
+	var t: int = WorldCoords.MACRO
+	var center: Vector2i = (v.macro as Vector2i) * t + Vector2i(t / 2, t / 2)
+	for pass_i: int in 2:
+		var r: int = 6 if pass_i == 0 else 5
+		var color: Color = SHADOW_COLOR if pass_i == 0 else ALDEA_COLOR
+		for dy: int in range(-r, r + 1):
+			var w: int = r - absi(dy)
+			_fill_clipped(img, Rect2i(center + Vector2i(-w, dy), Vector2i(w * 2 + 1, 1)), color)
+	var label: String = "aldea " + String(v.name)
+	_text(img, label, center + Vector2i(-_text_width(label) / 2, 9), ALDEA_COLOR)
+
+
+static func _render_authoring(a: RegionAuthoring) -> Image:
 	var t: int = RegionAuthoring.MACRO_TILES
 	var img := Image.create_empty(a.size_px.x * t, a.size_px.y * t, false, Image.FORMAT_RGBA8)
 	var palette: Dictionary = RegionAuthoring.load_palette()
@@ -212,6 +342,9 @@ static func _blend(img: Image, p: Vector2i, color: Color) -> void:
 static func _print_legend(a: RegionAuthoring) -> void:
 	print("Leyenda: verdes = niveles 0-3 (más claro = más alto), blanco = cumbre, cuadros = sin pintar (decide el generador),")
 	print("  azules = agua, marrón = caminos y puentes, velo de color = Bosque clave, rojo = error.")
+	print("  Plan de la seed: velo = Bosque (gris = muerto), línea oscura = frontera de Bosque, marrón claro = camino")
+	print("  de la red procedural, marcas en los bordes = puertas (blanco sendero, amarillo camino, cian abierta por")
+	print("  el árbol del Bosque), cuadro granate = refugio, rombo naranja = aldea.")
 	print("Lugares (%d):" % a.places.size())
 	for p: Dictionary in a.places:
 		var c: Vector2i = RegionAuthoring.chunk_of(p.cell)
