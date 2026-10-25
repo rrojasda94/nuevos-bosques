@@ -1,7 +1,7 @@
 # Hoja de ruta 0.4 "Mundo 2.0"
 
 > Dueño del plan técnico: `engine-architect`. Decisión: [ADR 0014](../decisions/0014-mundo-2-relieve-movimiento-libre-y-mundo-hibrido.md) (aceptado). Hoja de ruta general: [`roadmap.md`](roadmap.md).
-> **Cuándo**: empieza al cerrar la 0.3 "El Bosque recuerda" (orden del dueño: "continúa con lo que tienes pendiente y las dinámicas del juego, luego arreglamos mapa y jugabilidad"). Después viene la 0.5 "Los otros adoc" ([`roadmap-0.5.md`](roadmap-0.5.md)).
+> **Cuándo**: en curso desde el 2026-10-25. El dueño pidió ese día adelantarla antes de cerrar lo que quedaba de la 0.3; ese mismo día se publicó la 0.3.0, así que no hubo solape. Después viene la 0.5 "Los otros adoc" ([`roadmap-0.5.md`](roadmap-0.5.md)).
 > Un PR = un tema (`CONTRIBUTING.md`). Las estimaciones son días de trabajo de un agente, incluidos los tests y la revisión.
 
 ## Qué verá el jugador en la 0.4
@@ -16,6 +16,25 @@
 
 ## Cómo se mantiene jugable `main`
 El mundo nuevo se construye **con clases nuevas** (`RegionAuthoring`, `RegionPlan`, `ChunkBuilder`, `WorldChunk`, `WorldCache`, `WorldStreamer`, `GridMover`, `PlayerController`) y una escena nueva (`scenes/world/world_view.tscn`), que se prueban con escenas y tests propios. El juego sigue usando `ChunkGenerator` y `exploration.tscn` hasta el **PR M17**, que hace el cambio y borra lo viejo.
+
+## Estado
+Se actualiza en cada PR del Mundo 2.0.
+
+| Hito | Estado |
+|---|---|
+| M0 | Hecho |
+| M1 ficha | Hecho (PR #47) |
+| M2 spec de arte | PR #51. Por validar en M12/M13: 2 claves de flor nuevas y 2 atlas por Bosque (normal y alto) |
+| M3 autoría | Hecho (PR #53). PNG desde el generador actual (seed 15) y 4 villas provisionales en `lugares.csv` que el dueño nombra o borra |
+| M4 `WorldChunk` y `WorldCoords` | Hecho (PR #50). Bench actual: mediana 37 ms, p95 80 ms (64×64, PC del dueño) |
+| M11 `GridMover` | PR #48. Escena `scenes/world/grid_mover_test.tscn` |
+| M5 `RegionPlan` | En curso. Villas procedurales: opción C |
+| M6–M9 (generación, en serie) | Pendiente |
+| M10, M12 | Pendiente |
+| M13–M16 | Pendiente |
+| M17 | Pendiente. Espera la decisión de conservar al adoc |
+| M18 | Pendiente. Espera la decisión de riscos rectos o con esquinas |
+| M19 | Pendiente |
 
 ## Orden de los PR
 | # | PR | Agente | Archivos principales | Depende de | Estim. | Hecho cuando |
@@ -75,5 +94,5 @@ M0 ─┬─────────┤
 
 ## Decisiones del dueño que bloquean
 - **Conservar al adoc** al pasar al Mundo 2.0 (nivel, XP, Luz, inventario, fama) en una partida nueva, o empezar de cero. Bloquea M17.
-- **Villas procedurales** además de las villas con nombre (¿aldeas sin nombre en los Bosques?). Bloquea M5 (lo propone `game-designer` en M1).
+- ~~**Villas procedurales**~~: **decidido** (2026-10-25), opción C: aldeas sin nombre con `procedural_villa_chance` 0,2, nunca junto a una villa con nombre, como mucho 2 por área.
 - **Riscos rectos**: aceptar las caras rectas en tramos cortos (como Zelda) o pedir esquinas interiores y diagonales (+1 PR de arte). Bloquea M18, no M13.
