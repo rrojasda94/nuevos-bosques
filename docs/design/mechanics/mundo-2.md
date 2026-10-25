@@ -145,7 +145,9 @@ El ADR pasa los monstruos a `GridMover` con `speed_px` = 16 / `step_time` y defi
 - `retreat_cells` (2 o 3) se conserva en casillas: al retroceder, el jugador se desplaza `retreat_cells × 16` px en sentido contrario al monstruo, con su `GridMover` (si choca, se queda donde pare).
 - Si `rpg-systems-dev` prefiere no renombrar claves en M15, `speed_px` y `engage_px` pueden calcularse desde las actuales; pero entonces el −6 tiene que vivir en datos (`engage_px_offset: -6` en `monsters`), no en el código.
 
-### 6. Villas procedurales — **PENDIENTE DE DECISIÓN DEL DUEÑO (bloquea M5)**
+### 6. Villas procedurales — **DECIDIDO: opción C** (dueño, 2026-10-25)
+> Decisión del dueño (2026-10-25): "opción C (aldeas sin nombre con procedural_villa_chance 0,2, nunca junto a una villa con nombre, máximo 2 por área)". `procedural_villa_chance` = 0,2 en el JSON de la región (lo aplica M5).
+
 **Contexto**: en la 0.3, **1 de cada 5 Bosques tiene villa** (ADR 0008, decidido por el dueño), con nombre tentativo de `data/text/nombres_villas.json`. El ADR 0014 pone las villas con nombre en `lugares.csv` y deja las demás a un parámetro de región, `procedural_villa_chance`, **por defecto 0** (solo villas con nombre). Hay que elegir.
 
 | | **A. Solo villas con nombre** (`procedural_villa_chance` 0) | **B. Aldeas sin nombre propio en algunos Bosques** (`procedural_villa_chance` 0,2) | **C. Como B, con límites** (0,2 y nunca junto a una villa con nombre) |
@@ -208,11 +210,11 @@ Propuestas, a confirmar con el dueño:
 | 2026-10-24 | "siento el mapa muy plano y la jugabilidad un poco tosca" | Movimiento libre en 8 direcciones con ayuda de esquina (§1); relieve y puntos de interés (§4). |
 | 2026-10-24 | "aumentar un poco el tamaño de los chunks" | Chunk de 80 (ADR 0014); tiempos de viaje revisados (§2) sin cambiar el reloj (§3). |
 | 2026-10-24 | "se ve muy repetitivo y se nota el patrón utilizado en forma de X y fractal"; "los arboles y los elementos decorativos se ven muy repetitivos" | Puntos de interés distintos por chunk, con pesos por latitud y sin repetir hitos entre vecinos (§4). La variedad de árboles y decoración es de `pixel-artist` (M2). |
-| 2026-10-24 | "tener aldeas y lugares bien definidos" | Villas con nombre en el CSV. Aldeas procedurales: pendiente (§6). |
+| 2026-10-24 | "tener aldeas y lugares bien definidos" | Villas con nombre en el CSV. Aldeas procedurales: opción C, decidida el 2026-10-25 (§6). |
 | _playtest M19_ | | |
 
 ## Decisiones a confirmar con el dueño
-- **Villas procedurales** (§6): A, B o C. Bloquea M5. Recomendación: C.
+- ~~**Villas procedurales** (§6)~~: decidido, opción C (2026-10-25).
 - Arrancar a 100/200 px/s y pasar a 120/240 solo si se notan saltos de píxel.
 - No cambiar el reloj del riutash; sostenerlo con la garantía de ≤ 300 casillas a un refugio.
 - Pesos de los puntos de interés por latitud (§4).
