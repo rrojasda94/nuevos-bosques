@@ -21,9 +21,13 @@ const BALANCE_PATH: String = "res://data/combat/balance.json"
 const SALT_BATTLE: int = 21
 const SALT_QUEST_BATTLE: int = 23
 const SALT_REFUGE_LOOT: int = 29
+const SALT_GROUP: int = 31
 const ADOC_ID: StringName = &"adoc"
 ## Valor de GameState.open_until para un paso pagado que no caduca (amistad alta).
 const OPEN_PERMANENT: int = -1
+## Combate en grupo: hasta 4 enemigos y 2 aliados (lo que cabe en la pantalla a 320×180).
+const MAX_ENEMIES: int = 4
+const MAX_ALLIES: int = 2
 
 static var _balance: Dictionary = {}
 
@@ -435,8 +439,8 @@ static func make_unico(d: int, unico_name: String, stats_block: String = "unico"
 	var dc: int = clampi(d, 0, int(u.d_max))
 	return {
 		"name": unico_name,
-		"max_hp": int(u.hp_base) + int(u.hp_per_d) * dc,
-		"atk": int(u.atk_base) + int(u.atk_per_d) * dc,
+		"max_hp": int(u.hp_base) + floori(float(u.hp_per_d) * dc),
+		"atk": int(u.atk_base) + floori(float(u.atk_per_d) * dc),
 		"def": mini(int(u.def_max), int(u.def_base) + floori(float(u.def_per_d) * dc)),
 	}
 
@@ -472,6 +476,47 @@ static func make_monster(monster_id: StringName, d: int) -> Dictionary:
 static func victory_xp(d: int) -> int:
 	var x: Dictionary = balance().xp
 	return int(x.victory_base) + int(x.victory_per_d) * clampi(d, 0, int(balance().unico.d_max))
+
+
+## XP de vencer a un monstruo a distancia d: la suya si sus datos la fijan (xp_base + xp_per_d × d,
+## los reparep), si no la de un Único (victory_xp).
+static func monster_xp(monster_id: StringName, d: int) -> int:
+	var cfg: Dictionary = monster_config(monster_id)
+	if not cfg.has("xp_base"):
+		return victory_xp(d)
+	return int(cfg.xp_base) + int(cfg.get("xp_per_d", 0)) * clampi(d, 0, int(balance().unico.d_max))
+
+
+## Tamaño de un grupo del monstruo (group_min .. group_max de sus datos), por `key` y seed. 1 si no
+## va en grupo.
+static func group_size(monster_id: StringName, seed_value: int, key: String) -> int:
+	var cfg: Dictionary = monster_config(monster_id)
+	var lo: int = int(cfg.get("group_min", 1))
+	var hi: int = maxi(lo, int(cfg.get("group_max", lo)))
+	return lo + ChunkGenerator.hash_ints([seed_value, key.hash(), SALT_GROUP]) % (hi - lo + 1)
+
+
+## El monstruo no es un Único del Bosque (outsider, los reparep): no le importa el peaje en los
+## Bosques sin Nujio o que necesitan ayuda, y allí los Únicos pelean a tu lado contra él.
+static func is_outsider(monster_id: StringName) -> bool:
+	return bool(monster_config(monster_id).get("outsider", false))
+
+
+## Únicos aliados del Bosque en un combate dentro de él contra `monster_id` (bosques-y-relacion.md,
+## "necesita ayuda": "algunos Únicos pelean junto a ti"): BosqueStates.allies_in_battle de su
+## estado, solo contra quien no es un Único suyo (outsider). Stats de ally_monster a la d del Bosque.
+static func bosque_allies(bosque_id: int, monster_id: StringName, d: int) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	if bosque_id < 0 or not is_outsider(monster_id):
+		return out
+	var state: String = bosque_state(bosque_id)
+	var n: int = BosqueStates.allies_in_battle(state)
+	var kind: StringName = StringName(str(BosqueStates.state_config(state).get("ally_monster", "botarramas")))
+	for i: int in n:
+		var u: Dictionary = make_monster(kind, d)
+		out.append({ "name": Texts.get_text("battle_ally_unico_name") % u.name, "max_hp": u.max_hp,
+			"atk": u.atk, "def": u.def, "kind": kind })
+	return out
 
 
 ## Perder es game over si el Momento en que empieza el combate está en `fatal_at` (monstruos.md).
@@ -620,13 +665,32 @@ static func pay_toll_with_ofrenda(bosque_id: int, cost: int, index: int) -> bool
 
 ## Prepara un combate nuevo contra el Botarramas que guarda el Bosque. Cuenta el intento (cambia la
 ## semilla) y el rival empieza siempre con todos sus PV: huir o retroceder no conserva el daño hecho.
-static func start_battle(bosque_id: int, d: int, monster_id: StringName = &"botarramas") -> BattleLogic:
+## Combate en grupo (monstruos.md): `count` enemigos del mismo tipo (numerados si son más de uno;
+## los de joint_attack atacan juntos) y XP por cada uno. Aliados: `allies` (p. ej. un adoc NPC,
+## AdocEncounters) y los Únicos del Bosque si su estado los da (bosque_allies), 2 como mucho.
+static func start_battle(bosque_id: int, d: int, monster_id: StringName = &"botarramas", count: int = 1,
+		allies: Array[Dictionary] = []) -> BattleLogic:
 	var key: String = str(bosque_id)
 	var attempt: int = int(GameState.battle_attempts.get(key, 0))
 	GameState.battle_attempts[key] = attempt + 1
 	var logic := BattleLogic.new(balance(), adoc_combat_stats(), GameState.hp, GameState.luz,
 		make_monster(monster_id, d), battle_seed(GameState.seed_value, bosque_id, attempt))
-	_prepare(logic, monster_config(monster_id), d)
+	var cfg: Dictionary = monster_config(monster_id)
+	count = clampi(count, 1, MAX_ENEMIES)
+	for i: int in count - 1:
+		logic.add_enemy(make_monster(monster_id, d))
+	if count > 1:
+		for i: int in count:
+			logic.enemies[i].name = Texts.get_text("battle_enemy_numbered") % [logic.enemies[i].name, i + 1]
+	logic.joint_attack = bool(cfg.get("joint_attack", false))
+	logic.monster_id = monster_id
+	var all_allies: Array[Dictionary] = allies.duplicate()
+	all_allies.append_array(bosque_allies(bosque_id, monster_id, d))
+	for ally: Dictionary in all_allies.slice(0, MAX_ALLIES):
+		logic.add_ally(ally)
+	_prepare(logic, cfg, d)
+	logic.victory_xp = monster_xp(monster_id, d) * count
+	logic.level_ups = levels_gained(GameState.xp, logic.victory_xp)
 	logic.toll = toll_for(bosque_id, d)
 	# Un Bosque enojado no acepta pagos; uno que no cobra no tiene peaje que ofrecer.
 	logic.accepts_payment = logic.accepts_payment and can_pay_toll(bosque_id)
@@ -669,7 +733,8 @@ static func finish_unico_battle(logic: BattleLogic, bosque_id: int, home: int, o
 			_ofrenda_given(bosque_id, value)
 		else:
 			change_relation(bosque_id, int(_memory().relation_per_payment))
-	elif outcome == &"victory":
+	elif outcome == &"victory" and not is_outsider(logic.monster_id):
+		# Vencer a quien no es un Único del Bosque (los reparep) no ofende al Bosque.
 		unico_defeated(bosque_id, home, offends)
 	EventBus.battle_ended.emit(bosque_id, outcome)
 	return outcome

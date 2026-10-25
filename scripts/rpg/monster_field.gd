@@ -18,6 +18,11 @@ extends Node2D
 ##   pagado.
 ## - ROLE_HUNTER: Único que el Bosque envía mientras estás dentro sin pagar (BosqueHunt).
 ## - ROLE_CAPTOR: Ofomni del Bosque natal que devuelve al Adoc a la villa. Solo se ve.
+## - ROLE_DUEL: rival de otro adoc (AdocEncounters): está a punto de pelear con él y no hace caso al
+##   jugador. Con E se le ayuda.
+## Grupos de reparep (BosquePatrols.reparep_group_of): un solo monstruo con `count` y un icono de
+## varios cangrejos (UnicoArt.group_texture); su encuentro es un combate contra todo el grupo. No son
+## Únicos del Bosque (outsider): en los Bosques muertos o que necesitan ayuda atacan siempre.
 ## Estados de Bosque (BosqueStates): en un Bosque corrupto pagado, un Único que ronda a veces ataca
 ## igual (emboscada, por Momento); en uno muerto, el Único que ronda a veces va por su cuenta y te
 ## sale al paso a pedir Luz (la exploración pregunta; pagarle lo deja satisfecho este Momento); en
@@ -50,6 +55,8 @@ const ROLE_PATROL: StringName = &"patrol"
 const ROLE_CHASER: StringName = &"chaser"
 const ROLE_HUNTER: StringName = &"hunter"
 const ROLE_CAPTOR: StringName = &"captor"
+const ROLE_DUEL: StringName = &"duel"
+const REPAREP: StringName = &"reparep"
 
 ## Tamaño del placeholder procedural en píxeles (sin PNG): Botarramas algo mayor que una casilla;
 ## el Ofomni y Aledra, el doble. Con PNG manda el tamaño del PNG (16x24 y 32x32).
@@ -140,8 +147,9 @@ func sync_patrols() -> void:
 		var id: StringName = p.monster
 		var m: OverworldMonster = _add(id, key, int(p.bosque_id), at, Rect2i(Vector2i.ZERO, Vector2i(ChunkData.SIZE, ChunkData.SIZE)),
 			Vector2i.RIGHT if ChunkGenerator.hash_ints([key.hash()]) % 2 == 0 else Vector2i.DOWN,
-			inner_config(id, ROLE_PATROL), _texture_for(id, _bosques.styles[int(p.bosque_id)], id == OFOMNI), _frames_for(id))
+			inner_config(id, ROLE_PATROL), _texture_for(id, _bosques.styles[int(p.bosque_id)], id == OFOMNI, int(p.get("count", 1))), _frames_for(id))
 		m.role = ROLE_PATROL
+		m.count = int(p.get("count", 1))
 
 
 ## Copia de la configuración de un Botarramas con la visión de la hostilidad de su Bosque. La correa
@@ -243,6 +251,25 @@ func spawn_captors(bosque_id: int, cells: Array[Vector2i], style: Dictionary) ->
 		_spawn_inner(OFOMNI, ROLE_CAPTOR, bosque_id, at, style)
 
 
+## Pone al rival de un encuentro con otro adoc (ROLE_DUEL) en `at`: no persigue ni ataca al jugador.
+func spawn_duel(e: Dictionary, at: Vector2i, style: Dictionary) -> OverworldMonster:
+	var id: StringName = e.enemy
+	var m: OverworldMonster = _add(id, "duel:%s" % e.id, int(e.bosque_id), at, Rect2i(Vector2i.ZERO, Vector2i(ChunkData.SIZE, ChunkData.SIZE)),
+		Vector2i.RIGHT, inner_config(id, ROLE_DUEL), _texture_for(id, style, id == OFOMNI, int(e.count)), _frames_for(id))
+	m.cfg.idle_wander = 0
+	m.role = ROLE_DUEL
+	m.count = int(e.count)
+	m.encounter = e
+	return m
+
+
+## Quita al rival del encuentro con otro adoc (resuelto), sin contarlo como vencido.
+func remove_duel(flash: bool = false) -> void:
+	for m: OverworldMonster in with_role(ROLE_DUEL):
+		_monsters.erase(m)
+		_fade_out(m, flash)
+
+
 func _spawn_inner(monster_id: StringName, role: StringName, bosque_id: int, at: Vector2i, style: Dictionary) -> OverworldMonster:
 	_serial += 1
 	var m: OverworldMonster = _add(monster_id, "%s_%d" % [role, _serial], bosque_id, at,
@@ -304,7 +331,7 @@ func monster_at(c: Vector2i) -> OverworldMonster:
 ## apartan: no cierran el paso.
 func occupied(c: Vector2i) -> bool:
 	for m: OverworldMonster in _monsters:
-		if m.cell == c and can_detect(m):
+		if m.cell == c and (can_detect(m) or m.role == ROLE_DUEL):
 			return true
 	return false
 
@@ -325,13 +352,18 @@ func has_chaser() -> bool:
 ## o el Adoc lleve el arma en la mano (salvo en el natal, y salvo los amistosos).
 func can_detect(m: OverworldMonster) -> bool:
 	match m.role:
-		ROLE_CAPTOR:
+		ROLE_CAPTOR, ROLE_DUEL:
 			return false
 		ROLE_QUEST, ROLE_CHASER:
 			return true
 	if m.bosque_id < 0:
 		return true
 	var state: String = BosqueStates.state_of(m.bosque_id, _bosques)
+	if AdventureRules.is_outsider(m.monster_id) and m.bosque_id != _home:
+		# Los reparep no son del Bosque: donde no hay peaje que pagar (muerto, necesita ayuda), atacan.
+		if BosqueStates.is_free(state):
+			return true
+		return AdventureRules.is_armed_against(m.bosque_id, _home) or not AdventureRules.is_paid(m.bosque_id, _home)
 	if BosqueStates.has_friendly_unicos(state):
 		return false
 	if AdventureRules.is_armed_against(m.bosque_id, _home):
@@ -451,8 +483,14 @@ func _add(id: StringName, monster_key: String, bosque_id: int, at: Vector2i, rec
 
 ## Textura de un monstruo por id, con los colores de su Bosque. `aura`: los Ofomni que sirven a su
 ## Bosque llevan el aura de Luz (UnicoArt.with_aura).
-func _texture_for(monster_id: StringName, style: Dictionary, aura: bool) -> Texture2D:
+## `count`: un grupo de reparep se dibuja como varios cangrejos juntos.
+func _texture_for(monster_id: StringName, style: Dictionary, aura: bool, count: int = 1) -> Texture2D:
 	var kind: UnicoArt.Kind = UnicoArt.kind_for(monster_id)
+	if kind == UnicoArt.Kind.REPAREP:
+		var k: String = "group:%d:%d:%d" % [int(style.get("leaf", 0)), int(style.get("trunk", 0)), count]
+		if not _textures.has(k):
+			_textures[k] = UnicoArt.group_texture(style, count, OFOMNI_PX)
+		return _textures[k]
 	return _texture(kind, style, BOTARRAMAS_PX if kind == UnicoArt.Kind.BOTARRAMAS else OFOMNI_PX, aura)
 
 

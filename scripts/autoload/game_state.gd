@@ -21,13 +21,18 @@ extends Node
 ## enojarse con la relación aún en el umbral pasan a enojados (BosqueStates.make_angry). v15: sigilo
 ## (sigilo-y-robo.md): Bosques colados (sneaked_bosques), segundos de camuflaje roto
 ## (stealth_exposed) y usos de los objetos que se rompen (item_uses); al migrar, nada colado, el
-## camuflaje intacto y ningún uso gastado. Las versiones anteriores se cargan con valores por defecto.
-const SAVE_VERSION: int = 15
+## camuflaje intacto y ningún uso gastado. v16: combate en grupo (otros-adoc.md): encuentros con otros
+## adoc ya resueltos (adoc_encounters); al migrar, ninguno. Las versiones anteriores se cargan con
+## valores por defecto.
+const SAVE_VERSION: int = 16
 ## Migración a v9: el Ofomni de la misión pasó de "ofomni" a "ofomni_descarriado" (y su etiqueta
 ## de brújula, de "Ofomni" a "Ofomni descarriado").
 const LEGACY_OFOMNI_ID: String = "ofomni"
 const LEGACY_OFOMNI_LABEL: String = "Ofomni"
 const QUEST_OFOMNI_ID: String = "ofomni_descarriado"
+## Migración a v11 (bolsa y equipo): las partidas anteriores llevan la lanza equipada. En una
+## partida nueva, desde la 0.3, la lanza empieza guardada en la bolsa (Items.start_bag, dueño).
+const LEGACY_EQUIPPED: Dictionary = { "main_hand": "lanza_de_adoc", "mask": "", "talisman": "" }
 
 var rng := RandomNumberGenerator.new()
 var seed_value: int = 0
@@ -122,6 +127,9 @@ var looted_refuges: Array[Vector2i] = []
 var seen_monsters: Dictionary = {}
 ## Monstruos del mundo vencidos que han vuelto a la Luz del Bosque (no reaparecen en la partida).
 var defeated_monsters: Array[String] = []
+## Encuentros con otros adoc ya resueltos (AdocEncounters): { "adoc:<id del Bosque>": "helped" |
+## "retired" | "passed" }. No vuelven a aparecer.
+var adoc_encounters: Dictionary = {}
 ## Frutales sin fruto hasta el próximo riutash (FruitRules): Vector4i(chunk x, chunk y, casilla x,
 ## casilla y).
 var emptied_fruit_trees: Array[Vector4i] = []
@@ -175,6 +183,7 @@ func new_game(new_seed: int = 0, new_region: StringName = &"valle_del_sara") -> 
 	defeated_monsters = []
 	emptied_fruit_trees = []
 	fruit_taken = {}
+	adoc_encounters = {}
 
 
 func to_dict() -> Dictionary:
@@ -224,6 +233,7 @@ func to_dict() -> Dictionary:
 		"defeated_monsters": defeated_monsters,
 		"emptied_fruit_trees": emptied_fruit_trees.map(func(k: Vector4i) -> Array: return [k.x, k.y, k.z, k.w]),
 		"fruit_taken": fruit_taken,
+		"adoc_encounters": adoc_encounters,
 	}
 
 
@@ -306,6 +316,12 @@ func from_dict(data: Dictionary) -> void:
 			if int(str(key)) >= 0:
 				sneaked_bosques[str(int(str(key)))] = bool(sneaked[key])
 	stealth_exposed = maxf(0.0, float(data.get("stealth_exposed", 0.0)))
+	# v15 o anterior: ningún encuentro con otros adoc resuelto.
+	adoc_encounters = {}
+	var encounters: Variant = data.get("adoc_encounters", {})
+	if encounters is Dictionary:
+		for key: Variant in encounters:
+			adoc_encounters[str(key)] = str(encounters[key])
 	item_uses = {}
 	var uses: Variant = data.get("item_uses", {})
 	if uses is Dictionary:
@@ -396,7 +412,7 @@ func _load_inventory(data: Dictionary) -> void:
 		for item: Variant in items:
 			if item is Dictionary and item.has("id"):
 				InventoryLogic.add(bag, StringName(str(item.id)))
-	equipped = InventoryLogic.sanitize_equipped(Items.start_equipped())
+	equipped = InventoryLogic.sanitize_equipped(LEGACY_EQUIPPED)
 
 
 ## Fija el objetivo de la brújula y del mapa. `label`: texto corto ya traducido ("Ofomni").

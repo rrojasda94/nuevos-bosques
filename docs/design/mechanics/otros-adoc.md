@@ -44,6 +44,15 @@ Palabras del dueño (2026-10-24): "encontrarte con otros adoc, ayudarles a lucha
   - Los enemigos atacan a uno de los dos al azar (50/50).
 - **Seguir tu camino**: tras 2 minutos de reloj, el otro adoc gana o se retira (por seed). Sin efecto para ti salvo la oportunidad perdida.
 
+### Implementado en la 0.3 (PR 7, versión mínima)
+Decisiones de `rpg-systems-dev`, provisionales (`balance.json`, bloque `otros_adoc`; nombres y ropa en `data/npcs/otros_adoc.json`):
+- **Dónde**: 1 de cada 3 Bosques (nunca el natal; por seed), en un chunk de ese Bosque a 8 casillas o más de la plaza. El adoc está quieto junto a su rival, que no hace caso al jugador.
+- **Rival**: un grupo de reparep (2 de cada 3) o un Botarramas. Si el Bosque deja pasar en paz al Adoc (pagado o natal), un Único no pelearía, así que el rival pasa a ser un grupo de reparep.
+- **Con E** (sobre el adoc o su rival): "Ayudar" / "Seguir tu camino". Todos aceptan tu ayuda: la Senda llega en la 0.5.
+- **Aliado**: stats de adoc de nivel 1 a 3 (por seed). No muere: a 0 PV se retira. No hace daño al jugador.
+- **Recompensa al ganar**: relación +5 con ese Bosque y fama +1 (en lugar de la tabla de abajo, que queda para la 0.5), y una línea de agradecimiento.
+- **Una sola vez**: ayudes (ganes, pierdas o huyas) o sigas tu camino, el encuentro queda resuelto y no vuelve (se guarda, v16). Sin el temporizador de 2 minutos de "Seguir tu camino".
+
 ### Qué ganas
 | Resultado | Recompensa (provisional) |
 |---|---|

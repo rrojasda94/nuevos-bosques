@@ -14,6 +14,7 @@ const COORD := Vector2i(6, 13)
 
 func before_each() -> void:
 	GameState.new_game(42)
+	_arm_spear()
 	AdventureRules.open_bosque(PAID)
 
 
@@ -131,3 +132,11 @@ func test_save_keeps_origin_and_mark() -> void:
 	assert_eq(GameState.bag, bag)
 	assert_true(bool(GameState.bag[_fruit_index(PAID)].out), "sigue marcado como sacado")
 	assert_eq(FruitRules.bosque_entered(UNPAID), 0, "no penaliza otra vez tras cargar")
+
+
+## Pone la lanza en la mano (desde la 0.3 una partida nueva la empieza guardada en la bolsa).
+func _arm_spear() -> void:
+	for i in GameState.bag.size():
+		if InventoryLogic.id_at(GameState.bag, i) == &"lanza_de_adoc":
+			AdventureRules.equip_from_bag(i)
+			return

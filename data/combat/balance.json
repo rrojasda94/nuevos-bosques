@@ -41,6 +41,17 @@
     "def_max": 5,
     "d_max": 6
   },
+  "unico_reparep": {
+    "$comment": "Fórmulas de un reparep según d (monstruos.md, propuesta de grupo): PV 6 + 2·d, ATQ 2 + ⌊d/2⌋, DEF 1. Los valores por d se redondean hacia abajo. Provisionales: game-designer.",
+    "hp_base": 6,
+    "hp_per_d": 2,
+    "atk_base": 2,
+    "atk_per_d": 0.5,
+    "def_base": 1,
+    "def_per_d": 0,
+    "def_max": 1,
+    "d_max": 6
+  },
   "attack": {
     "roll_min": -1,
     "roll_max": 2,
@@ -119,7 +130,7 @@
     "kinds": ["botarramas", "ofomni"]
   },
   "bosque_states": {
-    "$comment": "Efectos de los estados de Bosque (bosques-y-relacion.md, #133; el reparto por seed está en el JSON de la región). toll_factor: multiplica el peaje (0 = no cobra: borde abierto, Únicos pasivos y permiso para el fruto). can_pay: false = no se puede pagar (el menú del borde solo ofrece enfrentar o retroceder y sus Únicos no aceptan Luz ni ofrendas). enojado: patrol_factor multiplica los Únicos que rondan; el primer cazador llega a los hunt_first_seconds de entrar y luego cada intervalo × hunt_interval_factor, con max_hunters_bonus cazadores más a la vez; sus Botarramas ven vision_bonus casillas más. Con camuflaje alto o velocidad (bloque stealth), sus cazadores tardan stealth_hunt_factor veces más. corrupto: ambush_chance = probabilidad por Único y por Momento de que te ataque aunque hayas pagado; iserald_risk: avisa al entrar. muerto: patrol_count Únicos que rondan en todo el Bosque; independent_chance = probabilidad por Momento de que ese Único vaya por su cuenta y te pida independent_luz [mín, máx] de Luz (si no pagas, te ataca). necesita_ayuda: friendly_unicos (no persiguen), allies_in_battle (gancho del combate en grupo, PR 7, sin uso aún) y fire: chunk_percent = % de sus chunks con incendio (el central siempre), cells = [mín, máx] casillas de fuego, apagarlo cuesta time_seconds de reloj o luz_cost de Luz y sube la relación bosque_relation.per_defense. Provisionales: game-designer.",
+    "$comment": "Efectos de los estados de Bosque (bosques-y-relacion.md, #133; el reparto por seed está en el JSON de la región). toll_factor: multiplica el peaje (0 = no cobra: borde abierto, Únicos pasivos y permiso para el fruto). can_pay: false = no se puede pagar (el menú del borde solo ofrece enfrentar o retroceder y sus Únicos no aceptan Luz ni ofrendas). enojado: patrol_factor multiplica los Únicos que rondan; el primer cazador llega a los hunt_first_seconds de entrar y luego cada intervalo × hunt_interval_factor, con max_hunters_bonus cazadores más a la vez; sus Botarramas ven vision_bonus casillas más. Con camuflaje alto o velocidad (bloque stealth), sus cazadores tardan stealth_hunt_factor veces más. corrupto: ambush_chance = probabilidad por Único y por Momento de que te ataque aunque hayas pagado; iserald_risk: avisa al entrar. muerto: patrol_count Únicos que rondan en todo el Bosque; independent_chance = probabilidad por Momento de que ese Único vaya por su cuenta y te pida independent_luz [mín, máx] de Luz (si no pagas, te ataca). necesita_ayuda: friendly_unicos (no persiguen), allies_in_battle (Únicos del Bosque que pelean a tu lado en los combates dentro de él contra quien no es un Único suyo, como los reparep; ally_monster: su tipo, con los stats de su bloque a la d del Bosque; no mueren: a 0 PV se retiran) y fire: chunk_percent = % de sus chunks con incendio (el central siempre), cells = [mín, máx] casillas de fuego, apagarlo cuesta time_seconds de reloj o luz_cost de Luz y sube la relación bosque_relation.per_defense. Provisionales: game-designer.",
     "sano": { "toll_factor": 1.0 },
     "enojado": {
       "toll_factor": 1.0,
@@ -137,6 +148,7 @@
       "toll_factor": 0,
       "friendly_unicos": true,
       "allies_in_battle": 1,
+      "ally_monster": "botarramas",
       "fire": { "chunk_percent": 40, "cells": [3, 5], "time_seconds": 30, "luz_cost": 1 }
     }
   },
@@ -157,8 +169,26 @@
     "night_only": ["aledra"],
     "min_hub_distance": 10
   },
+  "reparep_groups": {
+    "$comment": "Grupos de reparep que rondan los Bosques (monstruos.md; #128 abierta, decisión provisional de rpg-systems-dev). Un grupo por Bosque (nunca el natal) de count_min a count_max reparep, en un chunk del Bosque elegido por seed. En los Bosques con estado de always_states están siempre fuera (los corruptos y muertos son peligrosos; los que necesitan ayuda los sufren); en el resto, solo de noche (Riumna) y solo en night_percent de cada 100 Bosques (por seed). Provisionales: game-designer.",
+    "monster": "reparep",
+    "count_min": 2,
+    "count_max": 4,
+    "always_states": ["corrupto", "muerto", "necesita_ayuda"],
+    "night_percent": 50
+  },
+  "otros_adoc": {
+    "$comment": "Otros adoc como aliados (otros-adoc.md, versión mínima de la 0.3). En one_in de cada N Bosques (nunca el natal; por seed) hay un adoc NPC a punto de pelear contra un grupo de reparep o un Único de enemies, en un chunk del Bosque y a min_hub_distance casillas o más de la plaza. Si el Bosque deja pasar al Adoc en paz (pagado o amistoso), su rival es siempre un grupo de reparep. El aliado tiene los stats de adoc de un nivel entre level_min y level_max (por seed), no muere (a 0 PV se retira) y no hace daño al jugador. Ganar con él: relation_reward con ese Bosque y fama_reward de fama. Nombres en data/npcs/otros_adoc.json. Provisionales: game-designer.",
+    "one_in": 3,
+    "level_min": 1,
+    "level_max": 3,
+    "enemies": ["reparep", "reparep", "botarramas"],
+    "min_hub_distance": 8,
+    "relation_reward": 5,
+    "fama_reward": 1
+  },
   "monsters": {
-    "$comment": "Monstruos del mundo (monstruos.md, mision-ofomni.md), una entrada por id. Genéricos: vision_radius (casillas, Chebyshev: a qué distancia te ve), step_time (s por casilla: su velocidad) y engage_distance (casillas, Chebyshev: a qué distancia empieza el encuentro; 1 = adyacente, con diagonal). Reposo: idle_wander (casillas de ida y vuelta) e idle_step_time. leash: casillas máximas desde su puesto, y distancia del jugador a la que deja de perseguir. max_outside: casillas que puede salir de su chunk. engage_cooldown: segundos sin ver al jugador tras retroceder o huir (y al aparecer). retreat_cells: casillas que retrocede el jugador. stats: bloque de fórmulas según d. fatal_at: Momentos en que perder es game over. special_every y special_factor: ataque especial cada N ataques con multiplicador de daño (0 = sin especial). appeasable: acepta Luz u ofrendas para irse (por defecto true). hp_factor: multiplica sus PV (por defecto 1). texts: claves de data/text/sistema.json para narrar sus ataques (attack, warning, special, special_defended) y para explicar por qué no acepta pagos (offer_luz_blocked, ofrenda_blocked).",
+    "$comment": "Monstruos del mundo (monstruos.md, mision-ofomni.md), una entrada por id. Genéricos: vision_radius (casillas, Chebyshev: a qué distancia te ve), step_time (s por casilla: su velocidad) y engage_distance (casillas, Chebyshev: a qué distancia empieza el encuentro; 1 = adyacente, con diagonal). Reposo: idle_wander (casillas de ida y vuelta) e idle_step_time. leash: casillas máximas desde su puesto, y distancia del jugador a la que deja de perseguir. max_outside: casillas que puede salir de su chunk. engage_cooldown: segundos sin ver al jugador tras retroceder o huir (y al aparecer). retreat_cells: casillas que retrocede el jugador. stats: bloque de fórmulas según d. fatal_at: Momentos en que perder es game over. special_every y special_factor: ataque especial cada N ataques con multiplicador de daño (0 = sin especial). appeasable: acepta Luz u ofrendas para irse (por defecto true). hp_factor: multiplica sus PV (por defecto 1). texts: claves de data/text/sistema.json para narrar sus ataques (attack, warning, special, special_defended; en un grupo, group para el ataque conjunto y plural para nombrar al grupo, y attack lleva el nombre de quien ataca) y para explicar por qué no acepta pagos (offer_luz_blocked, ofrenda_blocked).",
     "botarramas": {
       "$comment": "Guardianes de borde. post_depth: casillas desde la puerta del tramo hacia dentro de su Bosque.",
       "name_key": "monster_botarramas",
@@ -229,6 +259,36 @@
         "warning": "ofomni_whips_warning",
         "special": "ofomni_whips_hit",
         "special_defended": "ofomni_whips_defended"
+      }
+    },
+    "reparep": {
+      "$comment": "Reparep (monstruos.md): cangrejos fantasmales que atacan en grupos de group_min a group_max. joint_attack: el grupo ataca junto (suma de los ATQ de los vivos − DEF del objetivo, restada una vez). outsider: no es un Único del Bosque (#128): en los Bosques muertos o que necesitan ayuda ataca siempre, y allí los Únicos del Bosque pelean a tu lado. Apaciguable con el peaje del Bosque (todo el grupo se va); donde no hay peaje (muerto, necesita_ayuda), hay que vencerlo o huir. XP por reparep vencido: xp_base + xp_per_d × d. No fatal. Provisionales: game-designer.",
+      "name_key": "monster_reparep",
+      "stats": "unico_reparep",
+      "appeasable": true,
+      "outsider": true,
+      "joint_attack": true,
+      "group_min": 2,
+      "group_max": 4,
+      "xp_base": 2,
+      "xp_per_d": 1,
+      "vision_radius": 7,
+      "step_time": 0.26,
+      "engage_distance": 1,
+      "idle_wander": 2,
+      "patrol_wander": 5,
+      "idle_step_time": 0.5,
+      "leash": 64,
+      "max_outside": 0,
+      "engage_cooldown": 3.0,
+      "retreat_cells": 2,
+      "fatal_at": [],
+      "special_every": 0,
+      "special_factor": 1.0,
+      "texts": {
+        "attack": "reparep_pinch",
+        "group": "reparep_group_attack",
+        "plural": "monster_reparep_plural"
       }
     },
     "aledra": {

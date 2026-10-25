@@ -13,6 +13,7 @@ const TALISMAN: StringName = &"talisman_de_semillas"
 
 func before_each() -> void:
 	GameState.new_game(42)
+	_arm_spear()
 
 
 func after_all() -> void:
@@ -40,13 +41,15 @@ func test_catalog_has_every_kind() -> void:
 
 
 func test_new_game_bag_and_equipment() -> void:
+	GameState.new_game(42)
 	assert_eq(GameState.bag.size(), 12)
-	assert_eq(InventoryLogic.equipped_in(GameState.equipped, &"main_hand"), LANZA, "la lanza empieza equipada")
+	assert_eq(InventoryLogic.equipped_in(GameState.equipped, &"main_hand"), &"", "la lanza empieza guardada (dueño, 0.3)")
+	assert_eq(InventoryLogic.count(GameState.bag, LANZA), 1, "en la bolsa")
 	assert_eq(InventoryLogic.equipped_in(GameState.equipped, &"mask"), &"")
 	assert_eq(InventoryLogic.count(GameState.bag, MASK), 1, "máscara provisional para probar")
 	assert_eq(InventoryLogic.count(GameState.bag, TALISMAN), 1)
-	assert_eq(InventoryLogic.free_slots(GameState.bag), 7, "3 máscaras y 2 talismanes provisionales para probar")
-	assert_true(AdventureRules.is_armed())
+	assert_eq(InventoryLogic.free_slots(GameState.bag), 6, "la lanza, 3 máscaras y 2 talismanes provisionales para probar")
+	assert_false(AdventureRules.is_armed())
 
 
 func test_add_stacks_up_to_stack_max() -> void:
@@ -272,3 +275,11 @@ func _refuge_with_loot() -> Vector2i:
 			return c
 	fail_test("ningún chunk con hallazgo")
 	return Vector2i.ZERO
+
+
+## Pone la lanza en la mano (desde la 0.3 una partida nueva la empieza guardada en la bolsa).
+func _arm_spear() -> void:
+	for i in GameState.bag.size():
+		if InventoryLogic.id_at(GameState.bag, i) == &"lanza_de_adoc":
+			AdventureRules.equip_from_bag(i)
+			return

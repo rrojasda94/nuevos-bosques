@@ -1,0 +1,11 @@
+{
+  "$comment": "Otros adoc que el Adoc encuentra en el mundo (otros-adoc.md). Estructura: rpg-systems-dev. names: nombres PROVISIONALES (pendientes de narrative-writer). clothes: colores de la ropa de cada adoc NPC (hex de la paleta del proyecto) que sustituyen a los de la túnica del Adoc en su hoja; uno por seed.",
+  "names": ["Tavra", "Oskel", "Lunne", "Dasso", "Mirel", "Ganno", "Isvel", "Ruddo", "Felsa", "Ombra", "Nisso", "Varel"],
+  "clothes": [
+    { "light": "0099db", "dark": "124e89" },
+    { "light": "63c74d", "dark": "265c42" },
+    { "light": "feae34", "dark": "b86f50" },
+    { "light": "c0cbdc", "dark": "5a6988" },
+    { "light": "b55088", "dark": "68386c" }
+  ]
+}

@@ -16,7 +16,7 @@ extends RefCounted
 ## - muerto: sin Nujio y sin peaje; un solo Único que ronda y que, a veces, es "independiente": te
 ##   pide 1–2 de Luz al cruzarte y, si no pagas, te ataca. Sin frutos.
 ## - necesita_ayuda: sin peaje; da fruto; incendios (BosqueFires); sus Únicos son amistosos y no
-##   persiguen. Gancho del combate en grupo (PR 7): allies_in_battle.
+##   persiguen. En combate, allies_in_battle Únicos pelean a tu lado (contra los reparep).
 ## - Un Bosque sano o que necesita ayuda pasa a enojado si la relación cae a angry_candidate_at o
 ##   menos (make_angry; nunca el natal).
 ## Escribe en GameState y avisa con EventBus.bosque_state_changed. Números en
@@ -184,8 +184,8 @@ static func has_friendly_unicos(state: String) -> bool:
 	return bool(state_config(state).get("friendly_unicos", false))
 
 
-## Gancho del combate en grupo (PR 7): Únicos del Bosque que pelean a tu lado ("algunos Únicos
-## pelean junto a ti"). Todavía no se usa: el combate es uno contra uno.
+## Únicos del Bosque que pelean a tu lado ("algunos Únicos pelean junto a ti"; lo usa
+## AdventureRules.bosque_allies en el combate en grupo).
 static func allies_in_battle(state: String) -> int:
 	return int(state_config(state).get("allies_in_battle", 0))
 

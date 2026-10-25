@@ -30,6 +30,10 @@ var cooldown: float = 0.0
 var engage_delay: float = 0.0
 ## Papel en el mundo (MonsterField.ROLE_*): guardián de frontera, ronda, perseguidor...
 var role: StringName = &"guardian"
+## Cuántos van juntos (grupo de reparep: un solo monstruo en el mundo, el combate es contra todos).
+var count: int = 1
+## Encuentro con otro adoc al que pertenece este rival (MonsterField.ROLE_DUEL), o {}.
+var encounter: Dictionary = {}
 
 var _idle_phase: int = 0
 var _wait: float = 0.0

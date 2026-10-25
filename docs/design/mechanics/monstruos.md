@@ -116,7 +116,7 @@ Todo Único que se mueva por el mundo tiene tres parámetros (en datos, por tipo
 | **Aledra** | "Aledras son fatales en las noches" | Aparece cuando la villa crece en población sin permiso y causa enfermedades. Serpiente roja gigante con aura rojiza, cabeza de calavera reptiliana, ojos negros que se comen la luz física y colmillos carmesí | `["riumna"]` | **En el juego** (PR #39): ronda por los Bosques **solo de noche**, **fatal de noche**, `appeasable: false`. Avisa antes del encuentro y se puede **huir sin coste**. No guarda bordes. Su evento de villa (glosario) queda para más adelante (#128). |
 | **Iserald** | "un iserald es fatal"; "Tendria que dañar el bosque o intentar destruirlo para recien desatar al iserald, el iserald solo es vencido por un grupo de adoc [...]. Es mejor huir si vemos uno. Un iserald desata el status de miedo [...]" | El Único más poderoso y último recurso; sale del propio Nujio. Teorías: inmolación para que el Bosque no sea profanado, o pérdida de cordura | `["gietos", "riumna"]` | No existe todavía. Reglas en la sección "Iserald" (0.4+). |
 | **Garelinos** (enemigos humanos; no son Únicos) | "Los garelinos si pueden ser hostiles y causar daño mas no matar."; "Los garelinos si pueden desatar un iserald." | Ver ADR 0004 (grupo de fanáticos que destruye Bosques dominados por un Nujio) | `[]`: **combate no letal** | 0.4 (sección "Garelinos"). |
-| **Reparep** | "son como cangrejos fantasmales y tacan en grupos de 2 hasta 4 individuos. Son debiles solos pero en grupo el ataque conjunto suma daños" | No aparece en el glosario | `[]` (provisional) | **0.3.0** (fuera de la 0.2.0). Propuesta de combate de grupo abajo. Si son Únicos o no: #128. |
+| **Reparep** | "son como cangrejos fantasmales y tacan en grupos de 2 hasta 4 individuos. Son debiles solos pero en grupo el ataque conjunto suma daños" | No aparece en el glosario | `[]` (provisional) | **En el juego** (PR 7, combate en grupo): ver "Combate en grupo (implementado)". Si son Únicos o no: #128 (provisional: no lo son). |
 
 "Aun no tenemos más monstruos" (dueño, 2026-10-24). Botarramas se añadió después (dueño, misma fecha).
 
@@ -247,6 +247,18 @@ Propuestas, a confirmar con el dueño:
 - Solo, un reparep apenas hace daño (1–2 por turno contra DEF 3–4). Un grupo de 4 pega como un Único de d = 4.
 - ~~"Ofrecer Luz" (8 de daño) mata un reparep de un golpe.~~ Desde la 0.3, Ofrecer Luz ya no hace daño (ADR 0013). Contra grupos, la mejor respuesta pasa a ser una DEF alta y concentrar los ataques en un objetivo. Los números de la tabla de arriba son solo con Atacar y no cambian.
 - La DEF alta es más valiosa contra grupos que contra Únicos, porque se resta del daño total.
+
+## Combate en grupo (implementado, PR 7)
+Se aplicó la propuesta anterior con sus números (`data/combat/balance.json`: bloques `unico_reparep`, `monsters.reparep` y `reparep_groups`). Decisiones de `rpg-systems-dev` que el dueño debe confirmar (#128):
+- **Turno**: Adoc → aliados → enemigos. Los aliados atacan al mismo objetivo que el Adoc (si cayó, al de menos PV).
+- **Objetivo**: solo Atacar elige objetivo. Ofrecer Luz y la ofrenda pagan por **todo** el grupo (ADR 0013: ya no hacen daño, así que no tiene sentido elegir).
+- **Defender**: reduce a la mitad todos los golpes al Adoc de ese turno (en un grupo, el ataque conjunto). No protege a los aliados.
+- **Con aliados**, cada ataque enemigo va al Adoc o a un aliado en pie, al azar y con la misma probabilidad (50/50 con un aliado, `otros-adoc.md`).
+- **Reparep en el mundo**: un solo monstruo con un icono de 2 a 4 cangrejos (tantos como el grupo). Un grupo por Bosque, nunca en el natal:
+  - siempre fuera en los Bosques corruptos, muertos y que necesitan ayuda;
+  - en el resto, solo de noche y solo en el 50% de los Bosques (por seed).
+- **No son Únicos del Bosque** (`outsider`): en un Bosque pagado son pasivos, pero en uno muerto o que necesita ayuda (sin peaje) atacan siempre. Vencerlos no sube la hostilidad ni baja la relación. Se les paga con el peaje del Bosque (deja el Bosque pagado, como con un Único); donde no hay peaje, hay que vencerlos o huir.
+- XP: 2 + d por reparep. Luz de victoria: +1 por combate. No fatales.
 
 ## Inputs / outputs
 - **Inputs:** tipo de monstruo, d, Momento al empezar el combate, tamaño del grupo (reparep), acciones del jugador.

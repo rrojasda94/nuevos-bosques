@@ -36,6 +36,8 @@ Ningún otro píxel del monstruo puede usar esos tres colores. El artista humano
 
 - **Botarramas**: ave sin plumas, piel clara con granos oscuros, muñón de ala, pico, cola y patas en color tronco. Mira a la izquierda; el juego lo refleja cuando anda hacia la derecha. Fotograma 0: apoyado en la pata buena con la mala encogida. Fotograma 1: baja el cuerpo y apoya la mala, torcida. Cambia de fotograma en cada paso: eso es el renqueo. El pixel art no se gira (el balanceo con rotación queda solo para el placeholder procedural).
 - **Ofomni**: ojo enorme con iris rojo y cuatro tentáculos que cambian de postura entre fotogramas. Simétrico, menos los tentáculos y el brillo del ojo (arriba a la izquierda).
+- **Reparep** (pendiente, `UnicoArt.Kind.REPAREP`; hoy placeholder procedural de `UnicoArt.texture`): cangrejo fantasmal, pálido y algo transparente (en el placeholder el cuerpo va al 78% de opacidad y su color claro, aclarado hacia el blanco), con caparazón y pinzas en los colores de hoja del Bosque, y patas y tallos de los ojos en color tronco. En combate se dibuja en un cuadro de 40×40 (hasta 4 en fila); en el mundo, como un grupo de 2 a 4 cangrejos de 15×15 dentro de un cuadro de 32×32 (`UnicoArt.group_texture`). Necesita una hoja de 2 fotogramas con las claves de color de arriba y decidir cómo se ve la transparencia con la paleta (¿un tramado?).
+- **Otro adoc** (pendiente, `AdocNpc`; hoy la hoja del Adoc con la túnica recoloreada con los colores de `data/npcs/otros_adoc.json`): un adoc con otra ropa, que se reconozca como adoc y no como el jugador.
 - **Combate**: el primer fotograma ampliado a escala entera (×4 el Botarramas, ×3 el Ofomni) en el cuadro de 96×96. El Adoc de espaldas usa el fotograma 0 de la fila "arriba".
 
 ### Iconos
