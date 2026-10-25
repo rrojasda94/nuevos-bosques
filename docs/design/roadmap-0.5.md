@@ -1,4 +1,22 @@
-# Hoja de ruta 0.5 "Los otros adoc"
+# Hoja de ruta 0.5 "Dos caminos" (antes "Los otros adoc")
+
+> **Propuesta de reorganización (2026-10-25, ADR 0015).** El dueño propuso unir el modo Garelino dentro de Aventura. La 0.5 pasa a llamarse **"Dos caminos"** y combina "Los otros adoc" con el camino garelino (`mechanics/dos-caminos.md`).
+>
+> **Orden propuesto de la 0.5 "Dos caminos"** (sustituye a las tablas de abajo cuando el dueño lo confirme):
+>
+> | # | PR | Fichas | Depende de |
+> |---|---|---|---|
+> | 1 | Población de villas y diálogos (Ildo, Ista, Sfida…) | `npcs-y-villas.md` | 0.4 (villas con nombre) |
+> | 2 | Senda, puntos y skills (Sombra / Confianza) **y estado de bando** (fiel / en duda / garelino) | `moralidad-y-progresion.md`, `dos-caminos.md` | 0.3 |
+> | 3 | Garelinos: enemigo humano no letal, campamentos y ataques a Bosques | `monstruos.md` | 0.3 (combate en grupo, estados de Bosque) |
+> | 4 | Encuentro de historia y cambio de bando | `dos-caminos.md`, `historia/` (narrative-writer) | 2, 3 |
+> | 5 | Grupo garelino: reclutar, miembros que se retiran, Piedras | `dos-caminos.md` | 3, 4 |
+> | 6 | Persuadir villas (4 vías, convicción, necesidades) y contrapersuasión del fiel | `dos-caminos.md`, `npcs-y-villas.md` | 1, 5 |
+> | 7 | Sembrar Piedras (Nuevos Bosques), Humores por exposición | `dos-caminos.md`, `bosques-y-relacion.md` | 5; 0.3 (estados) |
+> | 8 | Salvar los Bosques (lado fiel) y encargos compartidos con otros adoc | `bosques-y-relacion.md`, `otros-adoc.md` | 1, 3 |
+> | 9 | Redención y finales de cada camino | `dos-caminos.md` | 6, 7, 8 |
+>
+> **Se mueve a la 0.6**: favores de los Sarua, artesanos y materiales, e Iserald con el combate de grupo grande (en la 0.5 el Iserald solo puede desatarse por una siembra, y lo sensato es huir). La personalización del adoc pasa a la 1.0, con el menú de inicio.
 
 > Dueño: `game-designer`. **Reparto confirmado por el dueño** ("1. si"): recoge la ronda de jugabilidad del dueño que no cabe en la 0.3.
 >

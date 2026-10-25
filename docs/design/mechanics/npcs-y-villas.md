@@ -95,6 +95,12 @@ Lista del dueño (#164): "Los artesanos normalmente trabjan con madera, piedras,
 - Cada material ocupa una casilla del inventario, apilable hasta 10 (propuesta, compatible con la bolsa de 12 casillas).
 - Precios × multiplicador del Ista de la villa, si lo hay (−5…+5 → ×0,5…×1,5).
 
+### Villas y bandos (0.5 "Dos caminos", `dos-caminos.md`)
+- Cada villa (menos la natal) tiene un medidor de **convicción** garelina (0–100) y **1 necesidad** generada por seed: comida escasa, un Único que la acosa, un incendio en su Bosque, enfermedad o falta de un material o servicio.
+- El **Ildo** y el **Ista** son con quienes se habla para persuadir (garelino) o contrapersuadir (fiel), con argumentos.
+- **Villa convertida**: acepta **Piedras de los Nuevos Bosques** como moneda, además de la Luz. Da 1 miembro de grupo garelino, una vez.
+- **Adoc garelino**: la villa natal le niega servicios y curación. Las demás villas lo atienden según su convicción (con < 30, desconfían: precios ×1,5).
+
 ### Diálogos y servicios básicos
 - Todos los NPC se hablan con **E** y usan el `DialogueBox` existente.
 - Menú: **"Hablar"** (texto de ambiente u oficio), **"Servicio"** (si lo tiene: favor, fabricar, curar, informar) y **"Adiós"**.

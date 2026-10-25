@@ -6,7 +6,13 @@
 >
 > **Hoja de ruta general**: [`roadmap.md`](roadmap.md). Orden del dueño: 0.3 "El Bosque recuerda" (dinámicas) → 0.4 "Mundo 2.0" (mapa y movimiento) → 0.5 "Los otros adoc" → hacia la 1.0 en Steam.
 >
-> **Versión 0.5 "Los otros adoc"** (reparto confirmado; antes numerada 0.4): hoja de ruta en [`roadmap-0.5.md`](roadmap-0.5.md).
+> **Versión 0.5 "Dos caminos"** (propuesta de nombre y orden, ADR 0015; antes "Los otros adoc"): hoja de ruta en [`roadmap-0.5.md`](roadmap-0.5.md).
+> - **Garelino dentro de Aventura** ([`mechanics/dos-caminos.md`](mechanics/dos-caminos.md)):
+>   - El adoc pasa de **fiel** a **en duda** con la Senda, y a **garelino** en un encuentro de historia con los garelinos.
+>   - Como garelino: reúne un grupo, **persuade villas** (necesidad, diálogo, fuerza sin matar, regalar Piedras) y **siembra Piedras de los Nuevos Bosques** junto a Nujio muertos o debilitados (con riesgo de Iserald).
+>   - Puede **redimirse** con un gran costo.
+>   - Finales por camino.
+>   - El modo Garelino suelto queda como "empezar ya garelino", para más adelante.
 > - Más NPC en las villas, por oficio: [`mechanics/npcs-y-villas.md`](mechanics/npcs-y-villas.md). Los Sarua dan ofrendas a cambio de favores y hacen máscaras y talismanes; los Paruas hacen armas.
 > - Otros adoc, **siempre aliados** (no hacen daño), con afinidad según la Senda: [`mechanics/otros-adoc.md`](mechanics/otros-adoc.md). Como aliados en combate ya en la 0.3, PR 7.
 > - **Senda** (icono violenta / neutral / respetuosa) que desbloquea las ramas de skills **Sombra** (sigilo, poder, recursos) y **Confianza** (favores, habilidades blandas). Al subir de nivel, +3 PV y +1 ATQ/DEF automáticos más 3 puntos a mano: [`mechanics/moralidad-y-progresion.md`](mechanics/moralidad-y-progresion.md).
@@ -70,7 +76,7 @@ El modo se elige al empezar, de forma similar a Project Zomboid. **Derrota = fal
 | Modo | Qué haces | Victoria | Derrota |
 |---|---|---|---|
 | **Supervivencia** | Mantienes con vida al Nujio. Es un modo largo: debes evitar que los garelinos enloquezcan al Nujio o aniquilen el bosque. Juegas "en teoría" con el Nujio (choca con el glosario §9, #59). Es gestión de villa: pedir a los pobladores que mantengan o se esfuercen por más Luz, controlar el crecimiento de la población, mantenerlos contentos con el Nujio o amenazarlos con la fuerza de los Únicos, y evitar que los garelinos lleguen al Nujio (ADR 0005). | No hay. | Los garelinos enloquecen al Nujio o aniquilan el bosque (reglas: por definir, #39b). |
-| **Garelino** | Comandas un grupo de fanáticos que buscan destruir los bosques dominados por un Nujio. Mejoras tus tropas, aprendes habilidades y estrategias para acelerar la decadencia y reclutas nuevos individuos. Te enfrentas a los Humores del mundo, a los Únicos que envía el bosque y a la resistencia de la población de la villa. | Eliminar al Nujio y sembrar las primeras semillas de los Nuevos Bosques. | Quedarte sin individuos. |
+| **Garelino** (desde ADR 0015, **camino dentro de Aventura**; el modo suelto queda como "empezar ya garelino") | Comandas un grupo de fanáticos que buscan destruir los bosques dominados por un Nujio. Mejoras tus tropas, aprendes habilidades y estrategias para acelerar la decadencia y reclutas nuevos individuos. Te enfrentas a los Humores del mundo, a los Únicos que envía el bosque y a la resistencia de la población de la villa. | Eliminar al Nujio y sembrar las primeras semillas de los Nuevos Bosques. | Quedarte sin individuos. |
 | **Aventura** (MVP) | Creas un personaje que viaja de lugar en lugar según las misiones que aparezcan (derrotar Únicos; las villas suelen llamar al adoc). Subes experiencia, aprendes habilidades, ganas objetos y fama. Viajas entre chunks y por el mapa de la región (ADR 0005). Primera misión: interceptar al Ofomni ([`mechanics/mision-ofomni.md`](mechanics/mision-ofomni.md)); si falla, la villa queda dañada y la partida sigue. | Es un **survival** (#31). | **Depende del monstruo** (ADR 0004): perder contra un monstruo **fatal en ese Momento** es game over (Iserald siempre; Aledra de noche); contra uno no fatal, despiertas en la villa. El Ofomni no es fatal en la primera misión (confirmado). Los Únicos comunes tampoco lo son (provisional, #127). |
 
 ### Reglas de no matar

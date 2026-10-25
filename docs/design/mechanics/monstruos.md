@@ -70,6 +70,11 @@ Palabras del dueño: "Tendria que dañar el bosque o intentar destruirlo para re
 - Miedo: **se mantiene la propuesta** (el dueño no la cambió en su respuesta a #160).
 
 ## Garelinos (0.5, propuesta)
+- **Enemigos o aliados según el bando** (ADR 0015, `dos-caminos.md`):
+  - Para un adoc **fiel**, son enemigos (todo lo de abajo).
+  - Para un adoc **garelino**, son **aliados**: forman su **grupo** (miembros que se retiran al caer, sin morir), le dan Piedras y una base (el campamento), y no lo atacan.
+  - Si el jugador se **redime**, lo tratan como traidor y vuelven a ser enemigos.
+  - Siempre en combate no letal.
 - **Enemigos humanos**, hostiles. Pueden **hacer daño pero no matar**, y el adoc tampoco los mata (ADR 0004). **Combate no letal**: "no matan, no mueren".
 - **Dónde**: atacando Bosques (estado "en necesidad de ayuda" con `hazard: ataque`, `bosques-y-relacion.md`) y en caminos cercanos a esos Bosques.
 - **Combate**: el combate en grupo (son grupos de 2–3; stats humanos provisionales: PV 15 + 3·d, ATQ 3 + d, DEF 2), con Únicos del Bosque como aliados si el Bosque lo necesita.
