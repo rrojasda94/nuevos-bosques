@@ -4,6 +4,9 @@ Todos los cambios que nota el jugador. Formato [Keep a Changelog](https://keepac
 
 ## [Sin publicar]
 
+## [0.3.0] - 2026-10-25
+"El Bosque recuerda": los Bosques tienen memoria, relación y estado; frutos, inventario y equipo; sigilo; Únicos que rondan, cazan y persiguen; combate en grupo con aliados; dormir y Pensamiento; reloj del riutash y arte de terreno.
+
 ### Añadido
 - El Bosque recuerda: cada Botarramas que vences sube 2 de Luz el peaje de su Bosque (hasta 10) y hace que sus demás Botarramas vean 2 casillas más lejos (hasta 6 más). Cuando el Bosque recuerda tu violencia, el menú del borde lo avisa con una línea más.
 - Relación con cada Bosque: baja 10 cada vez que vences a uno de sus Botarramas y sube 1 cada vez que pagas con Luz. La pantalla de estado (I) muestra la relación con el Bosque en el que estás.
@@ -116,6 +119,7 @@ Primer vertical slice del modo Aventura.
 - Luz suelta con tope de 10. Descanso en villas. Al perder, despiertas en la villa natal.
 - Guardado de seed, posición, Luz, PV y Bosques abiertos.
 
-[Sin publicar]: https://github.com/rrojasda94/nuevos-bosques/compare/v0.2.0...HEAD
+[Sin publicar]: https://github.com/rrojasda94/nuevos-bosques/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/rrojasda94/nuevos-bosques/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/rrojasda94/nuevos-bosques/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/rrojasda94/nuevos-bosques/releases/tag/v0.1.0
