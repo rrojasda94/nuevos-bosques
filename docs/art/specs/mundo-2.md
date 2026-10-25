@@ -237,7 +237,9 @@ Según [`docs/CONVENCIONES.md`](../../CONVENCIONES.md) §2 (`<tipo>_<nombre>[_<v
 | `sprite_casas.png` | 128×96 | 2 × 2 de 64×48 | Fila = material (0 barro, 1 piedra), col = variante |
 | `sprite_nujio.png` | 128×480 | 2 × 6 de 64×80 | Fila = silueta, col = fotograma |
 
-El script de M13 es `tools/art/make_world2.py` (o una ampliación de `make_tiles.py`; lo decide M13), con `--preview <carpeta>` como los demás.
+El script de M13 es `tools/art/make_world2.py`, con `--preview <carpeta>` como los demás y `--sheet <png>` para una hoja de contacto x3 con muestras recoloreadas por Bosque (normal y meseta alta). Valida tamaños, paleta, alfa y que cada atlas solo use sus claves y sus colores fijos; `tests/unit/world/test_world2_art.gd` comprueba lo mismo sobre los PNG importados.
+
+**Estado M13 (primera pasada hecha)**: todas las piezas M13 de la tabla §9 están dibujadas. Notas: el remate de cara contra pared (fila 4, cols 2–3) es una pieza de labio; el Nujio ya trae los 2 fotogramas; la grieta seca del cactus (`tileset_piedras.png` col 3) se adelantó. Falta en código (no es de este hito): que `TerrainTileset` cargue estos atlas con la clave nueva de sombra de hoja (`3a4466`), las dos claves de flor, `GROUNDS_HIGH` y la regla del centro de flor blanco (§2.3).
 
 ## 9. Tabla de piezas
 Prioridad: **M13** = tiene que estar en la primera pasada por script (la usa el generador de M6–M8 o el juego en M17); **M18** = puede esperar al arte final. Todo lo de M13 se redibuja en M18. "Sobresale" = píxeles del sprite por encima de la huella.
