@@ -1,5 +1,12 @@
 # Arco "Dos caminos": propuesta de historia
 
+> **BORRADOR APARCADO, no canon** (dueño, 2026-10-25: "por ahora no se cuales podrian ser las historias. Centremonos en mecanicas, jugabilidad, desarrollo de personaje y de ahi buscamos crear la historia del juego."). Los actos, hitos y finales de este arco quedan aparcados.
+> **Nombres NO aprobados**: Oridna → la ledai; Urdan → un adoc veterano; Avessa → el Ildo vecino; Tiunel → el Sfida (ver `personajes.md`).
+> **Correcciones del dueño que valen igualmente**:
+> - Los Nuevos Bosques se siembran **donde el Bosque de Nujio ya no está**: se tala el Bosque muerto y luego se siembra (no junto a un Nujio debilitado).
+> - El adoc que se une a los Nuevos Bosques se vuelve **magra**: los Bosques viejos y nuevos no son compatibles.
+> - Los ledai de la Tarca de Trastas son como **profetas** de Garel / Estrella Azul; cualquiera puede hacerse garelino y seguirlos.
+
 > Dueño: `narrative-writer`. Estado: **PROPUESTA** para el dueño del proyecto (worldbuilder). No es canon hasta que él lo apruebe.
 > Rama: `design/dos-caminos`. Mecánicas (Senda, cambio de bando, persuasión, coste de la redención): las define `game-designer` en `docs/design/mechanics/` y `docs/decisions/`. Aquí solo hay historia, tono y texto.
 > Fuente de verdad del lore: [`docs/glosario_nuevos_bosques.md`](../../glosario_nuevos_bosques.md). Todo lo que no sale de ahí lleva la marca **PROPUESTA**.

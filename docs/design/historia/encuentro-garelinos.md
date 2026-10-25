@@ -1,5 +1,8 @@
 # Escena: el cruce con los garelinos (Acto III)
 
+> **BORRADOR APARCADO, no canon** (dueño, 2026-10-25: historia en pausa; primero mecánicas, jugabilidad y desarrollo de personaje). El encuentro como **mecánica** sigue en `docs/design/mechanics/dos-caminos.md`, con roles genéricos.
+> **Nombres NO aprobados**: Oridna → la ledai; Urdan → un adoc veterano; Avessa → el Ildo vecino; Tiunel → el Sfida.
+
 > Dueño: `narrative-writer`. Estado: **PROPUESTA**. Personajes y lugar: PROPUESTA (ver [`personajes.md`](personajes.md) y [`arco-dos-caminos.md`](arco-dos-caminos.md)).
 > Las consecuencias de cada opción son **intención narrativa**. Los números (inclinación, Senda, relación) y si hay un medidor de bando los decide `game-designer`. La lógica la implementa `rpg-systems-dev`.
 > Formato listo para pasar a JSON: cada bloque tiene un `id`; cada mensaje es `speaker: texto` y cabe en **2 líneas de 38 caracteres** como mucho. Las opciones llevan `id`, texto de botón (≤ 24 caracteres) y consecuencia en una línea.

@@ -1,6 +1,7 @@
 # Ficha: Dos caminos (adoc fiel o garelino)
 
-> Dueño: `game-designer`. **Versión 0.5 "Dos caminos"**. ADR 0015. Valores **provisionales**.
+> Dueño: `game-designer`. **Versión 0.5 "Dos caminos"** (nombre y orden **confirmados** por el dueño). ADR 0015. Valores **provisionales**.
+> **Historia en pausa** (dueño, 2026-10-25: "por ahora no se cuales podrian ser las historias. Centremonos en mecanicas, jugabilidad, desarrollo de personaje y de ahi buscamos crear la historia del juego"). Esta ficha describe **mecánicas** con roles genéricos ("la ledai", "un adoc veterano", "el Ildo vecino"). `docs/design/historia/` es un borrador aparcado, no canon.
 > Fuentes: palabras del dueño (abajo); ADR 0004 (modo Garelino original, regla de no matar), glosario §6 ("Piedras de los Nuevos Bosques como moneda") y §7 ("Estrella Azul", "Piedras de los Nuevos Bosques", "Nuevos Bosques", "Guerra"); `moralidad-y-progresion.md` (Senda), `monstruos.md` (garelinos, Iserald), `bosques-y-relacion.md` (estados, cordura, relación), `npcs-y-villas.md`, `otros-adoc.md`, `cruce-y-combate-v2.md`. La historia (escenas, diálogos) es de `narrative-writer` (`docs/design/historia/`).
 
 ## Objetivo
@@ -38,7 +39,7 @@ Palabras del dueño (2026-10-25):
 - **Cuándo**: la primera vez que se cumplen las dos condiciones:
   - la misión del Ofomni ha terminado (`rewarded` o `failed`), o han pasado 3 días;
   - el jugador llega a un Bosque **en necesidad de ayuda bajo ataque garelino** (`bosques-y-relacion.md`), o pasa junto a un **campamento garelino**.
-- **Escena** (`narrative-writer`): un grupo garelino y su portavoz.
+- **Escena**: un grupo garelino y su portavoz, **una ledai** (rol genérico). Lore del dueño: "los ledai en esta era son como profetas, al menos los ledai de la tarca de trastas que es donde esta Garel/estrellazul. Pero igual en la historia cualquiera puede convertirse en garelino y seguir a los ledai". Los textos de la escena quedan aparcados mientras la historia esté en pausa.
 - **Opciones según el bando**:
 
 | Bando del jugador | Opciones |
@@ -58,7 +59,8 @@ Palabras del dueño (2026-10-25):
 | **Villa natal** | Te rechaza: sin curación, sin servicios, y el Sfida te lo reprocha. No es tu punto de reaparición (lo es el campamento). |
 | **Bosques con Nujio** | Te tratan como hostil. Al entrar por primera vez, hostilidad **2** y relación **−30**. Peaje ×2. Los **cazadores** salen aunque hayas pagado (cada 120 s). |
 | **Humores** (ADR 0004: "climas agresivos que ocurren si delatas tu intension y ubicación") | Medidor de **exposición** por Bosque. Sube con actos visibles para un Único: vencer (+20), robar (+20), sembrar (+40), intimidar (+20). Al llegar a 100 cae un **Humor** sobre ti en ese Bosque (tormenta focal, glosario §2): −20% de los PV máximos por Momento y movimiento ×0,8, hasta salir del Bosque o pasar un riutash en refugio. La exposición baja 20 por riutash. |
-| **Iserald** | Sembrar junto a un Nujio vivo le baja la cordura (sección 6) y puede desatarlo (fatal; `monstruos.md`). |
+| **Magra** (dueño: "si, se vuelve magra. Los nuevos y viejos bosques no son compatibles.") | Al unirte a los Nuevos Bosques te vuelves **magra** (glosario §5: quien abandona o cambia de oficio; condenado, suele huir pidiendo asilo y luego es desterrado). Propuesta: las **villas fieles** te niegan servicios y curación y te piden que te vayas; las villas convertidas te acogen. Los **Bosques con Nujio** no te dan fruto lícito (todo fruto que tomes es robo) ni descanso junto a su Nujio. |
+| **Iserald** | Ya no se siembra junto a Nujio vivos (sección 6). Pero dañar un Bosque (robos, Botarramas vencidos, ataques) le baja la cordura y puede desatar su Iserald (fatal; `monstruos.md`). |
 | **Reputación garelina** (0–100, empieza en 20) | Sube: villa convertida +20, siembra +15, Bosque defendido para los garelinos +10. Baja: intimidar en exceso (más de una vez por villa) −10, proteger un Bosque contra los garelinos −15. Con < 10, los garelinos dejan de apoyarte (no reclutas ni recibes Piedras). |
 | **Otros adoc** | No quieren trabajar contigo (afinidad, `otros-adoc.md`). Nunca te atacan, pero pueden defender villas de tu persuasión (sección 8). |
 | **Skills** | La rama **Sombra** encaja con el camino garelino; la rama **Confianza**, con el fiel (`moralidad-y-progresion.md`). |
@@ -101,11 +103,20 @@ Cada villa (menos la natal, #171) tiene un medidor de **convicción** garelina, 
   - **Sumidero**: reclutar (2), regalar a villas (1) y sembrar (1).
   - **Al agotarse**: no se puede sembrar ni reclutar en el campamento. Quedan la persuasión por necesidad y por diálogo.
   - Ocupan una casilla del inventario (apilables).
-- **Dónde se siembra** (con E, 1 Piedra):
-  - **Junto a un Nujio muerto** (Bosque muerto): sin riesgo. Tras **2 riutash**, el Bosque pasa a **Nuevo Bosque** (sin peaje de Luz, fauna de mamíferos y reptiles, `bosques-y-relacion.md`).
-  - **Junto a un Nujio debilitado** (Bosque corrupto, cordura < 20): la siembra le baja la cordura **−30**. Si llega a 0, **se desata el Iserald** (fatal; el Nujio muere y el Bosque queda muerto, `monstruos.md`). Después ya se puede sembrar junto al Nujio muerto.
-  - **Junto a un Nujio sano**: no se puede (la Piedra no prende). Hay que debilitar antes el Bosque, con consecuencias.
-- **Riesgos**: exposición +40 (Humores), los cazadores del Bosque y el Iserald.
+- **Dónde se siembra** (dueño: "siembras nuevos bosques donde los bosques de nujio ya no están, puedes mandar o talar tu mismo el bosque cuando el nujio ya murio"):
+  - **Solo donde el Bosque de Nujio ya no está**, es decir, en un **Bosque muerto** (su Nujio murió, por ejemplo tras un Iserald).
+  - **Se elimina** la siembra junto a un Nujio debilitado (con su pérdida de cordura y su Iserald) y junto a un Nujio sano.
+- **Paso 1, talar el Bosque muerto** (propuesta):
+  - **Tú mismo**: con E sobre los árboles muertos de un chunk. Unos **2 minutos de reloj por chunk** (talar 10 árboles a ~12 s cada uno).
+  - **Mandar a tu grupo**: asignas **1 miembro** a un chunk. Lo tala en **1 riutash** y mientras tanto no está en tu grupo.
+  - **Recompensa**: **madera** (unos 5 por chunk), material de artesano (`npcs-y-villas.md`).
+  - **Riesgo**: exposición +20 por chunk talado (Humores), y los pocos Únicos del Bosque muerto (que a veces piden Luz).
+  - **Talar un Bosque vivo** (con Nujio) no está permitido: es dañarlo (cordura −20) y no deja sembrar.
+- **Paso 2, sembrar**:
+  - Con E y **1 Piedra** en un chunk ya talado.
+  - Tras **2 riutash**, ese chunk pasa a **Nuevo Bosque** (sin peaje de Luz, fauna de mamíferos y reptiles, `bosques-y-relacion.md`).
+  - Cuando la **mitad** de los chunks del Bosque está sembrada, el Bosque entero pasa a Nuevo Bosque.
+- **Riesgos**: exposición (Humores) y los cazadores de los Bosques vecinos con Nujio, que se ofenden (relación −10 con cada Bosque vecino por cada Bosque convertido).
 - Glosario §7: los Nuevos Bosques "no requieren Luz, veneración ni vínculo, sí mucho trabajo y recursos".
 
 ## 7. Redención (volver a ser fiel)
@@ -115,6 +126,7 @@ Cada villa (menos la natal, #171) tiene un medidor de **convicción** garelina, 
   2. **3 días** (6 riutash) **sin actos garelinos** (sin intimidar, sembrar, robar ni persuadir).
   3. **Ofrendas por valor total de 30** dejadas junto al Nujio de tu villa natal.
   4. **Una misión de redención**: salvar un Bosque en necesidad de ayuda o devolver a sano un Bosque corrupto (`bosques-y-relacion.md`).
+  5. **Asilo de magra** (porque al hacerte garelino te volviste magra): pedir asilo al **Ildo** de una villa fiel, que te pone una prueba (la misión del punto 4) antes de aceptarte. Glosario §5: el magra "suele huir pidiendo asilo y luego ser desterrado". Propuesta: sin asilo no hay redención.
 - **Al completarla**:
   - Vuelves a **fiel** y tu villa natal te acepta otra vez.
   - Los Bosques **conservan su memoria** (hostilidad y relación).
@@ -141,12 +153,14 @@ Cada villa (menos la natal, #171) tiene un medidor de **convicción** garelina, 
 - **Intimidar** no es violencia letal. Es presión, con coste en reputación y relación.
 - Los Únicos no son gente: "vuelven a la Luz del Bosque" (glosario §3).
 
-## 10. Finales de cada camino (propuesta)
-Aventura sigue siendo un **survival**: la partida continúa después del final. El final es un **hito** con escena (`narrative-writer`) y un resumen. Enlaza con #31 y con las condiciones originales del modo Garelino (ADR 0004).
+## 10. Finales de cada camino (APARCADO)
+> **Aparcado** (dueño: historia en pausa; #167). Los hitos de final no se implementan en la 0.5. La tabla queda como referencia para cuando se construya la historia.
+
+Aventura sigue siendo un **survival**: la partida continúa después del final. El final sería un **hito** con escena y un resumen. Enlaza con #31 y con las condiciones originales del modo Garelino (ADR 0004).
 
 | Camino | Final (provisional) | Base |
 |---|---|---|
-| **Garelino** | **Convertir 3 villas** y **sembrar en 3 Bosques** (Nuevos Bosques creados) | ADR 0004: "Se vence eliminando al nujio y sembrando las primeras semillas de los nuevos bosques" |
+| **Garelino** | **Convertir 3 villas** y **convertir 3 Bosques muertos en Nuevos Bosques** (talados y sembrados) | ADR 0004: "Se vence eliminando al nujio y sembrando las primeras semillas de los nuevos bosques" |
 | **Fiel** | **Salvar 3 Bosques** (de necesita ayuda o corrupto a sano) y que **ninguna villa de la región se convierta durante 10 días seguidos**, o **vencer a un Iserald** con un grupo de adoc | ADR 0004: modo Supervivencia ("evitar que los garelinos enloquezcan al nujio o aniquilen el bosque") |
 
 ## Inputs / outputs
@@ -164,7 +178,9 @@ Aventura sigue siendo un **survival**: la partida continúa después del final. 
 ## Casos límite
 - **Pedir unirte sin haber tenido el encuentro**: imposible; el campamento no está en el mapa.
 - **Senda sube a ≥ −20 estando en duda tras rechazar**: vuelves a fiel y la invitación se cierra hasta volver a −40.
-- **Siembra en un Bosque corrupto que desata el Iserald con el jugador dentro**: estado Miedo; lo sensato es huir (Iserald fatal).
+- **Intentar sembrar en un Bosque con Nujio**: no se puede ("donde los bosques de nujio ya no están").
+- **Talar con el grupo mientras te atacan**: el miembro asignado se retira si cae, y el chunk queda a medio talar (se conserva el avance).
+- **Iserald desatado por dañar un Bosque con el jugador dentro**: estado Miedo; lo sensato es huir (Iserald fatal). Después el Bosque queda muerto y se puede talar y sembrar.
 - **Villa convertida cuyo Bosque estaba pagado**: el pago se mantiene hasta que caduque; luego, hostilidad.
 - **Redención con el grupo en combate**: no se puede iniciar con un encargo garelino activo.
 - **Villa natal**: no se puede convertir (propuesta, #171).
@@ -177,7 +193,8 @@ Aventura sigue siendo un **survival**: la partida continúa después del final. 
 - El dueño siente que volver atrás "cuesta mucho" pero es posible (pregunta directa).
 
 ## Preguntas abiertas
-- **#167**: finales: ¿los objetivos propuestos (garelino: 3 villas y 3 siembras; fiel: 3 Bosques salvados y 10 días sin conversiones, o vencer un Iserald) o sin final?
+- ~~**#167**: finales.~~ **Aparcada**: historia en pausa.
+- ~~Siembra, magra, ledai, nombres y 0.5~~: resueltas (dueño, 2026-10-25).
 - **#168**: siendo garelino, ¿los Bosques aceptan tu Luz (peaje ×2) o la rechazan?
 - **#169**: quedarse sin miembros: ¿retroceso (propuesta) o derrota, como en el modo original?
 - **#170**: redención: ¿una sola vez por partida?
