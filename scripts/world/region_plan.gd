@@ -66,6 +66,8 @@ var home_chunk: Vector2i = Vector2i(-1, -1)
 var bosques: BosqueMap = null
 ## Tiempo que tardó build(), en microsegundos.
 var build_usec: int = 0
+## JSON de la región (copia profunda, solo lectura): parámetros que lee la pasada de chunk.
+var region_params: Dictionary = {}
 
 var _height: PackedByteArray = PackedByteArray()
 var _water: PackedByteArray = PackedByteArray()
@@ -95,6 +97,7 @@ static func build(seed_v: int, id: StringName, region: Dictionary, authoring: Re
 	plan.authoring_hash = authoring_hash_of(authoring)
 	plan.plan_seed = ChunkGenerator.hash_ints([seed_v, String(id).sha256_buffer().decode_u32(0),
 			plan.authoring_hash, GENERATOR_VERSION, SALT_PLAN])
+	plan.region_params = region.duplicate(true)
 	plan.home_chunk = authoring.home_chunk()
 	if not plan._in_chunks(plan.home_chunk):
 		plan.home_chunk = ChunkGenerator.region_start_chunk(region)
