@@ -12,13 +12,13 @@ script = ExtResource("1_claro")
 
 [node name="Ground" type="TileMapLayer" parent="."]
 
+[node name="Trees" type="TileMapLayer" parent="."]
+material = SubResource("ShaderMaterial_sway")
+
 [node name="Fog" type="Sprite2D" parent="."]
 texture_repeat = 2
 centered = false
 region_enabled = true
-
-[node name="Trees" type="TileMapLayer" parent="."]
-material = SubResource("ShaderMaterial_sway")
 
 [node name="Player" type="Node2D" parent="."]
 script = ExtResource("2_player")
@@ -42,9 +42,11 @@ gravity = Vector2(0, 0)
 initial_velocity_min = 2.0
 initial_velocity_max = 6.0
 
-[node name="Companion" type="Sprite2D" parent="."]
+[node name="Watchers" type="Node2D" parent="."]
 
-[node name="Trail" type="CPUParticles2D" parent="Companion"]
+[node name="Mitahir" type="Sprite2D" parent="."]
+
+[node name="Trail" type="CPUParticles2D" parent="Mitahir"]
 show_behind_parent = true
 amount = 6
 lifetime = 0.8
