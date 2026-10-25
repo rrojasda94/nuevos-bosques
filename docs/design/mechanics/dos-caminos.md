@@ -57,7 +57,7 @@ Palabras del dueño (2026-10-25):
 | Ámbito | Efecto (provisional) |
 |---|---|
 | **Villa natal** | Te rechaza: sin curación, sin servicios, y el Sfida te lo reprocha. No es tu punto de reaparición (lo es el campamento). |
-| **Bosques con Nujio** | Te tratan como hostil. Al entrar por primera vez, hostilidad **2** y relación **−30**. Peaje ×2. Los **cazadores** salen aunque hayas pagado (cada 120 s). |
+| **Bosques con Nujio** | Te tratan como hostil. Al entrar por primera vez, hostilidad **2** y relación **−30**. **Peaje** (dueño, #168: "si tienes artefactos que oculten tu Luz, pueden aceptar el peaje como normal o mas caro. En caso contrario te atacara y deberas avanzar por el bosque con cautela"): **solo con un artefacto que oculte tu Luz** equipado (máscara o talismán de camuflaje, `sigilo-y-robo.md`), el Bosque acepta el pago. Coste propuesto según el nivel del artefacto: **nivel 1 ×1,5, nivel 2 ×1,25, nivel 3 ×1** (normal). Pagado así, no salen cazadores mientras lleves el artefacto equipado. Si te lo quitas dentro, el Bosque te reconoce y vuelve a atacarte. **Sin artefacto**: no se puede pagar (solo Enfrentar o Retroceder), salen **cazadores** (cada 90 s) y hay que avanzar con **cautela** (sigilo, evitar la visión de los Únicos). |
 | **Humores** (ADR 0004: "climas agresivos que ocurren si delatas tu intension y ubicación") | Medidor de **exposición** por Bosque. Sube con actos visibles para un Único: vencer (+20), robar (+20), sembrar (+40), intimidar (+20). Al llegar a 100 cae un **Humor** sobre ti en ese Bosque (tormenta focal, glosario §2): −20% de los PV máximos por Momento y movimiento ×0,8, hasta salir del Bosque o pasar un riutash en refugio. La exposición baja 20 por riutash. |
 | **Magra** (dueño: "si, se vuelve magra. Los nuevos y viejos bosques no son compatibles.") | Al unirte a los Nuevos Bosques te vuelves **magra** (glosario §5: quien abandona o cambia de oficio; condenado, suele huir pidiendo asilo y luego es desterrado). Propuesta: las **villas fieles** te niegan servicios y curación y te piden que te vayas; las villas convertidas te acogen. Los **Bosques con Nujio** no te dan fruto lícito (todo fruto que tomes es robo) ni descanso junto a su Nujio. |
 | **Iserald** | Ya no se siembra junto a Nujio vivos (sección 6). Pero dañar un Bosque (robos, Botarramas vencidos, ataques) le baja la cordura y puede desatar su Iserald (fatal; `monstruos.md`). |
@@ -74,12 +74,23 @@ Palabras del dueño (2026-10-25):
 - **En combate**: son **aliados** del combate en grupo (`monstruos.md`, `otros-adoc.md`). Actúan después de ti y atacan a tu objetivo.
 - **Caer**: un miembro a 0 PV **se retira** (no muere; no se mata gente). Vuelve al campamento y está disponible otra vez tras **2 riutash**, si vas a buscarlo.
 - **Quedarse sin miembros** (regla original del modo Garelino: "pierdes si te quedas sin individuos"):
-  - Propuesta: **no es game over** dentro de Aventura, sino un **retroceso**: reputación garelina −20 y la siembra y la persuasión con fuerza quedan bloqueadas hasta reclutar a alguien.
+  - **Confirmado** (dueño, #169: "es solo un retroceso"): no es game over. Reputación garelina −20, y la siembra y la persuasión con fuerza quedan bloqueadas hasta reclutar a alguien.
+- **IA del grupo** (dueño: "deberiamos tener NPC inteligentes que tengan formaciones o sepan como atacar, defender, adelantar turnos"): los miembros usan la iniciativa, las filas, los roles (atacante, defensor, apoyo) y las órdenes de `ia-de-combate.md`.
   - El "pierdes" original se reserva para el futuro modo "empezar como garelino" (#169).
 - El grupo te sigue por el mundo (como un encargo compartido).
 
 ## 5. Persuadir villas
-Cada villa (menos la natal, #171) tiene un medidor de **convicción** garelina, de 0 a 100. Al llegar a **100**, **se une** a los Nuevos Bosques.
+Cada villa tiene un medidor de **convicción** garelina, de 0 a 100. Al llegar a **100**, **se une** a los Nuevos Bosques.
+
+**Villa natal** (dueño, #171: "si, es dificil"). Se puede convertir, pero es difícil. Propuesta:
+- **Convicción inicial −50**, en lugar de 0.
+- **Resistencia del Nujio natal**: −5 de convicción por día.
+- **Requisito**: reputación garelina **≥ 60**. Si no, el diálogo y las Piedras no cuentan.
+- El **Sfida** hace contrapersuasión: una vez por día, −10.
+- Al convertirla:
+  - el Bosque natal pasa a **enojado** y su Nujio, ofendido, baja la cordura −30;
+  - la villa natal acepta Piedras y vuelve a ser tu punto de reaparición;
+  - los otros adoc de la villa se marchan.
 
 | Vía | Mecánica | Convicción |
 |---|---|---|
@@ -132,7 +143,7 @@ Cada villa (menos la natal, #171) tiene un medidor de **convicción** garelina, 
   - Los Bosques **conservan su memoria** (hostilidad y relación).
   - Los garelinos pasan a tratarte como **traidor**: sus grupos te atacan (combate no letal) y el campamento se cierra.
   - Tu grupo se disuelve.
-- **Una sola vez por partida** (propuesta, #170). Si vuelves a ser garelino, no hay segunda redención.
+- **Una sola vez por partida** (confirmado por el dueño, #170). Si vuelves a ser garelino, no hay segunda redención.
 
 ## 8. Adoc fiel frente a los garelinos
 - Los garelinos tienen sus propios grupos, que **persuaden villas** por su cuenta: cada **2 días**, una villa cercana a un campamento gana **+15 de convicción**.
@@ -183,7 +194,8 @@ Aventura sigue siendo un **survival**: la partida continúa después del final. 
 - **Iserald desatado por dañar un Bosque con el jugador dentro**: estado Miedo; lo sensato es huir (Iserald fatal). Después el Bosque queda muerto y se puede talar y sembrar.
 - **Villa convertida cuyo Bosque estaba pagado**: el pago se mantiene hasta que caduque; luego, hostilidad.
 - **Redención con el grupo en combate**: no se puede iniciar con un encargo garelino activo.
-- **Villa natal**: no se puede convertir (propuesta, #171).
+- **Villa natal**: se puede convertir, pero es difícil (sección 5).
+- **Garelino sin artefacto que oculte la Luz en un Bosque pagado antes**: el pago no vale; el Bosque te reconoce y te ataca.
 - **Todos los miembros retirados en mitad de un combate**: el combate sigue contigo solo.
 
 ## Criterios de éxito para playtest
@@ -195,7 +207,5 @@ Aventura sigue siendo un **survival**: la partida continúa después del final. 
 ## Preguntas abiertas
 - ~~**#167**: finales.~~ **Aparcada**: historia en pausa.
 - ~~Siembra, magra, ledai, nombres y 0.5~~: resueltas (dueño, 2026-10-25).
-- **#168**: siendo garelino, ¿los Bosques aceptan tu Luz (peaje ×2) o la rechazan?
-- **#169**: quedarse sin miembros: ¿retroceso (propuesta) o derrota, como en el modo original?
-- **#170**: redención: ¿una sola vez por partida?
-- **#171**: ¿se puede convertir la villa natal?
+- ~~#168–#171~~ Resueltas (dueño, 2026-10-25): peaje solo con un artefacto que oculte la Luz; quedarse sin miembros es retroceso; redención una vez por partida; la villa natal se puede convertir, pero es difícil.
+- **#174**: Agilidad como stat (`ia-de-combate.md`).
