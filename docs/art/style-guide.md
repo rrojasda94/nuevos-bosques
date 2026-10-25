@@ -8,3 +8,4 @@
 - Prohibido: anti-aliasing, degradados, alpha parcial, rotación libre.
 - Hay artista humano. Mientras no llega un asset, `pixel-artist` genera un placeholder `[PLACEHOLDER]` con la misma spec (tamaño, frames) para no bloquear a los devs.
 - Cada región del mapa mundial tiene su tileset con la misma paleta pero distinta rampa dominante. El terreno actual (0.3) se recolorea por Bosque con colores clave: ver `docs/art/specs/tileset-terreno.md`.
+- Intención visual (tono, referencias, movimiento, combate): [`direccion-de-arte.md`](direccion-de-arte.md).
