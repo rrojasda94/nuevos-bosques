@@ -1,0 +1,54 @@
+[gd_scene load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://scripts/world/claro_muestra.gd" id="1_claro"]
+[ext_resource type="Script" path="res://scripts/rpg/player_walker.gd" id="2_player"]
+[ext_resource type="Shader" path="res://assets/shaders/tree_sway.gdshader" id="3_sway"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_sway"]
+shader = ExtResource("3_sway")
+
+[node name="ClaroMuestra" type="Node2D"]
+script = ExtResource("1_claro")
+
+[node name="Ground" type="TileMapLayer" parent="."]
+
+[node name="Fog" type="Sprite2D" parent="."]
+texture_repeat = 2
+centered = false
+region_enabled = true
+
+[node name="Trees" type="TileMapLayer" parent="."]
+material = SubResource("ShaderMaterial_sway")
+
+[node name="Player" type="Node2D" parent="."]
+script = ExtResource("2_player")
+
+[node name="Sprite2D" type="Sprite2D" parent="Player"]
+
+[node name="Camera2D" type="Camera2D" parent="Player"]
+limit_left = 0
+limit_top = 0
+
+[node name="Motes" type="CPUParticles2D" parent="Player/Camera2D"]
+amount = 16
+lifetime = 7.0
+preprocess = 7.0
+local_coords = false
+emission_shape = 3
+emission_rect_extents = Vector2(170, 100)
+direction = Vector2(0.3, -1)
+spread = 30.0
+gravity = Vector2(0, 0)
+initial_velocity_min = 2.0
+initial_velocity_max = 6.0
+
+[node name="Companion" type="Sprite2D" parent="."]
+
+[node name="Trail" type="CPUParticles2D" parent="Companion"]
+show_behind_parent = true
+amount = 6
+lifetime = 0.8
+local_coords = false
+gravity = Vector2(0, 4)
+initial_velocity_min = 0.0
+initial_velocity_max = 2.0
