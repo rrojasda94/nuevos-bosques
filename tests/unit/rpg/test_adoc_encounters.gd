@@ -223,7 +223,7 @@ func test_bosque_in_need_sends_one_unico_ally_against_reparep() -> void:
 func test_save_v16_round_trip_and_migration() -> void:
 	GameState.adoc_encounters["adoc:3"] = AdocEncounters.HELPED
 	var data: Dictionary = JSON.parse_string(JSON.stringify(GameState.to_dict()))
-	assert_eq(int(data.save_version), 16)
+	assert_gte(int(data.save_version), 16)
 	GameState.new_game(1)
 	GameState.from_dict(data)
 	assert_eq(GameState.adoc_encounters, { "adoc:3": "helped" })

@@ -22,6 +22,9 @@ const PLAYER_COLOR := Color("e43b44")
 const OBJECTIVE_COLOR := Color("f6757a")
 const MONSTER_COLOR := Color("b55088")
 const MONSTER_PASSIVE_COLOR := Color("8b9bb4")
+## Misión lejana (FarQuests): el Bosque que llama y su ruta de salvoconducto.
+const FAR_QUEST_COLOR := Color("ffffff")
+const FAR_ROUTE_COLOR := Color("2ce8f5")
 ## Marca de estado de Bosque (esquina superior derecha de cada chunk explorado).
 const STATE_COLORS: Dictionary = {
 	"enojado": Color("e43b44"), "corrupto": Color("b55088"), "muerto": Color("c0cbdc"), "necesita_ayuda": Color("f77622"),
@@ -122,6 +125,9 @@ func _build_legend() -> void:
 		var label: String = GameState.objective_label
 		_legend.append({ "icon": PixelIcons.OBJECTIVE, "color": OBJECTIVE_COLOR,
 				"text": label if not label.is_empty() else Texts.get_text("map_legend_objective") })
+	if not FarQuests.active_quests().is_empty():
+		_legend.append({ "icon": PixelIcons.OBJECTIVE, "color": FAR_QUEST_COLOR, "text": Texts.get_text("map_legend_far_quest") })
+		_legend.append({ "icon": [] as Array[String], "color": FAR_ROUTE_COLOR, "route": true, "text": Texts.get_text("map_legend_far_route") })
 	for child: Node in _legend_box.get_children():
 		child.queue_free()
 	for i: int in _legend.size():
@@ -173,11 +179,25 @@ func _on_canvas_draw() -> void:
 	var home: Vector2i = MapLogic.home_villa(_bosques)
 	if home.x >= 0:
 		PixelIcons.draw_centered(_canvas, PixelIcons.HOUSE, _cell_center(home), HOME_COLOR)
+	_draw_far_quests()
 	if GameState.has_objective():
 		PixelIcons.draw_centered(_canvas, PixelIcons.OBJECTIVE, _cell_center(GameState.objective_chunk), OBJECTIVE_COLOR)
 	if _blink_on and GameState.chunk_coord.x >= 0:
 		PixelIcons.draw_centered(_canvas, PixelIcons.PLAYER, _cell_center(GameState.chunk_coord), PLAYER_COLOR)
 	_draw_legend_icons()
+
+
+## Rutas de salvoconducto (línea de chunk en chunk, de Nujio a Nujio) y el objetivo de cada misión
+## lejana activa, con su propia marca. Se ven aunque estén en la niebla: llegaron en Pensamiento.
+func _draw_far_quests() -> void:
+	for q: Dictionary in FarQuests.active_quests():
+		var path: Array[Vector2i] = FarQuests.map_path(_bosques, q)
+		for i: int in range(1, path.size()):
+			_canvas.draw_line(_cell_center(path[i - 1]) - Vector2(0.5, 0.5), _cell_center(path[i]) - Vector2(0.5, 0.5), FAR_ROUTE_COLOR, 1.0)
+		for id: int in FarQuests.route_of(q):
+			var c: Vector2 = _cell_center(_bosques.nujio_chunk[id]) - Vector2.ONE
+			_canvas.draw_rect(Rect2(c, Vector2(2, 2)), FAR_ROUTE_COLOR)
+		PixelIcons.draw_centered(_canvas, PixelIcons.OBJECTIVE, _cell_center(FarQuests.target_chunk(q)), FAR_QUEST_COLOR)
 
 
 func _draw_legend_icons() -> void:
@@ -188,6 +208,8 @@ func _draw_legend_icons() -> void:
 		icon.assign(entry.icon)
 		if not icon.is_empty():
 			PixelIcons.draw_centered(_canvas, icon, center, entry.color)
+		elif bool(entry.get("route", false)):
+			_canvas.draw_line(center + Vector2(-4, 0), center + Vector2(4, 0), FAR_ROUTE_COLOR, 1.0)
 		elif bool(entry.get("mark", false)):
 			_canvas.draw_rect(Rect2(center - Vector2(4, 4), Vector2(CELL - 1, CELL - 1)), Color("3e8948"))
 			_canvas.draw_rect(Rect2(center + Vector2(CELL - 5 - STATE_MARK, -4), Vector2(STATE_MARK, STATE_MARK)), entry.color)

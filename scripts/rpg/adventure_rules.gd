@@ -270,9 +270,12 @@ static func relation_toll_factor(bosque_id: int) -> float:
 ## Peaje del Bosque a distancia d: 3 + d + hostility_toll × hostilidad (la hostilidad no lo sube por
 ## encima de toll_max; si la distancia ya lo supera, se queda en el de d) y, sobre eso, los
 ## multiplicadores del estado (corrupto ×1,5, BosqueStates.toll_factor) y de la relación
-## (redondeado, 1 como mínimo). 0 si el estado no cobra (muerto, necesita_ayuda). El enojado tiene
+## (redondeado, 1 como mínimo). 0 si el estado no cobra (muerto, necesita_ayuda) o con salvoconducto
+## (FarQuests.covers). El enojado tiene
 ## precio pero no lo acepta (can_pay_toll).
 static func toll_for(bosque_id: int, d: int) -> int:
+	if FarQuests.covers(bosque_id):
+		return 0
 	var state_factor: float = BosqueStates.toll_factor(bosque_state(bosque_id))
 	if state_factor <= 0.0:
 		return 0
@@ -584,10 +587,11 @@ static func leave_sneaked(bosque_id: int) -> void:
 			GameState.sneaked_bosques.erase(key)
 
 
-## El Bosque inicial, uno con el peaje pagado y sin caducar, o uno que no cobra por su estado
-## (muerto, necesita_ayuda): sus Botarramas quedan pasivos y da permiso para el fruto.
+## El Bosque inicial, uno con el peaje pagado y sin caducar, uno que no cobra por su estado
+## (muerto, necesita_ayuda) o uno con salvoconducto (el que llama o uno de la ruta de una misión
+## lejana activa, FarQuests.covers): sus Botarramas quedan pasivos y da permiso para el fruto.
 static func is_paid(bosque_id: int, home: int) -> bool:
-	return bosque_id >= 0 and (bosque_id == home or is_open(bosque_id) or is_free_pass(bosque_id))
+	return bosque_id >= 0 and (bosque_id == home or is_open(bosque_id) or is_free_pass(bosque_id) 		or FarQuests.covers(bosque_id))
 
 
 ## Forzado: se venció a alguno de sus Botarramas sin pagar (o el pago ha caducado). Se cruza, pero

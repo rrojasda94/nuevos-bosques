@@ -73,15 +73,16 @@ func show_static(line: Variant) -> void:
 	_more.visible = false
 
 
-## Pregunta con opciones. `line`: el texto de la pregunta; `options`: textos de las opciones.
-func ask(line: Variant, options: Array) -> void:
+## Pregunta con opciones. `line`: el texto de la pregunta; `options`: textos de las opciones;
+## `enabled` (opcional): false = la opción se ve desactivada y no se puede elegir.
+func ask(line: Variant, options: Array, enabled_options: Array = []) -> void:
 	_open()
 	show_static(line)
 	var texts: Array[String] = []
 	var enabled: Array[bool] = []
-	for o: Variant in options:
-		texts.append(str(o))
-		enabled.append(true)
+	for i: int in options.size():
+		texts.append(str(options[i]))
+		enabled.append(i >= enabled_options.size() or bool(enabled_options[i]))
 	_menu.set_options(texts, enabled)
 	# Ancho mínimo CHOICE_WIDTH; más si alguna opción no cabe (p. ej. "Tomarlo igualmente").
 	var width: float = CHOICE_WIDTH
