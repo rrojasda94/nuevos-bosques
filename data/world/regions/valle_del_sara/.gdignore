@@ -1,0 +1,3 @@
+Godot no importa esta carpeta: las PNG de autoría se leen como datos (RegionAuthoring, Image.load_from_file)
+y lugares.csv no es una tabla de traducción. ponytail: decidir en M5/M10 cómo llegan a un build exportado
+(hornear el RegionPlan en la caché o un importador propio).

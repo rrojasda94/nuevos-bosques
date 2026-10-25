@@ -22,3 +22,7 @@ jobs:
           echo "GODOT=$PWD/Godot_v${GODOT_VERSION}-stable_linux.x86_64" >> "$GITHUB_ENV"
       - name: Tests GUT
         run: tools/test.sh
+      - name: Banco de chunks (aviso, nunca falla)
+        # ADR 0014 §6: mediana y p95 de 50 chunks, seed 42. Las máquinas de CI varían.
+        continue-on-error: true
+        run: '"$GODOT" --headless --path . -s tools/world/bench_chunks.gd'

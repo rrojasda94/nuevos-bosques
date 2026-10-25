@@ -5,6 +5,7 @@
   "areas": ["Lean", "Tossie", "Ostie", "Casie", "Vastie", "Alss", "Causie"],
   "size_chunks": [12, 16],
   "start_chunk": [6, 13],
+  "authoring": "valle_del_sara/",
   "relief": {
     "north_base": 0.55,
     "south_base": -0.45,

@@ -30,7 +30,8 @@
 - **Mundo híbrido**: autoría por región en `data/world/regions/<id>/` (`altura.png`, `agua.png`, `caminos.png`, `bosques.png` a 1 px = 4×4 tiles, más `lugares.csv`). El relleno es procedural y determinista por `(seed, region_id, authoring_hash, generator_version)`.
 - **Pregeneración y caché**: la región se genera al crear la partida (anillo inicial con barra de progreso y el resto en segundo plano) con `WorkerThreadPool`, y se cachea en `user://world_cache/<world_key>/`, comprimida con ZSTD. La caché no va en el guardado ni en Steam Cloud.
 - **Streaming**: en memoria, el chunk del jugador y sus 8 vecinos; dibujados, los sectores visibles más un margen. Presupuesto de ≤ 2 ms por fotograma para montar sectores. Sin fundidos entre chunks.
-- **Presupuestos**: pasada de región ≤ 1,5 s; chunk ≤ 80 ms (mediana; `tools/world/bench_chunks.gd`); ningún fotograma de más de 20 ms por culpa del mundo.
+- **Presupuestos**: pasada de región ≤ 1,5 s; chunk ≤ 80 ms (mediana; `tools/world/bench_chunks.gd`, en la CI como aviso que nunca falla); ningún fotograma de más de 20 ms por culpa del mundo.
+- **Datos y coordenadas** (M4): `WorldCoords` (`scripts/core/world_coords.gd`) tiene la escala y todas las conversiones chunk/cell ↔ `world_cell` ↔ `world_pos`, sector y macro. `WorldChunk` (`scripts/core/data/world_chunk.gd`) guarda el chunk en capas `PackedByteArray` de 80×80 (`ground`, `level`, `cliff`, `decor`, `blocked`, `variant`), `occupant` y `objects`; `blocked` se deriva con `rebuild_blocked()` y `to_dict`/`from_dict` dan tipos simples para la caché. Convive con `ChunkData` hasta que lo sustituya el `ChunkBuilder`.
 
 ## Estructura de carpetas
 ```
