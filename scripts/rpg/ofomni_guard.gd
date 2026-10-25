@@ -3,8 +3,8 @@ extends RefCounted
 ## Ofomni que guardan su Bosque (sigilo-y-robo.md; feedback del dueño 0.3). Dos reglas, en lógica
 ## pura (sin nodos; MonsterField los dibuja y la exploración decide cuándo):
 ## - Persecución por robo: "tomar o comer mas de un fruto puede alertar a los ofomni a que te
-##   sigan". Con un robo a la vista (de momento siempre: no hay sigilo, MonsterSteering.is_camouflaged)
-##   despiertan entre chase_count_min y chase_count_max `ofomni` (los apaciguables) del Bosque
+##   sigan". Con un robo a la vista (sin camuflaje, siempre; camuflado, solo si un Único lo ve:
+##   is_alerted) despiertan entre chase_count_min y chase_count_max `ofomni` (los apaciguables) del Bosque
 ##   robado, cerca y fuera de la vista inmediata, y persiguen al Adoc dentro de ese Bosque. Si sale
 ##   del Bosque, se rinden. Una instancia lleva la persecución en curso: no se guarda (al cargar
 ##   una partida no hay perseguidores).
@@ -68,10 +68,14 @@ func chaser_defeated() -> void:
 		clear()
 
 
-## El robo se ve y alerta a los Ofomni: sin camuflaje, con probabilidad alert_chance (1.0 por
-## ahora). `roll`: número en [0, 1) para la probabilidad.
-static func is_alerted(roll: float = 0.0) -> bool:
-	return not MonsterSteering.is_camouflaged() and roll < float(config().get("alert_chance", 1.0))
+## El robo se ve y alerta a los Ofomni (sigilo-y-robo.md: "si robas algun objeto y estas sin
+## proteccion o a la vista de otro Único"): sin camuflaje (`hidden` false), con probabilidad
+## alert_chance (1.0 por ahora); camuflado, solo si un Único lo ve (`watched`). `roll`: número en
+## [0, 1) para la probabilidad.
+static func is_alerted(roll: float = 0.0, hidden: bool = false, watched: bool = false) -> bool:
+	if hidden and not watched:
+		return false
+	return roll < float(config().get("alert_chance", 1.0))
 
 
 ## Cuántos Ofomni despiertan con un robo (chase_count_min..chase_count_max), determinista por

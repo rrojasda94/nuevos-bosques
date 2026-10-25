@@ -88,7 +88,16 @@ func begin(logic: BattleLogic, style: Dictionary, kind: UnicoArt.Kind) -> void:
 	bob.tween_property(_unico, "position:y", _unico.position.y - 2.0, 0.6)
 	bob.tween_property(_unico, "position:y", _unico.position.y, 0.6)
 	_set_bars({ "unico_hp": logic.unico_hp, "adoc_hp": logic.adoc_hp, "luz": logic.luz }, false)
-	_show_messages([{ "text": TEXT_START % logic.unico_name }])
+	_show_messages(start_messages(logic))
+
+
+## Mensajes del comienzo: "¡X te cierra el paso!" y, si el Adoc no lleva arma, "Peleas sin arma"
+## (ATQ base; sigilo-y-robo.md, #131 provisional).
+static func start_messages(logic: BattleLogic) -> Array[Dictionary]:
+	var out: Array[Dictionary] = [{ "text": TEXT_START % logic.unico_name }]
+	if logic.unarmed:
+		out.append({ "text": Texts.get_text("battle_unarmed") })
+	return out
 
 
 ## Textos propios del rival, ya leídos de data/text/sistema.json (ver messages_for). Un combate

@@ -11,7 +11,10 @@ extends RefCounted
 ##   salir del Bosque; cambiar de chunk dentro del Bosque se los lleva detrás.
 ## - Bosque enojado (BosqueStates): el primer cazador llega a los hunt_first_seconds de entrar, el
 ##   intervalo se multiplica por hunt_interval_factor y caben max_hunters_bonus cazadores más. Un
-##   Bosque que no cobra (muerto, necesita_ayuda) cuenta como pagado: no caza.
+##   Bosque que no cobra (muerto, necesita_ayuda) cuenta como pagado: no caza. Con camuflaje alto
+##   o un talismán de velocidad, los cazadores del enojado tardan stealth_hunt_factor veces más.
+## - Sigilo (Stealth): con el arma en la mano, un Bosque pagado (salvo el natal) caza igual que uno
+##   sin pagar; en un Bosque colado no caza mientras ningún Único te haya visto dentro.
 ## Una instancia lleva la cacería en curso; no se guarda (al cargar no hay cazadores y el reloj de
 ## la cacería empieza de cero). Números en data/combat/balance.json (bloque bosque_hunt).
 
@@ -36,22 +39,23 @@ static func interval(hostility: int, state: String = "") -> float:
 	var cfg: Dictionary = config()
 	var base: float = maxf(float(cfg.get("min_seconds", 30)),
 		float(cfg.get("base_seconds", 90)) - float(cfg.get("per_hostility_seconds", 15)) * hostility)
-	return BosqueStates.hunt_interval(state, base)
+	return BosqueStates.hunt_interval(state, base) * BosqueStates.stealth_hunt_factor(state)
 
 
 ## Segundos hasta el primer cazador de una estancia (enojado: hunt_first_seconds; si no, interval).
 static func first_delay(hostility: int, state: String = "") -> float:
 	var first: float = BosqueStates.hunt_first_seconds(state)
-	return first if first >= 0.0 else interval(hostility, state)
+	return first * BosqueStates.stealth_hunt_factor(state) if first >= 0.0 else interval(hostility, state)
 
 
 static func max_hunters(state: String = "") -> int:
 	return int(config().get("max_hunters", 2)) + BosqueStates.max_hunters_bonus(state)
 
 
-## El Bosque caza al Adoc: está dentro (`bosque`) y no lo ha pagado (el natal nunca caza).
+## El Bosque caza al Adoc: está dentro (`bosque`) y no le deja pasar en paz (sin pagar, o con el
+## arma en la mano; el natal nunca caza), salvo que se haya colado y nadie le haya visto.
 static func is_hunting(bosque: int, home: int) -> bool:
-	return bosque >= 0 and not AdventureRules.is_paid(bosque, home)
+	return bosque >= 0 and not AdventureRules.is_welcome(bosque, home) and not AdventureRules.is_sneaking_unseen(bosque)
 
 
 ## Tipo del cazador número `n` (0, 1...) del Bosque: alterna los de `kinds` desde uno por seed.

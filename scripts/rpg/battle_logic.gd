@@ -51,6 +51,8 @@ var toll: int = 0
 var accepts_payment: bool = true
 var ofrendas: Array = []
 var ofrenda_index: int = -1
+## El Adoc pelea sin arma (ATQ base): el combate lo avisa al empezar.
+var unarmed: bool = false
 
 
 ## `adoc` = { max_hp, atk, def } del nivel del Adoc (AdventureRules.adoc_stats). `unico` =

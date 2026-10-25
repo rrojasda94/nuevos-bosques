@@ -22,10 +22,19 @@ extends Node2D
 ## igual (emboscada, por Momento); en uno muerto, el Único que ronda a veces va por su cuenta y te
 ## sale al paso a pedir Luz (la exploración pregunta; pagarle lo deja satisfecho este Momento); en
 ## uno que necesita ayuda, sus Únicos son amistosos.
+## Sigilo (Stealth): el camuflaje del Adoc se resta a la visión de todos (guardian_config,
+## inner_config; se recalcula al equipar o desequipar y cuando se rompe o vuelve). Cuando uno que
+## puede detectarle empieza a perseguirle o se le echa encima mientras va oculto (`is_hidden`),
+## avisa con `spotted` (la exploración rompe el camuflaje) y tarda Stealth.seen_grace en empezar el
+## encuentro. Con el arma en la mano, los de un Bosque pagado (salvo el natal) le tratan como a
+## quien no ha pagado (AdventureRules.is_welcome).
 ## Los perseguidores, cazadores y captores no se guardan; sus Ofomni llevan un aura de Luz que los
 ## distingue del descarriado. Ninguno de los que van por dentro sale del chunk (de su Bosque).
 
 signal engaged(monster: OverworldMonster)
+## Un monstruo que puede detectar al Adoc le ha visto mientras iba oculto (empieza a perseguirle o se
+## le echa encima). La exploración decide si rompe el camuflaje.
+signal spotted(monster: OverworldMonster)
 
 const BOTARRAMAS: StringName = &"botarramas"
 ## Ofomni de un Bosque con Nujio (apaciguable).
@@ -55,6 +64,9 @@ const SEEN_RANGE := Vector2i(10, 6)
 var area_walkable: Callable = func(_c: Vector2i) -> bool: return false
 ## () -> bool: se puede empezar un encuentro (sin fundido de entrada en curso).
 var can_engage: Callable = func() -> bool: return true
+## () -> bool: el Adoc va oculto (camuflado, o colado sin que le hayan visto): ver o alcanzarle
+## emite `spotted`.
+var is_hidden: Callable = func() -> bool: return false
 var player: PlayerWalker
 
 var _monsters: Array[OverworldMonster] = []
@@ -67,6 +79,13 @@ var _bosques: BosqueMap
 var _chunk: ChunkData
 ## Únicos independientes (Bosque muerto) ya pagados: "clave:riutash" -> true. No se guarda.
 var _satisfied: Dictionary = {}
+
+
+func _ready() -> void:
+	# Equipar o quitarse una máscara, un talismán o el arma cambia lo que ven los Únicos.
+	EventBus.item_equipped.connect(func(_s: StringName, _id: StringName) -> void: refresh_vision())
+	EventBus.item_unequipped.connect(func(_s: StringName, _id: StringName) -> void: refresh_vision())
+	EventBus.item_broken.connect(func(_id: StringName) -> void: refresh_vision())
 
 
 func clear() -> void:
@@ -139,6 +158,8 @@ static func guardian_config(base: Dictionary, bosque_id: int) -> Dictionary:
 ## rondar usa patrol_wander si sus datos lo tienen.
 static func inner_config(monster_id: StringName, role: StringName) -> Dictionary:
 	var cfg: Dictionary = AdventureRules.monster_config(monster_id).duplicate()
+	# Su visión, menos el camuflaje del Adoc (Stealth).
+	cfg.vision_radius = Stealth.vision_against(int(cfg.get("vision_radius", 0)), Stealth.camouflage())
 	cfg.max_outside = 0
 	cfg.leash = maxi(int(cfg.get("leash", 0)), ChunkData.SIZE)
 	if role == ROLE_PATROL:
@@ -146,13 +167,17 @@ static func inner_config(monster_id: StringName, role: StringName) -> Dictionary
 	return cfg
 
 
-## Vuelve a calcular la visión de los Botarramas de frontera (tras una victoria, la hostilidad ha
-## subido).
+## Vuelve a calcular la visión de todos: la de los Botarramas de frontera con la hostilidad de su
+## Bosque (tras una victoria ha subido) y la de todos con el camuflaje del Adoc (al equipar algo, o
+## cuando se rompe o vuelve). El Ofomni descarriado no la cambia: su misión va aparte del sigilo.
 func refresh_vision() -> void:
 	var base: Dictionary = AdventureRules.monster_config(BOTARRAMAS)
 	for m: OverworldMonster in _monsters:
-		if m.role == ROLE_GUARDIAN:
-			m.cfg = guardian_config(base, m.bosque_id)
+		match m.role:
+			ROLE_GUARDIAN:
+				m.cfg = guardian_config(base, m.bosque_id)
+			ROLE_PATROL, ROLE_CHASER, ROLE_HUNTER:
+				m.cfg = inner_config(m.monster_id, m.role)
 
 
 ## Pone al Ofomni descarriado en el chunk actual cerca de `cell`, a OFOMNI_MIN_GAP o más del jugador.
@@ -296,7 +321,8 @@ func has_chaser() -> bool:
 
 ## Puede ver al jugador (y por tanto perseguirle y alcanzarle): el descarriado y los perseguidores
 ## por robo siempre (el robo va aparte del peaje); los captores, nunca; los guardianes, los que
-## rondan y los cazadores, mientras su Bosque no esté pagado (cerrado o forzado: el Bosque recuerda).
+## rondan y los cazadores, mientras su Bosque no esté pagado (cerrado o forzado: el Bosque recuerda)
+## o el Adoc lleve el arma en la mano (salvo en el natal, y salvo los amistosos).
 func can_detect(m: OverworldMonster) -> bool:
 	match m.role:
 		ROLE_CAPTOR:
@@ -306,14 +332,29 @@ func can_detect(m: OverworldMonster) -> bool:
 	if m.bosque_id < 0:
 		return true
 	var state: String = BosqueStates.state_of(m.bosque_id, _bosques)
+	if BosqueStates.has_friendly_unicos(state):
+		return false
+	if AdventureRules.is_armed_against(m.bosque_id, _home):
+		return true
 	if m.role == ROLE_PATROL and m.bosque_id != _home:
 		if state == BosqueStates.MUERTO:
 			return is_independent(m)
 		if state == BosqueStates.CORRUPTO and AdventureRules.is_paid(m.bosque_id, _home) 				and BosqueStates.ambushes(GameState.seed_value, m.key, GameState.riutash_count, state):
 			return true
-	if BosqueStates.has_friendly_unicos(state):
-		return false
 	return not AdventureRules.is_paid(m.bosque_id, _home)
+
+
+## Algún Único del Bosque `bosque_id` mira la casilla `cell`: está a su visión (ya con el
+## camuflaje) o a su distancia de encuentro, lo pueda perseguir o no (los que rondan un Bosque
+## pagado también miran). Para el robo camuflado (OfomniGuard.is_alerted).
+func is_watched(bosque_id: int, cell: Vector2i) -> bool:
+	for m: OverworldMonster in _monsters:
+		if m.bosque_id != bosque_id or m.role == ROLE_CAPTOR:
+			continue
+		var reach: int = maxi(int(m.cfg.get("vision_radius", 0)), int(m.cfg.get("engage_distance", 1)))
+		if MonsterSteering.chebyshev(m.cell, cell) <= reach:
+			return true
+	return false
 
 
 ## Único de un Bosque muerto que este Momento va por su cuenta y pide Luz (y no se le ha pagado).
@@ -336,15 +377,30 @@ static func _satisfied_key(m: OverworldMonster) -> String:
 func _process(delta: float) -> void:
 	if player == null:
 		return
-	for m: OverworldMonster in _monsters:
+	for m: OverworldMonster in _monsters.duplicate():
+		var was_chasing: bool = m.state == MonsterSteering.State.CHASE
 		m.think(delta, player.cell, can_detect(m), func(c: Vector2i) -> bool: return _is_free(c, m))
 		_note_seen(m)
+		# Le ha visto (el camuflaje no basta) y empieza a perseguirle.
+		if not was_chasing and m.state == MonsterSteering.State.CHASE and can_spot(m) and is_hidden.call():
+			spotted.emit(m)
 	if not can_engage.call():
 		return
 	for m: OverworldMonster in _monsters:
-		if m.cooldown <= 0.0 and MonsterSteering.engages(m.cell, player.cell, can_detect(m), m.cfg):
-			engaged.emit(m)
-			return
+		if m.cooldown > 0.0 or m.engage_delay > 0.0 or not MonsterSteering.engages(m.cell, player.cell, can_detect(m), m.cfg):
+			continue
+		# Oculto, pero se le ha echado encima: le ve igualmente y tarda un instante en atacar.
+		if can_spot(m) and is_hidden.call():
+			spotted.emit(m)
+			if m.engage_delay > 0.0:
+				continue
+		engaged.emit(m)
+		return
+
+
+## Puede romper el camuflaje al ver al Adoc: los que guardan, rondan o cazan en su Bosque.
+static func can_spot(m: OverworldMonster) -> bool:
+	return m.role == ROLE_GUARDIAN or m.role == ROLE_PATROL or m.role == ROLE_HUNTER
 
 
 func _is_free(c: Vector2i, me: OverworldMonster) -> bool:

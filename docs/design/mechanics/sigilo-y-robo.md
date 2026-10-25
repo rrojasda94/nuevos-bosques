@@ -38,6 +38,27 @@ Palabras del dueño:
    - Los perseguidores son `ofomni` **apaciguables** (`monstruos.md`), no el `ofomni_descarriado` de la misión.
 5. **Persecución**: los Ofomni **persiguen al jugador por el Bosque hasta la frontera**.
 
+## Implementado en la 0.3 (provisional, a confirmar por el dueño en #131 y #132)
+> Números en `data/combat/balance.json` (bloque `stealth`) y `data/items/items.json`. Nombres y textos provisionales (`narrative-writer`). Código: `Stealth`, `AdventureRules` (sección Colarse), `MonsterField`, `exploration.gd`.
+
+- **Camuflaje**: cada máscara y talismán tiene `camouflage` (casillas que se restan al `vision_radius` de todos los Únicos). Máscara + talismán se suman, con tope `camouflage_max` = 14. **Con un arma en la mano principal, el camuflaje no funciona.**
+- **Objetos** (para probar, todos en la bolsa inicial; de dónde salen sigue en #132):
+
+| Objeto | Camuflaje | Otro efecto | Coste |
+|---|---|---|---|
+| Máscara de corteza | 6 | — | — |
+| Máscara de musgo | 8 | — | DEF −2 mientras se lleva |
+| Máscara de ceniza | 11 | — | Se deshace tras 3 cruces colados |
+| Talismán de semillas | 3 | — | — |
+| Talismán de pluma (de viaje) | 0 | Paso un 30% más rápido (`speed_bonus`, tope 0,5) | No oculta |
+
+- **Colarse**: si la visión de los Botarramas del Bosque vecino (con su hostilidad y su estado, menos el camuflaje) queda en `sneak_max_vision` = 1 o menos, se cruza su frontera cerrada sin menú. El Bosque queda **colado** mientras sigas dentro: ni pagado ni forzado, sin cazadores mientras nadie te vea y sin derecho a fruto (tomarlo es robo). Al salir, hay que volver a colarse. Ejemplos: corteza + semillas (9) basta en un Bosque sano sin hostilidad; con hostilidad 1 ya no; un Bosque enojado (+4) pide ceniza + semillas (14).
+- **Te han visto**: un Único que te encuentra de cerca (a su `engage_distance`) o que empieza a perseguirte mientras vas oculto rompe el camuflaje `exposed_seconds` = 20 s; te persigue y tarda `seen_grace_seconds` = 0,8 s en empezar el encuentro. Si estabas colado en su Bosque, el Bosque empieza a cazarte.
+- **Robo camuflado**: solo despierta a los Ofomni si un Único del Bosque te tiene a su visión o a su distancia de encuentro. La hostilidad y la relación del robo se aplican igual. Sin camuflaje, siempre (100%).
+- **Arma equipada** (#131 provisional): con un arma en la mano principal, ningún Bosque salvo el natal (y salvo los que no cobran: muerto y necesita ayuda) te deja pasar en paz, aunque esté pagado: sus Únicos te persiguen, el menú del borde solo ofrece "Enfrentar" o "Retroceder" y caza como uno sin pagar. Aviso al entrar: "El Bosque siente tu arma.". Equipar o desequipar fuera de combate (pantalla I) es gratis. En combate el arma suma su ATQ; sin ella, ATQ base y "Peleas sin arma.". En combate se sigue pudiendo apaciguar con Luz u ofrendas.
+- **Bosque enojado**: con camuflaje alto (un Botarramas base se queda con visión ≤ `hidden_vision` = 2) o con velocidad, sus cazadores tardan `stealth_hunt_factor` = 2 veces más.
+- **HUD**: icono de máscara (verde oculto, rojo visto) y de lanza (armado).
+
 ## Propuestas de `game-designer` (a confirmar; sin números todavía)
 - **Máscara o artefacto de camuflaje equipado**:
   - Reduce el `vision_radius` con el que los Únicos ven al jugador (por ejemplo, a la mitad o a 0, según la máscara).

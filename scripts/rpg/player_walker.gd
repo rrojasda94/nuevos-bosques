@@ -29,6 +29,9 @@ const ACTIONS: Dictionary = {
 	&"move_right": Vector2i.RIGHT,
 }
 
+## Segundos por casilla andando ahora: STEP_TIME o menos con un talismán de viaje (Stealth.step_time;
+## lo fija la escena que contiene al jugador).
+var step_time: float = STEP_TIME
 ## (Vector2i) -> bool. Lo asigna la escena que contiene al jugador.
 var is_walkable: Callable = func(_c: Vector2i) -> bool: return true
 var cell: Vector2i = Vector2i.ZERO
@@ -122,7 +125,7 @@ func _try_step() -> void:
 	_steps += 1
 	if _steps % STEP_SOUND_EVERY == 0:
 		Sfx.play(&"step")
-	var time: float = STEP_TIME
+	var time: float = step_time
 	if Input.is_action_pressed(&"run"):
 		time /= RUN_MULTIPLIER
 	_tween = create_tween()

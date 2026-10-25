@@ -21,6 +21,12 @@ extends Node2D
 ## Estados de Bosque (BosqueStates): al entrar en un Bosque se avisa de su estado; la vegetación se
 ## tiñe según el estado; en un Bosque muerto, un Único independiente pide Luz antes de atacar; en
 ## uno que necesita ayuda arden algunos chunks (BosqueFires): el fuego bloquea y se apaga con E.
+## Sigilo (Stealth, sigilo-y-robo.md): con máscara o talismán (y sin arma) los Únicos ven menos;
+## si los Botarramas del Bosque vecino se quedan casi ciegos, su frontera cerrada se cruza sin pagar
+## ("colado": sin cazadores mientras no te vean, sin derecho a fruto). Si un Único te ve de cerca,
+## "¡Te han visto!": el camuflaje se rompe un rato y te persigue. Robar camuflado solo despierta a
+## los Ofomni si un Único lo ve. Con el arma en la mano, ningún Bosque salvo el natal te deja pasar
+## en paz ("El Bosque siente tu arma."). Los talismanes de viaje aceleran el paso.
 
 const TILE_SIZE: int = 16
 ## Duración del fundido al cambiar de chunk.
@@ -64,6 +70,10 @@ var _fire_cache: Dictionary = {}
 var _fire_layer: Node2D
 ## Último Bosque en el que se entró (para avisar de su estado al cambiar de Bosque).
 var _last_bosque: int = -1
+## Avisos que se muestran al entrar en el chunk siguiente (p. ej. "Te cuelas...").
+var _entry_notices: PackedStringArray = []
+## El último robo no lo vio nadie (camuflado y sin Únicos a la vista).
+var _theft_unseen: bool = false
 
 @onready var _terrain: TileMapLayer = $Terrain
 @onready var _nujios: Node2D = $Nujios
@@ -96,6 +106,10 @@ func _ready() -> void:
 	_field.area_walkable = _area_walkable
 	_field.can_engage = func() -> bool: return _fade.color.a <= 0.0
 	_field.engaged.connect(_on_monster_engaged)
+	_field.is_hidden = _is_hidden
+	_field.spotted.connect(_on_monster_spotted)
+	EventBus.item_equipped.connect(_on_equipment_changed)
+	EventBus.item_unequipped.connect(_on_equipment_changed)
 	_quest.setup(_dialogue, _region_map)
 	_quest.ofomni_changed.connect(_sync_ofomni)
 	_setup_riutash()
@@ -115,6 +129,8 @@ func start() -> void:
 	_chase.clear()
 	_hunt.clear()
 	_capturing = false
+	_entry_notices.clear()
+	_player.step_time = Stealth.step_time(PlayerWalker.STEP_TIME)
 	_quest.start(_bosques, _home_bosque, _get_chunk(_bosques.nujio_chunk[_home_bosque]))
 	var coord: Vector2i = GameState.chunk_coord
 	if not AdventureRules.is_passable(_bosques.bosque_at(coord), _home_bosque):
@@ -193,14 +209,21 @@ func _enter_chunk(coord: Vector2i, cell: Vector2i) -> void:
 	# Frutos guardados de otro Bosque: su Bosque de origen nota que te los llevas (FruitRules).
 	if FruitRules.bosque_entered(bosque_id) > 0:
 		EventBus.notice_requested.emit(Texts.get_text("fruit_taken_out"))
-	# Estado del Bosque al cruzar a otro (el corrupto avisa del Iserald).
+	# Estado del Bosque al cruzar a otro (el corrupto avisa del Iserald), si te has colado y si
+	# llevas el arma en la mano. Fuera de un Bosque colado, ya no se está colado en él.
+	AdventureRules.leave_sneaked(bosque_id)
 	if bosque_id != _last_bosque:
 		_last_bosque = bosque_id
 		var state: String = BosqueStates.state_of(bosque_id, _bosques)
 		EventBus.bosque_entered.emit(bosque_id, state)
 		var notice: String = BosqueStates.entry_notice(state)
 		if notice != "":
-			EventBus.notice_requested.emit(notice)
+			_entry_notices.append(notice)
+		if AdventureRules.is_armed_against(bosque_id, _home_bosque):
+			_entry_notices.append(Texts.get_text("bosque_feels_weapon"))
+	if not _entry_notices.is_empty():
+		EventBus.notice_requested.emit("\n".join(_entry_notices))
+		_entry_notices.clear()
 	EventBus.chunk_entered.emit(coord, bosque_id, _bosques.size_of(bosque_id))
 	_fade.color.a = 1.0
 	create_tween().tween_property(_fade, "color:a", 0.0, TRANSITION_TIME)
@@ -526,7 +549,7 @@ func _take_fruit(cell: Vector2i, store: bool) -> void:
 	_refresh_fruit_trees()
 	var lines: Array = [Texts.get_text("fruit_stored") if store else Texts.get_text("fruit_taken") % int(result.healed)]
 	if bool(result.theft):
-		lines.append(Texts.get_text("fruit_theft_seen"))
+		lines.append(Texts.get_text("fruit_theft_unseen" if _theft_unseen else "fruit_theft_seen"))
 		if _chase.is_active():
 			lines.append(Texts.get_text("ofomni_chase_alert"))
 	_dialogue.show_lines(lines)
@@ -553,6 +576,11 @@ func _on_edge_reached(direction: Vector2i) -> void:
 		return
 	var next_coord: Vector2i = GameState.chunk_coord + direction
 	var next_bosque: int = _bosques.bosque_at(next_coord)
+	# Sigilo: con camuflaje suficiente (y sin arma) se cruza la frontera cerrada sin pagar.
+	if not AdventureRules.is_passable(next_bosque, _home_bosque) and Stealth.can_sneak_into(next_bosque) \
+			and not _field.has_chaser():
+		_sneak_into(next_bosque, direction)
+		return
 	if not AdventureRules.is_passable(next_bosque, _home_bosque):
 		# Si un Botarramas ya viene a por el jugador, el menú lo abrirá su encuentro.
 		if direction != _blocked_dir and not _field.has_chaser():
@@ -562,6 +590,47 @@ func _on_edge_reached(direction: Vector2i) -> void:
 			EventBus.bosque_border_reached.emit(next_bosque)
 		return
 	_cross(direction)
+
+
+## Se cuela en el Bosque cerrado `bosque_id` (Stealth): queda colado, los objetos que se rompen
+## gastan un uso y cruza. Lo avisa al entrar.
+func _sneak_into(bosque_id: int, direction: Vector2i) -> void:
+	var broken: Array[StringName] = AdventureRules.sneak_into(bosque_id)
+	_entry_notices.append(Texts.get_text("sneak_entered"))
+	for id: StringName in broken:
+		_entry_notices.append(Texts.get_text("item_broke") % Items.display_name(id))
+	_cross(direction)
+
+
+## Va oculto: camuflado, o colado en este Bosque sin que le hayan visto.
+func _is_hidden() -> bool:
+	if Stealth.is_hidden():
+		return true
+	return _chunk != null and AdventureRules.is_sneaking_unseen(_bosques.bosque_at(_chunk.coord))
+
+
+## Un Único le ha visto yendo oculto: "¡Te han visto!". El camuflaje se rompe un rato (si estaba
+## colado en ese Bosque, el Bosque ya le caza), el Único le persigue y tarda un instante en atacar.
+func _on_monster_spotted(monster: OverworldMonster) -> void:
+	if not _is_hidden():
+		return
+	# Si el que le ve es de otro Bosque, el Bosque en el que está colado no se entera.
+	AdventureRules.spotted(monster.bosque_id)
+	monster.state = MonsterSteering.State.CHASE
+	monster.engage_delay = Stealth.seen_grace()
+	_field.refresh_vision()
+	EventBus.notice_requested.emit(Texts.get_text("stealth_spotted"))
+
+
+## Equipar o quitarse algo: el paso del talismán de viaje y, si saca el arma dentro de un Bosque en
+## el que se ha colado, el Bosque lo siente (ya le caza).
+func _on_equipment_changed(slot: StringName, _item_id: StringName) -> void:
+	_player.step_time = Stealth.step_time(PlayerWalker.STEP_TIME)
+	if _chunk == null or slot != InventoryLogic.SLOT_MAIN_HAND or not AdventureRules.is_armed():
+		return
+	var here: int = _bosques.bosque_at(_chunk.coord)
+	if AdventureRules.is_sneaking_unseen(here):
+		GameState.sneaked_bosques[str(here)] = true
 
 
 func _cross(direction: Vector2i) -> void:
@@ -701,10 +770,18 @@ func _on_unico_battle_resolved(_bosque_id: int, outcome: StringName) -> void:
 
 ## Un robo en el Bosque actual, a la vista: despiertan sus Ofomni y persiguen al Adoc.
 func _on_bosque_robbed(bosque_id: int) -> void:
+	_theft_unseen = false
 	if _chunk == null or _bosques == null or bosque_id != _bosques.bosque_at(_chunk.coord):
 		return
-	if not OfomniGuard.is_alerted():
+	# Camuflado, solo despiertan si algún Único del Bosque lo ve (y entonces te han visto).
+	var hidden: bool = Stealth.is_hidden()
+	var watched: bool = hidden and _field.is_watched(bosque_id, _player.cell)
+	_theft_unseen = hidden and not watched
+	if not OfomniGuard.is_alerted(0.0, hidden, watched):
 		return
+	if watched:
+		AdventureRules.spotted(bosque_id)
+		_field.refresh_vision()
 	var n: int = OfomniGuard.chase_count(GameState.seed_value, bosque_id, AdventureRules.hostility(bosque_id))
 	var added: int = _chase.alert(bosque_id, n)
 	if added > 0:
@@ -732,6 +809,11 @@ func _spawn_hunter(kind: StringName) -> void:
 func _process(delta: float) -> void:
 	if _chunk == null or _bosques == null or _capturing or _fade.color.a > 0.0:
 		return
+	# El camuflaje roto vuelve con el tiempo.
+	if Stealth.tick(delta):
+		_field.refresh_vision()
+		if Stealth.is_hidden():
+			EventBus.notice_requested.emit(Texts.get_text("stealth_hidden_again"))
 	var bosque_id: int = _bosques.bosque_at(_chunk.coord)
 	var was_hunting: bool = _hunt.bosque_id >= 0
 	var kind: StringName = _hunt.tick(delta, bosque_id, _home_bosque, GameState.seed_value)

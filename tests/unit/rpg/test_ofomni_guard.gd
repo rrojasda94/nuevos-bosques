@@ -104,6 +104,8 @@ func test_spawn_cells_out_of_sight_and_apart() -> void:
 # --- Persecución tras un robo -------------------------------------------------------------------
 
 func test_theft_spawns_chasers_that_follow_inside_their_bosque_and_not_outside() -> void:
+	# Sin arma: al entrar armado en otro Bosque se avisa además "El Bosque siente tu arma." (test_stealth).
+	GameState.equipped.main_hand = ""
 	var expl: Node = _exploration()
 	assert_eq(_map.bosque_at(GameState.chunk_coord), _home)
 	_steal_at_home()

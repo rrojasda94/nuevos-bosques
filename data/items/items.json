@@ -7,7 +7,10 @@
   },
   "start_bag": [
     { "id": "mascara_de_corteza", "qty": 1 },
-    { "id": "talisman_de_semillas", "qty": 1 }
+    { "id": "talisman_de_semillas", "qty": 1 },
+    { "id": "mascara_de_musgo", "qty": 1 },
+    { "id": "mascara_de_ceniza", "qty": 1 },
+    { "id": "talisman_de_pluma", "qty": 1 }
   ],
   "items": [
     {
@@ -76,7 +79,25 @@
       "name": "Máscara de corteza",
       "description": "Una cara de corteza que oculta la tuya.",
       "stack_max": 1,
-      "camouflage": 0
+      "camouflage": 6
+    },
+    {
+      "id": "mascara_de_musgo",
+      "kind": "mask",
+      "name": "Máscara de musgo",
+      "description": "Musgo húmedo prensado. Oculta bien, pero pesa y no deja ver los golpes.",
+      "stack_max": 1,
+      "camouflage": 8,
+      "def_penalty": 2
+    },
+    {
+      "id": "mascara_de_ceniza",
+      "kind": "mask",
+      "name": "Máscara de ceniza",
+      "description": "Ceniza de Nujio. Apaga casi toda tu Luz, pero se deshace.",
+      "stack_max": 1,
+      "camouflage": 11,
+      "max_uses": 3
     },
     {
       "id": "talisman_de_semillas",
@@ -84,7 +105,16 @@
       "name": "Talismán de semillas",
       "description": "Semillas ensartadas que apagan un poco tu Luz.",
       "stack_max": 1,
-      "camouflage": 0
+      "camouflage": 3
+    },
+    {
+      "id": "talisman_de_pluma",
+      "kind": "talisman",
+      "name": "Talismán de pluma",
+      "description": "Talismán de viaje sarua. Aligera el paso; no oculta nada.",
+      "stack_max": 1,
+      "camouflage": 0,
+      "speed_bonus": 0.3
     }
   ]
 }

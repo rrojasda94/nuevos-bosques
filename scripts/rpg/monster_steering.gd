@@ -20,22 +20,17 @@ static func chebyshev(a: Vector2i, b: Vector2i) -> int:
 	return maxi(absi(a.x - b.x), absi(a.y - b.y))
 
 
-## Punto de enganche del sigilo (0.3.0, sigilo-y-robo.md): una máscara u otro artefacto que camufle
-## la Luz del jugador. En la 0.2.0 no existe: nadie se cuela sin pagar.
-static func is_camouflaged() -> bool:
-	return false
-
-
-## El monstruo ve al jugador: puede detectar (Bosque cerrado, sin enfriamiento...), el jugador no
-## va camuflado y está dentro de su vision_radius.
+## El monstruo ve al jugador: puede detectar (Bosque cerrado, sin enfriamiento...) y está dentro de
+## su vision_radius. El sigilo (Stealth) ya viene restado en cfg.vision_radius (MonsterField): con
+## visión 0 solo te encuentra si se te echa encima (engages).
 static func sees(cell: Vector2i, player: Vector2i, can_detect: bool, cfg: Dictionary) -> bool:
-	return can_detect and not is_camouflaged() and chebyshev(cell, player) <= int(cfg.vision_radius)
+	return can_detect and chebyshev(cell, player) <= int(cfg.vision_radius)
 
 
 ## Empieza el encuentro (menú del borde o combate): a engage_distance o menos (1 = adyacente,
-## también en diagonal).
+## también en diagonal). El camuflaje no lo evita: de tan cerca, te ve igualmente.
 static func engages(cell: Vector2i, player: Vector2i, can_detect: bool, cfg: Dictionary) -> bool:
-	return can_detect and not is_camouflaged() and cell != player and chebyshev(cell, player) <= int(cfg.engage_distance)
+	return can_detect and cell != player and chebyshev(cell, player) <= int(cfg.engage_distance)
 
 
 ## Casillas que la casilla queda fuera de `home_rect` (0 si está dentro).
@@ -94,7 +89,7 @@ static func decide(state: State, cell: Vector2i, post: Vector2i, player: Vector2
 		cfg: Dictionary, home_rect: Rect2i, walkable: Callable, idle_phase: int, lateral: Vector2i) -> Dictionary:
 	var allowed: Callable = func(c: Vector2i) -> bool: return can_stand(c, post, home_rect, cfg, walkable)
 	var visible: bool = sees(cell, player, can_detect, cfg)
-	if state == State.CHASE and (not can_detect or is_camouflaged() or chebyshev(cell, player) > int(cfg.leash)):
+	if state == State.CHASE and (not can_detect or chebyshev(cell, player) > int(cfg.leash)):
 		state = State.RETURN
 	elif state != State.CHASE and visible:
 		state = State.CHASE

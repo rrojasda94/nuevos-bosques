@@ -7,6 +7,8 @@ extends CanvasLayer
 ## Estados de Bosque (BosqueStates): un Bosque enojado no acepta pagos (solo "Enfrentar" y
 ## "Retroceder", con su aviso en el título); uno corrupto lo dice junto a su peaje ×1,5. Los que no
 ## cobran (muerto, necesita_ayuda) tienen el borde abierto y el menú no se abre.
+## Sigilo (sigilo-y-robo.md): con el arma en la mano el Bosque no deja pasar en paz aunque esté
+## pagado: el menú se abre igual, sin pagos ("El Bosque siente tu arma.": enfrentar o retroceder).
 ## También lleva el combate de misión (Ofomni descarriado, EventBus.quest_battle_requested) y el
 ## combate directo contra un Único de dentro del Bosque (EventBus.unico_battle_requested: Ofomni
 ## que persiguen tras un robo, cazadores, los que rondan o el que se enfrenta a voluntad; sin menú,
@@ -71,9 +73,11 @@ func _on_bosque_border_reached(bosque_id: int) -> void:
 	var region: Dictionary = ChunkGenerator.load_region(GameState.region_id)
 	_ensure_map(region)
 	var home: int = AdventureRules.home_bosque(_map, region)
-	# Un Bosque forzado se cruza, pero sus Botarramas siguen exigiendo el pago al alcanzarte.
-	if AdventureRules.is_paid(bosque_id, home):
+	# Un Bosque forzado se cruza, pero sus Botarramas siguen exigiendo el pago al alcanzarte. Con el
+	# arma en la mano, tampoco uno pagado deja pasar en paz.
+	if AdventureRules.is_welcome(bosque_id, home):
 		return
+	_home = home
 	_bosque_id = bosque_id
 	_distance = maxi(1, _map.distance(home, bosque_id))
 	_cost = AdventureRules.toll_for(bosque_id, _distance)
@@ -84,13 +88,13 @@ func _on_bosque_border_reached(bosque_id: int) -> void:
 
 func _open_main_menu() -> void:
 	_in_submenu = false
-	_title.text = title_for(_bosque_id)
+	_title.text = title_for(_bosque_id, _home)
 	var lines: int = _title.text.count("\n")
 	var extra: float = 0.0 if lines == 0 else EXTRA_LINE + NEXT_EXTRA_LINE * (lines - 1)
 	_options.offset_top = _options_top + extra
 	# El panel crece hacia arriba: abajo no cabe.
 	_panel.offset_top = _panel_top - extra
-	_actions = actions_for(_bosque_id)
+	_actions = actions_for(_bosque_id, _home)
 	var texts: Array[String] = []
 	var enabled: Array[bool] = []
 	var has_ofrenda: bool = not Ofrendas.payable(AdventureRules.bag_ofrendas(), GameState.luz, _cost).is_empty()
@@ -112,17 +116,20 @@ func _open_main_menu() -> void:
 
 
 ## Opciones del menú del borde del Bosque: pagar (Luz u ofrenda), enfrentar y retroceder; si no
-## acepta pagos (enojado), solo enfrentar y retroceder.
-static func actions_for(bosque_id: int) -> Array[int]:
-	if not AdventureRules.can_pay_toll(bosque_id):
+## acepta pagos (enojado, o el Adoc lleva el arma en la mano), solo enfrentar y retroceder.
+static func actions_for(bosque_id: int, home: int = -1) -> Array[int]:
+	if not AdventureRules.can_pay_toll(bosque_id) or AdventureRules.is_armed_against(bosque_id, home):
 		return [Option.FIGHT, Option.RETREAT]
 	return [Option.PAY_LUZ, Option.OFRENDA, Option.FIGHT, Option.RETREAT]
 
 
 ## Título del menú: el de siempre; si el Bosque recuerda Botarramas vencidos, su aviso; y si la
-## relación multiplica el peaje, cuánto (con amistad alta, que el paso será permanente).
-static func title_for(bosque_id: int) -> String:
+## relación multiplica el peaje, cuánto (con amistad alta, que el paso será permanente). Con el arma
+## en la mano, el aviso del arma (manda sobre los demás: no hay peaje que ofrecer).
+static func title_for(bosque_id: int, home: int = -1) -> String:
 	var state: String = AdventureRules.bosque_state(bosque_id)
+	if AdventureRules.is_armed_against(bosque_id, home):
+		return "\n".join(PackedStringArray([Texts.get_text("crossing_armed_title"), Texts.get_text("crossing_armed_line")]))
 	if not AdventureRules.can_pay_toll(bosque_id):
 		var angry: PackedStringArray = [Texts.get_text("crossing_angry_title"), Texts.get_text("crossing_angry_line")]
 		return "\n".join(angry)

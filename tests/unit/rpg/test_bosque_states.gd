@@ -28,6 +28,8 @@ func before_each() -> void:
 	WorldClock.set_process(false)
 	WorldClock.shelter_check = Callable()
 	GameState.new_game(42)
+	# Sin arma en la mano: con ella ningún Bosque deja pasar en paz (eso se prueba en test_stealth).
+	GameState.equipped.main_hand = ""
 
 
 func after_each() -> void:
@@ -436,7 +438,7 @@ func test_map_and_inventory_show_the_state() -> void:
 # --- Guardado ------------------------------------------------------------------------------------------
 
 func test_save_v14_keeps_state_changes_and_put_out_fires() -> void:
-	assert_eq(GameState.SAVE_VERSION, 14)
+	assert_gte(GameState.SAVE_VERSION, 14)
 	_force(_target, BosqueStates.ENOJADO)
 	GameState.extinguished_fires.append(Vector2i(3, 4))
 	var data: Dictionary = GameState.to_dict()

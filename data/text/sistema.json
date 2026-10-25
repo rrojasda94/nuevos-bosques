@@ -137,5 +137,20 @@
   "map_legend_state_enojado": "Enojado",
   "map_legend_state_corrupto": "Corrupto",
   "map_legend_state_muerto": "Muerto",
-  "map_legend_state_necesita_ayuda": "Pide ayuda"
+  "map_legend_state_necesita_ayuda": "Pide ayuda",
+  "$provisional_stealth": "Textos del sigilo y del arma (sigilo-y-robo.md): crossing_armed_*, bosque_feels_weapon, battle_unarmed, sneak_entered, item_broke, stealth_*, fruit_theft_unseen e item_effect_*, y los nombres de las máscaras y talismanes nuevos en items.json, provisionales: pendientes de revisión de narrative-writer.",
+  "crossing_armed_title": "El Bosque siente tu arma. No te deja pasar en paz.",
+  "crossing_armed_line": "Guarda el arma (I) o enfréntate a sus Únicos.",
+  "bosque_feels_weapon": "El Bosque siente tu arma.",
+  "battle_unarmed": "Peleas sin arma.",
+  "sneak_entered": "Te cuelas en el Bosque sin que te vean.",
+  "item_broke": "Tu %s se deshace.",
+  "stealth_spotted": "¡Te han visto!",
+  "stealth_hidden_again": "Vuelves a ocultarte.",
+  "fruit_theft_unseen": "Ningún Único te ha visto, pero el Bosque echará en falta su fruto.",
+  "item_effect_atk": "ATQ +%d.",
+  "item_effect_camouflage": "Camuflaje %d.",
+  "item_effect_speed": "Paso +%d%%.",
+  "item_effect_def_penalty": "DEF −%d.",
+  "item_effect_uses": "Usos: %d."
 }
