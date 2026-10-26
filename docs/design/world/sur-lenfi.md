@@ -76,9 +76,16 @@ Las regiones del glosario §8 (Nan, Gumna, Ungol, Amuss, Hagat, Uta, Sanag, Suna
   - **Villa pequeña**, la **más septentrional** del Valle del Sara, en el **noroeste**, pegada a la **cordillera occidental**.
   - Tiene una **tarca** que es templo garelino (`docs/design/mechanics/lugares-e-interiores.md`).
   - De allí salieron los **primeros Nuevos Bosques**.
-  - *(lectura)* Cae probablemente en la subregión **Lean** (norte-oeste). Por confirmar (#179).
-- **Tarca de Trastas** (glosario §7: en Dorias): en la **misma cordillera occidental**, del **lado de Dorias**, hacia su **parte central** (dueño).
-- **Cordillera occidental**: separa el Valle del Sara de Dorias. *(lectura)* En la imagen (`Sur-Lenfi_02.jpg`) no se ve una cordillera continua entre Dorias y el Valle del Sara: hay símbolos de montaña en el este de Dorias y en el oeste de Lean y Tossie, y la franja de montañas del norte. Conviene que el dueño la marque cuando pinte el mapa del Mundo 2.0 (#179).
+  - Ubicación según la captura del dueño (2026-10-26): en el **extremo norte de la cordillera occidental**, pegada al **borde norte** (Larr).
+  - *(lectura)* Por posición coincide con la subregión **Lean** de `Sur-Lenfi_02.jpg` (norte-oeste). La captura no muestra los colores de las subregiones, así que queda **probable, sin confirmar** (#182).
+- **Tarca de Trastas** (glosario §7: en Dorias): en la **misma cordillera occidental**, del **lado de Dorias** (zona salmón de la captura), hacia la **parte central** de la franja (dueño).
+- **Cordillera occidental** (dueño: "la cordillera no tan agreste es la que esta rodeada en rojo, son colinas y montañas bastante transitables"):
+  - **franja alargada de norte a sur** en el borde oeste del Valle del Sara, a caballo con Dorias;
+  - va desde el **borde norte** casi hasta la **costa sur**;
+  - **la cruzan ríos**;
+  - **colinas y montañas transitables**, no una barrera.
+  - Para la generación: relieve de colinas, con pasos y ríos que la atraviesan.
+- **Cordillera de Larr** (dueño: "La cordillera norte de todo el Sur Lenfi es Larr y es una pared impenetrable"): la **franja de montañas del borde norte** de todo el mapa es Larr. **Impenetrable**: es el límite norte del mundo jugable.
 
 ## Frecuencia de Nuevos Bosques sobre el mapa (ADR 0007)
 - Alta: Lean, Tossie, Ostie (noroeste del Valle del Sara, junto a Dorias).

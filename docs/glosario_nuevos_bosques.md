@@ -2,7 +2,7 @@
 
 Mundo: **Nardaram**. Compilado solo con información aportada por el autor. Cada entrada indica su fuente entre corchetes.
 
-**Fuentes:** [Lenfi] · [Luz] · [Riutash] · [Oficios] · [Únicos] · [Estrella Azul] · [Ojos] (Gietos, Riumna y sus Riumini) · [Kulvar] · [Bosques] (Los Bosques y los Nuevos Bosques) · [Villa] · [Originales] · [Humores] · [Fronteras] · [Deidades] (borrador) · [Guerra] · [Errantes] · [Ueutrec] · [Antur-Keund] · [Mecánica v0.2] · [Economía] · [Mapas] (mapa general, cultural lenfi, cultural kulvar, cultural wertrak, ecosistemas) · [Canon] (datos confirmados por el autor en sesiones previas)
+**Fuentes:** [Lenfi] · [Luz] · [Riutash] · [Oficios] · [Únicos] · [Estrella Azul] · [Ojos] (Gietos, Riumna y sus Riumini) · [Kulvar] · [Bosques] (Los Bosques y los Nuevos Bosques) · [Villa] · [Originales] · [Humores] · [Fronteras] · [Deidades] (borrador) · [Guerra] · [Errantes] · [Ueutrec] · [Antur-Keund] · [Mecánica v0.2] · [Economía] · [Mapas] (mapa general, cultural lenfi, cultural kulvar, cultural wertrak, ecosistemas) · [Canon] (datos confirmados por el autor en sesiones previas) · [Chat 2026-10] (respuestas del autor en las sesiones de diseño; añadidas con su autorización)
 
 > ⚠️ Al final hay una sección de **inconsistencias de grafía** detectadas entre documentos, sin resolver.
 
@@ -134,7 +134,9 @@ Lugares del mapa cultural wertrak: Bectan, Sindare Mal, Cram, Wertrew, Clavac, A
 
 **Jainbul lenfi** — Idioma lenfi; alfabeto de 22 signos (17 consonantes, 5 vocales). "Jit" = río; "Div" = "los". [Canon]
 
-**Tarca** — Cueva; luego también templo. [Estrella Azul]
+**Tarca** — Cueva; luego también templo. [Estrella Azul] Son cuevas amplias. Solo algunas son templos de los garelinos (la de Trastas, la de Azhin, la de Lean y algunas más). La mayoría son lugares vacíos ocupados por algunos seres espirituales. [Chat 2026-10]
+
+**Seres espirituales de las tarcas** — Cuerpos etéreos y amorfos, de tamaño pequeño o mediano. Normalmente son neutros, pero puede tocar alguno hostil, y se les puede atacar y provocar. [Chat 2026-10]
 
 ### Oficios [Oficios]
 | Oficio | Función |
@@ -173,7 +175,7 @@ Lugares del mapa cultural wertrak: Bectan, Sindare Mal, Cram, Wertrew, Clavac, A
 
 **Estrella Azul (Garel / Gael Estrella Azul)** — Combinado de una riumini disidente de Riumna y un humano. Sin recuerdos claros, conserva conciencia de ambos y el poder de Crear con la Luz. Apareció en una "pseudo villa" del desierto de Dorias ante decenas de ledai. Creó las piedras de los Nuevos Bosques; venerado como líder en la Tarca de Trastas (primera vez que un combinado o humano lideró una villa). Luego envió grupos a predicar el uso de las piedras para liberar a la humanidad del yugo de los Bosques. [Estrella Azul] [Ojos]
 
-**Tarca de Trastas** — Cueva/templo en Dorias, origen del movimiento; allí los ledai hallaron restos humanos, posiblemente de Originales. [Estrella Azul]
+**Tarca de Trastas** — Cueva/templo en Dorias, origen del movimiento; allí los ledai hallaron restos humanos, posiblemente de Originales. [Estrella Azul] Está en la cordillera occidental, del lado de Dorias, hacia la parte central; donde está Garel/Estrella Azul. Sus ledai son, en esta era, como profetas; cualquiera puede hacerse garelino y seguirlos. [Chat 2026-10]
 
 **Piedras de los Nuevos Bosques** — Hacen crecer plantas que dan alimento cada cierto ciclo; algunas mueren tras producir, otras viven más pero tardan. [Estrella Azul] [Bosques]
 
@@ -187,7 +189,13 @@ Lugares del mapa cultural wertrak: Bectan, Sindare Mal, Cram, Wertrew, Clavac, A
 
 **Nardaram** — El mundo/continente. **El "Sur"** — Sur de la cordillera de Larr, donde ocurre el lore.
 
-**Cordillera de Larr** — Divide el continente; los lenfi vinieron del norte.
+**Cordillera de Larr** — Divide el continente; los lenfi vinieron del norte. Es la cordillera norte de todo el Sur Lenfi y "una pared impenetrable". [Chat 2026-10]
+
+**Cordillera occidental** — Franja de norte a sur en el borde oeste del Valle del Sara, entre el Valle del Sara y Dorias, cruzada por ríos. "No tan agreste": son "colinas y montañas bastante transitables". En ella están Azhin (extremo norte) y la Tarca de Trastas (lado de Dorias, hacia el centro). [Chat 2026-10]
+
+**Azhin** — Villa pequeña al noroeste del Valle del Sara, la más septentrional, pegada a la cordillera occidental. De ahí se originaron los primeros Nuevos Bosques, con la llegada de los ledai de la Tarca de Trastas. Tiene una tarca que es templo garelino. [Chat 2026-10]
+
+**Sicabis** — Lugares muy bonitos y sagrados donde no se puede entrar con armas; regeneran Luz y ayudan a conectar con la Luz y el Bosque. Son un espacio geográfico hermoso, como un jardín con un pequeño lago y muchas plantas ornamentales que solo existen en esos lugares. [Chat 2026-10]
 
 **Regiones del Sur:** Safio (Safis), Nan, Dorias, Sara (valle del Sara), Gumna, Calf (= Naca), Ungol (lago), Amuss, Hagat, Uta, Sanag, Sunasem, Ifa, Foss.
 **Regiones del Norte:** Kiln, Sanopil, Isera, Ignarel, Wacs-Prics, Wacs-Rutch, Wacs-Recuns, Ivi, Lopuni, Gorrn, Elenil.
