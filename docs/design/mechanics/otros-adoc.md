@@ -27,7 +27,8 @@ Palabras del dueño (2026-10-24): "encontrarte con otros adoc, ayudarles a lucha
 - **Afinidad**: si la diferencia entre tu Senda y la suya es **≥ 60**, **no quiere trabajar contigo**:
   - no acepta tu ayuda en combate (el menú muestra "El adoc rechaza tu ayuda" y solo "Seguir tu camino");
   - no propone encargos compartidos.
-- La skill de Confianza **C2 "Rostro conocido"** sube ese umbral a **≥ 100**: los adoc de afinidad dudosa aceptan.
+- ~~La skill de Confianza C2 "Rostro conocido" sube ese umbral a ≥ 100.~~ **Implementado (PR #62)**: con **Rostro conocido**, los adoc **aceptan siempre** tu ayuda.
+- **Implementado (PR #62)**: Senda de cada adoc en ±80 (`otros_adoc.senda_range`), umbral de afinidad 60 (`affinity_gap`). Si la diferencia es mayor, el adoc "no quiere pelear a tu lado" y sigue a lo suyo; no te ataca.
 - El jugador no ve el número; el adoc lo dice en su diálogo (textos de `narrative-writer`).
 
 ### Si el jugador es garelino (0.5 "Dos caminos", `dos-caminos.md`)

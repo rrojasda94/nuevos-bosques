@@ -7,7 +7,7 @@ Respuestas del dueño del proyecto a las preguntas abiertas (2026-10-21).
 | Tema | Decisión |
 |---|---|
 | Nombre | **Nardaram: Los Nuevos Bosques** |
-| Combate | Por turnos, por menú (Atacar / Habilidad / Objeto / Huir). Sin grid táctico. |
+| Combate | Por turnos, por menú (Atacar / Habilidad / Objeto / Huir). Sin grid táctico. **Sustituido por ADR 0016**: combate táctico en cuadrícula estilo Final Fantasy Tactics Advance. |
 | Ciudad | Por **días (turnos)**. El jugador termina el día y la simulación avanza un paso. Sin tiempo real. **Acotado por ADR 0012**: vale para la gestión de villa (Supervivencia). En Aventura el tiempo corre en tiempo real con pausa. |
 | Vista | **Top-down** (estilo Zelda 2D) en exploración y ciudad. |
 | Arte | Artista humano + placeholders generados por specs mientras llega el arte final. |

@@ -27,9 +27,13 @@ Que vencer Únicos haga más fuerte al adoc y que el progreso se vea en cada ses
 - Solo da XP una **victoria** (PV del rival a 0). Pagar, huir, retroceder, perder o usar una ofrenda en combate no dan XP.
 - El Ofomni da la XP de su d **más** la XP de la recompensa de la misión (`mision-ofomni.md`).
 
-> **0.5 (antes 0.4):** la tabla de stats por nivel cambia a "automático + 3 puntos a mano" (`moralidad-y-progresion.md`). La XP por nivel y la XP por victoria no cambian. La tabla siguiente vale hasta la 0.3.
+> **SUSTITUIDA (implementado en el PR #62, `[Sin publicar]`):** la tabla de stats siguiente es **historial (0.2–0.3)**. Ahora, al subir de nivel:
+> - automático: +3 PV máx., +1 ATQ en los niveles impares o +1 DEF en los pares, y la AGI sube sola;
+> - **3 puntos** para repartir en la pestaña "Crecer" de la pantalla I: ATQ +1 y DEF +1 cuestan 3 puntos; Vigor (+2 PV) y Luz (+1 al límite) cuestan 1.
+>
+> Valores en `data/combat/balance.json` (`levels`, `stat_points`) y detalle en `moralidad-y-progresion.md`. La XP por nivel y la XP por victoria no cambian.
 
-### Niveles 1–10
+### Niveles 1–10 (historial, hasta la 0.3)
 | Nivel | XP acumulada | PV máx. | ATQ | DEF | Sube |
 |---|---|---|---|---|---|
 | 1 | 0 | 30 | 6 | 3 | — (valores de v1) |

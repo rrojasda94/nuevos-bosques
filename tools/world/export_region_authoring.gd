@@ -1,7 +1,8 @@
 extends SceneTree
 ## Exporta las PNG iniciales de autoría de una región desde el generador actual (ADR 0014 §4,
 ## "Punto de partida"), para que el dueño retoque algo en vez de pintar sobre un lienzo vacío.
-## Uso: bash tools/world/export_region_authoring.sh [region_id] [seed]
+## Uso: bash tools/world/export_region_authoring.sh [region_id] [seed] [--force]
+## Si la región ya tiene agua.png (autoría pintada) no escribe nada salvo con --force.
 ## - Escala: el generador actual usa chunks de 64 tiles y la autoría, de 80 (20 celdas gruesas de
 ##   4 tiles). Cada celda gruesa (mx, my) se muestrea en (mx * 4 + 2) * 64 / 80, así que montañas,
 ##   río y caminos caen en el mismo chunk que hoy.
@@ -30,6 +31,9 @@ const NEW_CHUNK_TILES: int = 80
 
 func _initialize() -> void:
 	var args: PackedStringArray = OS.get_cmdline_user_args()
+	var force: bool = args.has("--force")
+	while args.has("--force"):
+		args.remove_at(args.find("--force"))
 	var region_id: StringName = StringName(args[0]) if args.size() > 0 else &"valle_del_sara"
 	var region: Dictionary = ChunkGenerator.load_region(region_id)
 	if region.is_empty():
@@ -38,6 +42,11 @@ func _initialize() -> void:
 		return
 	var seed_value: int = args[1].to_int() if args.size() > 1 else _reference_seed(region)
 	var dir: String = "res://data/world/regions/%s/" % region_id
+	# La autoría ya pintada (p. ej. los afluentes del Sara) no se pisa sin pedirlo (autoria.md §8).
+	if not force and FileAccess.file_exists(dir + "agua.png"):
+		printerr("%s ya tiene autoría pintada (agua.png con trazos a mano o por script). Exportar la sobrescribe; si de verdad quieres empezar de cero, añade --force." % dir)
+		quit(1)
+		return
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(dir))
 	var exported: Dictionary = export_region(region, seed_value)
 	for file: String in ["altura.png", "agua.png", "caminos.png", "bosques.png"]:

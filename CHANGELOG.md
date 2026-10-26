@@ -4,6 +4,44 @@ Todos los cambios que nota el jugador. Formato [Keep a Changelog](https://keepac
 
 ## [Sin publicar]
 
+### Añadido
+- Afluentes del río Sara: siete ríos bajan de las Urd Gumnavis (oeste) y de las Gumnada Gumnavis (este) hasta el Sara, siguiendo los límites entre subregiones del Valle del Sara. Nacen estrechos en la montaña y se hacen navegables al salir a tierra baja (los dos del norte, el 6to y el 7mo, en su último tramo antes del Sara); tienen vados y puentes donde los cruza un camino. De sur a norte se llaman "1ro del Sara", "2do del Sara"… hasta "7mo del Sara".
+- Larr, la cordillera norte del Sur Lenfi, cierra el Valle del Sara por el norte: una pared de cumbres que no se puede cruzar. El río Sara nace a su pie.
+- Azhin, la villa más septentrional del Valle del Sara, en el noroeste, al pie de Larr, con un camino que la une a los de Lean.
+- Senda (valores provisionales): tu forma de tratar a los Bosques y a sus Únicos va formando tu Senda, de violenta a respetuosa. No se ve ningún número: un icono arriba a la derecha del HUD (fauces rojas si es violenta, un círculo gris si es neutral, una hoja verde si es respetuosa) y su nombre en la pantalla I. Cuando el icono cambia, el HUD lo avisa ("Tu Senda se vuelve violenta.").
+  - **La oscurecen**: vencer a un Botarramas o a otro Único del Bosque (−3), atacar a un Único de un Bosque que te había abierto el paso (−2 más), robar (−10) y sacar frutos guardados de su Bosque (−1 por fruto).
+  - **La aclaran**: pagar el peaje con Luz (+1) o con una ofrenda (+2), también en combate; dejar una ofrenda ante un Nujio (+1); vencer junto a otro adoc (+2); apagar un incendio o defender un Bosque (+5); y cumplir una misión lejana (+3).
+  - Vencer al Ofomni descarriado de la misión o a los reparep no la mueve.
+- Estado de bando: empiezas fiel a los Bosques. Si tu Senda cae a −40 o menos, pasas a "en duda" ("Dudas de tu lealtad a los Bosques."), y vuelves a fiel cuando sube a −20 o más. Se ve con un icono junto al de la Senda (árbol si eres fiel, interrogación amarilla si dudas). Estando en duda, el sfida de tu villa lo nota al saludarte. El camino garelino llegará con el encuentro de historia.
+- Crecer al subir de nivel (sustituye a la tabla de niveles de la 0.3): cada nivel da +3 PV máx. y +1 ATQ en los niveles impares o +1 DEF en los pares, más 3 puntos para repartir en la nueva pestaña "Crecer" de la pantalla I (Tab cambia de pestaña). ATQ +1 y DEF +1 cuestan 3 puntos; Vigor (+2 PV máx.) y Luz (+1 al límite de Luz suelta) cuestan 1. Eliges las compras, ves cómo quedan tus stats y confirmas (o deshaces). Los puntos que no gastes se guardan. Un "+" amarillo en el HUD y el nombre de la pestaña ("Crecer (3)") avisan de que tienes puntos, y el combate lo recuerda al subir de nivel.
+- Skills por Senda: en los niveles pares (2, 4, 6, 8 y 10) ganas un punto de skill para la pestaña "Senda" de la pantalla I. Hay dos ramas en cadena (cada skill pide la anterior) y cada una exige que tu Senda llegue a su umbral; lo aprendido se conserva aunque tu Senda cambie después:
+  - **Sombra** (Senda violenta): *Paso quedo* (los Únicos te ven 2 casillas más tarde), *Golpe fuerte* (tu primer ataque listo hace ×1,5 de daño, una vez cada 3 turnos), *Botín* (1 de cada 4 Únicos vencidos deja una ofrenda de 3 o 4) e *Imponerse* (opción "Imponerte" en el borde: si tu nivel es d + 2 o más, el Botarramas se aparta sin pelear; cuenta como vencerlo, sin XP, y no sirve ante un Bosque enojado).
+  - **Confianza** (Senda respetuosa): *Palabra suave* (peajes 1 de Luz más baratos, mínimo 1), *Rostro conocido* (los otros adoc aceptan siempre tu ayuda), *Descanso del Nujio* (el riutash en refugio dentro de un Bosque pagado cura el 75% de lo que te falta) y *Llamada del Bosque* (en Bosques con relación 30 o más, un Único del Bosque pelea a tu lado contra los reparep).
+- Afinidad con los otros adoc: cada adoc tiene su propia Senda. Si la tuya es muy distinta, "no quiere pelear a tu lado" y sigue a lo suyo (no te ataca). Con *Rostro conocido* aceptan siempre.
+- IA de combate (valores provisionales):
+  - **Iniciativa**: cada combatiente tiene Agilidad (la tuya sube sola: 5 + la mitad de tu nivel; Botarramas 3, Ofomni 6, reparep 7, Aledra 5). En los combates en grupo, cada ronda actúa antes quien saca más con su Agilidad y una tirada de 0 a 2 (en un empate, tu bando). Arriba a la izquierda, una línea de iconos muestra el orden de la próxima ronda. En el 1 contra 1 sigues actuando primero, salvo que el rival te saque 3 de Agilidad o más.
+  - Menú de combate: "Defender" pasa al submenú **Táctica**, junto a **Apresurar** (−2 de daño ahora y +4 de Agilidad en la ronda siguiente), **Esperar** (actúas el último con ×1,25 de daño), **cambiar de fila** y, con aliados, la **orden al grupo**. Defender se resuelve antes que nadie.
+  - **Formación**: en los combates con aliados o contra un grupo, cada bando tiene una fila de delante (hasta 3) y otra de detrás, que se ven separadas. Los golpes van a la fila de delante 3 de cada 4 veces; desde detrás se pega ×0,75. Empiezas delante; cambiar de fila gasta el turno. El ataque conjunto de los reparep y el Latigazo múltiple del Ofomni golpean a toda la fila de delante.
+  - **Roles** de los aliados (por seed, con un icono): atacante (+1 ATQ y *Remate*: +3 de daño contra quien está por debajo del 30%), defensor (+1 DEF y *Cubrir*: se lleva los golpes dirigidos a otro durante una ronda, cada 2 rondas) y apoyo (va detrás; *Vendar* cura el 20% de los PV dos veces por combate y *Animar* da +2 ATQ al siguiente golpe). Los aliados curan o cubren a quien baja del 30%, se protegen ante un Latigazo anunciado, se retiran atrás con poca vida y rematan al herido.
+  - **Órdenes al grupo** (Libre, Atacar a tu objetivo, Defender), una vez por ronda y sin gastar turno.
+  - Enemigos con carácter: Botarramas, Ofomni y Aledra van a por el de menos PV; los reparep atacan juntos y el último huye si le queda poca vida (sin dar su XP); el Ofomni descarriado no huye nunca.
+
+- Combate táctico, primeras piezas internas (todavía no se juega; ADR 0016, valores provisionales): un tablero de 8 × 6 casillas con alturas de 0 a 3, escaleras y rampas, agua con vados y obstáculos; cada bando se coloca en las 2 columnas de su lado. Turnos por CT al estilo de FFTA (más Agilidad, más turnos; mover y actuar cuesta 100, solo una de las dos 80 y esperar 60), y movimiento según la Agilidad: Mov 3 + (Agilidad − 5) / 2, entre 2 y 6, y Salto 1 + Agilidad / 7 niveles. Se podrá huir desde cualquier casilla del borde.
+- Combate táctico, acciones (todavía no se juega; valores provisionales):
+  - **Atacar** a una casilla vecina, no en diagonal, y solo si el desnivel no supera tu Salto.
+  - **Evasión** del que recibe: de frente 5 + 2 × Agilidad %, de flanco la mitad y por la espalda 0. Pierde 10 por cada nivel que el atacante esté por encima y gana 10 por cada nivel por debajo. Siempre hay al menos un 5% de acierto. Si esquiva, sale "Falla".
+  - **Daño**: el de siempre, más 1 de flanco, 2 por la espalda y 1 por cada nivel a favor.
+  - **Defender** reduce el daño a la mitad hasta tu siguiente turno. **Esperar** acaba el turno sin actuar y ya no da el ×1,25.
+  - **Ofrecer Luz u ofrenda** paga y termina el combate.
+  - **Huir** funciona desde cualquier casilla del borde, siempre y con todo tu grupo.
+  - Los caídos salen del tablero. Ganas cuando no queda ningún enemigo y pierdes si cae tu adoc.
+  - Los roles de los aliados en el tablero: Cubrir protege a un aliado vecino, Vendar y Animar llegan a 2 casillas y Remate funciona igual.
+
+### Cambiado
+- La cordillera occidental del Valle del Sara (Urd Gumnavis) ya no tiene cumbres: son colinas y montañas que se cruzan a pie. Los afluentes del oeste que la atraviesan llegan desde el lado de Dorias.
+- El Ofomni descarriado tiene más PV (×0,85 en vez de ×0,7: 29 con d = 4) para que siga siendo un reto con los puntos de stat. En nivel 3 lo vence cualquier reparto de combate (todo ATQ, todo DEF, equilibrado o, más justo, todo Vigor); en nivel 2 o con todo a Luz sigue perdiendo casi siempre.
+- El guardado pasa a la versión 18 (Senda, bando, puntos sin gastar, puntos gastados por stat y skills). Las partidas anteriores conservan su nivel, recalculan los stats con el crecimiento automático nuevo y reciben todos los puntos de stat y de skill de su nivel para repartirlos.
+
 ## [0.3.0] - 2026-10-25
 "El Bosque recuerda": los Bosques tienen memoria, relación y estado; frutos, inventario y equipo; sigilo; Únicos que rondan, cazan y persiguen; combate en grupo con aliados; dormir y Pensamiento; reloj del riutash y arte de terreno.
 

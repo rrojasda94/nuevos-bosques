@@ -498,6 +498,10 @@ func _ask_adoc_encounter() -> void:
 	if _encounter.is_empty():
 		return
 	var e: Dictionary = _encounter
+	# Afinidad por Senda (otros-adoc.md): si no quiere trabajar contigo, lo dice y sigue a lo suyo.
+	if not AdocEncounters.accepts_help(e):
+		_dialogue.show_lines([Texts.get_text("adoc_encounter_refuses") % str(e.name)])
+		return
 	_dialogue.choice.connect(_on_adoc_encounter_choice.bind(e), CONNECT_ONE_SHOT)
 	_dialogue.ask(AdocEncounters.prompt(e), [Texts.get_text("adoc_encounter_help"), Texts.get_text("adoc_encounter_pass")])
 

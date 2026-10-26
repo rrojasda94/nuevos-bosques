@@ -98,6 +98,15 @@ signal quest_battle_resolved(quest_id: StringName, outcome: StringName)
 signal notice_requested(text: String)
 ## El personaje sube de nivel (progresion-adoc.md). Una vez por nivel; id &"adoc".
 signal character_leveled_up(character_id: StringName, level: int)
+## Senda (moralidad-y-progresion.md): valor nuevo (-100 .. 100) y cuánto ha cambiado. La UI solo
+## muestra el icono (Senda.icon), nunca el número.
+signal senda_changed(senda: int, delta: int)
+## Estado de bando (dos-caminos.md): &"fiel", &"en_duda" o &"garelino".
+signal bando_changed(bando: StringName)
+## Se han gastado `points` puntos de stat en `stat` (&"atk", &"def", &"vigor" o &"luz", AdocGrowth).
+signal stat_points_spent(stat: StringName, points: int)
+## Se ha aprendido una skill (AdocGrowth, ids de balance.json skills).
+signal skill_learned(skill_id: StringName)
 signal game_ended(reason: StringName)
 
 # --- Partida ---

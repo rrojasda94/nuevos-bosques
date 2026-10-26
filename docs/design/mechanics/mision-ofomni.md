@@ -61,7 +61,8 @@ Si el Ofomni llega a la villa: "la misión falla y la villa queda dañada; la pa
 - **Distancia fija**: d_ofomni = (saltos del Bosque de aparición al Bosque natal) + 1, es decir, **4 o 5**, con las fórmulas de Único de v1.
   - Se fija al aparecer y **no cambia** aunque el Ofomni se acerque. Así no compensa esperar a que esté cerca, y se evita un exploit.
   - Hasta la 0.2.0: d = 4: PV 34, ATQ 8, DEF 3; d = 5: PV 38, ATQ 9, DEF 3.
-  - **Desde la 0.3** (ADR 0013): PV reducidos (factor `hp_factor` en `balance.json`), ATQ y DEF iguales. Recomendación de `game-designer`: **×0,7** → d = 4: **PV 24**; d = 5: **PV 27**. Ver "Balance 0.3".
+  - **Desde la 0.3** (ADR 0013): PV reducidos (factor `hp_factor` en `balance.json`), ATQ y DEF iguales. En la 0.3, ×0,7 (d = 4: PV 24; d = 5: PV 27).
+  - **Implementado en el PR #62**: `hp_factor` **0,85** → d = 4: **PV 29**; d = 5: **PV 32**. En nivel 3 lo vence cualquier reparto de combate (todo ATQ, todo DEF, equilibrado o, más justo, todo Vigor); en nivel 2 o con todo a Luz sigue perdiendo casi siempre (`moralidad-y-progresion.md`, "Comprobación").
 - **Látigos** (confirmado por el dueño: "el ofomni ataca con latigos y cada 3 turnos usa varios latigos"):
   - El **ataque normal** del Ofomni es un **latigazo** (uno de sus tentáculos), con la fórmula de daño normal. Texto: `ofomni_whip_hit`.
   - **Latigazo múltiple**: cada **3.er ataque** usa **varios látigos** y hace **×3 de daño**.

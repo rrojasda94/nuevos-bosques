@@ -392,7 +392,8 @@ static func has_failed(q: Dictionary, map: BosqueMap = null) -> bool:
 
 
 ## Cumple la misión: active -> completed -> rewarded, relación + per_mission con el Bosque que llamó
-## (AdventureRules.reward_bosque_mission), fama y Luz suelta de reward. El salvoconducto termina.
+## (AdventureRules.reward_bosque_mission), Senda + far_quest_done, fama y Luz suelta de reward. El
+## salvoconducto termina.
 ## Devuelve { "relation", "fama", "luz" } o {} si no estaba activa.
 static func complete(q: Dictionary) -> Dictionary:
 	if not QuestLogic.transition(q, QuestLogic.COMPLETED):
@@ -401,6 +402,7 @@ static func complete(q: Dictionary) -> Dictionary:
 	var bosque: int = int(q.bosque)
 	var before: int = AdventureRules.relation(bosque)
 	AdventureRules.reward_bosque_mission(bosque)
+	Senda.record(Senda.FAR_QUEST_DONE)
 	var r: Dictionary = reward()
 	GameState.fama += int(r.get("fama", 0))
 	var luz_before: int = GameState.luz

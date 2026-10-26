@@ -18,6 +18,24 @@ Todo vive en `data/world/regions/<region>/`. Para el Valle del Sara: `data/world
 
 Las PNG que hay ahora salieron del generador actual (seed 15, la primera en la que la villa natal cae donde empieza hoy la partida). Son un punto de partida: retócalas o pinta encima tu mapa del Sur Lenfi.
 
+**Ya no son solo del generador.** Encima de esa exportación hay trazos por script: los **7 afluentes del Sara** (4 de las Urd Gumnavis y 3 de las Gumnada Gumnavis; ver [`sur-lenfi.md`](sur-lenfi.md#afluentes-del-sara)) en `agua.png`, sus cumbres y colinas de nacimiento en `altura.png`, sus puentes en `caminos.png` y sus nombres ("1ro del Sara"… "7mo del Sara") como filas `lugar` con id `afluente_<n>` en `lugares.csv` (el script las rehace; las demás filas no las toca). Salen de `tools/world/paint_afluentes.py`: para mover un afluente, cambia sus puntos de control y ejecuta `python tools/world/paint_afluentes.py --from-ref` (rehace los afluentes desde la exportación original; descarta lo retocado a mano en esas tres PNG después). Sin `--from-ref` pinta encima de lo que haya y no borra nada.
+
+Encima de los afluentes va **el relieve del dueño** (2026-10-26), de `tools/world/paint_relieve_autor.py`:
+- **Larr**, la cordillera norte, "una pared impenetrable": las 3 filas de arriba de `altura.png` (12 casillas) son cumbre de lado a lado, sin huecos. El Sara ya no toca el borde norte: nace al pie de Larr. Debajo, 3 filas de nivel 2 como mínimo.
+- **Cordillera occidental** (Urd Gumnavis, a caballo con Dorias), "colinas y montañas bastante transitables": en la franja `x < 40` (2 chunks), desde el pie de Larr hasta la fila 259 (casi la costa), no hay cumbres (pasan a nivel 3) y el nivel 0 sube a 1: todo es nivel 1-3 y se cruza a pie. Los tres afluentes del oeste que la cruzan (3ro, 5to y 7mo del Sara) ya no nacen en una cumbre de 3×3: entran por el borde oeste (vienen del lado de Dorias), con colinas de nivel 3 y 2 en el nacimiento y un vado nada más entrar. El 1ro (sur de Cassie, fuera de la franja) conserva su cumbre.
+- **Azhin**: fila `villa_azhin` de `lugares.csv` en (16, 4), al pie de Larr en el noroeste (Lean), con un camino hasta el camino de Lean que ya existía.
+- **Pendiente**: la **Tarca de Trastas** está en la misma cordillera pero del lado de Dorias, fuera de esta región. Se pondrá cuando exista la región de Dorias.
+
+**Orden de los scripts** (cada uno sobre la salida del anterior; los dos son idempotentes):
+
+```bash
+python tools/world/paint_afluentes.py --from-ref   # 1. afluentes (rehace altura, agua y caminos desde la base)
+python tools/world/paint_relieve_autor.py          # 2. Larr, cordillera occidental y Azhin
+bash tools/world/preview_region.sh valle_del_sara 7  # 3. validar y ver
+```
+
+Si se ejecuta el paso 1 con `--from-ref`, hay que volver a pasar el 2: el 1 parte de la exportación original y borra Larr y el camino de Azhin.
+
 ## 2. La escala
 
 - **1 píxel = 1 celda gruesa = 4×4 casillas del juego.**
@@ -135,4 +153,6 @@ Si algo no funciona, Godot tiene que estar instalado (lo busca igual que `tools/
 - `RegionAuthoring.load_region(&"valle_del_sara")` lee la carpeta indicada en la clave `"authoring"` del JSON de la región y devuelve capas (`height`, `water`, `roads`, `bosque`), `places`, `size_chunks()`, `home_chunk()` y `errors`.
 - La carpeta de autoría tiene un `.gdignore`: Godot no la importa (las PNG se leen como datos y el CSV no es una traducción). Cómo llega a un build exportado se decide en M5/M10.
 - Las PNG van en Git LFS (`.gitattributes`). Tras clonar: `git lfs pull`.
-- `bash tools/world/export_region_authoring.sh valle_del_sara [seed]` vuelve a exportar las PNG iniciales desde el generador actual. **Sobrescribe lo que haya pintado**: solo para el punto de partida.
+- `bash tools/world/export_region_authoring.sh valle_del_sara [seed]` vuelve a exportar las PNG iniciales desde el generador actual. **Sobrescribe lo que haya pintado**: solo para el punto de partida. Si la región ya tiene `agua.png` se niega y solo escribe con `--force`. En el Valle del Sara **no lo fuerces**: borraría los afluentes del Sara (`agua.png`, `altura.png`, `caminos.png` ya llevan trazos por script, §1) y lo que el dueño haya retocado. Si alguna vez hiciera falta, después hay que volver a pasar `python tools/world/paint_afluentes.py` y `python tools/world/paint_relieve_autor.py` (en ese orden, §1) y revisar el diff de las PNG antes de hacer commit.
+- `python tools/world/paint_afluentes.py [--from-ref [commit]]` (Pillow) pinta los afluentes del Sara: polilíneas de puntos de control en px de la PNG, trazo de 1 px en 4-vecindad que se para al tocar el Sara, río estrecho en la montaña y navegable desde que sale de ella (`mountain_exit`), filas `afluente_<n>` de `lugares.csv` con su nombre, cumbre de 3×3 px con colinas en el nacimiento (solo sube el relieve; los de `"nacimiento": "borde"` nacen en el borde del mapa con colinas y sin cumbre), puente donde cruza un camino. Es idempotente. El test `test_valle_del_sara_has_the_sara_tributaries` comprueba que la red de agua es conexa, que llegan al Sara al menos 4 afluentes por el oeste y 3 por el este, que nacen estrechos, que lo navegable va sobre todo por tierra baja y que están sus nombres.
+- `python tools/world/paint_relieve_autor.py` (Pillow; después de `paint_afluentes.py`) pinta Larr (`LARR_ROWS` filas de cumbre en el borde norte y `FOOT_ROWS` de nivel 2 debajo; corta el agua y los caminos que hubiera encima), la cordillera occidental (`x < STRIP_W`, `LARR_ROWS <= y < STRIP_END`: cumbre → nivel 3, nivel 0 → 1), la fila `villa_azhin` de `lugares.csv` y su camino (`AZHIN_ROAD`, se para si pisa una cumbre o no toca la red). Idempotente. Tests en `tests/unit/world/test_region_authoring.gd` (mismas constantes): Larr continua (ninguna celda del borde norte se pisa), ninguna cumbre ni nivel 0 en la franja y se cruza a pie de oeste a este en cada fila de chunks, Azhin es villa, la más septentrional, al pie de Larr y accesible, y la red de agua del plan sigue conexa en las seeds 7, 15 y 42.
