@@ -137,8 +137,24 @@ De oeste a este (posiciones y equivalencias *(lectura)*, por confirmar):
 | **Larr** | Franja oscura de todo el norte | La cordillera norte: pared impenetrable (dueño, PR #68) |
 
 - Las zonas blancas entre ellas están menos pobladas por lenfi, no vacías.
-- Para la 0.4 importa sobre todo **Sagra y Gumna** dentro del Valle del Sara: dónde está el límite entre las dos (¿la cordillera occidental es Sagra y el valle del río, Gumna?). Pregunta abierta para el dueño.
-- Hagat, Sanag, Sunasem, Ifa y Foss siguen sin ubicar.
+- **Límite entre Sagra y Gumna** (dueño, 2026-10-26): la línea roja de [`Sur-Lenfi_limite_sagra_gumna.png`](Sur-Lenfi_limite_sagra_gumna.png), de norte a sur desde Larr hasta la costa, al este de la franja verde clara de Sagra. Al oeste de la línea, Sagra; al este, Gumna.
+- **Hagat, Sanag, Sunasem, Ifa y Foss** quedan **fuera del límite del juego** por ahora (dueño, 2026-10-26): son zonas de gentenueva, de otra parte del juego y de la historia. Fuera de la spec.
+
+### Mapa de biomas (dueño, 2026-10-26)
+Imagen: [`Sur-Lenfi_biomas.png`](Sur-Lenfi_biomas.png). Leyenda del dueño:
+
+| Color | Bioma |
+|---|---|
+| Marrón | Alta montaña (Larr y los brazos que bajan de ella, el anillo alrededor del lago Ungol) |
+| Verde oscuro | Bosque tupido con geografía de montañas y colinas |
+| Verde claro | Zonas más llanas, con bosque menos tupido |
+| Naranja | Zonas desérticas |
+
+Lo que se lee *(lectura)*:
+- Desierto en Dorias (casi entera), en la punta de la península de Safis y en una **franja costera** que va del sur de Sagra al sur de Gumna (la costa sur del Valle del Sara). Otra mancha desértica al este de Ungol.
+- Verde oscuro (bosque tupido de montaña) bajo Larr en todo el norte, en la cordillera occidental entre Sagra y Gumna y alrededor del lago (Calf, Ungol).
+- Verde claro en el interior de Safio, Nan, Sagra y el centro de Gumna (el valle del río).
+- Uso: es la referencia para el **diseño de biomas** que va después de la 0.4 (paleta y formas fijas por bioma, transiciones suaves) y para retocar la autoría del Valle del Sara (`altura.png`, Bosques clave). Lo propone `game-designer`.
 
 ## Lugares con nombre (dueño)
 - **Azhin** (dueño, 2026-10-25): "Azhin es una villa pequeña al noroeste del valle del Sara, es la villa mas septentrional y pegada a l cordillera occidental. Se supone que de ahi se originan los primeros nuevos bosques con la llegada de los ledai de la tarca de Trastas que está en la misma cordillera pero del lado de dorias, por la parte central de esta."
