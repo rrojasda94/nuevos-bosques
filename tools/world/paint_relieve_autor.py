@@ -9,10 +9,13 @@ Datos del dueño (2026-10-26; docs/design/world/sur-lenfi.md, "Lugares con nombr
 - Cordillera occidental (Urd Gumnavis, a caballo con Dorias): "colinas y montañas bastante
   transitables". No es barrera: en la franja x < STRIP_W, desde el pie de Larr hasta y < STRIP_END
   (casi la costa), no hay cumbres (pasan a nivel 3) y el nivel 0 sube a 1. Así la franja queda en
-  niveles 1-3. Los nacimientos de sus afluentes ya no son cumbres (paint_afluentes.py, "borde").
+  niveles 1-3. Los nacimientos de sus afluentes ya no son cumbres (paint_afluentes.py, "manantial": nacen dentro de la franja).
 - Azhin: villa pequeña, la más septentrional, en el extremo norte de la cordillera occidental,
   pegada a Larr, en Lean. Fila villa_azhin de lugares.csv en AZHIN, y un camino (AZHIN_ROAD) hasta
   la red pintada más cercana.
+- Tarca de Azhin (dueño, 2026-10-26: "es un lugar mencionado en algunas partes de la historia
+  cuando te encuentras con ledai de Estrellazul"): fila tarca_azhin, tipo tarca, en TARCA, junto a
+  Azhin.
 
 Modifica las PNG de data/world/regions/valle_del_sara/ y lugares.csv. Hay que ejecutarlo DESPUÉS de
 tools/world/paint_afluentes.py (que con --from-ref rehace altura, agua y caminos desde la base y
@@ -49,6 +52,10 @@ AZHIN_ROW = ("villa_azhin,Azhin,villa,{x},{y},,,\"Villa pequeña, la más septen
 # Camino de Azhin a la red pintada: puntos de control (x, y) en px, trazo 4-conectado. El último
 # punto toca un camino que ya existe (el de Lean, al norte del 7mo del Sara).
 AZHIN_ROAD = [(16, 5), (16, 12), (44, 12), (51, 29)]
+TARCA = (21, 7)
+TARCA_ROW = ("tarca_azhin,Tarca de Azhin,tarca,{x},{y},,,\"Tarca (templo garelino) de Azhin, junto a la villa. "
+             "Aparece en la historia en el encuentro con los ledai de Estrellazul (dueño, 2026-10-26). "
+             "Fila escrita por tools/world/paint_relieve_autor.py.\"")
 
 
 def hex_rgba(h: str) -> tuple[int, int, int, int]:
@@ -154,27 +161,21 @@ def main() -> int:
         print(f"El camino de Azhin acaba en {last} sin tocar otro camino: alarga AZHIN_ROAD.", file=sys.stderr)
         return 1
 
-    # 4) Azhin en lugares.csv (sustituye la fila villa_azhin si la había).
-    ax, ay = AZHIN
-    if agua.getpixel(AZHIN)[3] or level_at(ax, ay) == 4:
-        print(f"Azhin cae en el agua o en una cumbre en {AZHIN}.", file=sys.stderr)
-        return 1
+    # 4) Azhin y su tarca en lugares.csv (sustituye sus filas si las había).
     path = REGION_DIR / "lugares.csv"
-    lines = path.read_text(encoding="utf-8").splitlines()
-    row = AZHIN_ROW.format(x=ax, y=ay)
-    out: list[str] = []
-    placed = False
-    for ln in lines:
-        if ln.startswith("villa_azhin,"):
-            if not placed:
-                out.append(row)
-                placed = True
-            continue
-        out.append(ln)
-    if not placed:
-        # Detrás de la última villa, antes de los afluentes.
-        idx = max(i for i, ln in enumerate(out) if ln.startswith("villa"))
-        out.insert(idx + 1, row)
+    out: list[str] = path.read_text(encoding="utf-8").splitlines()
+    for pid, cell, template in [("villa_azhin", AZHIN, AZHIN_ROW), ("tarca_azhin", TARCA, TARCA_ROW)]:
+        if agua.getpixel(cell)[3] or level_at(*cell) == 4:
+            print(f"{pid} cae en el agua o en una cumbre en {cell}.", file=sys.stderr)
+            return 1
+        row = template.format(x=cell[0], y=cell[1])
+        idx = next((i for i, ln in enumerate(out) if ln.startswith(pid + ",")), -1)
+        if idx >= 0:
+            out[idx] = row
+        else:
+            # Detrás de la última villa (y de Azhin), antes de los afluentes.
+            idx = max(i for i, ln in enumerate(out) if ln.startswith(("villa", "tarca_azhin")))
+            out.insert(idx + 1, row)
     path.write_bytes(("\n".join(out) + "\n").encode("utf-8"))
 
     altura.save(REGION_DIR / "altura.png")
@@ -182,7 +183,7 @@ def main() -> int:
     caminos.save(REGION_DIR / "caminos.png")
     print(f"Larr: filas 0-{LARR_ROWS - 1} de cumbre ({cut_water} px de agua cortados al pie). "
           f"Cordillera occidental (x < {STRIP_W}, y {LARR_ROWS}-{STRIP_END - 1}): {lowered} cumbres a nivel 3, "
-          f"{raised} px de nivel 0 a 1. Azhin en {AZHIN}; camino de {len(road)} px hasta {last}.")
+          f"{raised} px de nivel 0 a 1. Azhin en {AZHIN}, su tarca en {TARCA}; camino de {len(road)} px hasta {last}.")
     return 0
 
 

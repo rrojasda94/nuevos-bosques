@@ -13,7 +13,7 @@ const TMP_DIR: String = "user://test_region_authoring/"
 const LARR_ROWS: int = 3
 const STRIP_W: int = 40
 const STRIP_END: int = 260
-const RELIEF_SEEDS: Array[int] = [7, 15, 42]
+const RELIEF_SEEDS: Array[int] = [1, 2, 3, 7, 15, 42]
 
 var _palette: Dictionary
 
@@ -260,6 +260,33 @@ func test_river_into_a_lake_is_valid() -> void:
 	assert_true(_build({ "water": water }).is_valid())
 
 
+## Manantial (lugar de lugares.csv): un río puede nacer junto a él, en nivel 2 o 3, sin cumbre ni
+## borde. En llano, o lejos del río, es un error.
+func test_river_from_a_spring_is_valid() -> void:
+	var water := _river(20, 40, 0, 25)
+	var height := _img(20, 40)
+	for y: int in 40:
+		for x: int in 20:
+			_put(height, Vector2i(x, y), "height", "level_2")
+	var spring: String = "manantial_1,Nacimiento,manantial,10,25,,,"
+	var a := _build({ "water": water, "height": height }, [HOME_ROW, spring])
+	assert_true(a.is_valid(), "%s" % [a.errors])
+	assert_eq(a.places_of_type("manantial").size(), 1)
+
+
+func test_spring_on_flat_land_or_away_from_a_river_is_an_error() -> void:
+	var height := _img(20, 40)
+	for y: int in 40:
+		for x: int in 20:
+			_put(height, Vector2i(x, y), "height", "level_0")
+	var flat := _build({ "water": _river(20, 40, 0, 25), "height": height },
+			[HOME_ROW, "manantial_1,Nacimiento,manantial,10,25,,,"])
+	assert_true(_has_error(flat, "un manantial tiene que estar en la montaña"), "%s" % [flat.errors])
+	var away := _build({ "water": _river(20, 40, 0, 25) }, [HOME_ROW, "manantial_1,Nacimiento,manantial,15,30,,,"])
+	assert_true(_has_error(away, "el manantial no toca ningún río"), "%s" % [away.errors])
+	assert_true(_has_error(away, "el río se corta"), "%s" % [away.errors])
+
+
 func test_villa_closed_by_peaks_is_an_error() -> void:
 	var height := _img(40, 20)
 	for y: int in range(10, 15):
@@ -317,7 +344,7 @@ func test_valle_del_sara_authoring_is_valid_and_matches_the_region() -> void:
 ## una sola y le llegan al menos 4 afluentes desde el oeste (Urd Gumnavis) y 3 desde el este
 ## (Gumnada Gumnavis). El Sara es el pasillo de agua de norte a sur: las celdas que están a 3 pasos
 ## o menos de más que el camino más corto entre los dos bordes. Lo que queda son los afluentes:
-## cuenta cada trozo que toca el Sara y nace en una cumbre o en el borde oeste o este. Nacen como
+## cuenta cada trozo que toca el Sara y nace en una cumbre, en un manantial o en el borde oeste o este. Nacen como
 ## río estrecho, todos tienen tramo navegable antes del Sara y lo navegable va sobre todo por tierra
 ## baja (nivel 0-1); cada uno tiene su nombre,
 ## "1ro del Sara"... "7mo del Sara", como lugar de lugares.csv.
@@ -350,6 +377,9 @@ func test_valle_del_sara_has_the_sara_tributaries() -> void:
 			sara[c] = true
 		else:
 			rest[c] = true
+	var springs: Dictionary = {}
+	for p: Dictionary in a.places_of_type("manantial"):
+		springs[p.cell] = true
 	var west: int = 0
 	var east: int = 0
 	var with_navigable: int = 0
@@ -375,7 +405,7 @@ func test_valle_del_sara_has_the_sara_tributaries() -> void:
 				nav_low += 1 if h == RegionAuthoring.Height.LEVEL_0 or h == RegionAuthoring.Height.LEVEL_1 else 0
 			for d: Vector2i in [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]:
 				touches_sara = touches_sara or sara.has(p + d)
-				if a.height_at(p + d) == RegionAuthoring.Height.PEAK:
+				if a.height_at(p + d) == RegionAuthoring.Height.PEAK or springs.has(p + d):
 					source_x = p.x
 					source_kind = a.water_at(p)
 		if touches_sara and source_x >= 0:
@@ -449,6 +479,54 @@ func test_valle_del_sara_west_range_is_walkable_hills() -> void:
 		assert_true(crosses, "la cordillera se cruza a pie de oeste a este entre y=%d y y=%d" % [y0, y1 - 1])
 		bands += 1
 	assert_eq(bands, ceili(STRIP_END / float(WorldCoords.MACROS_PER_CHUNK)))
+
+
+## Afluentes del oeste (dueño, 2026-10-26: "no nacen en el Valle, no pueden nacer en Dorias porque
+## la cordillera lo impide"): el 3ro, el 5to y el 7mo nacen en un manantial dentro de la cordillera
+## occidental (x < STRIP_W), en nivel 2-3, y ningún agua toca el borde oeste en la franja. El 1ro
+## sigue naciendo en su colina con cumbre del sur de Cassie.
+func test_valle_del_sara_west_tributaries_rise_inside_the_range() -> void:
+	var a := RegionAuthoring.load_region(&"valle_del_sara")
+	assert_true(a.is_valid(), "%s" % [a.errors])
+	var names: Array = []
+	for p: Dictionary in a.places_of_type("manantial"):
+		names.append(p.name)
+		var cell: Vector2i = p.cell
+		assert_between(cell.x, 1, STRIP_W - 1, "%s dentro de la cordillera occidental" % p.name)
+		assert_between(cell.y, LARR_ROWS, STRIP_END - 1, "%s dentro de la cordillera occidental" % p.name)
+		var h: int = a.height_at(cell)
+		assert_true(h == RegionAuthoring.Height.LEVEL_2 or h == RegionAuthoring.Height.LEVEL_3, "%s en la montaña" % p.name)
+	for n: String in ["3ro", "5to", "7mo"]:
+		assert_has(names, "Nacimiento del %s del Sara" % n)
+	for y: int in a.size_px.y:
+		assert_eq(a.water_at(Vector2i(0, y)), RegionAuthoring.Water.NONE, "agua en el borde oeste (Dorias) en y=%d" % y)
+	# El 1ro nace junto a una cumbre del sur de Cassie (84, 303): a su oeste está su cumbre de 3x3.
+	assert_ne(a.water_at(Vector2i(84, 303)), RegionAuthoring.Water.NONE, "el 1ro nace en (84, 303)")
+	assert_eq(a.height_at(Vector2i(82, 303)), RegionAuthoring.Height.PEAK, "el 1ro sigue naciendo en su cumbre")
+
+
+## Tarca de Azhin (dueño, 2026-10-26): lugar propio de tipo tarca junto a Azhin, accesible a pie.
+func test_valle_del_sara_has_the_tarca_of_azhin() -> void:
+	var a := RegionAuthoring.load_region(&"valle_del_sara")
+	var tarca: Dictionary = {}
+	var azhin: Dictionary = {}
+	for p: Dictionary in a.places:
+		if p.name == "Tarca de Azhin":
+			tarca = p
+		elif p.name == "Azhin":
+			azhin = p
+	assert_false(tarca.is_empty() or azhin.is_empty(), "Azhin y su tarca en lugares.csv")
+	if tarca.is_empty() or azhin.is_empty():
+		return
+	assert_eq(tarca.type, "tarca")
+	assert_lte(absi(tarca.cell.x - azhin.cell.x) + absi(tarca.cell.y - azhin.cell.y), 8, "la tarca está junto a Azhin")
+	assert_true(a.is_walkable(tarca.cell), "tarca en terreno transitable")
+	var walk: Dictionary = {}
+	for y: int in a.size_px.y:
+		for x: int in a.size_px.x:
+			if a.is_walkable(Vector2i(x, y)):
+				walk[Vector2i(x, y)] = true
+	assert_true(_flood(walk, [a.home_villa().cell]).has(tarca.cell), "la tarca se alcanza a pie desde la villa natal")
 
 
 ## Azhin (dueño): villa, la más septentrional, al pie de Larr en el noroeste, con acceso a pie desde
