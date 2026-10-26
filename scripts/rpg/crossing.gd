@@ -19,6 +19,12 @@ extends CanvasLayer
 ## Mientras está abierto (o dura el combate) el árbol se pausa; este nodo y el combate siguen
 ## activos (process_mode ALWAYS). Al terminar emite EventBus.crossing_resolved (o
 ## quest_battle_resolved) y la exploración cruza, retrocede o despierta al Adoc junto a un Nujio aliado.
+## Combate táctico (T1b): el tamaño del tablero y el cupo salen de la proporción transitable de un
+## recorte de 14 x 10 alrededor del Adoc (TacticalArena). Por orden: `walkable_sampler` si se
+## inyecta (tests); en el Mundo 2.0, WorldQuery.rect si el mundo activo da `world_get_chunk` y
+## `world_player_cell`; si no, el chunk de exploración antiguo, regenerándolo con su seed
+## (ChunkGenerator.generate, ~30 ms, una vez por combate); sin chunk, el bioma. El bioma
+## (desempate) es "bosque" mientras no haya otros biomas.
 ## Solo escucha EventBus y lee GameState: no conoce la escena de exploración.
 
 const BATTLE_SCENE: PackedScene = preload("res://scenes/rpg/battle.tscn")
@@ -37,6 +43,8 @@ const NEXT_EXTRA_LINE: float = 15.0
 ## Opciones que caben en el panel sin crecer y alto de cada fila de más.
 const BASE_OPTIONS: int = 4
 const OPTION_ROW: float = 14.0
+## Bioma del desempate del tamaño del tablero (TacticalArena) hasta que el mundo tenga biomas.
+const ARENA_BIOME: StringName = &"bosque"
 ## Opciones del menú principal (las que se muestran están en _actions, en orden).
 enum Option { PAY_LUZ, OFRENDA, FIGHT, RETREAT, IMPOSE }
 
@@ -61,6 +69,13 @@ var _ofrenda_choices: Array[int] = []
 var _in_submenu: bool = false
 ## Opciones del menú principal que se muestran (Option), en orden.
 var _actions: Array[int] = []
+## Fuente inyectable del recorte del combate táctico: Callable() -> float con la proporción
+## transitable (0..1) alrededor del encuentro, o < 0 si no la hay. Sin ella, el chunk actual.
+var walkable_sampler: Callable
+## Mundo 2.0 (los fija la escena del mundo activo): Callable(chunk_coord) -> WorldChunk y
+## Callable() -> Vector2i con la world_cell del Adoc. Con los dos, el recorte sale de WorldQuery.rect.
+var world_get_chunk: Callable
+var world_player_cell: Callable
 
 @onready var _panel: Control = $Panel
 @onready var _title: Label = $Panel/Title
@@ -297,11 +312,40 @@ func _on_group_battle_requested(bosque_id: int, monster_id: StringName, count: i
 
 
 func _open_battle(logic: BattleLogic, style: Dictionary, kind: UnicoArt.Kind) -> void:
-	_battle = battle_scene(AdventureRules.balance()).instantiate()
+	var balance_data: Dictionary = AdventureRules.balance()
+	_battle = battle_scene(balance_data).instantiate()
 	add_child(_battle)
 	_battle.finished.connect(_on_battle_finished)
-	_battle.begin(logic, style, kind, _ally_kinds)
+	if TacticalBridge.is_enabled(balance_data):
+		_battle.begin(logic, style, kind, _ally_kinds,
+			TacticalBridge.arena_config(logic.balance, encounter_ratio(), ARENA_BIOME))
+	else:
+		_battle.begin(logic, style, kind, _ally_kinds)
 	_ally_kinds = []
+
+
+## Proporción transitable del recorte del combate táctico alrededor del Adoc (TacticalArena), o -1
+## si no se puede leer (el tamaño lo decide entonces el bioma).
+func encounter_ratio() -> float:
+	if walkable_sampler.is_valid():
+		return float(walkable_sampler.call())
+	if world_get_chunk.is_valid() and world_player_cell.is_valid():
+		var cfg: Dictionary = TacticalArena.arena_cfg(AdventureRules.balance().get("tactical", {}))
+		return TacticalArena.world_ratio(world_get_chunk, world_player_cell.call(), TacticalArena.sample_size(cfg))
+	if GameState.chunk_coord.x < 0 or GameState.chunk_coord.y < 0:
+		return -1.0
+	var region: Dictionary = ChunkGenerator.load_region(GameState.region_id)
+	_ensure_map(region)
+	var chunk: ChunkData = ChunkGenerator.generate(GameState.seed_value, GameState.chunk_coord, region, _map)
+	return chunk_ratio(chunk, GameState.player_cell)
+
+
+## Proporción transitable del recorte de 14 x 10 (tactical.arena.sample) de un chunk alrededor de
+## `cell` (desplazado para quedar dentro del chunk).
+static func chunk_ratio(chunk: ChunkData, cell: Vector2i) -> float:
+	var cfg: Dictionary = TacticalArena.arena_cfg(AdventureRules.balance().get("tactical", {}))
+	return TacticalArena.sample_ratio(chunk.is_walkable, cell, TacticalArena.sample_size(cfg),
+		Rect2i(0, 0, ChunkData.SIZE, ChunkData.SIZE))
 
 
 ## Escena de combate según el interruptor tactical.enabled de balance.json.

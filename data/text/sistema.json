@@ -382,5 +382,12 @@
   "tactical_victory": "¡Victoria!",
   "tactical_defeat": "Caes. Despertarás junto a un Nujio.",
   "tactical_fled": "Tu grupo huye del combate.",
-  "tactical_appeased": "El Único acepta tu pago y se va."
+  "tactical_appeased": "El Único acepta tu pago y se va.",
+  "$provisional_tactical_t1b": "Textos de la party y los refuerzos del combate táctico (T1b): provisionales, pendientes de revisión de narrative-writer.",
+  "tactical_reinforce": "Refuerzo",
+  "tactical_waiting": "Espera",
+  "tactical_party_title": "¿Quién entra? %d de %d",
+  "tactical_party_adoc": "%s (siempre)",
+  "tactical_party_confirm": "Al combate",
+  "tactical_party_hint": "E: marcar\nLos demás esperan en el borde."
 }

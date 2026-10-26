@@ -28,8 +28,10 @@ extends Node
 ## bando, puntos de stat y skills (moralidad-y-progresion.md, dos-caminos.md): senda, bando,
 ## stat_points (sin gastar), spent_points (gastados por stat), skill_points y skills; al migrar, Senda
 ## 0, fiel, el mismo nivel con los stats automáticos nuevos y todos los puntos de su nivel por
-## repartir (AdocGrowth.migrate_points). Las versiones anteriores se cargan con valores por defecto.
-const SAVE_VERSION: int = 18
+## repartir (AdocGrowth.migrate_points). v19: última party elegida para el combate táctico
+## (last_party, combate-tactico.md, T1b); al migrar, ninguna (la primera vez se preselecciona la
+## party más grande que cabe). Las versiones anteriores se cargan con valores por defecto.
+const SAVE_VERSION: int = 19
 ## Migración a v9: el Ofomni de la misión pasó de "ofomni" a "ofomni_descarriado" (y su etiqueta
 ## de brújula, de "Ofomni" a "Ofomni descarriado").
 const LEGACY_OFOMNI_ID: String = "ofomni"
@@ -157,6 +159,9 @@ var emptied_fruit_trees: Array[Vector4i] = []
 ## Frutos tomados en el Momento actual por Bosque: { "id del Bosque": n }. Se vacía en cada
 ## riutash. Con n > 0, el siguiente fruto de ese Bosque es un robo.
 var fruit_taken: Dictionary = {}
+## Última party elegida para el combate táctico (TacticalParty): claves de los aliados que entraron
+## ("adoc:0", "botarramas:0"...). Vacía: ninguna elección todavía.
+var last_party: Array[String] = []
 
 
 func new_game(new_seed: int = 0, new_region: StringName = &"valle_del_sara") -> void:
@@ -213,6 +218,7 @@ func new_game(new_seed: int = 0, new_region: StringName = &"valle_del_sara") -> 
 	adoc_encounters = {}
 	far_quests = []
 	last_vision_day = 0
+	last_party = []
 
 
 func to_dict() -> Dictionary:
@@ -271,6 +277,7 @@ func to_dict() -> Dictionary:
 		"adoc_encounters": adoc_encounters,
 		"far_quests": far_quests,
 		"last_vision_day": last_vision_day,
+		"last_party": last_party,
 	}
 
 
@@ -370,6 +377,13 @@ func from_dict(data: Dictionary) -> void:
 			if not fq.is_empty():
 				far_quests.append(fq)
 	last_vision_day = maxi(0, int(data.get("last_vision_day", 0)))
+	# v18 o anterior: ninguna party elegida (SaveManager.migrate la deja vacía).
+	last_party = []
+	var saved_party: Variant = data.get("last_party", [])
+	if saved_party is Array:
+		for key: Variant in saved_party:
+			if not last_party.has(str(key)):
+				last_party.append(str(key))
 	item_uses = {}
 	var uses: Variant = data.get("item_uses", {})
 	if uses is Dictionary:
