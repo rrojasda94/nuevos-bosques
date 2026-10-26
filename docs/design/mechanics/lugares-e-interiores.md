@@ -147,9 +147,7 @@ Palabras del dueño (2026-10-25): "Despues tambien podemos empezar a crear los e
 
 ## Preguntas abiertas
 - **#175** (en parte): sicabis: jardín con un pequeño lago y plantas ornamentales exclusivas; un garelino no puede entrar. Queda abierto confirmar las mecánicas propuestas (+1 Luz cada 30 s, Meditar, relación +5 y Senda +1). El término ya está en el glosario. La rareza y la colocación las dio el dueño el 2026-10-26 ("lugares raros de hallar", entrada especial en bosque o montaña). Los números (tope de 1 por subregión, probabilidad 0,6, ≥ 2 chunks de una villa, ≥ 4 entre sicabis) son propuesta.
-- **Nueva: ¿la entrada se ve a simple vista o hay que buscarla?**
-  - Propuesta por defecto (pilar 3): el objeto de la entrada **se ve** si está en pantalla, pero queda fuera de los senderos, sin letrero que lleve a ella y sin marca en el mapa M hasta haberla encontrado.
-  - La alternativa sería esconderla del todo: que solo aparezca al acercarse a ≤ 3 casillas o con una pista (un Bosque, una visión de Meditar). Hay que preguntarlo al dueño.
+- ~~¿La entrada se ve a simple vista o hay que buscarla?~~ **Decidido** (dueño, 2026-10-26): **se ve, sin pistas**. El objeto de la entrada se ve si está en pantalla, fuera de los senderos, sin letrero que lleve a ella y sin marca en el mapa M hasta haberla encontrado.
 - ~~#177 y #178~~ Resueltas: Azhin, villa del noroeste; seres etéreos y amorfos, pequeños o medianos.
 - ~~#179, #180, #181~~ Resueltas: cordillera occidental transitable y Larr al norte (`docs/design/world/sur-lenfi.md`); espíritus neutros por defecto, a veces hostiles, y se les puede atacar o provocar; glosario actualizado con autorización del dueño.
 - ~~#182 y #183~~ Resueltas: Azhin está en Lean; la mecánica de los espíritus está confirmada.
