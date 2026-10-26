@@ -21,7 +21,7 @@ Modifica las PNG de data/world/regions/valle_del_sara/ (no las regenera desde el
   cordillera occidental, que es transitable y sin cumbres; dueño, 2026-10-26: "no nacen en el
   Valle, no pueden nacer en Dorias porque la cordillera lo impide") nacen dentro de la cordillera,
   en una colina de nivel 3 y 2 sin cumbre, junto a un lugar de tipo manantial (fila manantial_<n>
-  de lugares.csv, un px al oeste del nacimiento). El validador da por unido un río que toca un
+  de lugares.csv, "Fuente del <n>", un px al oeste del nacimiento). El validador da por unido un río que toca un
   manantial.
 - caminos.png: donde un camino pintado cruza un afluente, ese píxel pasa a puente.
 - lugares.csv: una fila de tipo lugar por afluente (id afluente_<n>, nombre "<n> del Sara"), junto
@@ -359,9 +359,9 @@ def main() -> int:
     for n, d in enumerate(info):
         if d["af"].get("nacimiento", "cumbre") == "manantial":
             mx, my = d["river"][0][0] - 1, d["river"][0][1]
-            notas = (f"Nacimiento del {d['nombre']}, en la cordillera occidental (Urd Gumnavis). "
+            notas = (f"Fuente (nacimiento) del {d['nombre']}, en la cordillera occidental (Urd Gumnavis). "
                      "Fila escrita por tools/world/paint_afluentes.py.")
-            rows.append(f"manantial_{n + 1},Nacimiento del {d['nombre']},manantial,{mx},{my},,,\"{notas}\"")
+            rows.append(f"manantial_{n + 1},Fuente del {ORDINALES[n]},manantial,{mx},{my},,,\"{notas}\"")
     write_places(rows)
 
     agua.save(REGION_DIR / "agua.png")

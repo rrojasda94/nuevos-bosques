@@ -497,7 +497,7 @@ func test_valle_del_sara_west_tributaries_rise_inside_the_range() -> void:
 		var h: int = a.height_at(cell)
 		assert_true(h == RegionAuthoring.Height.LEVEL_2 or h == RegionAuthoring.Height.LEVEL_3, "%s en la montaña" % p.name)
 	for n: String in ["3ro", "5to", "7mo"]:
-		assert_has(names, "Nacimiento del %s del Sara" % n)
+		assert_has(names, "Fuente del %s" % n)
 	for y: int in a.size_px.y:
 		assert_eq(a.water_at(Vector2i(0, y)), RegionAuthoring.Water.NONE, "agua en el borde oeste (Dorias) en y=%d" % y)
 	# El 1ro nace junto a una cumbre del sur de Cassie (84, 303): a su oeste está su cumbre de 3x3.
@@ -505,7 +505,9 @@ func test_valle_del_sara_west_tributaries_rise_inside_the_range() -> void:
 	assert_eq(a.height_at(Vector2i(82, 303)), RegionAuthoring.Height.PEAK, "el 1ro sigue naciendo en su cumbre")
 
 
-## Tarca de Azhin (dueño, 2026-10-26): lugar propio de tipo tarca junto a Azhin, accesible a pie.
+## Tarca de Azhin (dueño, 2026-10-26): lugar propio de tipo tarca, "a 20 o más casillas, pero más
+## al oeste, en las montañas, en lo alto de una montaña": dentro de la cordillera occidental, en
+## nivel 3 (lo más alto que se pisa) sin nada más alto en 2 celdas a la redonda, y accesible a pie.
 func test_valle_del_sara_has_the_tarca_of_azhin() -> void:
 	var a := RegionAuthoring.load_region(&"valle_del_sara")
 	var tarca: Dictionary = {}
@@ -519,7 +521,16 @@ func test_valle_del_sara_has_the_tarca_of_azhin() -> void:
 	if tarca.is_empty() or azhin.is_empty():
 		return
 	assert_eq(tarca.type, "tarca")
-	assert_lte(absi(tarca.cell.x - azhin.cell.x) + absi(tarca.cell.y - azhin.cell.y), 8, "la tarca está junto a Azhin")
+	var dist_tiles: float = Vector2(tarca.cell - azhin.cell).length() * RegionAuthoring.MACRO_TILES
+	assert_gte(dist_tiles, 20.0, "la tarca está a 20 casillas o más de Azhin")
+	assert_lt(tarca.cell.x, azhin.cell.x, "la tarca está al oeste de Azhin")
+	assert_lt(tarca.cell.x, STRIP_W, "la tarca está en la cordillera occidental")
+	assert_eq(a.height_at(tarca.cell), RegionAuthoring.Height.LEVEL_3, "la tarca está en nivel 3, en lo alto")
+	for dy: int in range(-2, 3):
+		for dx: int in range(-2, 3):
+			var n: Vector2i = tarca.cell + Vector2i(dx, dy)
+			if a.in_map(n):
+				assert_ne(a.height_at(n), RegionAuthoring.Height.PEAK, "nada más alto junto a la tarca en %s" % n)
 	assert_true(a.is_walkable(tarca.cell), "tarca en terreno transitable")
 	var walk: Dictionary = {}
 	for y: int in a.size_px.y:
