@@ -1,8 +1,9 @@
 class_name ChunkBuilder
 extends RefCounted
 ## Pasada de chunk del Mundo 2.0 (ADR 0014 §5): convierte un chunk del RegionPlan en un
-## WorldChunk nuevo. Hoy (M6) hace los pasos 1 y 2: suelo base, pedregal y relieve. Los puntos de
-## interés, la red de senderos, las formas grandes y la decoración llegan en M7–M8.
+## WorldChunk nuevo. Hace los pasos 1 a 5: suelo base y pedregal, relieve, puntos de interés, red
+## de senderos y formas grandes (M6 y M7). La decoración, los letreros, el refugio, los frutales y
+## el trazado completo de la villa llegan en M8.
 ##
 ## Relieve (ADR 0014 §3, spec de arte docs/art/specs/mundo-2.md §3):
 ## - `level[]` = nivel de la celda gruesa (0..3; la cumbre cuenta como 3 y además bloquea entera).
@@ -11,27 +12,38 @@ extends RefCounted
 ## - Bordes norte, este y oeste en las casillas del borde de la meseta (nivel de arriba), con la
 ##   máscara de la spec (1 = norte, 2 = este, 8 = oeste).
 ## - Cascada: cara cuya celda gruesa y la de la meseta de encima tienen agua. Bloquea.
-## - Escaleras y rampas: en las puertas del plan, y donde haga falta para que todas las puertas
-##   queden unidas con el hub (provisional hasta la red de senderos de M7). Solo se convierten
-##   caras enteras dentro del chunk, así que dos chunks vecinos nunca se contradicen.
+## - Escaleras y rampas: donde una puerta o un sendero cruza una cara o un borde.
 ## Por construcción, dos casillas transitables de distinto nivel no son vecinas ortogonales salvo
 ## por una escalera o una rampa (lo verifica tests/unit/world/test_relief.gd).
+##
+## Lo que cambia el relieve (Nujio aplanado, colina +1 nivel) solo toca celdas gruesas del
+## "interior seguro" (SAFE_*), las que ningún chunk vecino lee en su margen: dos chunks vecinos
+## nunca se contradicen.
+##
+## Red de senderos: nodos = puertas + puntos de interés + ancla (villa o Nujio; si no, el primer
+## punto de interés; si no, la primera puerta). Prim sobre la distancia en celdas gruesas (entre
+## puertas de camino, a mitad de precio); cada arista se traza con AStarGrid2D sobre la rejilla
+## gruesa de 20×20 (agua, caras, casas y Nujio cuestan; lo ya trazado abarata). Cada paso grueso
+## son 4 casillas en línea recta. Después, un Dijkstra por casillas repara lo que falte
+## (escaleras, rampas y puentes) para que todo nodo se alcance desde el hub.
 ##
 ## Capas de dibujo: `variant` de una casilla con risco codifica la pieza (ver VARIANT_*); en las
 ## casillas sin risco queda para la variante de suelo de M8. `decor` lleva las sombras de la capa 2
 ## (Decor), porque una casilla solo tiene una pieza en esa capa (spec §3.6).
 ##
-## Apto para hilos: solo lee el RegionPlan (inmutable), crea su propio FastNoiseLite y sus
-## arreglos de trabajo, no usa randi() ni GameState y no toca el árbol de escena. El resultado
-## depende solo de (plan, coord): da igual el orden o el hilo en que se construya.
+## Apto para hilos: solo lee el RegionPlan (inmutable), crea su propio FastNoiseLite,
+## RandomNumberGenerator, AStarGrid2D y arreglos de trabajo, no usa randi() ni GameState y no toca
+## el árbol de escena. El resultado depende solo de (plan, coord): da igual el orden o el hilo.
 
 ## Piezas de la capa 2 (`WorldChunk.decor`). Se amplía añadiendo valores al final.
 enum Decor { NONE, SHADOW_FOOT, SHADOW_EAST }
+## Ancla del chunk.
+enum Anchor { NONE, VILLA, NUJIO }
 
 ## Versión de la salida del ChunkBuilder: súbela con cualquier cambio que altere los bytes de un
 ## chunk. WorldCache la combina con RegionPlan.GENERATOR_VERSION y WorldChunk.FORMAT_VERSION
 ## (combined_generator_version), así que invalida la caché. Cabe en 16 bits.
-const VERSION: int = 1
+const VERSION: int = 2
 
 const SIZE: int = WorldCoords.CHUNK
 const LAST: int = SIZE - 1
@@ -78,8 +90,12 @@ const WATER_GROUND: Array[int] = [
 ## Riscos que se pisan (bit = valor de WorldChunk.Cliff).
 const CLIFF_OPEN: int = (1 << WorldChunk.Cliff.NONE) | (1 << WorldChunk.Cliff.STAIRS) \
 		| (1 << WorldChunk.Cliff.RAMP)
+## Suelos naturales que un sendero sustituye y sobre los que crecen árboles, rocas y casas.
+const NATURAL_GROUND: int = (1 << WorldChunk.Ground.GRASS) | (1 << WorldChunk.Ground.ROCKY) \
+		| (1 << WorldChunk.Ground.CLEARING)
+const TREE_GROUND: int = (1 << WorldChunk.Ground.GRASS) | (1 << WorldChunk.Ground.ROCKY)
 
-## Coste de la búsqueda de escaleras: casilla normal, casilla de agua (M7 pondrá el puente) y
+## Coste de la reparación por casillas: casilla normal, casilla de agua (se vuelve puente) y
 ## casilla de risco que se convertiría en escalera o rampa.
 const COST_STEP: int = 1
 const COST_WATER: int = 4
@@ -95,9 +111,104 @@ const MACRO_W: int = MACROS + 2 * PAD_W
 const MACRO_H: int = MACROS + PAD_N + 1
 ## Casillas con 1 de margen alrededor (vecinos de las del borde del chunk).
 const TILE_W: int = SIZE + 2
+## Interior seguro: celdas gruesas que ningún vecino lee en su margen (el vecino del sur lee las 3
+## últimas filas; el del norte, la primera; los de los lados, 2 columnas).
+const SAFE_X0: int = PAD_W
+const SAFE_X1: int = MACROS - 1 - PAD_W
+const SAFE_Y0: int = 1
+const SAFE_Y1: int = MACROS - 1 - PAD_N
+
+## Ancho de sendero y de camino (casillas); también son los valores de la capa de trabajo `path`.
+const PATH_W: int = RegionPlan.PATH_WIDTH
+const ROAD_W: int = RegionPlan.ROAD_WIDTH
+## Radio (celdas gruesas) de la zona aplanada alrededor del Nujio: con villa o aldea, y sin ella.
+const VILLA_RADIUS: int = 3
+const NUJIO_RADIUS: int = 1
+## Huella del Nujio (spec de arte: 4×4, una celda gruesa).
+const NUJIO_SIZE: int = 4
+## Casillas de claro alrededor de un Nujio y de plaza alrededor del de una villa.
+const NUJIO_CLEARING: int = 4
+const PLAZA_RADIUS: int = 3
+## Casas de una villa con nombre (las aldeas traen las suyas del plan). Huella 4×3. Radios
+## (casillas desde el centro del Nujio) a los que se prueban.
+const VILLA_HOUSES: int = 5
+const HOUSE_SIZE := Vector2i(4, 3)
+const HOUSE_RADII: Array[float] = [9.0, 10.5, 8.0, 12.0]
+## Ningún punto de interés tiene su centro a menos de esto (Chebyshev) del centro del chunk.
+const CENTER_CLEAR: int = 12
+## Posiciones al azar que se prueban por tipo de punto de interés y de Nujio.
+const SPOT_TRIES: int = 24
+## Intentos de tipo por hueco (mundo-2.md §4: como mucho 3).
+const KIND_TRIES: int = 3
+## Tipos que se sortean (PLACE solo sale del CSV): los primeros de WorldChunk.PointKind.
+const RANDOM_POINTS: int = 6
+## Tipos que exigen celdas gruesas de un mismo nivel.
+const FLAT_POINTS: int = (1 << WorldChunk.PointKind.HILL) | (1 << WorldChunk.PointKind.POND) \
+		| (1 << WorldChunk.PointKind.LANDMARK_TREE) | (1 << WorldChunk.PointKind.STONE_CIRCLE)
+## Tipos del CSV que son punto de interés (las villas y los Bosques clave son anclas).
+const CSV_POINTS: Array[String] = ["hito", "tarca", "lugar"]
+## Puntos de interés por defecto (mundo-2.md §4); la región los cambia con "points_of_interest".
+const DEFAULT_POI: Dictionary = {
+	"count_weights": {"2": 55, "3": 45},
+	"near_anchor": 1,
+	"border_margin": 12,
+	"min_gap": 24,
+	"weights": {
+		"north": {"colina": 35, "hito": 20, "circulo_piedras": 20, "arboleda": 15, "laguna": 5, "pradera": 5},
+		"center": {"colina": 20, "hito": 20, "circulo_piedras": 15, "arboleda": 15, "laguna": 15, "pradera": 15},
+		"south": {"colina": 5, "hito": 15, "circulo_piedras": 10, "arboleda": 15, "laguna": 30, "pradera": 25},
+	},
+}
+## Formas grandes por defecto; la región los cambia con "chunk_shapes". El umbral del bosque sale
+## de forest.density como en ChunkGenerator (0,3 - densidad × 0,45).
+## - forest_frequency: ruido de las manchas de bosque (por casilla; baja frecuencia).
+## - forest_min_neighbours: árboles 2×2 vecinos (de 8) que necesita uno para quedarse.
+## - forest_rocky_penalty: el pedregal sube el umbral (menos árboles).
+## - rock_permille: probabilidad (‰) de roca 2×2 en una celda 2×2 de pedregal o de montaña.
+const DEFAULT_SHAPES: Dictionary = {
+	"forest_frequency": 0.035,
+	"forest_min_neighbours": 4,
+	"forest_rocky_penalty": 0.25,
+	"rock_permille": 90,
+}
+const DEFAULT_FOREST_DENSITY: float = 0.6
+## Celdas de la rejilla de árboles y rocas (2×2 casillas, alineada con world_cell par).
+const GRID: int = SIZE / 2
+## Rocas del círculo de piedras: cuántas, a qué radio (casillas) y giros que se prueban.
+const CIRCLE_ROCKS: int = 6
+const CIRCLE_RADIUS: float = 4.5
+const CIRCLE_TURNS: int = 12
+
+## Coste del A* grueso (se suma al paso de 1): cara de frente (escalera, + 1 por nivel), borde
+## (rampa), ir a lo largo de una cara, cascada.
+const ASTAR_STAIRS: float = 2.0
+const ASTAR_RAMP: float = 3.0
+const ASTAR_ALONG_FACE: float = 2.0
+const ASTAR_WATERFALL: float = 40.0
+## Peso por celda gruesa (multiplica el coste de entrar): agua honda (puente), vado, camino pintado,
+## laguna, colina, zona de casas, arboleda; y el descuento de lo ya trazado.
+const WEIGHT_WATER: float = 5.0
+const WEIGHT_FORD: float = 1.5
+const WEIGHT_ROAD: float = 0.6
+const WEIGHT_POND: float = 8.0
+const WEIGHT_HILL: float = 6.0
+const WEIGHT_VILLA: float = 2.5
+const WEIGHT_GROVE: float = 1.5
+const TRACED_FACTOR: float = 0.4
+## Celdas gruesas hacia delante que mira el enderezado de una ruta del A*.
+const STRAIGHTEN_WINDOW: int = 16
+## Recargo de Prim de las aristas que no unen dos nodos de camino: así las puertas de camino (y la
+## villa o el Nujio, si hay camino) se unen entre sí antes que con nada más y el camino atraviesa
+## el chunk sin cortarse. Es más fuerte que el "a mitad de precio" del ADR (ver generation.md).
+const NON_ROAD_EDGE: float = 1000.0
 
 const SALT_ROCKY: int = 140
 const SALT_FACE_COLUMN: int = 141
+const SALT_CHUNK: int = 142
+const SALT_FOREST: int = 143
+const SALT_TREE: int = 144
+const SALT_ROCK: int = 145
+const SALT_HOUSE: int = 146
 
 
 ## Construye el chunk `coord` del plan. Nunca devuelve null.
@@ -105,11 +216,45 @@ static func build(plan: RegionPlan, coord: Vector2i) -> WorldChunk:
 	return _Build.new(plan, coord).run()
 
 
+## Casilla del carril de una celda gruesa: esquina superior izquierda del pincel del sendero.
+static func lane_cell(macro: Vector2i) -> Vector2i:
+	return macro * MACRO + Vector2i.ONE
+
+
+## A* de la rejilla gruesa con el coste de cruzar el relieve: las caras se cruzan de frente (en
+## vertical) y los bordes con rampa. No guarda referencia al _Build (sin ciclos de RefCounted).
+class _PathGrid extends AStarGrid2D:
+	var lv := PackedByteArray()
+	var face := PackedByteArray()
+	var wet := PackedByteArray()
+
+	func _compute_cost(from_id: Vector2i, to_id: Vector2i) -> float:
+		var a: int = from_id.y * MACROS + from_id.x
+		var b: int = to_id.y * MACROS + to_id.x
+		var cost: float = 1.0
+		if from_id.y == to_id.y:
+			if face[a] > 0 or face[b] > 0:
+				cost += ASTAR_ALONG_FACE
+			if lv[a] != lv[b]:
+				cost += ASTAR_RAMP
+			return cost
+		var n: int = a if from_id.y < to_id.y else b
+		var s: int = b if n == a else a
+		if lv[n] > lv[s]:
+			cost += ASTAR_STAIRS + lv[n] - lv[s]
+			if wet[s] == 1:
+				cost += ASTAR_WATERFALL
+		elif lv[n] < lv[s]:
+			cost += ASTAR_RAMP
+		return cost
+
+
 ## Estado de una construcción: todo lo mutable vive aquí, uno por llamada.
 class _Build:
 	var plan: RegionPlan
 	var coord: Vector2i
 	var chunk: WorldChunk
+	var rng := RandomNumberGenerator.new()
 	# Celdas gruesas con margen (MACRO_W × MACRO_H).
 	var m_level := PackedByteArray()
 	var m_peak := PackedByteArray()
@@ -118,12 +263,29 @@ class _Build:
 	var m_face_start := PackedByteArray() # fila de la cara en la que empieza la celda (0 o 4)
 	var m_face_len := PackedByteArray() # filas de la cara entera (2 por nivel de caída)
 	var m_face_wet := PackedByteArray() # cascada
+	# Celdas gruesas del chunk (MACROS × MACROS) para el A*.
+	var g_solid := PackedByteArray()
+	var g_weight := PackedFloat32Array()
 	# Casillas con margen (TILE_W × TILE_W): relieve antes de escaleras y rampas.
 	var t_cliff := PackedByteArray()
 	var t_aux := PackedByteArray() # cara: fila dentro de la cara; borde: máscara
 	var t_len := PackedByteArray() # cara: filas de la cara entera
-	# Búsqueda.
-	var has_relief: bool = false
+	# Casillas del chunk.
+	var path := PackedByteArray() # 0, PATH_W o ROAD_W
+	var keep := PackedByteArray() # 1 = sin objetos (alrededor del hub y de los nodos)
+	var solid := PackedByteArray() # 1 = reservada para un objeto grande: la reparación no pasa
+	var no_tree := PackedByteArray()
+	var force_tree := PackedByteArray()
+	# Ancla y puntos de interés.
+	var anchor: int = Anchor.NONE
+	var anchor_macro := Vector2i(-1, -1)
+	var villa: Dictionary = {}
+	# { kind, a (celda gruesa sup. izq.), size (celdas gruesas), center (casilla), node (casilla), csv }
+	var points: Array[Dictionary] = []
+	# { tile, macro, road, door ({} si no es puerta), side }
+	var nodes: Array[Dictionary] = []
+	var has_road_door: bool = false
+	# Reparación.
 	var reached := PackedByteArray()
 	var cost_h := PackedByteArray()
 	var cost_v := PackedByteArray()
@@ -141,12 +303,23 @@ class _Build:
 		chunk = WorldChunk.new()
 		chunk.seed_value = plan.seed_value
 		chunk.coord = coord
-		_load_macros()
+		rng.seed = ChunkGenerator.hash_ints([plan.plan_seed, coord.x, coord.y, SALT_CHUNK])
+		_load_levels()
+		_plan_anchor()
+		_plan_points()
+		_compute_faces()
 		_classify()
 		_fill()
+		_init_tile_layers()
 		var required: PackedInt32Array = _open_doors()
+		_shape_anchor()
+		_shape_points()
+		_route_network()
 		_place_hub()
+		for node: Dictionary in nodes:
+			required.append(WorldCoords.cell_index(node.tile))
 		_connect(required)
+		_place_objects()
 		_paint_variants()
 		_paint_shadows()
 		chunk.rebuild_blocked()
@@ -154,15 +327,14 @@ class _Build:
 
 	# --- Celdas gruesas -------------------------------------------------------------------------
 
-	func _load_macros() -> void:
+	func _mk(mx: int, my: int) -> int:
+		return (my + PAD_N) * MACRO_W + mx + PAD_W
+
+	func _load_levels() -> void:
 		var n: int = MACRO_W * MACRO_H
 		m_level.resize(n)
 		m_peak.resize(n)
 		m_water.resize(n)
-		m_face_rows.resize(n)
-		m_face_start.resize(n)
-		m_face_len.resize(n)
-		m_face_wet.resize(n)
 		var origin: Vector2i = coord * MACROS
 		var max_x: int = plan.size_macro.x - 1
 		var max_y: int = plan.size_macro.y - 1
@@ -176,6 +348,13 @@ class _Build:
 				m_peak[k] = 1 if level == RegionPlan.LEVEL_PEAK else 0
 				m_level[k] = mini(level, RegionPlan.LEVEL_MAX)
 				m_water[k] = plan.water_at(m)
+
+	func _compute_faces() -> void:
+		var n: int = MACRO_W * MACRO_H
+		m_face_rows.resize(n)
+		m_face_start.resize(n)
+		m_face_len.resize(n)
+		m_face_wet.resize(n)
 		var max_rows: int = FACE_ROWS_PER_LEVEL * RegionPlan.LEVEL_MAX
 		for j: int in range(2, MACRO_H):
 			for i: int in MACRO_W:
@@ -200,6 +379,247 @@ class _Build:
 				if source >= 0 and m_water[k] != RegionAuthoring.Water.NONE \
 						and m_water[source] != RegionAuthoring.Water.NONE:
 					m_face_wet[k] = 1
+
+	# --- Ancla: villa, aldea o Nujio --------------------------------------------------------------
+
+	## Busca dónde va el Nujio (con su villa o solo) y aplana su zona. Sin sitio, no hay ancla.
+	func _plan_anchor() -> void:
+		villa = plan.villa_in_chunk(coord)
+		var id: int = plan.bosque_at(coord)
+		var nujio_here: bool = id >= 0 and id < plan.bosques.count() \
+				and plan.bosques.nujio_chunk[id] == coord and plan.bosques.has_nujio(id)
+		if villa.is_empty() and not nujio_here:
+			return
+		var radius: int = NUJIO_RADIUS if villa.is_empty() else VILLA_RADIUS
+		var target := Vector2i(-1, -1)
+		if not villa.is_empty():
+			target = (villa.macro as Vector2i) - coord * MACROS
+		else:
+			for p: Dictionary in plan.places_in_chunk(coord):
+				if p.type == "bosque":
+					target = (p.cell as Vector2i) - coord * MACROS
+					break
+			if target.x < 0:
+				target = _random_anchor(radius)
+		var m: Vector2i = _find_anchor_macro(target, radius)
+		if m.x < 0:
+			villa = {}
+			return
+		anchor = Anchor.NUJIO if villa.is_empty() else Anchor.VILLA
+		anchor_macro = m
+		chunk.has_villa = anchor == Anchor.VILLA
+		chunk.nujio_rect = Rect2i(m * MACRO, Vector2i(NUJIO_SIZE, NUJIO_SIZE))
+		var level: int = m_level[_mk(m.x, m.y)]
+		for my: int in range(maxi(m.y - radius, SAFE_Y0), mini(m.y + radius, SAFE_Y1) + 1):
+			for mx: int in range(maxi(m.x - radius, SAFE_X0), mini(m.x + radius, SAFE_X1) + 1):
+				var k: int = _mk(mx, my)
+				m_level[k] = level
+				m_peak[k] = 0
+
+	func _anchor_range(radius: int) -> Rect2i:
+		var lo := Vector2i(SAFE_X0 + radius, SAFE_Y0 + radius)
+		var hi := Vector2i(SAFE_X1 - radius, SAFE_Y1 - radius)
+		return Rect2i(lo, hi - lo + Vector2i.ONE)
+
+	## El Nujio y la celda de debajo (la del hub) en seco y sin cumbre.
+	func _anchor_ok(m: Vector2i) -> bool:
+		for k: int in [_mk(m.x, m.y), _mk(m.x, m.y + 1)]:
+			if m_peak[k] == 1 or m_water[k] != RegionAuthoring.Water.NONE:
+				return false
+		return true
+
+	## Nujio sin villa ni lugar del CSV: al azar, lejos del centro fijo.
+	func _random_anchor(radius: int) -> Vector2i:
+		var r: Rect2i = _anchor_range(radius)
+		var center: Vector2i = WorldChunk.center()
+		for t: int in SPOT_TRIES:
+			var m := Vector2i(rng.randi_range(r.position.x, r.end.x - 1), rng.randi_range(r.position.y, r.end.y - 1))
+			var c: Vector2i = m * MACRO + Vector2i(MACRO / 2, MACRO / 2)
+			if maxi(absi(c.x - center.x), absi(c.y - center.y)) >= CENTER_CLEAR and _anchor_ok(m):
+				return m
+		return Vector2i(MACROS / 2, MACROS / 2)
+
+	## La celda válida más cercana (anillos de Chebyshev) a `target`, dentro del rango del radio.
+	func _find_anchor_macro(target: Vector2i, radius: int) -> Vector2i:
+		var r: Rect2i = _anchor_range(radius)
+		var t := Vector2i(clampi(target.x, r.position.x, r.end.x - 1), clampi(target.y, r.position.y, r.end.y - 1))
+		for ring: int in MACROS:
+			for my: int in range(t.y - ring, t.y + ring + 1):
+				for mx: int in range(t.x - ring, t.x + ring + 1):
+					if maxi(absi(mx - t.x), absi(my - t.y)) != ring or not r.has_point(Vector2i(mx, my)):
+						continue
+					if _anchor_ok(Vector2i(mx, my)):
+						return Vector2i(mx, my)
+		return Vector2i(-1, -1)
+
+	func _anchor_center() -> Vector2i:
+		return chunk.nujio_rect.position + Vector2i(NUJIO_SIZE / 2, NUJIO_SIZE / 2)
+
+	# --- Puntos de interés ------------------------------------------------------------------------
+
+	func _plan_points() -> void:
+		var params: Dictionary = DEFAULT_POI.merged(plan.region_params.get("points_of_interest", {}), true)
+		var total: int = int(params.near_anchor)
+		if anchor == Anchor.NONE:
+			total = _weighted_count(params.count_weights)
+		var used: Dictionary = {}
+		for p: Dictionary in plan.places_in_chunk(coord):
+			if not CSV_POINTS.has(String(p.type)):
+				continue
+			var local: Vector2i = (p.cell as Vector2i) - coord * MACROS
+			if p.type == "hito":
+				var a := Vector2i(clampi(local.x - 1, 0, MACROS - 3), clampi(local.y - 1, 0, MACROS - 3))
+				_add_point(WorldChunk.PointKind.LANDMARK_TREE, a, Vector2i(3, 3), true)
+				used[WorldChunk.PointKind.LANDMARK_TREE] = true
+			elif p.type == "tarca":
+				var a := Vector2i(clampi(local.x, 0, MACROS - 1), clampi(local.y - 1, 0, MACROS - 2))
+				_add_point(WorldChunk.PointKind.PLACE, a, Vector2i(1, 2), true)
+			else:
+				_add_point(WorldChunk.PointKind.PLACE, Vector2i(clampi(local.x, 0, MACROS - 1),
+						clampi(local.y, 0, MACROS - 1)), Vector2i.ONE, true)
+		var weights: PackedFloat32Array = _latitude_weights(params.weights)
+		var failed: Dictionary = used.duplicate()
+		var slots: int = total - points.size()
+		for slot: int in slots:
+			for attempt: int in KIND_TRIES:
+				var kind: int = _pick_kind(weights, failed)
+				if kind < 0:
+					break
+				var size: Vector2i = _point_size(kind)
+				var a: Vector2i = _find_spot(kind, size, params)
+				if a.x >= 0:
+					_add_point(kind, a, size, false)
+					failed[kind] = true # nunca dos del mismo tipo
+					break
+				failed[kind] = true
+
+	func _weighted_count(weights: Dictionary) -> int:
+		var total: float = 0.0
+		for key: Variant in weights:
+			total += float(weights[key])
+		var roll: float = rng.randf() * total
+		var last: int = 0
+		for key: Variant in weights:
+			last = int(String(key))
+			roll -= float(weights[key])
+			if roll < 0.0:
+				return last
+		return last
+
+	## Pesos de los tipos sorteables interpolados por latitud (norte t = 0, centro 0,5, sur 1).
+	func _latitude_weights(table: Dictionary) -> PackedFloat32Array:
+		var t: float = float(coord.y) / float(maxi(1, plan.size_chunks.y - 1))
+		var a: Dictionary = table.get("north", {})
+		var b: Dictionary = table.get("center", {})
+		var f: float = t * 2.0
+		if t > 0.5:
+			a = b
+			b = table.get("south", {})
+			f = (t - 0.5) * 2.0
+		var out := PackedFloat32Array()
+		out.resize(RANDOM_POINTS)
+		for k: int in RANDOM_POINTS:
+			var id: String = WorldChunk.POINT_IDS[k]
+			out[k] = maxf(0.0, lerpf(float(a.get(id, 0)), float(b.get(id, 0)), f))
+		return out
+
+	func _pick_kind(weights: PackedFloat32Array, excluded: Dictionary) -> int:
+		var total: float = 0.0
+		for k: int in RANDOM_POINTS:
+			if not excluded.has(k):
+				total += weights[k]
+		if total <= 0.0:
+			return -1
+		var roll: float = rng.randf() * total
+		var last: int = -1
+		for k: int in RANDOM_POINTS:
+			if excluded.has(k) or weights[k] <= 0.0:
+				continue
+			last = k
+			roll -= weights[k]
+			if roll < 0.0:
+				return k
+		return last
+
+	## Huella en celdas gruesas (mundo-2.md §4).
+	func _point_size(kind: int) -> Vector2i:
+		match kind:
+			WorldChunk.PointKind.POND:
+				return Vector2i(4, 3) if rng.randf() < 0.5 else Vector2i(3, 2)
+			WorldChunk.PointKind.MEADOW:
+				return Vector2i(4, 4) if rng.randf() < 0.5 else Vector2i(3, 3)
+		return Vector2i(3, 3)
+
+	func _find_spot(kind: int, size: Vector2i, params: Dictionary) -> Vector2i:
+		var x1: int = SAFE_X1 - size.x + 1
+		var y1: int = SAFE_Y1 - size.y + 1
+		if kind == WorldChunk.PointKind.HILL:
+			y1 = mini(y1, MACROS - 1 - size.y) # la fila del pie de la escalera, dentro
+		for t: int in SPOT_TRIES:
+			var a := Vector2i(rng.randi_range(SAFE_X0, x1), rng.randi_range(SAFE_Y0, y1))
+			if _spot_ok(kind, a, size, params):
+				return a
+		return Vector2i(-1, -1)
+
+	func _spot_ok(kind: int, a: Vector2i, size: Vector2i, params: Dictionary) -> bool:
+		var c: Vector2i = a * MACRO + size * (MACRO / 2)
+		var margin: int = int(params.border_margin)
+		if c.x < margin or c.y < margin or c.x > SIZE - margin or c.y > SIZE - margin:
+			return false
+		var center: Vector2i = WorldChunk.center()
+		if maxi(absi(c.x - center.x), absi(c.y - center.y)) < CENTER_CLEAR:
+			return false
+		var gap: int = int(params.min_gap)
+		for p: Dictionary in points:
+			if ((p.center as Vector2i) - c).length_squared() < gap * gap:
+				return false
+		if anchor != Anchor.NONE and (_anchor_center() - c).length_squared() < gap * gap:
+			return false
+		var flat: bool = (FLAT_POINTS >> kind) & 1 == 1
+		var base: int = -1
+		for my: int in range(a.y, a.y + size.y):
+			for mx: int in range(a.x, a.x + size.x):
+				var k: int = _mk(mx, my)
+				if m_peak[k] == 1 or m_water[k] != RegionAuthoring.Water.NONE:
+					return false
+				if base < 0:
+					base = m_level[k]
+				elif flat and m_level[k] != base:
+					return false
+		if (kind == WorldChunk.PointKind.HILL or kind == WorldChunk.PointKind.POND) and base >= RegionPlan.LEVEL_MAX:
+			return false
+		if kind == WorldChunk.PointKind.HILL:
+			# Fila de debajo (la de la cara y el pie de la escalera), del mismo nivel y en seco.
+			for mx: int in range(a.x, a.x + size.x):
+				var k: int = _mk(mx, a.y + size.y)
+				if m_peak[k] == 1 or m_water[k] != RegionAuthoring.Water.NONE or m_level[k] != base:
+					return false
+		return true
+
+	## Registra el punto y su nodo de sendero; la colina sube su huella un nivel.
+	func _add_point(kind: int, a: Vector2i, size: Vector2i, csv: bool) -> void:
+		var mid := Vector2i(a.x + size.x / 2, a.y + size.y / 2)
+		var node_macro: Vector2i = mid
+		var node_offset := Vector2i.ZERO
+		match kind:
+			WorldChunk.PointKind.HILL:
+				node_macro = Vector2i(mid.x, a.y + size.y)
+				node_offset = Vector2i(0, 1) # pie de la escalera, debajo de las 2 filas de cara
+				for my: int in range(a.y, a.y + size.y):
+					for mx: int in range(a.x, a.x + size.x):
+						m_level[_mk(mx, my)] += 1
+			WorldChunk.PointKind.LANDMARK_TREE:
+				node_macro = Vector2i(mid.x, a.y + size.y - 1)
+			WorldChunk.PointKind.POND:
+				node_macro = Vector2i(mid.x, a.y + size.y - 1)
+			WorldChunk.PointKind.PLACE:
+				node_macro = Vector2i(a.x, a.y + size.y - 1)
+		node_macro = node_macro.clamp(Vector2i.ZERO, Vector2i(MACROS - 1, MACROS - 1))
+		points.append({
+			"kind": kind, "a": a, "size": size, "csv": csv,
+			"center": a * MACRO + size * (MACRO / 2),
+			"node": ChunkBuilder.lane_cell(node_macro) + node_offset,
+		})
 
 	# --- Relieve por casilla (con 1 de margen) --------------------------------------------------
 
@@ -269,9 +689,7 @@ class _Build:
 				var c: int = row_c + x
 				var level: int = m_level[k]
 				chunk.level[c] = level
-				var cliff: int = t_cliff[row_t + x]
-				chunk.cliff[c] = cliff
-				has_relief = has_relief or cliff != WorldChunk.Cliff.NONE
+				chunk.cliff[c] = t_cliff[row_t + x]
 				var water: int = m_water[k]
 				if water != RegionAuthoring.Water.NONE:
 					chunk.ground[c] = WATER_GROUND[water]
@@ -279,10 +697,143 @@ class _Build:
 						and noise.get_noise_2d(wx0 + x, wy0 + y) > thresholds[level]:
 					chunk.ground[c] = WorldChunk.Ground.ROCKY
 
-	# --- Puertas, hub y conexión -----------------------------------------------------------------
+	func _init_tile_layers() -> void:
+		for layer: PackedByteArray in [path, keep, solid, no_tree, force_tree]:
+			layer.resize(WorldChunk.CELLS)
 
-	## Abre las casillas de cada puerta (escalera o rampa si caen en un risco). Devuelve las
-	## casillas de las puertas (índices del chunk), que tienen que quedar unidas al hub.
+	# --- Formas del ancla y de los puntos de interés (suelo y reservas) --------------------------
+
+	func _shape_anchor() -> void:
+		if anchor == Anchor.NONE:
+			return
+		var rect: Rect2i = chunk.nujio_rect
+		var reach: int = VILLA_RADIUS * MACRO + MACRO / 2 if anchor == Anchor.VILLA else NUJIO_CLEARING
+		var zone: Rect2i = rect.grow(reach).intersection(Rect2i(0, 0, SIZE, SIZE))
+		for y: int in range(zone.position.y, zone.end.y):
+			for x: int in range(zone.position.x, zone.end.x):
+				var i: int = y * SIZE + x
+				no_tree[i] = 1
+				if chunk.cliff[i] != WorldChunk.Cliff.NONE or (NATURAL_GROUND >> chunk.ground[i]) & 1 == 0:
+					continue
+				var plaza: bool = anchor == Anchor.VILLA and rect.grow(PLAZA_RADIUS).has_point(Vector2i(x, y))
+				chunk.ground[i] = WorldChunk.Ground.PLAZA if plaza else WorldChunk.Ground.CLEARING
+		_mark(solid, rect)
+		var node: Vector2i = ChunkBuilder.lane_cell(anchor_macro + Vector2i.DOWN)
+		nodes.append({"tile": node, "macro": anchor_macro + Vector2i.DOWN, "road": false, "door": {}})
+		_mark(keep, Rect2i(node - Vector2i.ONE, Vector2i(3, 3)))
+
+	func _shape_points() -> void:
+		for p: Dictionary in points:
+			var a: Vector2i = p.a
+			var size: Vector2i = p.size
+			var foot := Rect2i(a * MACRO, size * MACRO)
+			var mid: Vector2i = a + size / 2
+			match int(p.kind):
+				WorldChunk.PointKind.HILL:
+					_mark(no_tree, foot.grow_individual(0, 0, 0, MACRO))
+					# Escalera de 2 en la cara sur, bajo la celda del medio.
+					for dx: int in PATH_W:
+						var i: int = (mid.x * MACRO + 1 + dx) + (a.y + size.y) * MACRO * SIZE
+						if chunk.cliff[i] == WorldChunk.Cliff.FACE:
+							_stairs_column(i)
+					_mark(solid, Rect2i(_big_tree_cell(p), Vector2i(3, 3)))
+				WorldChunk.PointKind.LANDMARK_TREE:
+					_mark(no_tree, foot)
+					_clearing_blob(p.center, 5.5)
+					_mark(solid, Rect2i(_big_tree_cell(p), Vector2i(3, 3)))
+				WorldChunk.PointKind.STONE_CIRCLE:
+					_mark(no_tree, foot)
+					_clearing_blob(p.center, 6.5)
+				WorldChunk.PointKind.GROVE:
+					var hollow := Rect2i(mid * MACRO, Vector2i(MACRO, MACRO))
+					_mark(force_tree, foot)
+					for y: int in range(hollow.position.y, hollow.end.y):
+						for x: int in range(hollow.position.x, hollow.end.x):
+							var i: int = y * SIZE + x
+							force_tree[i] = 0
+							no_tree[i] = 1
+							if chunk.cliff[i] == WorldChunk.Cliff.NONE and (NATURAL_GROUND >> chunk.ground[i]) & 1 == 1:
+								chunk.ground[i] = WorldChunk.Ground.CLEARING
+				WorldChunk.PointKind.POND:
+					_mark(no_tree, foot.grow(1).intersection(Rect2i(0, 0, SIZE, SIZE)))
+					_pond(p)
+				WorldChunk.PointKind.MEADOW:
+					_mark(no_tree, foot)
+				WorldChunk.PointKind.PLACE:
+					_mark(no_tree, foot.grow(2).intersection(Rect2i(0, 0, SIZE, SIZE)))
+					_clearing_blob(p.center, 3.5)
+					if size.y > 1:
+						_mark(solid, Rect2i(a * MACRO + Vector2i(1, 1), Vector2i(2, 2)))
+			var node: Vector2i = p.node
+			_mark(keep, Rect2i(node - Vector2i.ONE, Vector2i(3, 3)))
+			nodes.append({"tile": node, "macro": WorldCoords.floor_div_v(node, MACRO), "road": false, "door": {}})
+			chunk.points.append({"kind": p.kind, "rect": foot, "cell": node})
+
+	## Claro irregular (radio que ondula con el ángulo) alrededor de `center`.
+	func _clearing_blob(center: Vector2i, radius: float) -> void:
+		var phase: float = rng.randf() * TAU
+		var r: int = ceili(radius + 1.5)
+		for y: int in range(maxi(center.y - r, 0), mini(center.y + r, LAST) + 1):
+			for x: int in range(maxi(center.x - r, 0), mini(center.x + r, LAST) + 1):
+				var d := Vector2(x - center.x + 0.5, y - center.y + 0.5)
+				var limit: float = radius + 1.2 * sin(3.0 * d.angle() + phase)
+				if d.length() > limit:
+					continue
+				var i: int = y * SIZE + x
+				no_tree[i] = 1
+				if chunk.cliff[i] == WorldChunk.Cliff.NONE and (NATURAL_GROUND >> chunk.ground[i]) & 1 == 1:
+					chunk.ground[i] = WorldChunk.Ground.CLEARING
+
+	## Laguna: unión de 3 elipses dentro de la huella, sin tocar la celda del nodo, con orilla de claro.
+	func _pond(p: Dictionary) -> void:
+		var area := Rect2i((p.a as Vector2i) * MACRO, (p.size as Vector2i) * MACRO).grow(-1)
+		var node_box := Rect2i(WorldCoords.floor_div_v(p.node, MACRO) * MACRO, Vector2i(MACRO, MACRO)).grow(1)
+		var half := Vector2(area.size) * 0.5
+		var origin := Vector2(area.position) + half
+		var ellipses: Array[Vector3] = [Vector3(origin.x, origin.y - half.y * 0.15, 1.0)]
+		for k: int in 2:
+			var side: float = -1.0 if k == 0 else 1.0
+			ellipses.append(Vector3(origin.x + side * half.x * rng.randf_range(0.3, 0.45),
+					origin.y + rng.randf_range(-0.3, 0.2) * half.y, rng.randf_range(0.5, 0.65)))
+		var lake := PackedByteArray()
+		lake.resize(WorldChunk.CELLS)
+		for y: int in range(area.position.y, area.end.y):
+			for x: int in range(area.position.x, area.end.x):
+				if node_box.has_point(Vector2i(x, y)):
+					continue
+				var i: int = y * SIZE + x
+				if chunk.cliff[i] != WorldChunk.Cliff.NONE or (NATURAL_GROUND >> chunk.ground[i]) & 1 == 0:
+					continue
+				for e: Vector3 in ellipses:
+					var dx: float = (x + 0.5 - e.x) / (half.x * e.z)
+					var dy: float = (y + 0.5 - e.y) / (half.y * maxf(e.z, 0.7))
+					if dx * dx + dy * dy <= 1.0:
+						lake[i] = 1
+						break
+		var shore: Rect2i = area.grow(1).intersection(Rect2i(0, 0, SIZE, SIZE))
+		for y: int in range(shore.position.y, shore.end.y):
+			for x: int in range(shore.position.x, shore.end.x):
+				var i: int = y * SIZE + x
+				if lake[i] == 1:
+					chunk.ground[i] = WorldChunk.Ground.LAKE
+				elif chunk.cliff[i] == WorldChunk.Cliff.NONE and (NATURAL_GROUND >> chunk.ground[i]) & 1 == 1:
+					chunk.ground[i] = WorldChunk.Ground.CLEARING
+
+	## Árbol grande (3×3) de la colina y del hito: en la celda gruesa del medio, a 2 filas del nodo.
+	func _big_tree_cell(p: Dictionary) -> Vector2i:
+		var mid: Vector2i = (p.a as Vector2i) + (p.size as Vector2i) / 2
+		return mid * MACRO + Vector2i(1, 0)
+
+	func _mark(layer: PackedByteArray, rect: Rect2i) -> void:
+		var r: Rect2i = rect.intersection(Rect2i(0, 0, SIZE, SIZE))
+		for y: int in range(r.position.y, r.end.y):
+			for x: int in range(r.position.x, r.end.x):
+				layer[y * SIZE + x] = 1
+
+	# --- Puertas ----------------------------------------------------------------------------------
+
+	## Abre las casillas de cada puerta (escalera o rampa si caen en un risco), crea su nodo y
+	## devuelve sus casillas (índices del chunk), que tienen que quedar unidas al hub.
 	func _open_doors() -> PackedInt32Array:
 		var required := PackedInt32Array()
 		for side: Vector2i in WorldChunk.SIDES:
@@ -300,25 +851,314 @@ class _Build:
 				elif cliff == WorldChunk.Cliff.EDGE and _aux(i) != EDGE_PEAK:
 					_open_cell(i, WorldChunk.Cliff.RAMP)
 				required.append(i)
+			var middle: Vector2i = first + along * (int(door.width) / 2)
+			var road: bool = bool(door.road)
+			has_road_door = has_road_door or road
+			nodes.append({"tile": middle, "macro": WorldCoords.floor_div_v(middle, MACRO), "road": road,
+					"door": door, "side": side})
 		return required
 
-	## La casilla transitable más cercana al centro (en M7 el hub pasa al ancla del chunk). Busca
-	## por anillos (Chebyshev) y, dentro del primero con alguna, la más cercana en línea recta.
+	# --- Red de senderos --------------------------------------------------------------------------
+
+	## Ordena los nodos con el ancla primero, Prim sobre la distancia gruesa, A* por arista y
+	## rasterizado a casillas (sendero de 2, camino de 3), con escaleras, rampas y puentes.
+	func _route_network() -> void:
+		_order_nodes()
+		if nodes.is_empty():
+			return
+		var grid: _PathGrid = _make_grid()
+		var count: int = nodes.size()
+		var in_tree := PackedByteArray()
+		in_tree.resize(count)
+		in_tree[0] = 1
+		_paint_rect(Rect2i(ChunkBuilder.lane_cell(nodes[0].macro), Vector2i(PATH_W, PATH_W)), PATH_W)
+		for step: int in count - 1:
+			var best: float = INF
+			var bu: int = -1
+			var bv: int = -1
+			for u: int in count:
+				if in_tree[u] == 0:
+					continue
+				for v: int in count:
+					if in_tree[v] == 1:
+						continue
+					var mu: Vector2i = nodes[u].macro
+					var mv: Vector2i = nodes[v].macro
+					var w: float = absi(mu.x - mv.x) + absi(mu.y - mv.y)
+					if not (nodes[u].road and nodes[v].road):
+						w += NON_ROAD_EDGE
+					if w < best:
+						best = w
+						bu = u
+						bv = v
+			in_tree[bv] = 1
+			var width: int = ROAD_W if nodes[bu].road and nodes[bv].road else PATH_W
+			var route: Array[Vector2i] = grid.get_id_path(nodes[bv].macro, nodes[bu].macro)
+			if route.is_empty():
+				continue # Sin paso grueso: lo resuelve la reparación por casillas.
+			route = _straighten(grid, route)
+			_paint_route(route, width)
+			for m: Vector2i in route:
+				var k: int = m.y * MACROS + m.x
+				if g_solid[k] == 0:
+					grid.set_point_weight_scale(m, g_weight[k] * TRACED_FACTOR)
+		for node: Dictionary in nodes:
+			if not (node.door as Dictionary).is_empty():
+				_paint_door(node)
+		_apply_paths()
+
+	## Ancla primero: villa o Nujio; si no, el primer punto de interés que no sea colina (el hub no
+	## cae en una escalera); si no, la primera puerta. El ancla de villa o Nujio es de camino si el
+	## chunk tiene alguna puerta de camino.
+	func _order_nodes() -> void:
+		if nodes.is_empty():
+			return
+		var first: int = 0
+		if anchor == Anchor.NONE:
+			var doors: int = 0
+			for node: Dictionary in nodes:
+				if not (node.door as Dictionary).is_empty():
+					doors += 1
+			first = -1
+			for k: int in range(doors, nodes.size()):
+				if first < 0 and chunk.points[k - doors].kind != WorldChunk.PointKind.HILL:
+					first = k
+			if first < 0:
+				first = doors if doors < nodes.size() else 0
+		else:
+			for k: int in nodes.size():
+				if (nodes[k].door as Dictionary).is_empty():
+					first = k
+					break
+			nodes[first].road = has_road_door
+		var head: Dictionary = nodes[first]
+		nodes.remove_at(first)
+		nodes.insert(0, head)
+
+	## El A* deja escalones cuando va en diagonal (muchas rutas cuestan lo mismo). Sustituye cada
+	## tramo por una L (o una recta) si no cuesta más: menos giros y tramos rectos más largos.
+	func _straighten(grid: _PathGrid, route: Array[Vector2i]) -> Array[Vector2i]:
+		var n: int = route.size()
+		if n < 3:
+			return route
+		var prefix := PackedFloat32Array()
+		prefix.resize(n)
+		for k: int in range(1, n):
+			prefix[k] = prefix[k - 1] + _step_cost(grid, route[k - 1], route[k])
+		var out: Array[Vector2i] = [route[0]]
+		var i: int = 0
+		while i < n - 1:
+			var taken: bool = false
+			for j: int in range(mini(n - 1, i + STRAIGHTEN_WINDOW), i + 1, -1):
+				var a: Vector2i = route[i]
+				var b: Vector2i = route[j]
+				var budget: float = prefix[j] - prefix[i] + 0.001
+				for corner: Vector2i in [Vector2i(b.x, a.y), Vector2i(a.x, b.y)]:
+					var cells: Array[Vector2i] = _l_cells(a, corner, b)
+					if _cells_cost(grid, a, cells) <= budget:
+						out.append_array(cells)
+						i = j
+						taken = true
+						break
+				if taken:
+					break
+			if not taken:
+				i += 1
+				out.append(route[i])
+		return out
+
+	## Celdas de a (sin ella) a b pasando por la esquina, en pasos ortogonales.
+	func _l_cells(a: Vector2i, corner: Vector2i, b: Vector2i) -> Array[Vector2i]:
+		var out: Array[Vector2i] = []
+		var at: Vector2i = a
+		for target: Vector2i in [corner, b]:
+			while at != target:
+				at += Vector2i(signi(target.x - at.x), signi(target.y - at.y))
+				out.append(at)
+		return out
+
+	func _cells_cost(grid: _PathGrid, a: Vector2i, cells: Array[Vector2i]) -> float:
+		var total: float = 0.0
+		var from: Vector2i = a
+		for c: Vector2i in cells:
+			if grid.is_point_solid(c):
+				return INF
+			total += _step_cost(grid, from, c)
+			from = c
+		return total
+
+	func _step_cost(grid: _PathGrid, from: Vector2i, to: Vector2i) -> float:
+		return grid._compute_cost(from, to) * grid.get_point_weight_scale(to)
+
+	func _make_grid() -> _PathGrid:
+		var grid := _PathGrid.new()
+		grid.region = Rect2i(0, 0, MACROS, MACROS)
+		grid.diagonal_mode = AStarGrid2D.DIAGONAL_MODE_NEVER
+		grid.default_compute_heuristic = AStarGrid2D.HEURISTIC_MANHATTAN
+		grid.default_estimate_heuristic = AStarGrid2D.HEURISTIC_MANHATTAN
+		grid.update()
+		var n: int = MACROS * MACROS
+		grid.lv.resize(n)
+		grid.face.resize(n)
+		grid.wet.resize(n)
+		g_solid.resize(n)
+		g_weight.resize(n)
+		g_weight.fill(1.0)
+		var origin: Vector2i = coord * MACROS
+		for my: int in MACROS:
+			for mx: int in MACROS:
+				var k: int = my * MACROS + mx
+				var mk: int = _mk(mx, my)
+				grid.lv[k] = m_level[mk]
+				grid.face[k] = m_face_rows[mk]
+				grid.wet[k] = m_face_wet[mk]
+				if m_peak[mk] == 1:
+					g_solid[k] = 1
+				var water: int = m_water[mk]
+				if water == RegionAuthoring.Water.FORD:
+					g_weight[k] = WEIGHT_FORD
+				elif water != RegionAuthoring.Water.NONE:
+					g_weight[k] = WEIGHT_WATER
+				elif plan.road_at(origin + Vector2i(mx, my)) != RegionAuthoring.Road.NONE:
+					g_weight[k] = WEIGHT_ROAD
+		if anchor != Anchor.NONE:
+			if anchor == Anchor.VILLA:
+				_weigh(Rect2i(anchor_macro - Vector2i(VILLA_RADIUS, VILLA_RADIUS), Vector2i.ONE * (2 * VILLA_RADIUS + 1)), WEIGHT_VILLA)
+			g_solid[anchor_macro.y * MACROS + anchor_macro.x] = 1
+		for p: Dictionary in points:
+			var a: Vector2i = p.a
+			var size: Vector2i = p.size
+			var mid: Vector2i = a + size / 2
+			match int(p.kind):
+				WorldChunk.PointKind.HILL:
+					_weigh(Rect2i(a, size), WEIGHT_HILL)
+					g_solid[mid.y * MACROS + mid.x] = 1
+				WorldChunk.PointKind.POND:
+					_weigh(Rect2i(a, size), WEIGHT_POND)
+				WorldChunk.PointKind.GROVE:
+					_weigh(Rect2i(a, size), WEIGHT_GROVE)
+				WorldChunk.PointKind.LANDMARK_TREE:
+					g_solid[mid.y * MACROS + mid.x] = 1
+		for node: Dictionary in nodes:
+			var m: Vector2i = node.macro
+			var k: int = m.y * MACROS + m.x
+			g_solid[k] = 0 # un nodo siempre se puede alcanzar
+			if (node.door as Dictionary).is_empty():
+				g_weight[k] = minf(g_weight[k], 1.0)
+		for k: int in n:
+			var m := Vector2i(k % MACROS, k / MACROS)
+			if g_solid[k] == 1:
+				grid.set_point_solid(m, true)
+			else:
+				grid.set_point_weight_scale(m, g_weight[k])
+		return grid
+
+	func _weigh(rect: Rect2i, weight: float) -> void:
+		var r: Rect2i = rect.intersection(Rect2i(0, 0, MACROS, MACROS))
+		for my: int in range(r.position.y, r.end.y):
+			for mx: int in range(r.position.x, r.end.x):
+				var k: int = my * MACROS + mx
+				g_weight[k] = maxf(g_weight[k], weight)
+
+	## Tramos rectos entre los carriles de celdas gruesas consecutivas (4 casillas por paso).
+	func _paint_route(route: Array[Vector2i], width: int) -> void:
+		var brush := Vector2i(width - 1, width - 1)
+		for k: int in route.size():
+			var p: Vector2i = ChunkBuilder.lane_cell(route[k])
+			var q: Vector2i = ChunkBuilder.lane_cell(route[k - 1]) if k > 0 else p
+			var lo := Vector2i(mini(p.x, q.x), mini(p.y, q.y))
+			var hi := Vector2i(maxi(p.x, q.x), maxi(p.y, q.y)) + brush
+			_paint_rect(Rect2i(lo, hi - lo + Vector2i.ONE), width)
+
+	## Tramo de la puerta: de sus casillas del borde hacia dentro hasta el carril de su celda gruesa.
+	func _paint_door(node: Dictionary) -> void:
+		var door: Dictionary = node.door
+		var side: Vector2i = node.side
+		var dw: int = int(door.width)
+		var w: int = dw
+		var first: Vector2i = door.cell
+		var lane := Rect2i(ChunkBuilder.lane_cell(node.macro), Vector2i(w, w))
+		var stub: Rect2i
+		var link: Rect2i
+		if side.x != 0:
+			var x0: int = 0 if side.x < 0 else lane.position.x
+			var x1: int = lane.end.x if side.x < 0 else SIZE
+			stub = Rect2i(x0, first.y, x1 - x0, dw)
+			var y0: int = mini(first.y, lane.position.y)
+			var y1: int = maxi(first.y + dw, lane.end.y)
+			link = Rect2i(lane.position.x, y0, w, y1 - y0)
+		else:
+			var y0: int = 0 if side.y < 0 else lane.position.y
+			var y1: int = lane.end.y if side.y < 0 else SIZE
+			stub = Rect2i(first.x, y0, dw, y1 - y0)
+			var x0: int = mini(first.x, lane.position.x)
+			var x1: int = maxi(first.x + dw, lane.end.x)
+			link = Rect2i(x0, lane.position.y, x1 - x0, w)
+		var value: int = ROAD_W if bool(door.road) else PATH_W
+		_paint_rect(stub, value)
+		_paint_rect(link, value)
+
+	func _paint_rect(rect: Rect2i, value: int) -> void:
+		var r: Rect2i = rect.intersection(Rect2i(0, 0, SIZE, SIZE))
+		for y: int in range(r.position.y, r.end.y):
+			for x: int in range(r.position.x, r.end.x):
+				var i: int = y * SIZE + x
+				if path[i] < value:
+					path[i] = value
+
+	## Suelo de sendero, camino y puente; caras cruzadas a escalera (si la cara entera cabe en el
+	## chunk) y bordes a rampa. Cascadas, cumbres y lo reservado quedan como están.
+	func _apply_paths() -> void:
+		for i: int in WorldChunk.CELLS:
+			var w: int = path[i]
+			if w == 0:
+				continue
+			if solid[i] == 1:
+				path[i] = 0
+				continue
+			var cliff: int = chunk.cliff[i]
+			if cliff == WorldChunk.Cliff.WATERFALL:
+				continue
+			if cliff == WorldChunk.Cliff.FACE:
+				var top: int = i / SIZE - _aux(i)
+				if top < 0 or top + _len(i) - 1 > LAST:
+					continue
+				_stairs_column(i)
+			elif cliff == WorldChunk.Cliff.EDGE:
+				if _aux(i) == EDGE_PEAK:
+					continue
+				_open_cell(i, WorldChunk.Cliff.RAMP)
+			_pave(i, w)
+
+	## Suelo de una casilla de sendero (w = PATH_W) o camino (ROAD_W): puente sobre el agua.
+	func _pave(i: int, w: int) -> void:
+		var g: int = chunk.ground[i]
+		if (WorldChunk.GROUND_BLOCKING >> g) & 1 == 1:
+			chunk.ground[i] = WorldChunk.Ground.BRIDGE
+		elif (NATURAL_GROUND >> g) & 1 == 1:
+			chunk.ground[i] = WorldChunk.Ground.ROAD if w >= ROAD_W else WorldChunk.Ground.PATH
+
+	# --- Hub ------------------------------------------------------------------------------------
+
+	## El hub es la casilla del ancla (nodo 0). Si no se pisa, la transitable más cercana a ella.
 	func _place_hub() -> void:
-		var center: Vector2i = WorldChunk.center()
-		for r: int in SIZE / 2 + 1:
+		var target: Vector2i = nodes[0].tile if not nodes.is_empty() else WorldChunk.center()
+		if _walk(WorldCoords.cell_index(target)):
+			chunk.hub = target
+			return
+		for r: int in range(1, SIZE):
 			var best: int = -1
 			var best_d: int = 1 << 30
-			for y: int in range(maxi(center.y - r, 0), mini(center.y + r, LAST) + 1):
-				var dy: int = y - center.y
+			for y: int in range(maxi(target.y - r, 0), mini(target.y + r, LAST) + 1):
+				var dy: int = y - target.y
 				var step: int = 1 if absi(dy) == r else maxi(2 * r, 1)
-				for x: int in range(center.x - r, center.x + r + 1, step):
+				for x: int in range(target.x - r, target.x + r + 1, step):
 					if x < 0 or x > LAST:
 						continue
 					var i: int = y * SIZE + x
-					if (CLIFF_OPEN >> chunk.cliff[i]) & 1 == 0 or (WorldChunk.GROUND_BLOCKING >> chunk.ground[i]) & 1 == 1:
+					if not _walk(i):
 						continue
-					var dx: int = x - center.x
+					var dx: int = x - target.x
 					var d: int = dx * dx + dy * dy
 					if d < best_d:
 						best_d = d
@@ -327,27 +1167,34 @@ class _Build:
 				chunk.hub = Vector2i(best % SIZE, best / SIZE)
 				return
 
-	## Pone escaleras y rampas hasta que todas las puertas abiertas se alcanzan desde el hub (el
-	## agua cuenta como abierta: los puentes son de M7).
+	## Se pisa: risco abierto, suelo que no es agua y sin objeto grande reservado.
+	func _walk(i: int) -> bool:
+		return (CLIFF_OPEN >> chunk.cliff[i]) & 1 == 1 and (WorldChunk.GROUND_BLOCKING >> chunk.ground[i]) & 1 == 0 \
+				and solid[i] == 0
+
+	# --- Reparación: todo nodo unido al hub -------------------------------------------------------
+
+	## Pone escaleras, rampas y puentes (y su sendero) hasta que todas las casillas de `required`
+	## se alcanzan desde el hub.
 	func _connect(required: PackedInt32Array) -> void:
-		if not has_relief:
-			return # Sin riscos todo está unido (el agua no corta).
 		reached.resize(WorldChunk.CELLS)
 		queue.resize(WorldChunk.CELLS)
-		_build_costs()
 		var flooded: bool = false
+		var costs: bool = false
 		for r: int in required:
-			if (CLIFF_OPEN >> chunk.cliff[r]) & 1 == 0:
+			if (CLIFF_OPEN >> chunk.cliff[r]) & 1 == 0 or solid[r] == 1:
 				continue # Cumbre o cascada: no hay paso posible.
 			if not flooded:
 				_flood()
 				flooded = true
 			if reached[r] == 1:
 				continue
-			if dist.is_empty():
+			if not costs:
+				_build_costs()
 				dist.resize(WorldChunk.CELLS)
 				prev.resize(WorldChunk.CELLS)
 				heap.resize(WorldChunk.CELLS)
+				costs = true
 			var end: int = _search(r)
 			if end >= 0:
 				_carve(end)
@@ -355,11 +1202,15 @@ class _Build:
 
 	## Coste de entrar o salir de cada casilla en horizontal y en vertical (0 = imposible). Una
 	## cara se cruza en vertical y solo si cabe entera en el chunk; un borde, en el eje de su
-	## máscara; cumbres y cascadas, nunca.
+	## máscara; cumbres, cascadas y objetos grandes, nunca.
 	func _build_costs() -> void:
 		cost_h.resize(WorldChunk.CELLS)
 		cost_v.resize(WorldChunk.CELLS)
+		cost_h.fill(0)
+		cost_v.fill(0)
 		for i: int in WorldChunk.CELLS:
+			if solid[i] == 1:
+				continue
 			var cliff: int = chunk.cliff[i]
 			if (CLIFF_OPEN >> cliff) & 1 == 1:
 				var c: int = COST_WATER if (WorldChunk.GROUND_BLOCKING >> chunk.ground[i]) & 1 == 1 else COST_STEP
@@ -374,11 +1225,12 @@ class _Build:
 					cost_v[i] = COST_CLIFF if mask & EDGE_N != 0 else 0
 					cost_h[i] = COST_CLIFF if mask & EDGE_SIDES != 0 else 0
 
-	## Casillas alcanzables desde el hub sin cruzar riscos (el agua no corta).
+	## Casillas que se pisan alcanzables desde el hub (sin contar los objetos pequeños, que aún no
+	## están: nunca van sobre un sendero).
 	func _flood() -> void:
 		reached.fill(0)
 		var start: int = chunk.hub.y * SIZE + chunk.hub.x
-		if (CLIFF_OPEN >> chunk.cliff[start]) & 1 == 0:
+		if not _walk(start):
 			return
 		reached[start] = 1
 		queue[0] = start
@@ -388,29 +1240,24 @@ class _Build:
 			var i: int = queue[head]
 			head += 1
 			var x: int = i % SIZE
-			var n: int = i - 1
-			if x > 0 and reached[n] == 0 and (CLIFF_OPEN >> chunk.cliff[n]) & 1 == 1:
-				reached[n] = 1
-				queue[tail] = n
-				tail += 1
-			n = i + 1
-			if x < LAST and reached[n] == 0 and (CLIFF_OPEN >> chunk.cliff[n]) & 1 == 1:
-				reached[n] = 1
-				queue[tail] = n
-				tail += 1
-			n = i - SIZE
-			if n >= 0 and reached[n] == 0 and (CLIFF_OPEN >> chunk.cliff[n]) & 1 == 1:
-				reached[n] = 1
-				queue[tail] = n
-				tail += 1
-			n = i + SIZE
-			if n < WorldChunk.CELLS and reached[n] == 0 and (CLIFF_OPEN >> chunk.cliff[n]) & 1 == 1:
-				reached[n] = 1
-				queue[tail] = n
-				tail += 1
+			if x > 0:
+				tail = _flood_visit(i - 1, tail)
+			if x < LAST:
+				tail = _flood_visit(i + 1, tail)
+			if i >= SIZE:
+				tail = _flood_visit(i - SIZE, tail)
+			if i < WorldChunk.CELLS - SIZE:
+				tail = _flood_visit(i + SIZE, tail)
 
-	## Dijkstra desde la puerta `start` hasta lo ya alcanzado desde el hub. Devuelve la primera
-	## casilla alcanzada (su cadena `prev` lleva a la puerta) o -1.
+	func _flood_visit(n: int, tail: int) -> int:
+		if reached[n] == 0 and _walk(n):
+			reached[n] = 1
+			queue[tail] = n
+			return tail + 1
+		return tail
+
+	## Dijkstra desde `start` hasta lo ya alcanzado desde el hub. Devuelve la primera casilla
+	## alcanzada (su cadena `prev` lleva a `start`) o -1.
 	func _search(start: int) -> int:
 		dist.fill(1 << 30)
 		prev.fill(-1)
@@ -444,7 +1291,8 @@ class _Build:
 			prev[to] = from
 			_push(to)
 
-	## Convierte en escalera o rampa los riscos del camino de `end` a la puerta.
+	## Convierte en escalera, rampa o puente lo que hace falta en el camino de `end` a su origen y
+	## lo marca como sendero (sin objetos encima).
 	func _carve(end: int) -> void:
 		var i: int = end
 		while i >= 0:
@@ -457,15 +1305,24 @@ class _Build:
 				# Un borde siempre está entre dos casillas del camino: los extremos están abiertos.
 				_open_cell(i, WorldChunk.Cliff.RAMP)
 				_widen_ramp(i, absi(next - i) == SIZE)
+			if path[i] == 0:
+				path[i] = 1
+			_pave(i, PATH_W)
+			if not cost_h.is_empty():
+				cost_h[i] = COST_STEP
+				cost_v[i] = COST_STEP
 			i = next
 
 	## Abre una casilla de risco (escalera o rampa) y actualiza sus costes si ya existen.
 	func _open_cell(i: int, cliff: int) -> void:
 		chunk.cliff[i] = cliff
+		if (WorldChunk.GROUND_BLOCKING >> chunk.ground[i]) & 1 == 1:
+			# Una escalera o rampa nunca queda en el agua: sobre el agua es un puente (y sigue
+			# contando como agua para la cascada de debajo).
+			chunk.ground[i] = WorldChunk.Ground.BRIDGE
 		if not cost_h.is_empty():
-			var c: int = COST_WATER if (WorldChunk.GROUND_BLOCKING >> chunk.ground[i]) & 1 == 1 else COST_STEP
-			cost_h[i] = c
-			cost_v[i] = c
+			cost_h[i] = COST_STEP
+			cost_v[i] = COST_STEP
 
 	## La columna entera de la cara de `i` (dentro del chunk) pasa a escalera.
 	func _stairs_column(i: int) -> void:
@@ -511,6 +1368,215 @@ class _Build:
 			if n >= 0 and chunk.cliff[n] == WorldChunk.Cliff.EDGE and _aux(n) == _aux(i):
 				_open_cell(n, WorldChunk.Cliff.RAMP)
 				return
+
+	# --- Formas grandes (objetos) -----------------------------------------------------------------
+
+	func _place_objects() -> void:
+		if anchor != Anchor.NONE:
+			chunk.add_object(WorldChunk.ObjectKind.NUJIO, chunk.nujio_rect.position, chunk.nujio_rect.size)
+			if anchor == Anchor.VILLA:
+				_place_houses()
+		for p: Dictionary in points:
+			var a: Vector2i = p.a
+			var size: Vector2i = p.size
+			var mid: Vector2i = a + size / 2
+			match int(p.kind):
+				WorldChunk.PointKind.HILL, WorldChunk.PointKind.LANDMARK_TREE:
+					chunk.add_object(WorldChunk.ObjectKind.TREE_BIG, _big_tree_cell(p), Vector2i(3, 3))
+				WorldChunk.PointKind.STONE_CIRCLE:
+					_place_circle(p)
+				WorldChunk.PointKind.PLACE:
+					if size.y > 1:
+						chunk.add_object(WorldChunk.ObjectKind.LANDMARK, a * MACRO + Vector2i(1, 1), Vector2i(2, 2))
+		_place_rocks()
+		_place_forest()
+
+	## Una casilla libre para un objeto que no es de los reservados.
+	func _free(x: int, y: int, ground_mask: int) -> bool:
+		if x < 0 or y < 0 or x > LAST or y > LAST:
+			return false
+		var i: int = y * SIZE + x
+		return chunk.occupant[i] == WorldChunk.NO_OBJECT and path[i] == 0 and keep[i] == 0 \
+				and solid[i] == 0 and chunk.cliff[i] == WorldChunk.Cliff.NONE \
+				and (ground_mask >> chunk.ground[i]) & 1 == 1
+
+	func _rect_free(rect: Rect2i, ground_mask: int) -> bool:
+		for y: int in range(rect.position.y, rect.end.y):
+			for x: int in range(rect.position.x, rect.end.x):
+				if not _free(x, y, ground_mask):
+					return false
+		return true
+
+	## Casas de 4×3 en corro alrededor de la plaza, sin pisar senderos y con 1 casilla entre ellas.
+	## Solo la huella y el objeto: el trazado de la villa es de M8.
+	func _place_houses() -> void:
+		var count: int = int(villa.get("houses", 0))
+		if count <= 0:
+			count = VILLA_HOUSES
+		var center := Vector2(_anchor_center())
+		var start: float = rng.randf() * TAU
+		var material: int = ChunkGenerator.hash_ints([plan.plan_seed, coord.x, coord.y, SALT_HOUSE]) % 2
+		var ground_mask: int = NATURAL_GROUND
+		for k: int in count:
+			var placed: bool = false
+			for jitter: float in [0.0, 0.25, -0.25, 0.5, -0.5]:
+				if placed:
+					break
+				var angle: float = start + TAU * k / count + jitter
+				for radius: float in HOUSE_RADII:
+					var at: Vector2 = center + Vector2(cos(angle), sin(angle)) * radius - Vector2(HOUSE_SIZE) * 0.5
+					var rect := Rect2i(Vector2i(roundi(at.x), roundi(at.y)), HOUSE_SIZE)
+					if not _rect_free(rect, ground_mask) or not _no_objects(rect.grow(1)):
+						continue
+					chunk.add_object(WorldChunk.ObjectKind.HOUSE, rect.position, HOUSE_SIZE,
+							material * 2 + ChunkGenerator.hash_ints([plan.plan_seed, coord.x, coord.y, k, SALT_HOUSE]) % 2)
+					placed = true
+					break
+
+	func _no_objects(rect: Rect2i) -> bool:
+		var r: Rect2i = rect.intersection(Rect2i(0, 0, SIZE, SIZE))
+		for y: int in range(r.position.y, r.end.y):
+			for x: int in range(r.position.x, r.end.x):
+				if chunk.occupant[y * SIZE + x] != WorldChunk.NO_OBJECT:
+					return false
+		return true
+
+	## 6 rocas de 2×2 en corro; se gira el corro para dejar pasar los senderos que entran.
+	func _place_circle(p: Dictionary) -> void:
+		var center := Vector2((p.a as Vector2i) * MACRO + (p.size as Vector2i) * (MACRO / 2))
+		var best_turn: int = 0
+		var best_free: int = -1
+		for turn: int in CIRCLE_TURNS:
+			var free: int = 0
+			for k: int in CIRCLE_ROCKS:
+				if _rect_free(_circle_rock(center, turn, k), NATURAL_GROUND):
+					free += 1
+			if free > best_free:
+				best_free = free
+				best_turn = turn
+		for k: int in CIRCLE_ROCKS:
+			var rect: Rect2i = _circle_rock(center, best_turn, k)
+			if _rect_free(rect, NATURAL_GROUND):
+				chunk.add_object(WorldChunk.ObjectKind.ROCK, rect.position, Vector2i(2, 2), k % 3)
+
+	func _circle_rock(center: Vector2, turn: int, k: int) -> Rect2i:
+		var angle: float = TAU * k / CIRCLE_ROCKS + TAU / CIRCLE_ROCKS * turn / CIRCLE_TURNS
+		var at: Vector2 = center + Vector2(cos(angle), sin(angle)) * CIRCLE_RADIUS - Vector2.ONE
+		return Rect2i(Vector2i(roundi(at.x), roundi(at.y)), Vector2i(2, 2))
+
+	## Rocas de 2×2 sueltas en el pedregal y en la montaña (nivel 3), en la rejilla de 2×2.
+	func _place_rocks() -> void:
+		var params: Dictionary = DEFAULT_SHAPES.merged(plan.region_params.get("chunk_shapes", {}), true)
+		var permille: int = int(params.rock_permille)
+		if permille <= 0:
+			return
+		var gx0: int = coord.x * GRID
+		var gy0: int = coord.y * GRID
+		var rocks := PackedByteArray()
+		rocks.resize(GRID * GRID)
+		for gy: int in GRID:
+			for gx: int in GRID:
+				var x: int = gx * 2
+				var y: int = gy * 2
+				var i: int = y * SIZE + x
+				if chunk.ground[i] != WorldChunk.Ground.ROCKY and chunk.level[i] < RegionPlan.LEVEL_MAX:
+					continue
+				var h: int = ChunkGenerator.hash_ints([plan.plan_seed, gx0 + gx, gy0 + gy, SALT_ROCK])
+				if h % 1000 >= permille:
+					continue
+				if (gx > 0 and (rocks[gy * GRID + gx - 1] == 1 or (gy > 0 and rocks[(gy - 1) * GRID + gx - 1] == 1))) \
+						or (gy > 0 and rocks[(gy - 1) * GRID + gx] == 1) \
+						or (gy > 0 and gx < GRID - 1 and rocks[(gy - 1) * GRID + gx + 1] == 1):
+					continue
+				if not _rect_free(Rect2i(x, y, 2, 2), TREE_GROUND):
+					continue
+				chunk.add_object(WorldChunk.ObjectKind.ROCK, Vector2i(x, y), Vector2i(2, 2), (h >> 12) % 3)
+				rocks[gy * GRID + gx] = 1
+
+	## Bosque en manchas de árboles 2×2: ruido de baja frecuencia en la rejilla de 2×2 (alineada
+	## con world_cell, así que las manchas siguen en el chunk vecino), sin árboles sueltos: se quitan
+	## los que tienen menos de forest_min_neighbours árboles alrededor, hasta que no quede ninguno.
+	func _place_forest() -> void:
+		var params: Dictionary = DEFAULT_SHAPES.merged(plan.region_params.get("chunk_shapes", {}), true)
+		var forest: Dictionary = plan.region_params.get("forest", {})
+		var threshold: float = 0.3 - float(forest.get("density", DEFAULT_FOREST_DENSITY)) * 0.45
+		var rocky_penalty: float = float(params.forest_rocky_penalty)
+		var min_n: int = int(params.forest_min_neighbours)
+		var noise: FastNoiseLite = ChunkGenerator._make_noise(
+				ChunkGenerator.hash_ints([plan.plan_seed, SALT_FOREST]), float(params.forest_frequency), 2)
+		var wx0: int = coord.x * SIZE
+		var wy0: int = coord.y * SIZE
+		var cand := PackedByteArray()
+		cand.resize(GRID * GRID)
+		for gy: int in GRID:
+			for gx: int in GRID:
+				var x: int = gx * 2
+				var y: int = gy * 2
+				var i: int = y * SIZE + x
+				var forced: bool = force_tree[i] == 1 and force_tree[i + 1] == 1 \
+						and force_tree[i + SIZE] == 1 and force_tree[i + SIZE + 1] == 1
+				if not forced and (no_tree[i] == 1 or no_tree[i + 1] == 1 or no_tree[i + SIZE] == 1 or no_tree[i + SIZE + 1] == 1):
+					continue
+				if not _rect_free(Rect2i(x, y, 2, 2), TREE_GROUND | (1 << WorldChunk.Ground.CLEARING if forced else 0)):
+					continue
+				if not forced:
+					var t: float = threshold
+					if chunk.ground[i] == WorldChunk.Ground.ROCKY:
+						t += rocky_penalty
+					if noise.get_noise_2d(wx0 + x + 1, wy0 + y + 1) <= t:
+						continue
+				cand[gy * GRID + gx] = 1
+		# Vecinos de cada candidato y poda por cola hasta que todos tengan min_n.
+		var count := PackedByteArray()
+		count.resize(GRID * GRID)
+		var pending := PackedInt32Array()
+		for g: int in GRID * GRID:
+			if cand[g] == 0:
+				continue
+			var n: int = _grid_neighbours(cand, g)
+			count[g] = n
+			if n < min_n:
+				pending.append(g)
+		var head: int = 0
+		while head < pending.size():
+			var g: int = pending[head]
+			head += 1
+			if cand[g] == 0:
+				continue
+			cand[g] = 0
+			var gx: int = g % GRID
+			var gy: int = g / GRID
+			for dy: int in range(-1, 2):
+				for dx: int in range(-1, 2):
+					var nx: int = gx + dx
+					var ny: int = gy + dy
+					if (dx == 0 and dy == 0) or nx < 0 or ny < 0 or nx >= GRID or ny >= GRID:
+						continue
+					var ng: int = ny * GRID + nx
+					if cand[ng] == 1:
+						count[ng] -= 1
+						if count[ng] == min_n - 1:
+							pending.append(ng)
+		var gx0: int = coord.x * GRID
+		var gy0: int = coord.y * GRID
+		for g: int in GRID * GRID:
+			if cand[g] == 1:
+				var gx: int = g % GRID
+				var gy: int = g / GRID
+				chunk.add_object(WorldChunk.ObjectKind.TREE, Vector2i(gx * 2, gy * 2), Vector2i(2, 2),
+						ChunkGenerator.hash_ints([plan.plan_seed, gx0 + gx, gy0 + gy, SALT_TREE]) % 4)
+
+	func _grid_neighbours(cand: PackedByteArray, g: int) -> int:
+		var gx: int = g % GRID
+		var gy: int = g / GRID
+		var n: int = 0
+		for dy: int in range(-1, 2):
+			for dx: int in range(-1, 2):
+				var nx: int = gx + dx
+				var ny: int = gy + dy
+				if (dx != 0 or dy != 0) and nx >= 0 and ny >= 0 and nx < GRID and ny < GRID:
+					n += cand[ny * GRID + nx]
+		return n
 
 	# --- Piezas de dibujo ------------------------------------------------------------------------
 

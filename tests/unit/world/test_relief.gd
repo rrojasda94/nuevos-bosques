@@ -15,7 +15,8 @@ const SAMPLED_ROWS: int = 3
 const SIZE: int = WorldChunk.SIZE
 const OPEN_CLIFFS: int = (1 << WorldChunk.Cliff.NONE) | (1 << WorldChunk.Cliff.STAIRS) | (1 << WorldChunk.Cliff.RAMP)
 const CROSSINGS: int = (1 << WorldChunk.Cliff.STAIRS) | (1 << WorldChunk.Cliff.RAMP)
-const WATER: int = WorldChunk.GROUND_BLOCKING | (1 << WorldChunk.Ground.FORD)
+## Agua para las cascadas: un puente (M7) sigue estando sobre el agua.
+const WATER: int = WorldChunk.GROUND_BLOCKING | (1 << WorldChunk.Ground.FORD) | (1 << WorldChunk.Ground.BRIDGE)
 
 ## seed -> { plan, chunks: { Vector2i: WorldChunk } }
 var _worlds: Dictionary = {}
@@ -91,16 +92,36 @@ func test_levels_meet_only_at_stairs_or_ramps_across_chunks() -> void:
 	assert_eq(failures.size(), 0, "niveles vecinos entre chunks: %s" % [failures.slice(0, 8)])
 
 
+## Celdas gruesas que el ChunkBuilder cambia a propósito (M7): la huella de las colinas (+1 nivel)
+## y la zona aplanada alrededor del Nujio.
+static func _edited(c: WorldChunk, cell: Vector2i) -> bool:
+	for p: Dictionary in c.points:
+		if p.kind == WorldChunk.PointKind.HILL and (p.rect as Rect2i).has_point(cell):
+			return true
+	if c.nujio_rect.size != Vector2i.ZERO:
+		var radius: int = ChunkBuilder.VILLA_RADIUS if c.has_villa else ChunkBuilder.NUJIO_RADIUS
+		return c.nujio_rect.grow(radius * WorldCoords.MACRO).has_point(cell)
+	return false
+
+
 func test_level_layer_matches_the_plan() -> void:
 	var plan: RegionPlan = _worlds[42].plan
 	var chunks: Dictionary = _worlds[42].chunks
-	for coord: Vector2i in [Vector2i(0, 0), Vector2i(5, 3), Vector2i(11, 15)]:
+	var edited: int = 0
+	for coord: Vector2i in chunks:
 		var c: WorldChunk = chunks[coord]
 		for my: int in WorldCoords.MACROS_PER_CHUNK:
 			for mx: int in WorldCoords.MACROS_PER_CHUNK:
-				var expected: int = mini(plan.level_at(coord * WorldCoords.MACROS_PER_CHUNK + Vector2i(mx, my)), WorldChunk.MAX_LEVEL)
 				var cell := Vector2i(mx, my) * WorldCoords.MACRO
-				assert_eq(c.get_level(cell), expected, "nivel de %s en %s" % [cell, coord])
+				if _edited(c, cell):
+					edited += 1
+					continue
+				var expected: int = mini(plan.level_at(coord * WorldCoords.MACROS_PER_CHUNK + Vector2i(mx, my)), WorldChunk.MAX_LEVEL)
+				if c.get_level(cell) != expected:
+					assert_eq(c.get_level(cell), expected, "nivel de %s en %s" % [cell, coord])
+	gut.p("celdas gruesas cambiadas por colinas y Nujios (seed 42): %d" % edited)
+	assert_lt(edited, chunks.size() * WorldCoords.MACROS_PER_CHUNK * WorldCoords.MACROS_PER_CHUNK / 10,
+			"casi todo el relieve sale tal cual del plan")
 
 
 func test_faces_have_two_rows_per_level() -> void:

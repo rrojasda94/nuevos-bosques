@@ -161,6 +161,7 @@ func test_serializacion_ida_y_vuelta_byte_a_byte() -> void:
 	assert_eq(back.occupant, chunk.occupant, "occupant se rehace desde los objetos")
 	assert_eq(back.objects, chunk.objects)
 	assert_eq(back.signs, chunk.signs)
+	assert_eq(back.points, chunk.points)
 	assert_eq(back.coord, Vector2i(-3, 7))
 	assert_eq(back.nujio_rect, Rect2i(30, 30, 6, 6))
 	assert_true(back.has_villa)
@@ -198,6 +199,7 @@ func _sample_chunk() -> WorldChunk:
 	chunk.coord = Vector2i(-3, 7)
 	chunk.hub = Vector2i(33, 40)
 	chunk.nujio_rect = Rect2i(30, 30, 6, 6)
+	chunk.points.append({"kind": WorldChunk.PointKind.POND, "rect": Rect2i(8, 12, 16, 12), "cell": Vector2i(17, 21)})
 	chunk.has_villa = true
 	for i: int in WorldChunk.CELLS:
 		chunk.ground[i] = i % 5
