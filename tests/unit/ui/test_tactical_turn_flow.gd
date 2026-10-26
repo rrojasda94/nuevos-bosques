@@ -1,7 +1,7 @@
 extends GutTest
 ## Lógica de la escena táctica (PR T4): entrada -> dirección y cursor, salto entre objetivos,
-## cámara con tableros de cualquier tamaño, máquina de estados del turno del jugador e IA
-## provisional. Bloque tactical fijo de test, sin evasión, para que los golpes acierten.
+## cámara con tableros de cualquier tamaño, máquina de estados del turno del jugador, Auto y orden
+## al grupo (T5). Bloque tactical fijo de test, sin evasión, para que los golpes acierten.
 
 const TACTICAL: Dictionary = {
 	"board": { "width": 8, "height": 6, "deploy_columns": 2, "max_per_side": 3, "ford_cost": 1 },
@@ -121,7 +121,7 @@ func test_camera_follows_focus_on_a_big_board_without_showing_outside() -> void:
 # --- Máquina de estados del turno ---------------------------------------------------------------
 
 func test_main_menu_and_move_flow() -> void:
-	var b := _battle([_unit(&"adoc", P, Vector2i(1, 2)), _unit(&"r", E, Vector2i(6, 2))])
+	var b := _battle([_unit(&"adoc", P, Vector2i(1, 2), { "leader": true }), _unit(&"r", E, Vector2i(6, 2))])
 	var f := TacticalTurnFlow.new(b)
 	f.begin_player_turn()
 	assert_eq(f.state, State.MENU)
@@ -275,19 +275,38 @@ func test_flow_works_with_six_per_side_on_a_big_board() -> void:
 	pass_test("6 contra 6")
 
 
-# --- IA provisional -----------------------------------------------------------------------------
+# --- Auto y orden al grupo (T5) -----------------------------------------------------------------
 
-func test_provisional_ai_approaches_and_attacks_nearest() -> void:
-	var b := _battle([_unit(&"r", E, Vector2i(6, 2)), _unit(&"adoc", P, Vector2i(2, 2)),
-		_unit(&"far", P, Vector2i(0, 5))])
-	var plan: Dictionary = TacticalTurnFlow.provisional_ai(b, 0)
-	assert_eq(plan.move_to, Vector2i(3, 2), "Mov 3: llega al lado del más cercano")
-	assert_eq(plan.target, 1)
-	var near := _battle([_unit(&"r", E, Vector2i(3, 2)), _unit(&"adoc", P, Vector2i(2, 2))])
-	var stay: Dictionary = TacticalTurnFlow.provisional_ai(near, 0)
-	assert_eq(stay.move_to, Vector2i(3, 2), "ya vecino: no se mueve")
-	assert_eq(stay.target, 1)
-	var far := _battle([_unit(&"r", E, Vector2i(7, 0)), _unit(&"adoc", P, Vector2i(0, 5))])
-	var closer: Dictionary = TacticalTurnFlow.provisional_ai(far, 0)
-	assert_eq(closer.target, TacticalBattle.NONE)
-	assert_eq(TacticalRules.distance(closer.move_to, Vector2i(0, 5)), 9, "se acerca todo lo que puede (12 − 3)")
+func test_auto_only_for_allies_and_order_cycles_without_cost() -> void:
+	var b := _battle([_unit(&"ally", P, Vector2i(1, 2), { "role": "attacker" }),
+		_unit(&"adoc", P, Vector2i(1, 3), { "leader": true }), _unit(&"r", E, Vector2i(6, 2))])
+	var f := TacticalTurnFlow.new(b)
+	f.begin_player_turn()
+	var ids: Array = _ids(f.main_entries())
+	assert_true(ids.has(TacticalTurnFlow.MAIN_AUTO), "un aliado puede jugar en Auto")
+	assert_true(ids.has(TacticalTurnFlow.MAIN_ORDER), "con aliados, la orden al grupo")
+	assert_eq(_entry(f.main_entries(), TacticalTurnFlow.MAIN_ORDER).text,
+		Texts.get_text("battle_tactic_order") % Texts.get_text("battle_order_free"))
+	f.choose_main(TacticalTurnFlow.MAIN_ORDER)
+	assert_eq(b.group_order, BattleLogic.GroupOrder.ATTACK)
+	assert_eq(f.state, State.MENU, "cambiar la orden no gasta nada")
+	assert_false(b.active_moved or b.active_acted)
+	f.choose_main(TacticalTurnFlow.MAIN_ORDER)
+	f.choose_main(TacticalTurnFlow.MAIN_ORDER)
+	assert_eq(b.group_order, BattleLogic.GroupOrder.FREE, "Libre -> Atacar -> Defender -> Libre")
+	f.choose_main(TacticalTurnFlow.MAIN_AUTO)
+	assert_eq(f.state, State.IDLE, "Auto: la escena juega el turno con TacticalAI")
+	var res: Dictionary = TacticalAI.run_turn(b)
+	assert_eq(res.plan.move_to, Vector2i(4, 2), "el atacante en Auto se acerca al enemigo (Mov 3)")
+	assert_eq(b.active, TacticalBattle.NONE, "turno terminado")
+
+
+func test_leader_has_no_auto_and_no_order_without_allies() -> void:
+	var b := _battle([_unit(&"adoc", P, Vector2i(1, 2), { "leader": true }), _unit(&"r", E, Vector2i(6, 2))])
+	var f := TacticalTurnFlow.new(b)
+	f.begin_player_turn()
+	var ids: Array = _ids(f.main_entries())
+	assert_false(ids.has(TacticalTurnFlow.MAIN_AUTO))
+	assert_false(ids.has(TacticalTurnFlow.MAIN_ORDER))
+	f.choose_main(TacticalTurnFlow.MAIN_AUTO)
+	assert_eq(f.state, State.MENU)

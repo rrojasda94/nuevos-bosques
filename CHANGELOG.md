@@ -41,9 +41,14 @@ Todos los cambios que nota el jugador. Formato [Keep a Changelog](https://keepac
   - Cada unidad con su sprite mirando hacia donde mira (o una flecha de orientación si su sprite no tiene 4 direcciones) y una barra de PV. Arriba, una línea de iconos con el orden de los próximos turnos.
   - En tu turno llevas a todo tu grupo: **Mover** (casillas alcanzables en azul y un cursor), **Actuar** (Atacar, con los objetivos marcados y la precisión y el lado del golpe a la vista; Defender; Vendar, Animar o Cubrir según el rol; Ofrecer Luz; Ofrenda; Huir solo desde el borde) y **Esperar**. Al final eliges hacia dónde miras. Flechas o WASD para moverte, E o Enter para elegir, Esc para volver.
   - Los golpes muestran el daño flotando ("Falla" si esquiva) y una línea corta con el nombre de la acción ("Golpe por la espalda", "Vendar"...).
-  - Los enemigos se acercan al más cercano y le atacan (comportamiento provisional hasta la IA del tablero).
   - Al encenderlo, todos los combates se juegan en el tablero con el mismo final de siempre: victoria con XP, pago, huida o derrota, y el Bosque lo recuerda igual.
   - Para probarlo desde el editor: `scenes/rpg/tactical_demo.tscn` (3 contra 3 en 8 × 6) y `scenes/rpg/tactical_demo_big.tscn` (6 contra 6 en 14 × 10), con F6.
+- Combate táctico, IA en el tablero (sigue apagado por defecto; textos y valores provisionales):
+  - Cada enemigo pelea según su carácter: Botarramas, Ofomni y Aledra van a por el de menos PV que alcancen y, si no llegan, se acercan al más cercano; los reparep rodean al mismo objetivo desde lados distintos; los garelinos buscan tu flanco o tu espalda, golpean primero al apoyo, se cubren y vendan entre ellos y no dejan la espalda al descubierto; el Ofomni descarriado carga contra el más cercano.
+  - Con poca vida, el último reparep de un grupo huye por el borde del tablero (sin dar su XP) y los garelinos se retiran por el borde; si no llegan, se defienden. El resto no huye nunca.
+  - Al terminar su turno, cada uno mira hacia la amenaza más cercana.
+  - Sigues llevando a todo tu grupo, pero en el turno de un aliado puedes elegir **Auto**: juega ese turno él solo según su rol (el apoyo venda al herido o anima a quien va a golpear, el defensor cubre al herido, el atacante remata al que está por debajo del 30%, y quien está muy herido se aleja y se defiende).
+  - **Orden** en el menú (Libre, Atacar o Defender), sin gastar nada: con Atacar, los aliados en Auto van a por tu último objetivo; con Defender, se agrupan a tu lado, vendan, cubren y se defienden.
 
 ### Cambiado
 - La cordillera occidental del Valle del Sara (Urd Gumnavis) ya no tiene cumbres: son colinas y montañas que se cruzan a pie. El 3ro, el 5to y el 7mo del Sara nacen en manantiales de esa cordillera y bajan desde allí al Sara.
