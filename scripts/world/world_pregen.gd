@@ -11,6 +11,10 @@ extends RefCounted
 ##    mundo…" (scenes/ui/world_loading.tscn) espera a ring_completed.
 ## 2. Resto de la región en segundo plano con `max(1, núcleos - 2)` tareas, por una cola de
 ##    prioridad: distancia al chunk del jugador, que se recalcula con set_player_chunk().
+##    Las tareas del anillo son de alta prioridad y solo toman chunks del anillo; las del segundo
+##    plano las lanza poll() (hilo principal) cuando el anillo está hecho, con prioridad BAJA: así
+##    no ocupan los hilos que el motor usa para sus propias tareas de cada fotograma (M9: con la
+##    caché fría y todo en alta prioridad hubo fotogramas de 127-143 ms con el mundo a 0,05 ms).
 ## 3. Cada chunk se lee de la WorldCache si es válido; si no, se construye y se guarda allí.
 ## 4. Los chunks se entregan al hilo principal por una cola con Mutex: poll() (que llama el dueño
 ##    cada fotograma, desde el hilo principal) los saca y emite las señales. Ninguna señal se emite
@@ -57,9 +61,7 @@ var _ring: Dictionary = {}  # Vector2i -> true
 var _done: Dictionary = {}  # Vector2i -> true (producido; puede estar aún en _results)
 var _results: Array[Array] = []  # [coord, chunk] esperando a poll()
 var _focus: Vector2i = Vector2i.ZERO
-var _limit: int = 0
 var _background_limit: int = 1
-var _running: int = 0
 var _cancelled: bool = false
 var _ring_left: int = 0
 var _started_order: Array[Vector2i] = []
@@ -69,6 +71,8 @@ var _total: int = 0
 var _ring_total: int = 0
 var _delivered: int = 0
 var _ring_delivered: int = 0
+var _started: bool = false
+var _background_launched: bool = false
 
 
 func _init(region_plan: RegionPlan, builder: Callable, cache: WorldCache = null) -> void:
@@ -125,16 +129,19 @@ static func priority_key(coord: Vector2i, is_ring: bool, home: Vector2i, focus: 
 
 
 ## Arranca los hilos. `initial` y `background` = tareas a la vez (por defecto, según los núcleos).
+## El anillo va en tareas de alta prioridad; el segundo plano lo lanza poll() al terminar el anillo.
 func start(initial: int = -1, background: int = -1) -> void:
 	var first: int = initial if initial > 0 else initial_workers()
 	_mutex.lock()
 	_background_limit = background if background > 0 else background_workers()
-	_limit = first if _ring_left > 0 else _background_limit
-	var launch: int = _limit - _running
-	_running += maxi(0, launch)
+	var ring_left: int = _ring_left
 	_mutex.unlock()
-	for i: int in launch:
-		_tasks.append(WorkerThreadPool.add_task(_work, true, TASK_NAME))
+	_started = true
+	if ring_left == 0:
+		_launch_background()
+		return
+	for i: int in first:
+		_tasks.append(WorkerThreadPool.add_task(_work.bind(true), true, TASK_NAME))
 
 
 ## Todo en el hilo que llama, en el orden de la cola (tests y PC de un núcleo). Entrega al final.
@@ -166,14 +173,24 @@ func poll() -> void:
 		if WorkerThreadPool.is_task_completed(_tasks[i]):
 			WorkerThreadPool.wait_for_task_completion(_tasks[i])
 			_tasks.remove_at(i)
+	if _started and not _background_launched:
+		_mutex.lock()
+		var ring_done: bool = _ring_left == 0 and not _cancelled
+		_mutex.unlock()
+		if ring_done:
+			_launch_background()
 
 
-## Bloquea hasta que terminan los hilos y entrega lo que quede (tests y cierre de la pantalla).
+## Bloquea hasta que terminan los hilos (anillo y segundo plano) y entrega lo que quede (tests y
+## cierre de la pantalla).
 func wait() -> void:
-	for id: int in _tasks:
-		WorkerThreadPool.wait_for_task_completion(id)
-	_tasks.clear()
-	poll()
+	while true:
+		for id: int in _tasks:
+			WorkerThreadPool.wait_for_task_completion(id)
+		_tasks.clear()
+		poll() # Si acaba de terminar el anillo, lanza el segundo plano.
+		if _tasks.is_empty():
+			return
 
 
 ## Cancela lo pendiente y espera a los hilos (los chunks en curso se terminan y se guardan).
@@ -239,25 +256,31 @@ func started_order() -> Array[Vector2i]:
 
 # --- hilos ---------------------------------------------------------------------------------
 
-func _work() -> void:
+## Bucle de una tarea. `ring_only`: tarea del anillo (alta prioridad), que acaba cuando no quedan
+## chunks del anillo en la cola.
+func _work(ring_only: bool) -> void:
 	while true:
 		_mutex.lock()
-		if _cancelled or _running > _limit:
-			_running -= 1
-			_mutex.unlock()
-			return
+		var cancelled: bool = _cancelled
 		_mutex.unlock()
-		var coord: Variant = _take_next()
+		if cancelled:
+			return
+		var coord: Variant = _take_next(ring_only)
 		if coord == null:
-			_mutex.lock()
-			_running -= 1
-			_mutex.unlock()
 			return
 		_finish(coord, _produce(coord))
 
 
-## Saca de la cola el chunk de mayor prioridad (o null si no queda). Seguro entre hilos.
-func _take_next() -> Variant:
+## Segundo plano: `_background_limit` tareas de prioridad baja (hilo principal, una vez).
+func _launch_background() -> void:
+	_background_launched = true
+	for i: int in _background_limit:
+		_tasks.append(WorkerThreadPool.add_task(_work.bind(false), false, TASK_NAME))
+
+
+## Saca de la cola el chunk de mayor prioridad (o null si no queda; con `ring_only`, también si el
+## siguiente ya no es del anillo). Seguro entre hilos.
+func _take_next(ring_only: bool = false) -> Variant:
 	_mutex.lock()
 	if _pending.is_empty():
 		_mutex.unlock()
@@ -270,6 +293,9 @@ func _take_next() -> Variant:
 			best_key = key
 			best = i
 	var coord: Vector2i = _pending[best]
+	if ring_only and best_key.x != 0:
+		_mutex.unlock()
+		return null
 	_pending.remove_at(best)
 	_started_order.append(coord)
 	_mutex.unlock()
@@ -302,8 +328,6 @@ func _finish(coord: Vector2i, chunk: WorldChunk) -> void:
 		_results.append([coord, chunk])
 		if _ring.has(coord):
 			_ring_left -= 1
-			if _ring_left == 0:
-				_limit = _background_limit
 	_mutex.unlock()
 
 
