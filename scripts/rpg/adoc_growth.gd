@@ -2,7 +2,8 @@ class_name AdocGrowth
 extends RefCounted
 ## Crecimiento del Adoc (moralidad-y-progresion.md, 0.5; sustituye a la tabla de progresion-adoc.md):
 ## - Stats automáticos por nivel: los del nivel 1 y, desde el 2, +auto_hp PV máx. y +1 ATQ en los
-##   niveles impares o +1 DEF en los pares (auto_stats). Sirven también para los adoc NPC.
+##   niveles impares o +1 DEF en los pares (auto_stats). Sirven también para los adoc NPC. La
+##   Agilidad (agility) también sube sola: agi_base + ⌊nivel / agi_every⌋.
 ## - Puntos de stat: points_per_level por nivel, a mano. Cada compra cuesta lo que diga
 ##   balance.json (stat_points): ATQ y DEF 3 puntos por +1; Vigor 1 por +2 PV; Luz 1 por +1 al
 ##   límite de Luz suelta. GameState guarda los no gastados (stat_points) y los gastados por stat
@@ -74,6 +75,13 @@ static func auto_stats(level: int) -> Dictionary:
 		"atk": int(base.atk) + int(l.auto_atk_odd) * odd,
 		"def": int(base.def) + int(l.auto_def_even) * even,
 	}
+
+
+## Agilidad de un adoc en un nivel (ia-de-combate.md): agi_base + ⌊nivel / agi_every⌋. Solo
+## automática, sin puntos (#174). La usan el jugador y los adoc aliados.
+static func agility(level: int) -> int:
+	var l: Dictionary = levels()
+	return int(l.get("agi_base", 5)) + clampi(level, 1, max_level()) / maxi(1, int(l.get("agi_every", 2)))
 
 
 static func points_per_level() -> int:
