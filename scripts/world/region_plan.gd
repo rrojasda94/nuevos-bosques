@@ -36,6 +36,9 @@ const MEANDER_FREQUENCY: float = 0.06
 const MEANDER_GAIN: float = 2.2
 ## Celdas gruesas alrededor de un lugar del CSV donde el agua no se mueve (no lo inunda).
 const MEANDER_KEEP: int = 3
+## Tipos de lugar que solo ponen nombre (rótulos de río y nacimientos): no quitan el agua de su
+## celda gruesa. El resto (villas, Bosques, hitos, tarcas) ocupa tierra.
+const WATER_LABELS: Array[String] = ["lugar", "manantial"]
 const NAMES_PATH: String = "res://data/text/nombres_villas.json"
 ## Aldeas: [mín, máx] casas (mundo-2.md §6: 2-4, frente a 5 o más de las villas con nombre).
 const DEFAULT_ALDEA_HOUSES: Array = [2, 4]
@@ -374,9 +377,11 @@ func _build_water(authoring: RegionAuthoring, terrain_region: Dictionary) -> voi
 		_meander(authoring.water)
 	else:
 		_procedural_river(terrain_region)
-	# Ningún lugar del CSV queda en el agua (el validador ya lo exige de lo pintado).
+	# Ningún lugar del CSV que ocupa tierra queda en el agua (el validador ya lo exige de lo
+	# pintado). Los que solo nombran el agua (WATER_LABELS: los rótulos de afluentes y los
+	# manantiales) no la borran, para no dejar un hueco seco en el río.
 	for p: Dictionary in _places:
-		if in_macro(p.cell):
+		if in_macro(p.cell) and not WATER_LABELS.has(String(p.type)):
 			_water[p.cell.y * size_macro.x + p.cell.x] = RegionAuthoring.Water.NONE
 
 
