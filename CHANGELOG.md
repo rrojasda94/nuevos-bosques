@@ -36,6 +36,14 @@ Todos los cambios que nota el jugador. Formato [Keep a Changelog](https://keepac
   - **Huir** funciona desde cualquier casilla del borde, siempre y con todo tu grupo.
   - Los caídos salen del tablero. Ganas cuando no queda ningún enemigo y pierdes si cae tu adoc.
   - Los roles de los aliados en el tablero: Cubrir protege a un aliado vecino, Vendar y Animar llegan a 2 casillas y Remate funciona igual.
+- Combate táctico, primera escena jugable (de prueba: apagada por defecto con `tactical.enabled` en `data/combat/balance.json`; textos y valores provisionales):
+  - Tablero en vista cenital con las alturas por capas: cada nivel sube un poco y muestra su cara hacia abajo, y se ven el agua, los vados, las escaleras, los árboles y las rocas. El tamaño del tablero puede cambiar: si no cabe en la pantalla, la cámara sigue con suavidad al cursor o a quien juega.
+  - Cada unidad con su sprite mirando hacia donde mira (o una flecha de orientación si su sprite no tiene 4 direcciones) y una barra de PV. Arriba, una línea de iconos con el orden de los próximos turnos.
+  - En tu turno llevas a todo tu grupo: **Mover** (casillas alcanzables en azul y un cursor), **Actuar** (Atacar, con los objetivos marcados y la precisión y el lado del golpe a la vista; Defender; Vendar, Animar o Cubrir según el rol; Ofrecer Luz; Ofrenda; Huir solo desde el borde) y **Esperar**. Al final eliges hacia dónde miras. Flechas o WASD para moverte, E o Enter para elegir, Esc para volver.
+  - Los golpes muestran el daño flotando ("Falla" si esquiva) y una línea corta con el nombre de la acción ("Golpe por la espalda", "Vendar"...).
+  - Los enemigos se acercan al más cercano y le atacan (comportamiento provisional hasta la IA del tablero).
+  - Al encenderlo, todos los combates se juegan en el tablero con el mismo final de siempre: victoria con XP, pago, huida o derrota, y el Bosque lo recuerda igual.
+  - Para probarlo desde el editor: `scenes/rpg/tactical_demo.tscn` (3 contra 3 en 8 × 6) y `scenes/rpg/tactical_demo_big.tscn` (6 contra 6 en 14 × 10), con F6.
 
 ### Cambiado
 - La cordillera occidental del Valle del Sara (Urd Gumnavis) ya no tiene cumbres: son colinas y montañas que se cruzan a pie. El 3ro, el 5to y el 7mo del Sara nacen en manantiales de esa cordillera y bajan desde allí al Sara.
