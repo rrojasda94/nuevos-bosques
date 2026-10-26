@@ -148,3 +148,60 @@ func test_migration_from_v8_has_all_fruit() -> void:
 	assert_eq(GameState.emptied_fruit_trees, [] as Array[Vector4i])
 	assert_eq(GameState.fruit_taken, {})
 	assert_true(FruitRules.has_fruit(COORD, Vector2i(5, 5)))
+
+
+# --- Mundo 2.0: frutales 2×2 (ADR 0014 §7) -----------------------------------------------------
+
+const TREE_AT := Vector2i(20, 20)
+
+
+func _fruit_chunk() -> WorldChunk:
+	var chunk := WorldChunk.new()
+	chunk.coord = COORD
+	chunk.add_object(WorldChunk.ObjectKind.FRUIT_TREE, TREE_AT, Vector2i(2, 2))
+	chunk.add_object(WorldChunk.ObjectKind.TREE, Vector2i(30, 30), Vector2i(2, 2))
+	chunk.rebuild_blocked()
+	return chunk
+
+
+func test_world_key_is_the_northwest_corner() -> void:
+	var chunk := _fruit_chunk()
+	for d: Vector2i in [Vector2i.ZERO, Vector2i(1, 0), Vector2i(0, 1), Vector2i.ONE]:
+		assert_eq(FruitRules.tree_origin(chunk, TREE_AT + d), TREE_AT)
+		assert_eq(FruitRules.key_world(chunk, TREE_AT + d), Vector4i(COORD.x, COORD.y, TREE_AT.x, TREE_AT.y),
+			"misma clave desde %s" % (TREE_AT + d))
+	assert_false(FruitRules.is_fruit_tree_world(chunk, Vector2i(30, 30)), "un árbol normal no es frutal")
+	assert_false(FruitRules.is_fruit_tree_world(chunk, TREE_AT - Vector2i.ONE))
+	assert_eq(FruitRules.key_world(chunk, TREE_AT), FruitRules.key(COORD, TREE_AT), "la misma clave del guardado")
+
+
+func test_world_take_empties_the_whole_2x2() -> void:
+	var chunk := _fruit_chunk()
+	GameState.hp = 5
+	assert_true(FruitRules.has_fruit_world(chunk, TREE_AT + Vector2i.ONE))
+	var r: Dictionary = FruitRules.take_world(chunk, TREE_AT + Vector2i.ONE, HOME, HOME)
+	assert_eq(r.healed, FruitRules.heal_amount(AdventureRules.max_hp()), "las reglas no cambian")
+	assert_false(r.theft)
+	for d: Vector2i in [Vector2i.ZERO, Vector2i(1, 0), Vector2i(0, 1), Vector2i.ONE]:
+		assert_false(FruitRules.has_fruit_world(chunk, TREE_AT + d), "vacío desde %s" % (TREE_AT + d))
+	assert_eq(GameState.emptied_fruit_trees, [FruitRules.key(COORD, TREE_AT)] as Array[Vector4i])
+	assert_eq(FruitRules.take_world(chunk, TREE_AT, HOME, HOME), {}, "un árbol vacío no da nada")
+	assert_eq(FruitRules.take_world(chunk, Vector2i(30, 30), HOME, HOME), {}, "un árbol normal no da fruto")
+	assert_false(FruitRules.has_fruit_world(chunk, Vector2i(30, 30)))
+	FruitRules.regrow()
+	assert_true(FruitRules.has_fruit_world(chunk, TREE_AT), "rebrota en el riutash")
+
+
+func test_world_fruit_from_any_neighbour_cell() -> void:
+	var chunk := _fruit_chunk()
+	var nw: Vector2i = WorldCoords.to_world_cell(COORD, TREE_AT)
+	var beside: int = 0
+	for y: int in range(-2, 4):
+		for x: int in range(-2, 4):
+			var feet: Vector2i = nw + Vector2i(x, y)
+			var ring: bool = x >= -1 and x <= 2 and y >= -1 and y <= 2 and not (x >= 0 and x <= 1 and y >= 0 and y <= 1)
+			assert_eq(FruitRules.can_reach_world(chunk, TREE_AT, feet), ring, "pies en %s" % Vector2i(x, y))
+			if ring:
+				beside += 1
+	assert_eq(beside, 12, "las 12 casillas que rodean el 2×2")
+	assert_false(FruitRules.can_reach_world(chunk, Vector2i(30, 30), nw), "no es un frutal")

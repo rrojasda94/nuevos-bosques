@@ -168,7 +168,8 @@ static func _should_flee(b: TacticalBattle, i: int) -> bool:
 			for v: Dictionary in b.units:
 				if int(v.side) == int(u.side) and StringName(v.ai) == BattleLogic.AI_SWARM:
 					group += 1
-					if v.alive:
+					# Los que esperan en el borde (refuerzos, T1b) también cuentan: no es el último.
+					if v.alive or v.get("waiting", false):
 						alive += 1
 			return group > 1 and alive == 1 and ratio < _cfg(b, "swarm_flee_below", 0.3)
 		BattleLogic.AI_TACTICAL:

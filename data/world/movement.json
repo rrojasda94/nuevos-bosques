@@ -3,5 +3,8 @@
   "walk_speed": 100,
   "run_speed": 200,
   "corner_assist_px": 5,
-  "hitbox": [10, 6]
+  "hitbox": [10, 6],
+  "$comment_interaction": "Interacción con E (ADR 0014 §2, Interaction.find_world): punto de sondeo a probe_px por delante de los pies; se habla con el NPC a ≤ npc_reach_px del sondeo.",
+  "probe_px": 12,
+  "npc_reach_px": 14
 }
