@@ -21,6 +21,10 @@ extends RefCounted
 ## del Bosque (con su hostilidad) en Luz suelta; la ofrenda (ofrendas-v1.md) entrega una del
 ## inventario, completada con Luz suelta hasta N. Se van todos. El Ofomni de la misión no acepta
 ## ninguno de los dos pagos (accepts_payment = false).
+## Skills (moralidad-y-progresion.md, las fija AdventureRules): Golpe fuerte es pasiva: con
+## `strong_every` > 0, el primer ataque del Adoc que la tenga lista hace `strong_factor` veces el daño
+## y vuelve a estar lista `strong_every` turnos después. Botín: `loot_id` es la ofrenda que deja el
+## rival si se le vence (la victoria la anuncia).
 
 enum Action { ATTACK, DEFEND, OFFER_LUZ, FLEE, OFRENDA }
 enum Result { ONGOING, VICTORY, DEFEAT, FLED, APPEASED }
@@ -37,6 +41,8 @@ var adoc_max_hp: int
 var adoc_atk: int
 var adoc_def: int
 var luz: int
+## Tope de Luz suelta del Adoc (con los puntos de Luz). Para anunciar el +1 de la victoria.
+var luz_max: int = 10
 ## Los golpes al Adoc de este turno se reducen (Defender).
 var defending: bool = false
 
@@ -64,6 +70,15 @@ var ofrendas: Array = []
 var ofrenda_index: int = -1
 ## El Adoc pelea sin arma (ATQ base): el combate lo avisa al empezar.
 var unarmed: bool = false
+## Golpe fuerte (skill): cada cuántos turnos (0 = sin la skill), multiplicador y turnos que faltan
+## para que vuelva a estar listo (0 = listo).
+var strong_every: int = 0
+var strong_factor: float = 1.0
+var strong_cooldown: int = 0
+## Botín (skill): ofrenda que deja el rival al vencerlo (&"" = ninguna) y si cupo en la bolsa (lo
+## escribe AdventureRules al aplicar la victoria).
+var loot_id: StringName = &""
+var loot_taken: bool = false
 
 # --- El primer enemigo (uno contra uno) ---------------------------------------------------------
 var unico_name: String:
@@ -110,6 +125,7 @@ func _init(balance_data: Dictionary, adoc: Dictionary, hp: int, luz_amount: int,
 	adoc_atk = int(adoc.atk)
 	adoc_def = int(adoc.def)
 	luz = luz_amount
+	luz_max = int(balance_data.get("adoc", {}).get("luz_max", 10))
 	add_enemy(unico)
 
 
@@ -164,6 +180,16 @@ static func is_special_attack(n: int, every: int) -> bool:
 ## Golpe recibido con Defender activo: se reduce redondeando hacia arriba.
 static func defended_damage(damage: int, factor: float) -> int:
 	return ceili(damage * factor)
+
+
+## Golpe fuerte listo: el Adoc tiene la skill y ya pasaron sus turnos de espera.
+func is_strong_ready() -> bool:
+	return strong_every > 0 and strong_cooldown <= 0
+
+
+## Daño de un Golpe fuerte (redondeado).
+static func strong_damage(damage: int, factor: float) -> int:
+	return roundi(damage * factor)
 
 
 ## Hay más de un enemigo (la escena dibuja la fila y pregunta el objetivo).
@@ -261,19 +287,28 @@ func offer_ofrenda(index: int) -> Array[Dictionary]:
 ## victory, defeat.
 ## Una acción no válida (Ofrecer Luz sin Luz o contra el Ofomni, combate acabado) devuelve [] y no
 ## consume turno.
-## La ofrenda no se juega aquí: va por offer_ofrenda. La victoria lleva además "xp" y "level_ups".
+## La ofrenda no se juega aquí: va por offer_ofrenda. La victoria lleva además "xp", "level_ups" y
+## "loot" (id de la ofrenda del Botín, "" si no hay). Un ataque con Golpe fuerte lleva "strong".
 func play_turn(action: Action, target: int = -1) -> Array[Dictionary]:
 	var events: Array[Dictionary] = []
 	if is_over() or (action == Action.OFFER_LUZ and not can_offer_luz()) or action == Action.OFRENDA:
 		return events
 	if not is_alive(target):
 		target = default_target()
+	if strong_cooldown > 0:
+		strong_cooldown -= 1
 	match action:
 		Action.ATTACK:
 			var dmg: int = _roll_attack(adoc_atk, int(enemies[target].def))
+			var strong: bool = is_strong_ready()
+			if strong:
+				dmg = strong_damage(dmg, strong_factor)
+				strong_cooldown = strong_every
 			_hurt_enemy(target, dmg)
 			var a: Dictionary = _event(&"attack", dmg)
 			a.target = target
+			if strong:
+				a.strong = true
 			events.append(a)
 			_note_down(target, events)
 		Action.DEFEND:
@@ -423,6 +458,7 @@ func _check_victory(events: Array[Dictionary]) -> bool:
 	var v: Dictionary = _event(&"victory")
 	v.xp = victory_xp
 	v.level_ups = level_ups.duplicate()
+	v.loot = String(loot_id)
 	events.append(v)
 	return true
 

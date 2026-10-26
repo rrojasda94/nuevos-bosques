@@ -14,14 +14,20 @@ extends RefCounted
 ## borde está abierto; el enojado no acepta pagos) y la visión de sus Botarramas, y un Bosque que
 ## cae a angry_candidate_at de relación se enoja. Sigilo (Stealth, sigilo-y-robo.md): con un arma
 ## en la mano ningún Bosque salvo el natal te deja pasar en paz (is_welcome), colarse deja el
-## Bosque colado (sneak_into) y la máscara pesada resta DEF. Escribe en GameState y avisa por EventBus. Los
-## números viven en data/combat/balance.json y, los del riutash, en data/world/time.json.
+## Bosque colado (sneak_into) y la máscara pesada resta DEF. Senda y skills (0.5,
+## moralidad-y-progresion.md): los actos que ya pasan aquí mueven la Senda (Senda.record) y las
+## skills aprendidas (AdocGrowth) cambian la visión de los Únicos, el peaje, el combate (golpe
+## fuerte, botín, Únicos aliados), el menú del borde (imponerse) y el riutash. Los stats del Adoc
+## salen de su nivel y de los puntos gastados (AdocGrowth.player_stats). Escribe en GameState y
+## avisa por EventBus. Los números viven en data/combat/balance.json y, los del riutash, en
+## data/world/time.json.
 
 const BALANCE_PATH: String = "res://data/combat/balance.json"
 const SALT_BATTLE: int = 21
 const SALT_QUEST_BATTLE: int = 23
 const SALT_REFUGE_LOOT: int = 29
 const SALT_GROUP: int = 31
+const SALT_LOOT: int = 37
 const ADOC_ID: StringName = &"adoc"
 ## Valor de GameState.open_until para un paso pagado que no caduca (amistad alta).
 const OPEN_PERMANENT: int = -1
@@ -40,25 +46,25 @@ static func balance() -> Dictionary:
 	return _balance
 
 
-## PV máximos del Adoc en su nivel actual.
+## PV máximos del Adoc: los de su nivel más el Vigor comprado.
 static func max_hp() -> int:
-	return int(adoc_stats(GameState.level).max_hp)
+	return int(AdocGrowth.player_stats().max_hp)
 
 
-# --- Niveles (progresion-adoc.md) ---------------------------------------------------------------
+# --- Niveles (progresion-adoc.md; stats de moralidad-y-progresion.md) ----------------------------
 
-static func _level_table() -> Array:
-	return balance().levels.table
+static func _level_xp() -> Array:
+	return balance().levels.xp
 
 
-## Nivel tope (el último de la tabla).
+## Nivel tope (el último de la lista de XP).
 static func max_level() -> int:
-	return _level_table().size()
+	return _level_xp().size()
 
 
 ## XP acumulada para alcanzar un nivel (1 = 0).
 static func xp_for_level(level: int) -> int:
-	return int(_level_table()[clampi(level, 1, max_level()) - 1].xp)
+	return int(_level_xp()[clampi(level, 1, max_level()) - 1])
 
 
 ## Nivel que corresponde a una XP acumulada (umbral inclusivo, con el tope).
@@ -75,10 +81,10 @@ static func xp_to_next(xp: int) -> int:
 	return -1 if level >= max_level() else xp_for_level(level + 1) - xp
 
 
-## Stats del Adoc en un nivel: { max_hp, atk, def }.
+## Stats automáticos de un adoc en un nivel, sin puntos repartidos: { max_hp, atk, def }. Los
+## usan los adoc NPC; el jugador suma sus puntos (AdocGrowth.player_stats).
 static func adoc_stats(level: int) -> Dictionary:
-	var row: Dictionary = _level_table()[clampi(level, 1, max_level()) - 1]
-	return { "max_hp": int(row.max_hp), "atk": int(row.atk), "def": int(row.def) }
+	return AdocGrowth.auto_stats(level)
 
 
 # --- Equipo (roadmap-0.3.md #113, sigilo-y-robo.md) ---------------------------------------------
@@ -99,10 +105,10 @@ static func weapon_atk_bonus() -> int:
 	return Items.atk_bonus(weapon())
 
 
-## Stats con los que pelea el Adoc ahora: los de su nivel más el ATQ del arma equipada y menos la
-## DEF que restan las máscaras pesadas (Stealth.def_penalty, sin bajar de 0).
+## Stats con los que pelea el Adoc ahora: los de su nivel y sus puntos, más el ATQ del arma equipada
+## y menos la DEF que restan las máscaras pesadas (Stealth.def_penalty, sin bajar de 0).
 static func adoc_combat_stats() -> Dictionary:
-	var stats: Dictionary = adoc_stats(GameState.level)
+	var stats: Dictionary = AdocGrowth.player_stats()
 	stats.atk = int(stats.atk) + weapon_atk_bonus()
 	stats.def = maxi(0, int(stats.def) - Stealth.def_penalty())
 	return stats
@@ -165,8 +171,9 @@ static func levels_gained(xp: int, gained: int) -> Array[int]:
 	return out
 
 
-## Suma XP al Adoc y aplica cada nivel nuevo: los PV actuales suben lo mismo que los máximos y se
-## emite character_leveled_up por nivel. Devuelve los niveles alcanzados.
+## Suma XP al Adoc y aplica cada nivel nuevo: los PV actuales suben lo mismo que los máximos, llegan
+## los puntos de stat (y de skill en los niveles pares, AdocGrowth.level_reached) y se emite
+## character_leveled_up por nivel. Devuelve los niveles alcanzados.
 static func gain_xp(amount: int) -> Array[int]:
 	var gained: int = maxi(0, amount)
 	var levels: Array[int] = levels_gained(GameState.xp, gained)
@@ -174,6 +181,7 @@ static func gain_xp(amount: int) -> Array[int]:
 	for level: int in levels:
 		var before: int = max_hp()
 		GameState.level = level
+		AdocGrowth.level_reached(level)
 		set_hp(GameState.hp + max_hp() - before)
 		EventBus.character_leveled_up.emit(ADOC_ID, level)
 	return levels
@@ -183,9 +191,9 @@ static func start_luz() -> int:
 	return int(balance().adoc.start_luz)
 
 
-## Tope de Luz suelta que puede llevar el Adoc.
+## Tope de Luz suelta que puede llevar el Adoc: el de los datos más los puntos de Luz gastados.
 static func luz_max() -> int:
-	return int(balance().adoc.luz_max)
+	return int(balance().adoc.luz_max) + int(AdocGrowth.bonuses().luz_max)
 
 
 ## Luz que exige el Nujio de un Bosque a distancia d del Bosque inicial (sin hostilidad).
@@ -270,7 +278,8 @@ static func relation_toll_factor(bosque_id: int) -> float:
 ## Peaje del Bosque a distancia d: 3 + d + hostility_toll × hostilidad (la hostilidad no lo sube por
 ## encima de toll_max; si la distancia ya lo supera, se queda en el de d) y, sobre eso, los
 ## multiplicadores del estado (corrupto ×1,5, BosqueStates.toll_factor) y de la relación
-## (redondeado, 1 como mínimo). 0 si el estado no cobra (muerto, necesita_ayuda) o con salvoconducto
+## (redondeado, 1 como mínimo) y, con la skill Palabra suave, menos su descuento (1 como mínimo).
+## 0 si el estado no cobra (muerto, necesita_ayuda) o con salvoconducto
 ## (FarQuests.covers). El enojado tiene
 ## precio pero no lo acepta (can_pay_toll).
 static func toll_for(bosque_id: int, d: int) -> int:
@@ -282,7 +291,8 @@ static func toll_for(bosque_id: int, d: int) -> int:
 	var base: int = toll_cost(d)
 	var raised: int = base + int(_memory().hostility_toll) * hostility(bosque_id)
 	var with_hostility: int = maxi(base, mini(raised, int(_memory().toll_max)))
-	return maxi(1, roundi(with_hostility * state_factor * relation_toll_factor(bosque_id)))
+	var toll: int = maxi(1, roundi(with_hostility * state_factor * relation_toll_factor(bosque_id)))
+	return maxi(1, toll - AdocGrowth.toll_discount())
 
 
 ## Estado del Bosque en la partida (BosqueStates.state_of con el reparto de la partida actual).
@@ -354,6 +364,7 @@ static func leave_ofrenda(bosque_id: int, item_id: StringName) -> bool:
 		return false
 	InventoryLogic.remove(GameState.bag, item_id)
 	_ofrenda_given(bosque_id, Items.luz_of(item_id))
+	Senda.record(Senda.OFRENDA_LEFT)
 	EventBus.bosque_ofrenda_left.emit(bosque_id, item_id)
 	return true
 
@@ -388,9 +399,11 @@ static func reward_bosque_mission(bosque_id: int) -> void:
 	change_relation(bosque_id, int(_relation_cfg().per_mission))
 
 
-## Defender el Bosque de un incendio o un ataque: relación + per_defense (BosqueFires.extinguish).
+## Defender el Bosque de un incendio o un ataque: relación + per_defense (BosqueFires.extinguish) y
+## la Senda sube (salvar un Bosque).
 static func reward_bosque_defense(bosque_id: int) -> void:
 	change_relation(bosque_id, int(_relation_cfg().per_defense))
+	Senda.record(Senda.BOSQUE_SAVED)
 
 
 ## Distancia (Chebyshev) de una casilla a la huella del Nujio del chunk (-1 si no hay Nujio).
@@ -426,12 +439,14 @@ static func riutash_near_nujio(chunk: ChunkData, cell: Vector2i, bosque_id: int,
 
 ## Radio de visión de un Botarramas del Bosque: el de sus datos + hostility_vision × hostilidad,
 ## con un extra de vision_max_bonus como mucho ("mira, observa"), más el del estado (enojado:
-## detectan más lejos) y menos el camuflaje del Adoc (Stealth). Sin camuflaje, 1 como mínimo; con
-## él puede llegar a 0 (solo te ve si te echa encima, a su engage_distance).
+## detectan más lejos), menos la skill Paso quedo y menos el camuflaje del Adoc (Stealth). Sin
+## camuflaje, 1 como mínimo; con él puede llegar a 0 (solo te ve si te echa encima, a su
+## engage_distance).
 static func vision_radius(bosque_id: int, base: int) -> int:
 	var m: Dictionary = _memory()
 	var radius: int = base + mini(int(m.vision_max_bonus), int(m.hostility_vision) * hostility(bosque_id))
 	radius += BosqueStates.vision_bonus(bosque_state(bosque_id))
+	radius -= AdocGrowth.vision_reduction()
 	return Stealth.vision_against(maxi(1, radius), BosqueStates.stealth_vision_bonus())
 
 
@@ -620,16 +635,51 @@ static func _paid(bosque_id: int, ofrenda_value: int = -1) -> void:
 		_ofrenda_given(bosque_id, ofrenda_value)
 	else:
 		change_relation(bosque_id, int(_memory().relation_per_payment))
+	_senda_paid(ofrenda_value)
 	open_bosque(bosque_id)
 
 
-## Un Botarramas del Bosque ha sido vencido: el Bosque queda forzado (si no estaba pagado), lo
-## recuerda (+1 de hostilidad) y la relación baja.
+## La Senda sube al pagar: con Luz (pay_luz) o con una ofrenda (`ofrenda_value` >= 0, pay_ofrenda).
+static func _senda_paid(ofrenda_value: int) -> void:
+	Senda.record(Senda.PAY_OFRENDA if ofrenda_value >= 0 else Senda.PAY_LUZ)
+
+
+## Un Botarramas del Bosque ha sido vencido (o se ha apartado ante Imponerse): el Bosque queda
+## forzado (si no estaba pagado), lo recuerda (+1 de hostilidad), la relación baja y la Senda también.
 static func guardian_defeated(bosque_id: int) -> void:
 	if not is_open(bosque_id) and not GameState.forced_bosques.has(bosque_id):
 		GameState.forced_bosques.append(bosque_id)
 	GameState.bosque_hostility[str(bosque_id)] = hostility(bosque_id) + 1
 	change_relation(bosque_id, int(_memory().relation_per_kill))
+	Senda.record(Senda.GUARDIAN_DEFEATED)
+
+
+# --- Imponerse (skill S4, moralidad-y-progresion.md) ------------------------------------------------
+
+## Con la skill Imponerse, el Botarramas del Bosque a distancia d se aparta sin pelear: el nivel del
+## Adoc llega a d + level_margin y el Bosque no está enojado ("no funciona").
+static func can_impose(bosque_id: int, d: int) -> bool:
+	if not AdocGrowth.has_skill(AdocGrowth.IMPONERSE) or bosque_id < 0:
+		return false
+	if bosque_state(bosque_id) == BosqueStates.ENOJADO:
+		return false
+	var margin: int = int(AdocGrowth.skill_config(AdocGrowth.IMPONERSE).get("level_margin", 2))
+	return GameState.level >= d + margin
+
+
+## Se impone al Botarramas: cuenta como vencerlo (Bosque forzado, hostilidad +1, relación y Senda a
+## la baja), sin XP ni Luz. false si no puede.
+static func impose(bosque_id: int, d: int) -> bool:
+	if not can_impose(bosque_id, d):
+		return false
+	guardian_defeated(bosque_id)
+	return true
+
+
+## Fija el estado de bando (dos-caminos.md). Garelino solo lo fija el encuentro de historia (otro
+## PR); fiel y en duda los mueve la Senda sola (Senda.update_bando).
+static func set_bando(bando: StringName) -> bool:
+	return Senda.set_bando(bando)
 
 
 static func set_luz(value: int) -> void:
@@ -690,11 +740,14 @@ static func start_battle(bosque_id: int, d: int, monster_id: StringName = &"bota
 	logic.monster_id = monster_id
 	var all_allies: Array[Dictionary] = allies.duplicate()
 	all_allies.append_array(bosque_allies(bosque_id, monster_id, d))
+	all_allies.append_array(called_allies(bosque_id, monster_id, d))
 	for ally: Dictionary in all_allies.slice(0, MAX_ALLIES):
 		logic.add_ally(ally)
 	_prepare(logic, cfg, d)
 	logic.victory_xp = monster_xp(monster_id, d) * count
 	logic.level_ups = levels_gained(GameState.xp, logic.victory_xp)
+	if not is_outsider(monster_id):
+		logic.loot_id = loot_for(GameState.seed_value, bosque_id, attempt)
 	logic.toll = toll_for(bosque_id, d)
 	# Un Bosque enojado no acepta pagos; uno que no cobra no tiene peaje que ofrecer.
 	logic.accepts_payment = logic.accepts_payment and can_pay_toll(bosque_id)
@@ -733,10 +786,12 @@ static func finish_unico_battle(logic: BattleLogic, bosque_id: int, home: int, o
 			value = int(logic.ofrendas[logic.ofrenda_index].luz)
 		if bosque_id != home:
 			_paid(bosque_id, value)
-		elif value >= 0:
-			_ofrenda_given(bosque_id, value)
 		else:
-			change_relation(bosque_id, int(_memory().relation_per_payment))
+			if value >= 0:
+				_ofrenda_given(bosque_id, value)
+			else:
+				change_relation(bosque_id, int(_memory().relation_per_payment))
+			_senda_paid(value)
 	elif outcome == &"victory" and not is_outsider(logic.monster_id):
 		# Vencer a quien no es un Único del Bosque (los reparep) no ofende al Bosque.
 		unico_defeated(bosque_id, home, offends)
@@ -745,11 +800,15 @@ static func finish_unico_battle(logic: BattleLogic, bosque_id: int, home: int, o
 
 
 ## Un Único de dentro del Bosque ha sido vencido: el Bosque lo recuerda (+1 de hostilidad) y la
-## relación baja relation_per_kill, como con un Botarramas. Con `offends` (se le atacó a voluntad
-## con el paso abierto), un Bosque pagado que no sea el natal pasa a forzado: el pago se pierde.
+## relación baja relation_per_kill, como con un Botarramas, y la Senda baja (unico_defeated; y además
+## offend si se le atacó con el paso abierto). Con `offends` (se le atacó a voluntad con el paso
+## abierto), un Bosque pagado que no sea el natal pasa a forzado: el pago se pierde.
 static func unico_defeated(bosque_id: int, home: int, offends: bool = false) -> void:
 	GameState.bosque_hostility[str(bosque_id)] = hostility(bosque_id) + 1
 	change_relation(bosque_id, int(_memory().relation_per_kill))
+	Senda.record(Senda.UNICO_DEFEATED)
+	if offends:
+		Senda.record(Senda.OFFEND)
 	if offends and bosque_id != home and is_open(bosque_id):
 		GameState.open_until.erase(str(bosque_id))
 		if not GameState.forced_bosques.has(bosque_id):
@@ -792,6 +851,52 @@ static func _prepare(logic: BattleLogic, cfg: Dictionary, d: int) -> void:
 	logic.unarmed = not is_armed()
 	logic.victory_xp = victory_xp(d)
 	logic.level_ups = levels_gained(GameState.xp, logic.victory_xp)
+	logic.luz_max = luz_max()
+	# Skill Golpe fuerte (S2): pasiva, el primer ataque disponible hace factor× de daño, como mucho
+	# uno cada `every` turnos.
+	if AdocGrowth.has_skill(AdocGrowth.GOLPE_FUERTE):
+		var strong: Dictionary = AdocGrowth.skill_config(AdocGrowth.GOLPE_FUERTE)
+		logic.strong_every = int(strong.get("every", 3))
+		logic.strong_factor = float(strong.get("factor", 1.5))
+
+
+# --- Skills en combate (moralidad-y-progresion.md) ------------------------------------------------
+
+## Skill Botín (S3): ofrenda que deja el Único si se le vence (&"" = ninguna). Determinista por seed,
+## Bosque e intento: `chance` de una ofrenda al azar entre las del catálogo con valor en `values`.
+static func loot_for(seed_value: int, bosque_id: int, attempt: int) -> StringName:
+	if not AdocGrowth.has_skill(AdocGrowth.BOTIN):
+		return &""
+	var cfg: Dictionary = AdocGrowth.skill_config(AdocGrowth.BOTIN)
+	var h: int = ChunkGenerator.hash_ints([seed_value, bosque_id, attempt, SALT_LOOT])
+	if float(h % 1000) >= float(cfg.get("chance", 0.0)) * 1000.0:
+		return &""
+	var values: Array = cfg.get("values", [3, 4])
+	var ids: Array[StringName] = []
+	for entry: Variant in Ofrendas.catalog():
+		var luz: int = int((entry as Dictionary).get("luz", 0))
+		if luz >= int(values[0]) and luz <= int(values[values.size() - 1]):
+			ids.append(StringName(str(entry.id)))
+	if ids.is_empty():
+		return &""
+	return ids[(h / 1000) % ids.size()]
+
+
+## Skill Llamada del Bosque (C4): en un Bosque con relación >= relation, `allies` Únicos suyos pelean a
+## tu lado contra quien no es un Único del Bosque (outsider, como los reparep). Stats de Botarramas
+## a la d del Bosque, como los aliados de un Bosque que necesita ayuda.
+static func called_allies(bosque_id: int, monster_id: StringName, d: int) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	if not AdocGrowth.has_skill(AdocGrowth.LLAMADA_BOSQUE) or bosque_id < 0 or not is_outsider(monster_id):
+		return out
+	var cfg: Dictionary = AdocGrowth.skill_config(AdocGrowth.LLAMADA_BOSQUE)
+	if relation(bosque_id) < int(cfg.get("relation", 30)) or bosque_state(bosque_id) == BosqueStates.MUERTO:
+		return out
+	for i: int in int(cfg.get("allies", 1)):
+		var u: Dictionary = make_monster(&"botarramas", d)
+		out.append({ "name": Texts.get_text("battle_ally_unico_name") % u.name, "max_hp": u.max_hp,
+			"atk": u.atk, "def": u.def, "kind": &"botarramas" })
+	return out
 
 
 static func _apply_result(logic: BattleLogic) -> StringName:
@@ -801,6 +906,9 @@ static func _apply_result(logic: BattleLogic) -> StringName:
 			set_hp(logic.adoc_hp)
 			set_luz(logic.luz + int(b.victory_luz))
 			gain_xp(logic.victory_xp)
+			# Botín (S3): la ofrenda va a la bolsa si cabe (si no, se queda en el Bosque).
+			if logic.loot_id != &"":
+				logic.loot_taken = InventoryLogic.add(GameState.bag, logic.loot_id)
 			return &"victory"
 		BattleLogic.Result.APPEASED:
 			set_hp(logic.adoc_hp)
@@ -926,6 +1034,7 @@ static func apply_quest_reward(reward: Dictionary, bosque_id: int = -1) -> void:
 	for level: int in gain_xp(int(reward.get("xp", 0))):
 		lines.append(Texts.get_text("level_up") % level)
 	if not lines.is_empty():
+		lines.append(Texts.get_text("growth_points_hint"))
 		EventBus.notice_requested.emit("\n".join(lines))
 
 
@@ -971,6 +1080,7 @@ static func loot_refuge(coord: Vector2i) -> Dictionary:
 static func record_theft(bosque_id: int) -> void:
 	GameState.bosque_hostility[str(bosque_id)] = hostility(bosque_id) + int(_memory().hostility_per_theft)
 	change_relation(bosque_id, int(_memory().relation_per_theft))
+	Senda.record(Senda.THEFT)
 	EventBus.bosque_robbed.emit(bosque_id)
 
 
@@ -1015,8 +1125,22 @@ static func riutash_hp(hp: int, hp_max: int, sheltered: bool) -> int:
 	return mini(hp, maxi(1, hp - damage))
 
 
-## Aplica el riutash al Adoc. Devuelve el cambio de PV (negativo si hiere).
-static func apply_riutash(sheltered: bool) -> int:
+## Aplica el riutash al Adoc. Devuelve el cambio de PV (negativo si hiere). Con la skill Descanso del
+## Nujio (C3), en refugio dentro de un Bosque pagado (o el natal) cura su heal_pct de lo que falta.
+## `bosque_id` < -1: el del chunk actual (GameState.chunk_coord).
+static func apply_riutash(sheltered: bool, bosque_id: int = -2) -> int:
 	var before: int = GameState.hp
+	var pct: int = AdocGrowth.nujio_rest_heal_pct()
+	if sheltered and pct >= 0:
+		var map: BosqueMap = MapLogic.current_bosques() if bosque_id < -1 else null
+		var id: int = map.bosque_at(GameState.chunk_coord) if map != null and GameState.chunk_coord.x >= 0 else bosque_id
+		if id >= 0 and is_paid(id, current_home()):
+			set_hp(rest_heal_hp(before, max_hp(), pct))
+			return GameState.hp - before
 	set_hp(riutash_hp(before, max_hp(), sheltered))
 	return GameState.hp - before
+
+
+## PV tras un riutash en refugio que cura `pct` % de lo que falta (redondeo hacia arriba).
+static func rest_heal_hp(hp: int, hp_max: int, pct: int) -> int:
+	return mini(hp_max, hp + ceili(maxi(0, hp_max - hp) * pct / 100.0))

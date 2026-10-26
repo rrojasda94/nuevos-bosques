@@ -24,9 +24,12 @@ extends Node
 ## camuflaje intacto y ningún uso gastado. v16: combate en grupo (otros-adoc.md): encuentros con otros
 ## adoc ya resueltos (adoc_encounters); al migrar, ninguno. v17: dormir y Pensamiento
 ## (bosques-y-relacion.md, #136): misiones lejanas con su ruta de salvoconducto (far_quests) y día
-## de la última visión (last_vision_day); al migrar, ninguna misión lejana y ninguna visión. Las
-## versiones anteriores se cargan con valores por defecto.
-const SAVE_VERSION: int = 17
+## de la última visión (last_vision_day); al migrar, ninguna misión lejana y ninguna visión. v18: Senda,
+## bando, puntos de stat y skills (moralidad-y-progresion.md, dos-caminos.md): senda, bando,
+## stat_points (sin gastar), spent_points (gastados por stat), skill_points y skills; al migrar, Senda
+## 0, fiel, el mismo nivel con los stats automáticos nuevos y todos los puntos de su nivel por
+## repartir (AdocGrowth.migrate_points). Las versiones anteriores se cargan con valores por defecto.
+const SAVE_VERSION: int = 18
 ## Migración a v9: el Ofomni de la misión pasó de "ofomni" a "ofomni_descarriado" (y su etiqueta
 ## de brújula, de "Ofomni" a "Ofomni descarriado").
 const LEGACY_OFOMNI_ID: String = "ofomni"
@@ -122,6 +125,17 @@ var villa_damaged: bool = false
 var xp: int = 0
 var level: int = 1
 var fama: int = 0
+## Senda (Senda, moralidad-y-progresion.md): -100 (violenta) .. 100 (respetuosa). Empieza en 0.
+var senda: int = 0
+## Estado de bando (Senda, dos-caminos.md): &"fiel", &"en_duda" o &"garelino".
+var bando: StringName = &"fiel"
+## Puntos de stat sin gastar y gastados por stat { "atk", "def", "vigor", "luz": puntos }
+## (AdocGrowth). Los stats del Adoc salen del nivel y de lo gastado.
+var stat_points: int = 0
+var spent_points: Dictionary = {}
+## Puntos de skill sin gastar y skills aprendidas (ids de balance.json skills; AdocGrowth).
+var skill_points: int = 0
+var skills: Array[String] = []
 ## Chunks cuyo refugio ya se ha saqueado (hallazgos, ofrendas-v1.md): una vez por partida.
 var looted_refuges: Array[Vector2i] = []
 ## Última posición vista de cada Botarramas, para el mapa:
@@ -157,6 +171,12 @@ func new_game(new_seed: int = 0, new_region: StringName = &"valle_del_sara") -> 
 	player_cell = Vector2i(-1, -1)
 	xp = 0
 	level = 1
+	senda = 0
+	bando = &"fiel"
+	stat_points = 0
+	spent_points = {}
+	skill_points = 0
+	skills = []
 	luz = AdventureRules.start_luz()
 	hp = AdventureRules.max_hp()
 	riutash_count = 0
@@ -237,6 +257,12 @@ func to_dict() -> Dictionary:
 		"xp": xp,
 		"level": level,
 		"fama": fama,
+		"senda": senda,
+		"bando": String(bando),
+		"stat_points": stat_points,
+		"spent_points": spent_points,
+		"skill_points": skill_points,
+		"skills": skills,
 		"looted_refuges": looted_refuges.map(func(c: Vector2i) -> Array: return [c.x, c.y]),
 		"seen_monsters": seen_monsters,
 		"defeated_monsters": defeated_monsters,
@@ -260,10 +286,12 @@ func from_dict(data: Dictionary) -> void:
 	chunk = data.get("chunk", {})
 	chunk_coord = _to_vector2i(data.get("chunk_coord", [-1, -1]), Vector2i(-1, -1))
 	player_cell = _to_vector2i(data.get("player_cell", [-1, -1]), Vector2i(-1, -1))
-	luz = clampi(int(data.get("luz", AdventureRules.start_luz())), 0, AdventureRules.luz_max())
-	# Antes que los PV: su máximo depende del nivel. Sin nivel (v6 o anterior), el de su XP.
+	# Antes que los PV y la Luz: su máximo depende del nivel y de los puntos gastados. Sin nivel (v6
+	# o anterior), el de su XP.
 	xp = maxi(0, int(data.get("xp", 0)))
 	level = clampi(int(data.get("level", AdventureRules.level_for_xp(xp))), 1, AdventureRules.max_level())
+	_load_growth(data)
+	luz = clampi(int(data.get("luz", AdventureRules.start_luz())), 0, AdventureRules.luz_max())
 	hp = clampi(int(data.get("hp", AdventureRules.max_hp())), 1, AdventureRules.max_hp())
 	riutash_count = maxi(0, int(data.get("riutash_count", 0)))
 	bosque_hostility = _int_dict(data.get("bosque_hostility", {}), 0, 1 << 30)
@@ -415,6 +443,35 @@ func from_dict(data: Dictionary) -> void:
 				if old_version and monster == LEGACY_OFOMNI_ID:
 					monster = QUEST_OFOMNI_ID
 				seen_monsters[str(id)] = { "monster": monster, "bosque_id": int(e.get("bosque_id", -1)), "chunk": [c.x, c.y] }
+
+
+## Senda, bando, puntos y skills. v18: tal cual (saneados: Senda con sus topes, un bando válido,
+## puntos no negativos, gastos solo de stats conocidos y skills conocidas sin repetir). v17 o
+## anterior (tabla de niveles antigua): Senda 0, fiel, nada gastado y todos los puntos de stat y de
+## skill de su nivel por repartir (AdocGrowth.migrate_points).
+func _load_growth(data: Dictionary) -> void:
+	senda = clampi(int(data.get("senda", 0)), Senda.min_value(), Senda.max_value())
+	bando = StringName(str(data.get("bando", "fiel")))
+	if not Senda.BANDOS.has(bando):
+		bando = Senda.FIEL
+	if int(data.get("save_version", 1)) < 18:
+		AdocGrowth.migrate_points(level)
+		return
+	stat_points = maxi(0, int(data.get("stat_points", 0)))
+	spent_points = {}
+	var saved: Variant = data.get("spent_points", {})
+	if saved is Dictionary:
+		for stat: StringName in AdocGrowth.stat_order():
+			var points: int = int(saved.get(String(stat), 0))
+			if points > 0:
+				spent_points[String(stat)] = points
+	skill_points = maxi(0, int(data.get("skill_points", 0)))
+	skills = []
+	var learned: Variant = data.get("skills", [])
+	if learned is Array:
+		for id: Variant in learned:
+			if AdocGrowth.branch_of(StringName(str(id))) != &"" and not skills.has(str(id)):
+				skills.append(str(id))
 
 
 ## Bolsa y equipo. v11: tal cual (saneados). v10 o anterior: la lista de ofrendas "inventory"

@@ -397,11 +397,11 @@ func test_reparep_mission_and_failure() -> void:
 
 # --- Guardado --------------------------------------------------------------------------------------
 
-func test_save_v17_round_trip() -> void:
+func test_save_v17_fields_round_trip() -> void:
 	var q: Dictionary = FarQuests.new_quest(FarQuests.TYPE_FIRE, 5, Vector2i(3, 4), [_home, 2, 5] as Array[int], 7)
 	GameState.far_quests.append(q)
 	GameState.last_vision_day = 7
-	assert_eq(int(GameState.to_dict().save_version), 17)
+	assert_eq(int(GameState.to_dict().save_version), GameState.SAVE_VERSION)
 	assert_eq(SaveManager.save_game(SAVE_SLOT), OK)
 	GameState.new_game(7)
 	assert_eq(SaveManager.load_game(SAVE_SLOT), OK)

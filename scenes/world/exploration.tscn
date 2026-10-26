@@ -1,4 +1,4 @@
-[gd_scene load_steps=15 format=3]
+[gd_scene load_steps=16 format=3]
 
 [ext_resource type="Script" path="res://scripts/world/exploration.gd" id="1_expl"]
 [ext_resource type="Script" path="res://scripts/rpg/player_walker.gd" id="2_player"]
@@ -14,6 +14,7 @@
 [ext_resource type="Script" path="res://scripts/rpg/stealth_hud.gd" id="12_stealth"]
 [ext_resource type="Script" path="res://scripts/rpg/far_quest_runner.gd" id="13_far"]
 [ext_resource type="PackedScene" path="res://scenes/rpg/sleep_screen.tscn" id="14_sleep"]
+[ext_resource type="Script" path="res://scripts/rpg/senda_hud.gd" id="15_senda"]
 
 [node name="Exploration" type="Node2D"]
 script = ExtResource("1_expl")
@@ -76,6 +77,16 @@ offset_right = 318.0
 offset_bottom = 24.0
 mouse_filter = 2
 script = ExtResource("12_stealth")
+
+[node name="SendaHud" type="Control" parent="DebugHud"]
+layout_mode = 3
+anchors_preset = 0
+offset_left = 266.0
+offset_top = 15.0
+offset_right = 294.0
+offset_bottom = 24.0
+mouse_filter = 2
+script = ExtResource("15_senda")
 
 [node name="Transition" type="CanvasLayer" parent="."]
 layer = 10
