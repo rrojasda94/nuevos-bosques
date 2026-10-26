@@ -481,31 +481,52 @@ func test_valle_del_sara_west_range_is_walkable_hills() -> void:
 	assert_eq(bands, ceili(STRIP_END / float(WorldCoords.MACROS_PER_CHUNK)))
 
 
-## Afluentes del oeste (dueño, 2026-10-26: "no nacen en el Valle, no pueden nacer en Dorias porque
-## la cordillera lo impide"): el 3ro, el 5to y el 7mo nacen en un manantial dentro de la cordillera
-## occidental (x < STRIP_W), en nivel 2-3, y ningún agua toca el borde oeste en la franja. El 1ro
-## sigue naciendo en su colina con cumbre del sur de Cassie.
-func test_valle_del_sara_west_tributaries_rise_inside_the_range() -> void:
+## Nacimientos (dueño, 2026-10-26): los 7 afluentes nacen en un manantial pisable ("Fuente del
+## 1ro"… "Fuente del 7mo"), en nivel 2-3, pegado al primer píxel del río y sin ninguna cumbre en 2
+## celdas a la redonda. Los del oeste (3ro, 5to, 7mo) nacen dentro de la cordillera occidental
+## ("no nacen en el Valle, no pueden nacer en Dorias porque la cordillera lo impide") y ningún agua
+## toca el borde oeste.
+func test_valle_del_sara_tributaries_rise_in_walkable_springs() -> void:
 	var a := RegionAuthoring.load_region(&"valle_del_sara")
 	assert_true(a.is_valid(), "%s" % [a.errors])
-	var names: Array = []
+	var springs: Dictionary = {}
 	for p: Dictionary in a.places_of_type("manantial"):
-		names.append(p.name)
+		springs[p.name] = p.cell
 		var cell: Vector2i = p.cell
-		assert_between(cell.x, 1, STRIP_W - 1, "%s dentro de la cordillera occidental" % p.name)
-		assert_between(cell.y, LARR_ROWS, STRIP_END - 1, "%s dentro de la cordillera occidental" % p.name)
 		var h: int = a.height_at(cell)
 		assert_true(h == RegionAuthoring.Height.LEVEL_2 or h == RegionAuthoring.Height.LEVEL_3, "%s en la montaña" % p.name)
+		assert_true(a.is_walkable(cell), "%s se pisa" % p.name)
+		var touches: int = 0
+		for d: Vector2i in [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]:
+			touches += 1 if a.water_at(cell + d) == RegionAuthoring.Water.RIVER_NARROW else 0
+		assert_gte(touches, 1, "%s pegado a un río estrecho" % p.name)
+		for dy: int in range(-2, 3):
+			for dx: int in range(-2, 3):
+				assert_ne(a.height_at(cell + Vector2i(dx, dy)), RegionAuthoring.Height.PEAK, "%s sin cumbre al lado" % p.name)
+	for n: String in ["1ro", "2do", "3ro", "4to", "5to", "6to", "7mo"]:
+		assert_true(springs.has("Fuente del %s" % n), "Fuente del %s en lugares.csv" % n)
 	for n: String in ["3ro", "5to", "7mo"]:
-		assert_has(names, "Nacimiento del %s del Sara" % n)
+		var c: Vector2i = springs.get("Fuente del %s" % n, Vector2i(-1, -1))
+		assert_between(c.x, 1, STRIP_W - 1, "Fuente del %s dentro de la cordillera occidental" % n)
+		assert_between(c.y, LARR_ROWS, STRIP_END - 1, "Fuente del %s dentro de la cordillera occidental" % n)
 	for y: int in a.size_px.y:
 		assert_eq(a.water_at(Vector2i(0, y)), RegionAuthoring.Water.NONE, "agua en el borde oeste (Dorias) en y=%d" % y)
-	# El 1ro nace junto a una cumbre del sur de Cassie (84, 303): a su oeste está su cumbre de 3x3.
-	assert_ne(a.water_at(Vector2i(84, 303)), RegionAuthoring.Water.NONE, "el 1ro nace en (84, 303)")
-	assert_eq(a.height_at(Vector2i(82, 303)), RegionAuthoring.Height.PEAK, "el 1ro sigue naciendo en su cumbre")
+	# Fuera de Larr no quedan cumbres pegadas a ningún río: todo nacimiento es un manantial.
+	var peaks_by_water: int = 0
+	for y: int in range(LARR_ROWS, a.size_px.y):
+		for x: int in a.size_px.x:
+			if a.water_at(Vector2i(x, y)) == RegionAuthoring.Water.NONE:
+				continue
+			for d: Vector2i in [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]:
+				var n: Vector2i = Vector2i(x, y) + d
+				if n.y >= LARR_ROWS and a.height_at(n) == RegionAuthoring.Height.PEAK:
+					peaks_by_water += 1
+	assert_eq(peaks_by_water, 0, "ríos que nacen en una cumbre fuera de Larr")
 
 
-## Tarca de Azhin (dueño, 2026-10-26): lugar propio de tipo tarca junto a Azhin, accesible a pie.
+## Tarca de Azhin (dueño, 2026-10-26): lugar propio de tipo tarca, "a 20 o más casillas, pero más
+## al oeste, en las montañas, en lo alto de una montaña": dentro de la cordillera occidental, en
+## nivel 3 (lo más alto que se pisa) sin nada más alto en 2 celdas a la redonda, y accesible a pie.
 func test_valle_del_sara_has_the_tarca_of_azhin() -> void:
 	var a := RegionAuthoring.load_region(&"valle_del_sara")
 	var tarca: Dictionary = {}
@@ -519,7 +540,16 @@ func test_valle_del_sara_has_the_tarca_of_azhin() -> void:
 	if tarca.is_empty() or azhin.is_empty():
 		return
 	assert_eq(tarca.type, "tarca")
-	assert_lte(absi(tarca.cell.x - azhin.cell.x) + absi(tarca.cell.y - azhin.cell.y), 8, "la tarca está junto a Azhin")
+	var dist_tiles: float = Vector2(tarca.cell - azhin.cell).length() * RegionAuthoring.MACRO_TILES
+	assert_gte(dist_tiles, 20.0, "la tarca está a 20 casillas o más de Azhin")
+	assert_lt(tarca.cell.x, azhin.cell.x, "la tarca está al oeste de Azhin")
+	assert_lt(tarca.cell.x, STRIP_W, "la tarca está en la cordillera occidental")
+	assert_eq(a.height_at(tarca.cell), RegionAuthoring.Height.LEVEL_3, "la tarca está en nivel 3, en lo alto")
+	for dy: int in range(-2, 3):
+		for dx: int in range(-2, 3):
+			var n: Vector2i = tarca.cell + Vector2i(dx, dy)
+			if a.in_map(n):
+				assert_ne(a.height_at(n), RegionAuthoring.Height.PEAK, "nada más alto junto a la tarca en %s" % n)
 	assert_true(a.is_walkable(tarca.cell), "tarca en terreno transitable")
 	var walk: Dictionary = {}
 	for y: int in a.size_px.y:

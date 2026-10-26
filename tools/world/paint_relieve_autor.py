@@ -14,8 +14,9 @@ Datos del dueño (2026-10-26; docs/design/world/sur-lenfi.md, "Lugares con nombr
   pegada a Larr, en Lean. Fila villa_azhin de lugares.csv en AZHIN, y un camino (AZHIN_ROAD) hasta
   la red pintada más cercana.
 - Tarca de Azhin (dueño, 2026-10-26: "es un lugar mencionado en algunas partes de la historia
-  cuando te encuentras con ledai de Estrellazul"): fila tarca_azhin, tipo tarca, en TARCA, junto a
-  Azhin.
+  cuando te encuentras con ledai de Estrellazul"; "a 20 o más casillas, pero más al oeste, en las
+  montañas, en lo alto de una montaña"): fila tarca_azhin, tipo tarca, en TARCA, en nivel 3 (lo
+  más alto que se pisa) y sin nada más alto alrededor.
 
 Modifica las PNG de data/world/regions/valle_del_sara/ y lugares.csv. Hay que ejecutarlo DESPUÉS de
 tools/world/paint_afluentes.py (que con --from-ref rehace altura, agua y caminos desde la base y
@@ -52,8 +53,11 @@ AZHIN_ROW = ("villa_azhin,Azhin,villa,{x},{y},,,\"Villa pequeña, la más septen
 # Camino de Azhin a la red pintada: puntos de control (x, y) en px, trazo 4-conectado. El último
 # punto toca un camino que ya existe (el de Lean, al norte del 7mo del Sara).
 AZHIN_ROAD = [(16, 5), (16, 12), (44, 12), (51, 29)]
-TARCA = (21, 7)
-TARCA_ROW = ("tarca_azhin,Tarca de Azhin,tarca,{x},{y},,,\"Tarca (templo garelino) de Azhin, junto a la villa. "
+# En lo alto de la montaña al oeste de Azhin (dueño, 2026-10-26: "a 20 o más casillas, pero más al
+# oeste, en las montañas, en lo alto de una montaña"): nivel 3, sin cumbre, a unos 9 px (36 casillas).
+TARCA = (8, 8)
+TARCA_MIN_PX = 5  # 20 casillas
+TARCA_ROW = ("tarca_azhin,Tarca de Azhin,tarca,{x},{y},,,\"Tarca (templo garelino) de Azhin, en lo alto de la montaña al oeste de la villa. "
              "Aparece en la historia en el encuentro con los ledai de Estrellazul (dueño, 2026-10-26). "
              "Fila escrita por tools/world/paint_relieve_autor.py.\"")
 
@@ -167,6 +171,11 @@ def main() -> int:
     for pid, cell, template in [("villa_azhin", AZHIN, AZHIN_ROW), ("tarca_azhin", TARCA, TARCA_ROW)]:
         if agua.getpixel(cell)[3] or level_at(*cell) == 4:
             print(f"{pid} cae en el agua o en una cumbre en {cell}.", file=sys.stderr)
+            return 1
+        if pid == "tarca_azhin" and (level_at(*cell) != 3 or cell[0] > AZHIN[0] - TARCA_MIN_PX
+                                     or any(level_at(x, y) > 3 for y in range(cell[1] - 2, cell[1] + 3)
+                                            for x in range(max(0, cell[0] - 2), cell[0] + 3))):
+            print(f"La tarca de Azhin en {cell} no está en lo alto de una montaña al oeste de Azhin.", file=sys.stderr)
             return 1
         row = template.format(x=cell[0], y=cell[1])
         idx = next((i for i, ln in enumerate(out) if ln.startswith(pid + ",")), -1)
