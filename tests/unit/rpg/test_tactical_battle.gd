@@ -95,7 +95,10 @@ func test_at_most_three_per_side() -> void:
 		fighters.append({ "id": StringName("e%d" % k), "side": E, "agi": 5 })
 	fighters.append({ "id": &"adoc", "side": P, "agi": 5 })
 	var b := _battle(fighters)
-	assert_eq(b.units.size(), 4, "3 enemigos + el adoc")
+	assert_eq(b.on_board(E), 3, "3 enemigos en el tablero (cupo)")
+	assert_eq(b.on_board(P), 1, "el adoc")
+	assert_eq(b.waiting_units(E), [3, 4], "los otros 2 esperan en el borde (T1b)")
+	assert_eq(b.units[3].cell, Vector2i(-1, -1), "sin casilla mientras esperan")
 
 
 # --- CT -----------------------------------------------------------------------------------------

@@ -223,4 +223,8 @@ Palabras del dueño:
 - **#189**: tablero y cupo variables: ¿se confirman los 3 tamaños (8 × 6, 10 × 8, 14 × 10), la elección por la proporción transitable, N = 8 casillas por personaje (cupo entre 1 y 6) y los refuerzos por el borde para los que no caben?
 
 ### Pendiente en el plan de PR (tablero variable)
-- **T1b**: tamaño de tablero según el espacio, cupo por bando, refuerzos, y pantalla de elección de party (lógica y tests; la UI de T4 ya admite tamaño variable).
+- **T1b** (**hecho**): tamaño de tablero según el espacio, cupo por bando, refuerzos, y pantalla de elección de party (lógica y tests; la UI de T4 ya admite tamaño variable). Notas de implementación (`rpg-systems-dev`; valores en `balance.json`, `tactical.arena`):
+  - el recorte de 14 × 10 se pide a `WorldQuery.rect` cuando el mundo activo es el del Mundo 2.0 (casillas cargadas y no bloqueadas); si no, se lee del chunk de exploración antiguo, y sin chunk decide el bioma. El tablero sigue llano hasta T7; en el tablero llano, las casillas transitables del cupo se estiman como casillas × máx(proporción, 70%), porque el recorte se elige con al menos un 70% transitable;
+  - "el bioma desempata" se aplica cuando la proporción queda a 2 puntos o menos de un umbral; mientras el mundo no tenga biomas, el bioma es "bosque" (prefiere el medio);
+  - el refuerzo entra al empezar el turno siguiente a la caída o retirada, con CT 50, por la columna del borde de su lado (o la libre más cercana hacia dentro);
+  - los aliados que no eliges esperan en el borde y entran como refuerzo; la última elección se guarda por tipo de aliado (guardado v19).

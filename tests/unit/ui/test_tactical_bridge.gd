@@ -57,11 +57,13 @@ func test_build_battle_keeps_stats_roles_and_payment() -> void:
 func test_build_battle_caps_per_side_from_data() -> void:
 	var logic := _logic(4, 0)
 	var b: TacticalBattle = TacticalBridge.build_battle(logic)
-	assert_eq(b.units.size(), 4, "el Adoc y 3 enemigos (max_per_side 3)")
+	assert_eq(b.on_board(TacticalBattle.SIDE_ENEMY), 3, "3 enemigos en el tablero (max_per_side 3)")
+	assert_eq(b.waiting_units(TacticalBattle.SIDE_ENEMY).size(), 1, "el cuarto espera en el borde (T1b)")
 	var cfg: Dictionary = TacticalBattle.config_from_balance(logic.balance)
 	cfg.board = { "width": 14, "height": 10, "deploy_columns": 2, "max_per_side": 6, "ford_cost": 1 }
 	var big: TacticalBattle = TacticalBridge.build_battle(logic, cfg)
 	assert_eq(big.units.size(), 5, "con max_per_side 6 entran los 4")
+	assert_true(big.waiting_units(TacticalBattle.SIDE_ENEMY).is_empty())
 	assert_eq(big.board.width, 14)
 
 

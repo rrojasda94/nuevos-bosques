@@ -32,7 +32,7 @@ func load_game(slot: int) -> Error:
 	var version: int = int(data.get("save_version", 0))
 	if version < 1 or version > GameState.SAVE_VERSION:
 		return ERR_INVALID_DATA
-	# Migraciones: de v1 a v18 se añadieron campos; GameState.from_dict les da su valor por
+	# Migraciones: de v1 a v19 se añadieron campos; GameState.from_dict les da su valor por
 	# defecto (v3: Luz y PV iniciales, ningún Bosque abierto; v4: reloj al inicio del Momento de
 	# Gietos; v5: solo el chunk actual explorado y sin objetivo; v6: inventario vacío (antes era
 	# un diccionario), sin misiones (la exploración la vuelve a ofrecer), villa sana, 0 XP y fama
@@ -49,7 +49,16 @@ func load_game(slot: int) -> Error:
 	# relación aún <= -50 pasan a enojados; v15: nada colado ni usos gastados; v16: ningún encuentro
 	# con otros adoc; v17: ninguna misión lejana ni visión de Pensamiento; v18: Senda 0 y bando fiel, el mismo
 	# nivel con los stats automáticos nuevos, nada gastado y todos los puntos de stat y de skill de
-	# su nivel por repartir (AdocGrowth.migrate_points).
-	GameState.from_dict(data)
+	# su nivel por repartir (AdocGrowth.migrate_points); v19: ninguna party elegida (migrate).
+	GameState.from_dict(migrate(data))
 	EventBus.game_loaded.emit(slot)
 	return OK
+
+
+## Pasa los datos de una partida guardada al formato actual donde from_dict no basta con su valor
+## por defecto. v19 (combate táctico, T1b): sin last_party, la party elegida empieza vacía.
+static func migrate(data: Dictionary) -> Dictionary:
+	var out: Dictionary = data.duplicate(true)
+	if int(out.get("save_version", 0)) < 19 and not out.has("last_party"):
+		out["last_party"] = []
+	return out

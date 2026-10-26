@@ -6,10 +6,17 @@ extends RefCounted
 ## data/combat/balance.json (bloque tactical; config_from_balance le añade attack, defend_factor,
 ## tactics.roles y tactics.ai.finish_below, que se comparten con el combate por menú).
 ## - Combatientes: [{ id, side, agi, cell?, facing?, max_hp?, hp?, atk?, def?, role?, leader?,
-##   accepts_payment?, strong_every?, strong_factor? }] (side: SIDE_PLAYER o SIDE_ENEMY). Hasta
-##   board.max_per_side por bando (los demás se ignoran). Sin `cell`, se colocan en las columnas de
-##   su lado (el jugador en `player_side`, los enemigos en el opuesto). Sin `facing`, miran al
-##   bando contrario. El rol (attacker, defender, support) suma atk_bonus/def_bonus y da sus usos.
+##   accepts_payment?, strong_every?, strong_factor?, reserve? }] (side: SIDE_PLAYER o SIDE_ENEMY).
+##   Hasta board.max_per_side por bando (el cupo, TacticalArena) en el tablero, en el orden de la
+##   lista; los demás (y los que traen `reserve`) esperan en su borde (`waiting`, sin casilla ni
+##   turno). Sin `cell`, se colocan en las columnas de su lado (el jugador en `player_side`, los
+##   enemigos en el opuesto). Sin `facing`, miran al bando contrario. El rol (attacker, defender,
+##   support) suma atk_bonus/def_bonus y da sus usos.
+## - Refuerzos (T1b): cuando cae o se retira uno del tablero, su bando gana una entrada pendiente;
+##   al empezar el siguiente turno (begin_turn), el primero que espera de ese bando entra con CT
+##   ct.reinforce_ct en la casilla libre más cercana a su borde (TacticalBoard.entry_cells; si no
+##   hay ninguna libre, lo intenta en el turno siguiente). last_entries dice quién entró. Los que
+##   esperan cuentan para el final: no hay victoria mientras quede un enemigo esperando.
 ## - Mov = mov_base + floor((AGI − mov_agi_ref) / mov_agi_div), entre mov_min y mov_max; Salto =
 ##   jump_base + floor(AGI / jump_agi_div); se baja hasta Salto + drop_extra.
 ## - CT: inicial AGI × start_per_agi; cada tick CT += AGI (al menos 1, para que nadie se quede
@@ -31,7 +38,8 @@ extends RefCounted
 ##   altura) + Remate; luego ×Golpe fuerte y ×defend_factor si quien lo recibe se defiende. Cubrir:
 ##   si el golpe acierta a un protegido y su defensor sigue vecino a él, se lo lleva el defensor (con
 ##   su DEF y el mismo bono de posición). Animar, Remate y Golpe fuerte solo se gastan si acierta.
-## - Caídos (PV 0): se retiran del tablero (remove_unit). Victoria cuando no queda ningún enemigo;
+## - Caídos (PV 0): se retiran del tablero (remove_unit). Victoria cuando no queda ningún enemigo
+##   (ni en el tablero ni esperando);
 ##   derrota cuando no queda nadie del jugador o cae un combatiente `leader` (el adoc).
 ## - Ofrecer Luz u ofrenda (set_payment da el peaje, la Luz suelta y las ofrendas): paga y termina
 ##   el combate (APPEASED); no vale si algún enemigo en pie no acepta pagos. Huir: desde cualquier
@@ -128,6 +136,10 @@ var active_moved: bool = false
 var active_acted: bool = false
 ## Turnos jugados (para la UI y los tests).
 var turn_count: int = 0
+## Entradas de refuerzo pendientes por bando (una por cada caído o retirado del tablero).
+var pending_entries: Array[int] = [0, 0]
+## Quién entró como refuerzo al empezar el último turno (índices; para la UI).
+var last_entries: Array[int] = []
 
 
 func _init(tactical: Dictionary, battle_board: TacticalBoard, fighters: Array, rng_seed: int,
@@ -151,9 +163,9 @@ func _init(tactical: Dictionary, battle_board: TacticalBoard, fighters: Array, r
 	for f: Variant in fighters:
 		var data: Dictionary = f
 		var side: int = SIDE_ENEMY if int(data.get("side", SIDE_PLAYER)) == SIDE_ENEMY else SIDE_PLAYER
-		if per_side[side] >= max_side:
-			continue
-		per_side[side] += 1
+		var waiting: bool = per_side[side] >= max_side or bool(data.get("reserve", false))
+		if not waiting:
+			per_side[side] += 1
 		var agi: int = int(data.get("agi", 0))
 		var jump: int = jump_height(agi, movement_cfg)
 		var role: StringName = StringName(str(data.get("role", "")))
@@ -184,11 +196,12 @@ func _init(tactical: Dictionary, battle_board: TacticalBoard, fighters: Array, r
 			"mov": move_range(agi, movement_cfg),
 			"jump": jump,
 			"drop": jump + int(movement_cfg.get("drop_extra", 1)),
-			"cell": data.get("cell", Vector2i(-1, -1)),
+			"cell": Vector2i(-1, -1) if waiting else data.get("cell", Vector2i(-1, -1)),
 			"facing": data.get("facing", -1),
 			"ct": agi * int(ct_cfg.get("start_per_agi", 10)),
 			"tie": tie_rng.randi(),
-			"alive": true,
+			"alive": not waiting,
+			"waiting": waiting,
 		})
 	_place_units()
 
@@ -237,13 +250,17 @@ func _place_units() -> void:
 		else TacticalBoard.Side.LEFT
 	var taken: Dictionary = {}
 	for u: Dictionary in units:
-		if board.in_bounds(u.cell):
+		if u.alive and board.in_bounds(u.cell):
 			taken[u.cell] = true
 	for side: int in [SIDE_PLAYER, SIDE_ENEMY]:
 		var board_side: TacticalBoard.Side = player_side if side == SIDE_PLAYER else enemy_side
 		var cells: Array[Vector2i] = board.deploy_cells(board_side, columns, _count_side(side) + taken.size())
 		for u: Dictionary in units:
 			if u.side != side:
+				continue
+			if u.waiting:
+				if int(u.facing) < 0:
+					u.facing = _facing_from(board_side)
 				continue
 			if not board.in_bounds(u.cell):
 				for c: Vector2i in cells:
@@ -252,16 +269,72 @@ func _place_units() -> void:
 						break
 				taken[u.cell] = true
 			if int(u.facing) < 0:
-				u.facing = TacticalBoard.Facing.EAST if board_side == TacticalBoard.Side.LEFT \
-					else TacticalBoard.Facing.WEST
+				u.facing = _facing_from(board_side)
+
+
+## Orientación de quien sale de un lado: hacia el lado contrario.
+static func _facing_from(board_side: TacticalBoard.Side) -> TacticalBoard.Facing:
+	return TacticalBoard.Facing.EAST if board_side == TacticalBoard.Side.LEFT else TacticalBoard.Facing.WEST
+
+
+## Lado del tablero de un bando.
+func board_side_of(side: int) -> TacticalBoard.Side:
+	if side == SIDE_PLAYER:
+		return player_side
+	return TacticalBoard.Side.RIGHT if player_side == TacticalBoard.Side.LEFT else TacticalBoard.Side.LEFT
 
 
 func _count_side(side: int) -> int:
 	var n: int = 0
 	for u: Dictionary in units:
-		if u.side == side:
+		if u.side == side and u.alive:
 			n += 1
 	return n
+
+
+# --- Refuerzos (T1b) ----------------------------------------------------------------------------
+
+## Índices de los que esperan en el borde de un bando, en orden de entrada.
+func waiting_units(side: int) -> Array[int]:
+	var out: Array[int] = []
+	for i in units.size():
+		if units[i].side == side and units[i].waiting:
+			out.append(i)
+	return out
+
+
+## Combatientes de un bando en el tablero.
+func on_board(side: int) -> int:
+	return _count_side(side)
+
+
+## Entran los refuerzos pendientes de cada bando (el jugador primero), con CT reinforce_ct, en la
+## casilla libre más cercana a su borde. Sin casilla libre, quedan pendientes. Devuelve quién entró.
+func deploy_reinforcements() -> Array[int]:
+	var out: Array[int] = []
+	for side: int in [SIDE_PLAYER, SIDE_ENEMY]:
+		var queue: Array[int] = waiting_units(side)
+		if queue.is_empty():
+			pending_entries[side] = 0
+			continue
+		var board_side: TacticalBoard.Side = board_side_of(side)
+		var free: Array[Vector2i] = []
+		for c: Vector2i in board.entry_cells(board_side):
+			if unit_at(c) == NONE:
+				free.append(c)
+		while pending_entries[side] > 0 and not queue.is_empty() and not free.is_empty():
+			var i: int = queue.pop_front()
+			var u: Dictionary = units[i]
+			u.cell = free.pop_front()
+			u.alive = true
+			u.waiting = false
+			u.ct = int(ct_cfg.get("reinforce_ct", 50))
+			u.facing = _facing_from(board_side)
+			pending_entries[side] -= 1
+			out.append(i)
+		if queue.is_empty():
+			pending_entries[side] = 0
+	return out
 
 
 # --- Turnos CT ----------------------------------------------------------------------------------
@@ -278,6 +351,8 @@ func set_ct(index: int, value: int) -> void:
 
 ## Retira a un combatiente (caído o huido): deja de jugar y de ocupar casilla.
 func remove_unit(index: int) -> void:
+	if units[index].alive:
+		pending_entries[int(units[index].side)] += 1
 	units[index].alive = false
 	covers.erase(index)
 	_drop_covers_by(index)
@@ -289,8 +364,10 @@ func remove_unit(index: int) -> void:
 ## índice, o NONE si no queda nadie en pie.
 func begin_turn() -> int:
 	assert(active == NONE, "Termina el turno antes de empezar otro")
+	last_entries = []
 	if is_over():
 		return NONE
+	last_entries = deploy_reinforcements()
 	var cts: Array[int] = _cts()
 	var next: int = _advance(cts)
 	for i in units.size():
@@ -752,7 +829,7 @@ func check_end() -> void:
 	var players: int = 0
 	var enemies: int = 0
 	for u: Dictionary in units:
-		if u.alive:
+		if u.alive or u.waiting:
 			if u.side == SIDE_PLAYER:
 				players += 1
 			else:

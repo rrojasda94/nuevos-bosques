@@ -15,7 +15,12 @@ extends CanvasLayer
 ## - Números de daño flotando ("Falla" si esquiva) y una línea corta con el nombre de la acción.
 ## - Turnos de la IA (T5): los enemigos siempre con TacticalAI; los aliados, cuando el jugador elige
 ##   Auto en su menú. Quien huye o se retira por el borde se desvanece.
-## No aplica nada a GameState.
+## - Party y refuerzos (T1b): antes del combate, si la party no cabe en el cupo (board.max_per_side)
+##   y no es una emboscada, abre TacticalPartyScreen (preseleccionada con GameState.last_party, que
+##   guarda al confirmar: TacticalParty.save_choice). Quien no entra espera en su borde: la línea de
+##   orden lo muestra a la derecha, apagado, tras la marca "Espera"; al entrar como refuerzo aparece
+##   en su casilla con la línea corta "Refuerzo".
+## Solo toca GameState para guardar la party elegida.
 
 signal finished(logic: BattleLogic)
 
@@ -26,6 +31,10 @@ const CAMERA_SPEED: float = 10.0
 const ORDER_COUNT: int = 12
 const ORDER_ICON: float = 12.0
 const ORDER_STEP: float = 13.0
+## Separación y opacidad de los que esperan en la línea de orden (T1b).
+const WAITING_GAP: float = 6.0
+const WAITING_ALPHA: float = 0.45
+const PARTY_SCENE: PackedScene = preload("res://scenes/rpg/tactical_party_screen.tscn")
 ## Tiempos de animación (segundos).
 const STEP_TIME: float = 0.09
 const FLOAT_TIME: float = 0.8
@@ -73,6 +82,10 @@ var _cam_ready: bool = false
 var _follow: Vector2i = Vector2i(-1, -1)
 ## Entradas del menú abierto (ids de TacticalTurnFlow o índices de ofrenda).
 var _menu_ids: Array = []
+## Paso de elección de party abierto (T1b), o null.
+var party_screen: TacticalPartyScreen
+var _cfg: Dictionary = {}
+var _board_override: TacticalBoard
 
 @onready var _clip: Control = $Root/BoardClip
 @onready var _board: Node2D = $Root/BoardClip/Board
@@ -101,14 +114,37 @@ func _ready() -> void:
 
 
 ## Empieza el combate desde el BattleLogic que prepara Crossing (o la demo). `cfg` y `board`
-## permiten a la demo probar otros tamaños; por defecto, los de balance.json y un tablero llano.
+## permiten elegir el tamaño y el cupo (TacticalArena, T1b) o probar otros en la demo; por defecto,
+## los de balance.json y un tablero llano. Antes, la elección de party si hace falta; en una
+## emboscada del enemigo (`ambush`, T6) entra la última party guardada sin preguntar.
 func begin(battle_logic: BattleLogic, style: Dictionary, kind: UnicoArt.Kind, ally_clothes: Array = [],
-		cfg: Dictionary = {}, board: TacticalBoard = null) -> void:
+		cfg: Dictionary = {}, board: TacticalBoard = null, ambush: bool = false) -> void:
 	logic = battle_logic
 	_style = style
 	_kind = kind
 	_ally_clothes = ally_clothes
-	battle = TacticalBridge.build_battle(logic, cfg, board)
+	_cfg = cfg if not cfg.is_empty() else TacticalBattle.config_from_balance(logic.balance)
+	_board_override = board
+	var quota: int = int((_cfg.get("board", {}) as Dictionary).get("max_per_side", 3))
+	var party: Dictionary = TacticalParty.resolve(logic.allies, quota, TacticalParty.last_choice(), ambush)
+	if party.prompt:
+		party_screen = PARTY_SCENE.instantiate()
+		add_child(party_screen)
+		party_screen.open(logic.allies, quota, party.chosen)
+		party_screen.confirmed.connect(_on_party_confirmed)
+		return
+	_start(party.chosen)
+
+
+func _on_party_confirmed(chosen: Array[int]) -> void:
+	TacticalParty.save_choice(logic.allies, chosen)
+	party_screen.queue_free()
+	party_screen = null
+	_start(chosen)
+
+
+func _start(chosen: Array[int]) -> void:
+	battle = TacticalBridge.build_battle(logic, _cfg, _board_override, chosen)
 	flow = TacticalTurnFlow.new(battle)
 	_build_units()
 	_tiles.queue_redraw()
@@ -118,7 +154,6 @@ func begin(battle_logic: BattleLogic, style: Dictionary, kind: UnicoArt.Kind, al
 # --- Unidades -----------------------------------------------------------------------------------
 
 func _build_units() -> void:
-	var adoc_index: int = 0
 	for i in battle.units.size():
 		var u: Dictionary = battle.units[i]
 		var id: StringName = u.id
@@ -132,8 +167,9 @@ func _build_units() -> void:
 			var ally: Dictionary = logic.allies[k]
 			unit_name = str(ally.name)
 			if StringName(str(ally.get("kind", "adoc"))) == &"adoc":
+				# La ropa va por el orden de los adoc en logic.allies (la party puede cambiar el orden).
+				var adoc_index: int = _adoc_rank(k)
 				var clothes: Dictionary = _ally_clothes[adoc_index] if adoc_index < _ally_clothes.size() else {}
-				adoc_index += 1
 				for dir: Vector2i in FACING_DIRS:
 					textures.append(AdocNpc.frame_texture(clothes, dir))
 			else:
@@ -165,6 +201,15 @@ func _build_units() -> void:
 		_views.append({ "node": node, "sprite": sprite, "bar": bar, "back": back, "textures": textures,
 			"name": unit_name, "height": size.y })
 		_place_unit(i)
+
+
+## Cuántos aliados adoc hay antes del aliado `k` de logic.allies.
+func _adoc_rank(k: int) -> int:
+	var n: int = 0
+	for j: int in k:
+		if StringName(str((logic.allies[j] as Dictionary).get("kind", "adoc"))) == &"adoc":
+			n += 1
+	return n
 
 
 ## El Adoc del jugador mirando hacia `dir` (fila de su hoja o el placeholder).
@@ -223,6 +268,11 @@ func _next_turn() -> void:
 	if i == TacticalBattle.NONE:
 		_finish()
 		return
+	for entered: int in battle.last_entries:
+		(_views[entered].node as Node2D).modulate.a = 1.0
+		_place_unit(entered)
+	if not battle.last_entries.is_empty():
+		_show_action_line(Texts.get_text("tactical_reinforce"))
 	_follow = battle.units[i].cell
 	_draw_order()
 	_refresh()
@@ -582,6 +632,41 @@ func _draw_order() -> void:
 		if k == 0:
 			mark.color = COLOR_CURSOR
 			mark.size.y = 2.0
+	_draw_waiting(ORDER_STEP * order.size() + WAITING_GAP, back)
+
+
+## Los que esperan en el borde (T1b): tras la línea de orden, la marca "Espera" y sus iconos
+## apagados (primero los del jugador), con la raya de su bando.
+func _draw_waiting(x: float, back: ColorRect) -> void:
+	var waiting: Array[int] = battle.waiting_units(TacticalBattle.SIDE_PLAYER)
+	waiting.append_array(battle.waiting_units(TacticalBattle.SIDE_ENEMY))
+	if waiting.is_empty():
+		return
+	var label := Label.new()
+	label.text = Texts.get_text("tactical_waiting")
+	label.theme_type_variation = &"HintLabel"
+	label.position = Vector2(x, -1.0)
+	label.size = Vector2(28.0, ORDER_ICON)
+	_order_line.add_child(label)
+	x += label.get_minimum_size().x + 2.0
+	for k: int in waiting.size():
+		var i: int = waiting[k]
+		var icon := TextureRect.new()
+		icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		var textures: Array[Texture2D] = _views[i].textures
+		icon.texture = textures[2] if textures.size() == 4 else textures[0]
+		icon.size = Vector2(ORDER_ICON, ORDER_ICON)
+		icon.position = Vector2(x + ORDER_STEP * k, 0.0)
+		icon.modulate.a = WAITING_ALPHA
+		_order_line.add_child(icon)
+		var mark := ColorRect.new()
+		mark.color = COLOR_PLAYER if battle.units[i].side == TacticalBattle.SIDE_PLAYER else COLOR_ENEMY
+		mark.color.a = WAITING_ALPHA
+		mark.size = Vector2(ORDER_ICON, 1.0)
+		mark.position = Vector2(x + ORDER_STEP * k, ORDER_ICON + 1.0)
+		_order_line.add_child(mark)
+	back.size.x = x + ORDER_STEP * waiting.size() + 2.0
 
 
 # --- Dibujo del tablero -------------------------------------------------------------------------

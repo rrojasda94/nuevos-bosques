@@ -49,11 +49,17 @@ Todos los cambios que nota el jugador. Formato [Keep a Changelog](https://keepac
   - Al terminar su turno, cada uno mira hacia la amenaza más cercana.
   - Sigues llevando a todo tu grupo, pero en el turno de un aliado puedes elegir **Auto**: juega ese turno él solo según su rol (el apoyo venda al herido o anima a quien va a golpear, el defensor cubre al herido, el atacante remata al que está por debajo del 30%, y quien está muy herido se aleja y se defiende).
   - **Orden** en el menú (Libre, Atacar o Defender), sin gastar nada: con Atacar, los aliados en Auto van a por tu último objetivo; con Defender, se agrupan a tu lado, vendan, cubren y se defienden.
+- Combate táctico, tablero según el espacio, party y refuerzos (sigue apagado por defecto; textos y valores provisionales):
+  - El tablero tiene el tamaño del sitio donde empieza el combate: **pequeño** (8 × 6) si alrededor hay poco espacio libre, **medio** (10 × 8) o **grande** (14 × 10) si es abierto. En el grande cada bando se coloca en 3 columnas (2 en los demás).
+  - Cuántos entran por bando depende del tamaño (de 1 a 6, el mismo número para los dos): lo típico es 2 en un sitio cerrado, 3 o 4 en uno medio y 6 en uno abierto.
+  - Si tienes más aliados de los que caben, antes del combate eliges quiénes entran. Tú siempre entras, la elección viene marcada con la última que usaste y se confirma con "Al combate". Si caben todos, no se pregunta.
+  - Quien no cabe (de los dos bandos) **espera en el borde** y entra como **refuerzo** cuando cae o se retira uno de los suyos. Arriba, junto a la línea de turnos, se ven apagados tras "Espera". Al entrar, aparece en su borde y se avisa con "Refuerzo".
 
 ### Cambiado
 - La cordillera occidental del Valle del Sara (Urd Gumnavis) ya no tiene cumbres: son colinas y montañas que se cruzan a pie. El 3ro, el 5to y el 7mo del Sara nacen en manantiales de esa cordillera y bajan desde allí al Sara.
 - El Ofomni descarriado tiene más PV (×0,85 en vez de ×0,7: 29 con d = 4) para que siga siendo un reto con los puntos de stat. En nivel 3 lo vence cualquier reparto de combate (todo ATQ, todo DEF, equilibrado o, más justo, todo Vigor); en nivel 2 o con todo a Luz sigue perdiendo casi siempre.
 - El guardado pasa a la versión 18 (Senda, bando, puntos sin gastar, puntos gastados por stat y skills). Las partidas anteriores conservan su nivel, recalculan los stats con el crecimiento automático nuevo y reciben todos los puntos de stat y de skill de su nivel para repartirlos.
+- El guardado pasa a la versión 19: recuerda la última party que elegiste para el combate táctico. Las partidas anteriores cargan sin ninguna elegida.
 
 ## [0.3.0] - 2026-10-25
 "El Bosque recuerda": los Bosques tienen memoria, relación y estado; frutos, inventario y equipo; sigilo; Únicos que rondan, cazan y persiguen; combate en grupo con aliados; dormir y Pensamiento; reloj del riutash y arte de terreno.
