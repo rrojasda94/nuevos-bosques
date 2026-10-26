@@ -8,7 +8,7 @@
 > | # | PR | Fichas | Depende de |
 > |---|---|---|---|
 > | 1 | **Villas vivas y diálogos**: prioridad de oficios por tamaño de villa (obligatorios: Pholua, Ildo, Sfida, Folas/Folat, Sarua), cada oficiante en su sitio, rutinas por Momento (de día trabajan, de noche duermen en las casas), diálogos por oficio | `npcs-y-villas.md` | 0.4 (villas con nombre y colocación en el Mundo 2.0) |
-> | 2 | Senda, puntos y skills (Sombra / Confianza) **y estado de bando** (fiel / en duda / garelino) | `moralidad-y-progresion.md`, `dos-caminos.md` | 0.3 |
+> | 2 | Senda, puntos y skills (Sombra / Confianza) **y estado de bando** (fiel / en duda / garelino) — **Hecho** (PR #62): Senda e iconos, bando fiel / en duda, pestaña "Crecer" con 3 puntos, ramas de skills, afinidad de adoc y Ofomni descarriado ×0,85. El bando garelino llega con el PR 4 | `moralidad-y-progresion.md`, `dos-caminos.md` | 0.3 |
 > | 3 | Garelinos: enemigo humano no letal, campamentos y ataques a Bosques | `monstruos.md` | 0.3 (combate en grupo, estados de Bosque) |
 > | 4 | Encuentro con los garelinos y cambio de bando (mecánica, con textos genéricos) | `dos-caminos.md` | 2, 3 |
 > | 4b | **IA de combate**: iniciativa (AGI, Apresurar, Esperar), formación delante/detrás, roles (atacante, defensor, apoyo), perfiles de enemigo y órdenes al grupo. PR propio antes del grupo garelino: lo usan los garelinos enemigos (PR 3), los aliados adoc y el grupo (PR 5) | `ia-de-combate.md` | 3; 0.3 (combate en grupo) |
