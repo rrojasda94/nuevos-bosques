@@ -13,12 +13,15 @@ extends Node2D
 ##
 ## No toca GameState (solo lee la seed si no se da otra). La exploración nueva (M17) la
 ## instanciará en lugar de la vieja y le conectará `cell_changed` del jugador a las reglas.
-## Arranque: godot --path . res://scenes/world/world_view.tscn [-- --seed=N --capture=<png>]
+## Arranque: godot --path . res://scenes/world/world_view.tscn [-- --seed=N --chunk=x,y --cell=x,y --capture=<png>]
+## (`--chunk` aparece en el hub de ese chunk en vez de en la villa natal; `--cell`, en esa
+## casilla global.)
 
 ## La WorldPregen terminó el anillo inicial y los sectores de la vista están montados.
 signal world_ready
 
 const DEFAULT_SEED: int = 42
+const LOADING_SCENE: PackedScene = preload("res://scenes/ui/world_loading.tscn")
 const CAPTURE_SCALE: int = 3
 const CAPTURE_WALK_FRAMES: int = 45
 
@@ -69,6 +72,10 @@ func _setup() -> void:
 			cache = null
 	pregen = WorldPregen.new(plan, builder, cache)
 	pregen.start()
+	var screen: Node = LOADING_SCENE.instantiate()
+	add_child(screen)
+	screen.track(pregen)
+	await get_tree().process_frame
 	var home_style: Dictionary = {}
 	var home_bosque: int = plan.bosque_at(plan.home_chunk)
 	if home_bosque >= 0 and home_bosque < plan.bosques.styles.size():
@@ -78,13 +85,14 @@ func _setup() -> void:
 	ground.tile_set = ts
 	overlay.tile_set = ts
 	painter.build_textures()
-	while not pregen.is_ring_complete():
-		pregen.poll()
-		_label.text = "Creando el mundo… %d/%d" % [pregen.ring_done(), pregen.ring_total()]
-		await get_tree().process_frame
+	if not pregen.is_ring_complete():
+		await screen.finished
+	screen.queue_free()
 	streamer = WorldStreamer.new(plan, pregen, cache, painter, ground, overlay, objects)
-	var home: WorldChunk = pregen.get_chunk(plan.home_chunk)
-	player.place_at_cell(WorldCoords.to_world_cell(plan.home_chunk, home.hub))
+	var start_chunk: Vector2i = _arg_vec("--chunk=", plan.home_chunk)
+	start_chunk = WorldCoords.world_cell_to_chunk(_arg_vec("--cell=", WorldCoords.to_world_cell(start_chunk, Vector2i.ZERO)))
+	var start: WorldChunk = pregen.get_chunk(start_chunk)
+	player.place_at_cell(_arg_vec("--cell=", WorldCoords.to_world_cell(start_chunk, start.hub)))
 	player.is_blocked = streamer.is_blocked
 	var size_px: Vector2i = plan.size_chunks * WorldCoords.CHUNK_PX
 	camera.limit_left = 0
@@ -142,15 +150,23 @@ func _arg_string(prefix: String) -> String:
 	return ""
 
 
+## "x,y" -> Vector2i (o `fallback`).
+func _arg_vec(prefix: String, fallback: Vector2i) -> Vector2i:
+	var parts: PackedStringArray = _arg_string(prefix).split(",")
+	if parts.size() == 2 and parts[0].is_valid_int() and parts[1].is_valid_int():
+		return Vector2i(int(parts[0]), int(parts[1]))
+	return fallback
+
+
 func _arg_int(prefix: String, fallback: int) -> int:
 	var s: String = _arg_string(prefix)
 	return int(s) if s.is_valid_int() else fallback
 
 
-## Anda unos pasos hacia la derecha y abajo, guarda la imagen ×CAPTURE_SCALE y sale.
+## Anda unos pasos hacia la izquierda y abajo, guarda la imagen ×CAPTURE_SCALE y sale.
 func _capture(path: String) -> void:
 	_label.visible = false
-	Input.action_press(&"move_right", 1.0)
+	Input.action_press(&"move_left", 1.0)
 	Input.action_press(&"move_down", 0.4)
 	for _i: int in CAPTURE_WALK_FRAMES:
 		await get_tree().physics_frame
@@ -159,6 +175,6 @@ func _capture(path: String) -> void:
 	img.resize(img.get_width() * CAPTURE_SCALE, img.get_height() * CAPTURE_SCALE, Image.INTERPOLATE_NEAREST)
 	var err: Error = img.save_png(path)
 	print("captura %s: %s" % [path, error_string(err)])
-	Input.action_release(&"move_right")
+	Input.action_release(&"move_left")
 	Input.action_release(&"move_down")
 	get_tree().quit()

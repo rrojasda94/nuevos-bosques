@@ -545,9 +545,9 @@ static func _ground_code(ch: WorldChunk, gg: PackedByteArray, gl: PackedByteArra
 	if _is_water(g):
 		if gc[k - _W] == WorldChunk.Cliff.WATERFALL:
 			return encode(Src.WATERFALL, _waterfall_col(gc, k - _W), 3)
-		var row: int = 4 if g == WorldChunk.Ground.FORD else (0 if g == WorldChunk.Ground.RIVER_NARROW else 2)
+		var water_row: int = 4 if g == WorldChunk.Ground.FORD else (0 if g == WorldChunk.Ground.RIVER_NARROW else 2)
 		var keep: int = _WATER | (1 << WorldChunk.Ground.BRIDGE)
-		return encode(Src.WATER, _mask_not(gg, k, keep), row)
+		return encode(Src.WATER, _mask_not(gg, k, keep), water_row)
 	return encode(Src.GRASS_HIGH if high else Src.GRASS, ch.variant[i] % 4, 0)
 
 
