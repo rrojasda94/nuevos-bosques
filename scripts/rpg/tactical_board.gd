@@ -16,7 +16,8 @@ extends RefCounted
 ## - reachable/path_to: Dijkstra con coste por casilla (1, o ford_cost en un vado), con casillas que
 ##   no se pueden cruzar (enemigos) y casillas en las que no se puede acabar (cualquier ocupada).
 ## - Colocación: deploy_cells da las casillas de las `deploy_columns` columnas de un lado, primero
-##   la columna interior y las filas del centro.
+##   la columna interior y las filas del centro. entry_cells, las de entrada de un refuerzo (T1b):
+##   primero la columna del borde.
 ## - Bordes (huida desde cualquier borde, #184) y adyacencia ortogonal.
 ## No decide turnos ni acciones (TacticalBattle) ni elige el recorte del mundo (sesión del Mundo 2.0).
 
@@ -327,6 +328,21 @@ func deploy_cells(side: int, columns: int, needed: int = 0) -> Array[Vector2i]:
 			if is_walkable(c):
 				out.append(c)
 		extra += 1
+	return out
+
+
+## Casillas de entrada de un refuerzo (T1b): transitables, primero la columna del borde de su lado
+## y, dentro de cada columna, las filas del centro hacia fuera; luego las columnas siguientes hacia
+## el centro ("Refuerzo con su columna ocupada: entra por la casilla libre más cercana de su borde").
+func entry_cells(side: int) -> Array[Vector2i]:
+	var out: Array[Vector2i] = []
+	var rows: Array[int] = _center_rows()
+	for k in width:
+		var col: int = k if side == Side.LEFT else width - 1 - k
+		for row: int in rows:
+			var c := Vector2i(col, row)
+			if is_walkable(c):
+				out.append(c)
 	return out
 
 

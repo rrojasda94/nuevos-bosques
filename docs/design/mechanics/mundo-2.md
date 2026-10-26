@@ -138,7 +138,7 @@ Cada uno de los **7 afluentes** tiene su fuente **visible** en el sitio donde na
   - Alrededor, un **claro de 1 celda gruesa (4×4)** sin árboles ni decoración que bloquee, para que se vea de un vistazo (pilar 3).
 - **Dónde**:
   - **3ro, 5to y 7mo**: en su lugar `manantial_<n>` de `lugares.csv`, que ya existe.
-  - **1ro, 2do, 4to y 6to**: nacen en una cumbre, que no se pisa. Su fuente va en la **primera casilla transitable del río al pie de la cumbre**. Para eso hacen falta 4 filas nuevas `manantial_1`, `manantial_2`, `manantial_4` y `manantial_6`, que escribe `tools/world/paint_afluentes.py`, igual que las otras.
+  - **1ro, 2do, 4to y 6to**: **decidido** (dueño, 2026-10-26): nacen también en un **manantial pisable**, como el 3ro, el 5to y el 7mo, en montaña o colina alta transitable (no en la cumbre). Hacen falta 4 filas nuevas `manantial_1`, `manantial_2`, `manantial_4` y `manantial_6`, que escribe `tools/world/paint_afluentes.py`, igual que las otras.
   - Cuenta como uno de los puntos de interés del chunk (ya es un `PLACE` del CSV, `generation.md` §3) y le llega sendero.
 - **Nombre al acercarse**: a **≤ 4 casillas** del borde de la huella sale un rótulo con el nombre del lugar (columna `nombre` de `lugares.csv`) durante 3 s, una vez por visita.
   - Desde ese momento queda marcado en el mapa M.
@@ -255,7 +255,5 @@ Propuestas, a confirmar con el dueño:
 - Cansancio al correr (#73): con chunks de 80 correr es casi obligatorio; la estamina lo equilibrará.
 - Navegación por ríos grandes (#74): con lagunas y ríos pintados, ¿barca en la 0.4 o más adelante?
 - Bosques que no dejan andar de noche (#75): con el relieve, ¿mesetas que de noche solo se suben por escalera?
-- **Fuentes de los afluentes que nacen en una cumbre** (1ro, 2do, 4to y 6to):
-  - propuesta: la fuente va al pie de la cumbre, en la primera casilla del río que se pisa;
-  - pregunta al dueño: ¿le vale, o prefiere que esos 4 nazcan también en un manantial que se pisa, como el 3ro, el 5to y el 7mo?
+- ~~Fuentes de los afluentes que nacen en una cumbre~~: decidido (2026-10-26), manantial pisable para los 7.
 - ¿Los Únicos ven a través de los riscos? El ADR deja `level[]` preparado; propuesta para más adelante: no ven a un nivel más alto que el suyo a más de 3 casillas.

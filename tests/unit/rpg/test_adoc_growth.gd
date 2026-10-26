@@ -215,7 +215,7 @@ func test_save_v18_round_trip() -> void:
 	assert_eq(SaveManager.save_game(SAVE_SLOT), OK)
 	GameState.new_game(1)
 	assert_eq(SaveManager.load_game(SAVE_SLOT), OK)
-	assert_eq(int(GameState.to_dict().save_version), 18)
+	assert_eq(int(GameState.to_dict().save_version), GameState.SAVE_VERSION)
 	assert_eq(GameState.senda, -12)
 	assert_eq(GameState.bando, Senda.EN_DUDA, "el bando se guarda (la histéresis no lo recalcula al cargar)")
 	assert_eq(GameState.stat_points, expected_points, "los no gastados se guardan")

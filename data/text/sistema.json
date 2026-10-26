@@ -76,6 +76,11 @@
   "monster_ofomni": "Ofomni",
   "monster_ofomni_descarriado": "Ofomni descarriado",
   "map_legend_botarramas": "Botarramas",
+  "$provisional_map_region": "Textos map_legend_aldea, map_legend_water, map_legend_border y map_legend_place (mapa M con la vista de la región, M16) provisionales: pendientes de revisión de narrative-writer.",
+  "map_legend_aldea": "Aldea",
+  "map_legend_water": "Agua",
+  "map_legend_border": "Límite de Bosque",
+  "map_legend_place": "Lugar",
   "$provisional_fruit": "Textos fruit_* provisionales: pendientes de revisión de narrative-writer.",
   "fruit_taken": "Tomas un fruto del Bosque. +%d PV",
   "fruit_one_per_momento": "El Bosque solo ofrece un fruto por Momento. Tomar otro sería robar.",
@@ -382,5 +387,12 @@
   "tactical_victory": "¡Victoria!",
   "tactical_defeat": "Caes. Despertarás junto a un Nujio.",
   "tactical_fled": "Tu grupo huye del combate.",
-  "tactical_appeased": "El Único acepta tu pago y se va."
+  "tactical_appeased": "El Único acepta tu pago y se va.",
+  "$provisional_tactical_t1b": "Textos de la party y los refuerzos del combate táctico (T1b): provisionales, pendientes de revisión de narrative-writer.",
+  "tactical_reinforce": "Refuerzo",
+  "tactical_waiting": "Espera",
+  "tactical_party_title": "¿Quién entra? %d de %d",
+  "tactical_party_adoc": "%s (siempre)",
+  "tactical_party_confirm": "Al combate",
+  "tactical_party_hint": "E: marcar\nLos demás esperan en el borde."
 }
