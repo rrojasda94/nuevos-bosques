@@ -27,5 +27,9 @@ jobs:
         continue-on-error: true
         run: '"$GODOT" --headless --path . -s tools/world/bench_chunks.gd'
       - name: Banco del ChunkBuilder del Mundo 2.0 (aviso, nunca falla)
+        # M9: la región entera (192 chunks), mediana, p95 y ms por fase. Objetivo en el PC de
+        # referencia: mediana <= 80 ms y p95 <= 150 ms. Nunca falla: si el banco no termina, avisa.
         continue-on-error: true
-        run: '"$GODOT" --headless --path . -s tools/world/bench_chunks.gd -- --builder=world'
+        run: |
+          timeout 600 "$GODOT" --headless --path . -s tools/world/bench_chunks.gd -- --builder=world --count=192 --profile \
+            || echo "::warning::bench_chunks --builder=world no terminó (código $?)"
