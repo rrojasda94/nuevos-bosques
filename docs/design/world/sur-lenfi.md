@@ -74,7 +74,9 @@ Confirmado por el dueño:
 
 Están pintados en `data/world/regions/valle_del_sara/agua.png` y salen de `tools/world/paint_afluentes.py` (puntos de control editables). Cada uno nace en una cumbre pequeña con colinas alrededor (`altura.png`). Donde cruza un camino lleva puente (`caminos.png`) y tiene algún vado. Su nombre está en `lugares.csv` como `lugar`, junto al río, y la vista previa lo rotula. El trazado sigue los límites del mapa a mano *(lectura)*, pasado a la escala de la autoría (el Valle del Sara del mapa → 12×16 chunks, 240×320 px).
 
-**Estrecho o navegable** (regla del script): el afluente es estrecho desde el nacimiento y pasa a navegable en el primer píxel de nivel 0-1 a partir del cual ya no vuelve a cruzar 8 celdas seguidas de nivel 2 o más. Si lo navegable del final mide menos de 8 celdas, se queda todo estrecho. El norte del valle (Lean, Causie, Tossie, Alss) es casi todo nivel 2-3 y allí el propio Sara también es estrecho; por eso el 6to y el 7mo no llegan a salir de la montaña y son estrechos enteros.
+**Estrecho o navegable** (regla del script): el afluente es estrecho desde el nacimiento y pasa a navegable en el primer píxel de nivel 0-1 a partir del cual ya no vuelve a cruzar 8 celdas seguidas de nivel 2 o más. Si lo navegable del final mide menos de 8 celdas, se queda todo estrecho. El norte del valle (Lean, Causie, Tossie, Alss) es casi todo nivel 2-3 y allí el propio Sara también es estrecho, así que el 6to y el 7mo no llegan a salir de la montaña. Por petición del dueño (2026-10-26: "Sí, dales un tramo navegable al 6to y al 7mo antes de unirse al Sara") tienen además un **tramo final navegable de 30 celdas** (1,5 chunks) antes de la confluencia (`navegable_min` en el script). El Sara sigue estrecho en esas dos confluencias: el validador y `RegionPlan` no exigen nada al cambiar de tipo de río, así que no se ha tocado.
+
+**Lejos de las cumbres**: el meandro de `RegionPlan` mueve el agua ±1 celda y no la pinta sobre una cumbre, así que un afluente pegado a una cumbre se podía cortar en la partida según la seed. Ningún afluente pasa ya a menos de 2 celdas de una cumbre, salvo la de su nacimiento (el script lo comprueba y se para). Para eso se apartaron un poco el 5to (de una cumbre de Tossie) y el 6to (de una de Causie).
 
 | Nombre | Orilla | Baja de | Límite que sigue (mapa a mano) | Nace (px, chunk) | Llega al Sara (px, chunk) | Estrecho / navegable (celdas) |
 |---|---|---|---|---|---|---|
@@ -82,14 +84,14 @@ Están pintados en `data/world/regions/valle_del_sara/agua.png` y salen de `tool
 | **2do del Sara** | Este | Gumnada Gumnavis | Vastie–Cassie | (235, 160), chunk (11, 8) | (93, 194), chunk (4, 9) | 6 / 179 |
 | **3ro del Sara** | Oeste | Urd Gumnavis | Ostie–Cassie (por la franja occidental de Cassie) | (4, 128), chunk (0, 6) | (91, 170), chunk (4, 8) | 9 / 121 |
 | **4to del Sara** | Este | Gumnada Gumnavis | Alss–Vastie | (235, 104), chunk (11, 5) | (120, 125), chunk (6, 6) | 125 / 32 |
-| **5to del Sara** | Oeste | Urd Gumnavis | Tossie–Ostie (borde sur de Tossie) | (4, 62), chunk (0, 3) | (99, 100), chunk (4, 5) | 49 / 89 |
-| **6to del Sara** | Este | Gumnada Gumnavis | Causie–Alss | (235, 36), chunk (11, 1) | (117, 88), chunk (5, 4) | 179 / 0 |
-| **7mo del Sara** | Oeste | Urd Gumnavis | Lean–Tossie (borde norte de Tossie) | (4, 30), chunk (0, 1) | (116, 56), chunk (5, 2) | 147 / 0 |
+| **5to del Sara** | Oeste | Urd Gumnavis | Tossie–Ostie (borde sur de Tossie) | (4, 62), chunk (0, 3) | (98, 101), chunk (4, 5) | 56 / 84 |
+| **6to del Sara** | Este | Gumnada Gumnavis | Causie–Alss | (235, 36), chunk (11, 1) | (115, 90), chunk (5, 4) | 159 / 30 |
+| **7mo del Sara** | Oeste | Urd Gumnavis | Lean–Tossie (borde norte de Tossie) | (4, 30), chunk (0, 1) | (116, 56), chunk (5, 2) | 117 / 30 |
 
 Notas:
 - El tramo alto del Sara en el mapa baja por el límite Lean–Causie y después por Tossie–Alss y Ostie–Vastie. El Sara de la autoría ya iba por esa franja central y no se ha movido.
 - *(lectura)* "Cerca de sur del lugar" se ha leído como el sur del Valle del Sara: el 1ro nace en una colina de Cassie, al oeste del Sara, en la última fila de chunks (la del borde sur).
-- Pendiente de confirmar con el dueño: si el 6to y el 7mo deben tener tramo navegable aunque el norte sea montañoso y el Sara sea estrecho allí.
+- Confirmado (dueño, 2026-10-26): el 6to y el 7mo tienen tramo navegable antes de unirse al Sara, aunque el norte sea montañoso.
 
 ## Alcuss: subregiones
 | Subregión | Posición (lectura del mapa) | Lenfi |

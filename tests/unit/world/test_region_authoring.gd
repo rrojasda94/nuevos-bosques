@@ -311,7 +311,8 @@ func test_valle_del_sara_authoring_is_valid_and_matches_the_region() -> void:
 ## (Gumnada Gumnavis). El Sara es el pasillo de agua de norte a sur: las celdas que están a 3 pasos
 ## o menos de más que el camino más corto entre los dos bordes. Lo que queda son los afluentes:
 ## cuenta cada trozo que toca el Sara y nace en una cumbre o en el borde oeste o este. Nacen como
-## río estrecho; lo navegable va sobre todo por tierra baja (nivel 0-1), y cada uno tiene su nombre,
+## río estrecho, todos tienen tramo navegable antes del Sara y lo navegable va sobre todo por tierra
+## baja (nivel 0-1); cada uno tiene su nombre,
 ## "1ro del Sara"... "7mo del Sara", como lugar de lugares.csv.
 func test_valle_del_sara_has_the_sara_tributaries() -> void:
 	var a := RegionAuthoring.load_region(&"valle_del_sara")
@@ -382,7 +383,7 @@ func test_valle_del_sara_has_the_sara_tributaries() -> void:
 	gut.p("Afluentes del Sara: %d al oeste, %d al este." % [west, east])
 	assert_gte(west, 4, "afluentes del oeste (Urd Gumnavis)")
 	assert_gte(east, 3, "afluentes del este (Gumnada Gumnavis)")
-	assert_gte(with_navigable, 4, "los afluentes que bajan a tierra baja se hacen navegables")
+	assert_gte(with_navigable, 7, "los 7 afluentes tienen tramo navegable antes del Sara (el 6to y el 7mo, por petición del dueño)")
 	assert_gte(navigable_low, ceili(navigable * 0.75), "lo navegable de los afluentes va por tierra baja (nivel 0-1)")
 	var names: Array = []
 	for p: Dictionary in a.places_of_type("lugar"):

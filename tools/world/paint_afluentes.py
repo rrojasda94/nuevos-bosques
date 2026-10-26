@@ -53,18 +53,21 @@ BASE_REF = "e15e3e1"
 
 # Cada afluente: id, lado, límite de subregión que sigue (mapa a mano) y puntos de control (x, y)
 # en px de la PNG, del nacimiento a la desembocadura. vados: fracciones del recorrido (0..1) donde
-# va un vado (#a0d8ff).
+# va un vado (#a0d8ff). navegable_min (opcional): px finales que son navegables aunque el afluente
+# no salga de la montaña (dueño, 2026-10-26: "dales un tramo navegable al 6to y al 7mo antes de
+# unirse al Sara").
 AFLUENTES: list[dict] = [
     {
         "id": "oeste_1", "lado": "O",
         "sigue": "límite Lean–Tossie (borde norte de Tossie)",
         "puntos": [(4, 30), (20, 29), (40, 33), (60, 40), (80, 50), (100, 56), (125, 58)],
         "vados": [0.35, 0.75],
+        "navegable_min": 30,
     },
     {
         "id": "oeste_2", "lado": "O",
         "sigue": "límite Tossie–Ostie (borde sur de Tossie)",
-        "puntos": [(4, 62), (25, 64), (42, 70), (46, 82), (60, 92), (80, 98), (105, 102)],
+        "puntos": [(4, 62), (25, 66), (32, 69), (42, 71), (46, 82), (60, 92), (80, 98), (105, 102)],
         "vados": [0.3, 0.7],
     },
     {
@@ -82,8 +85,9 @@ AFLUENTES: list[dict] = [
     {
         "id": "este_1", "lado": "E",
         "sigue": "límite Causie–Alss",
-        "puntos": [(235, 36), (205, 42), (175, 40), (160, 48), (145, 62), (135, 75), (128, 85), (110, 90)],
+        "puntos": [(235, 36), (222, 43), (205, 45), (175, 40), (160, 48), (145, 62), (135, 75), (128, 85), (110, 90)],
         "vados": [0.3, 0.7],
+        "navegable_min": 30,
     },
     {
         "id": "este_2", "lado": "E",
@@ -285,11 +289,26 @@ def main() -> int:
         c = altura.getpixel(p)
         return levels.index(c) if c in levels else 0
 
+    # El meandro de RegionPlan mueve el agua ±1 celda y no pinta sobre cumbres: un afluente pegado
+    # a una cumbre (salvo la de su nacimiento) se cortaría en la partida. Hay que apartarlo.
+    blocked = False
+    for af in AFLUENTES:
+        river = rivers[af["id"]]
+        for p in river[RING_LEVEL_3 + 1:]:
+            near = [(p[0] + dx, p[1] + dy) for dx in (-1, 0, 1) for dy in (-1, 0, 1)]
+            if any(0 <= x < w and 0 <= y < h and level_at((x, y)) == 4 for x, y in near):
+                print(f"{af['id']}: pasa junto a una cumbre en {p}; el meandro lo cortaría. Aparta sus puntos.",
+                      file=sys.stderr)
+                blocked = True
+    if blocked:
+        return 1
+
     # 2) Agua: estrecho en la montaña, navegable desde el primer tramo bajo; vados y puentes.
     info: list[dict] = []
     for af in AFLUENTES:
         river = rivers[af["id"]]
         exit_at = mountain_exit([level_at(p) for p in river])
+        exit_at = min(exit_at, max(0, len(river) - af.get("navegable_min", 0)))
         fords = {river[min(len(river) - 1, round(f * (len(river) - 1)))] for f in af["vados"]}
         for i, p in enumerate(river):
             if p in fords:
