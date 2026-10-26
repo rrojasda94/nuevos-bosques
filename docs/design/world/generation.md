@@ -6,7 +6,7 @@ La pasada de chunk (`ChunkBuilder`, M6–M9) solo lee este plan; ver la sección
 ## Entrada y determinismo
 - Entrada: `seed`, `region_id`, el JSON de la región y su autoría (`RegionAuthoring`: PNG + `lugares.csv`).
 - `authoring_hash`: SHA-256 (63 bits) de las capas decodificadas y de los lugares. Cambia si se repinta o se mueve algo; no si se vuelve a guardar la misma PNG.
-- `plan_seed = hash(seed, region_id, authoring_hash, GENERATOR_VERSION = 2)`. Todo lo procedural del plan (Bosques, aldeas, puertas, meandro) sale de él. El relieve y el río procedurales usan `ChunkGenerator.Terrain` con la seed, como la herramienta de exportación.
+- `plan_seed = hash(seed, region_id, authoring_hash, GENERATOR_VERSION = 3)`. Todo lo procedural del plan (Bosques, aldeas, puertas, meandro) sale de él. El relieve y el río procedurales usan `ChunkGenerator.Terrain` con la seed, como la herramienta de exportación.
 - Un solo hilo, sin `randi()` global ni `GameState.rng`. Medido: ~65 ms en el Valle del Sara (objetivo ≤ 1,5 s).
 - Inmutable tras `build()`: las consultas devuelven copias; varios `ChunkBuilder` pueden leerlo a la vez.
 
@@ -14,7 +14,7 @@ La pasada de chunk (`ChunkBuilder`, M6–M9) solo lee este plan; ver la sección
 | Paso | Qué hace |
 |---|---|
 | Altura gruesa | 1 valor por celda gruesa (240×320). Pintado manda (niveles 0–3 y `LEVEL_PEAK` = 4, cumbre). Transparente: `Terrain.elevation` en el centro de la celda (en casillas del generador viejo, igual que la exportación), cuantizada con `-0.1 / 0.32 / 0.62`, y luego una pasada que quita celdas sueltas (solo en lo procedural). |
-| Agua | Con `agua.png`: cada celda de agua se desplaza ±1 celda según dos ruidos suaves (frecuencia 0,06) y las celdas que eran vecinas se unen con una L, así que ningún río se corta. Prioridad si dos caen en la misma: vado > río navegable > estrecho > lago > mar. A ≤ 3 celdas de un lugar del CSV el agua no se mueve y los lugares nunca quedan en el agua. No pisa cumbres. Sin `agua.png`: río principal de la ADR 0006 sobre la rejilla gruesa. Los arroyos siguen en el chunk. |
+| Agua | Con `agua.png`: cada celda de agua se desplaza ±1 celda según dos ruidos suaves (frecuencia 0,06) y las celdas que eran vecinas se unen con una L, así que ningún río se corta. Prioridad si dos caen en la misma: vado > río navegable > estrecho > lago > mar. A ≤ 3 celdas de un lugar del CSV (por ejemplo, un manantial) el agua no se mueve y los lugares nunca quedan en el agua. Tampoco se mueve el agua pegada a una cumbre (el nacimiento al pie de Larr o de una cumbre: si cayera en la cumbre, el trozo de al lado quedaría suelto; versión 3). No pisa cumbres. Sin `agua.png`: río principal de la ADR 0006 sobre la rejilla gruesa. Los arroyos siguen en el chunk. |
 | Caminos pintados | Puente donde, tras el meandro, el camino pasa sobre agua honda; camino donde no. Un borde de chunk lleva camino pintado si hay camino a los dos lados; la puerta se centra en el tramo más largo. |
 | Bosques | `BosqueMap.build_planned` (ver abajo). |
 | Villas y aldeas | Villas del CSV (la natal sustituye a `start_chunk`) y aldeas de la opción C. |

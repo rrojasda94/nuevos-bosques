@@ -17,13 +17,16 @@ Modifica las PNG de data/world/regions/valle_del_sara/ (no las regenera desde el
   dentro o más allá del río, y el afluente queda unido a él por un lado.
 - altura.png: en el nacimiento pone una cumbre de 3x3 px (el afluente nace pegado a ella, así que
   el validador lo da por unido: "nacer en una cumbre") rodeada de nivel 3 y nivel 2. Solo sube el
-  relieve, nunca lo baja. Excepción: los afluentes con "nacimiento": "borde" (los tres de la
-  cordillera occidental, que es transitable; dueño, 2026-10-26) nacen en el borde oeste del mapa
-  (vienen del lado de Dorias, y el validador los da por unidos por tocar el borde) y en el
-  nacimiento solo tienen colinas de nivel 3 y 2, sin cumbre.
+  relieve, nunca lo baja. Excepción: los afluentes con "nacimiento": "manantial" (los tres de la
+  cordillera occidental, que es transitable y sin cumbres; dueño, 2026-10-26: "no nacen en el
+  Valle, no pueden nacer en Dorias porque la cordillera lo impide") nacen dentro de la cordillera,
+  en una colina de nivel 3 y 2 sin cumbre, junto a un lugar de tipo manantial (fila manantial_<n>
+  de lugares.csv, un px al oeste del nacimiento). El validador da por unido un río que toca un
+  manantial.
 - caminos.png: donde un camino pintado cruza un afluente, ese píxel pasa a puente.
 - lugares.csv: una fila de tipo lugar por afluente (id afluente_<n>, nombre "<n> del Sara"), junto
-  a su tramo medio, para que la vista previa lo rotule. Sustituye las filas afluente_* que hubiera y
+  a su tramo medio, para que la vista previa lo rotule, y una de tipo manantial (id manantial_<n>)
+  por cada afluente que nace en uno. Sustituye las filas afluente_* y manantial_* que hubiera y
   deja el resto igual.
 
 Es idempotente: volver a ejecutarlo sobre su propia salida no cambia nada. Para ajustar un afluente,
@@ -64,24 +67,24 @@ AFLUENTES: list[dict] = [
     {
         "id": "oeste_1", "lado": "O",
         "sigue": "límite Lean–Tossie (borde norte de Tossie)",
-        "nacimiento": "borde",
-        "puntos": [(0, 30), (20, 29), (40, 33), (60, 40), (80, 50), (100, 56), (125, 58)],
-        "vados": [0.02, 0.35, 0.75],
+        "nacimiento": "manantial",
+        "puntos": [(12, 30), (20, 29), (40, 33), (60, 40), (80, 50), (100, 56), (125, 58)],
+        "vados": [0.35, 0.75],
         "navegable_min": 30,
     },
     {
         "id": "oeste_2", "lado": "O",
         "sigue": "límite Tossie–Ostie (borde sur de Tossie)",
-        "nacimiento": "borde",
-        "puntos": [(0, 62), (25, 66), (32, 69), (42, 71), (46, 82), (60, 92), (80, 98), (105, 102)],
-        "vados": [0.02, 0.3, 0.7],
+        "nacimiento": "manantial",
+        "puntos": [(12, 62), (25, 66), (32, 69), (42, 71), (46, 82), (60, 92), (80, 98), (105, 102)],
+        "vados": [0.3, 0.7],
     },
     {
         "id": "oeste_3", "lado": "O",
         "sigue": "límite Ostie–Cassie (franja occidental de Cassie)",
-        "nacimiento": "borde",
-        "puntos": [(0, 128), (16, 132), (28, 150), (50, 160), (70, 165), (85, 169), (100, 170)],
-        "vados": [0.02, 0.3, 0.7],
+        "nacimiento": "manantial",
+        "puntos": [(14, 128), (16, 132), (28, 150), (50, 160), (70, 165), (85, 169), (100, 170)],
+        "vados": [0.3, 0.7],
     },
     {
         "id": "oeste_4", "lado": "O",
@@ -225,7 +228,7 @@ def label_cell(at: tuple[int, int], agua: Image.Image, altura: Image.Image, cami
 def write_places(rows: list[str]) -> None:
     path = REGION_DIR / "lugares.csv"
     lines = path.read_text(encoding="utf-8").splitlines()
-    kept = [ln for ln in lines if not ln.startswith("afluente_")]
+    kept = [ln for ln in lines if not ln.startswith(("afluente_", "manantial_"))]
     while kept and kept[-1].strip() == "":
         kept.pop()
     path.write_bytes(("\n".join(kept + rows) + "\n").encode("utf-8"))
@@ -278,11 +281,15 @@ def main() -> int:
     # 1) Colinas y cumbre de nacimiento (antes del agua: la navegabilidad lee la altura final).
     for af in AFLUENTES:
         sx, sy = rivers[af["id"]][0]
-        borde = af.get("nacimiento", "cumbre") == "borde"
+        borde = af.get("nacimiento", "cumbre") == "manantial"
         if borde:
-            # Nace en el borde del mapa (viene del otro lado de la cordillera): colina de nivel 3
-            # centrada en el nacimiento, sin cumbre, para que la cordillera se cruce a pie.
-            cx = sx
+            # Nace en un manantial de la cordillera, un px al oeste del nacimiento: colina de
+            # nivel 3 centrada en él, sin cumbre, para que la cordillera se cruce a pie.
+            cx = sx - 1
+            if cx < 1 or (cx, sy) in traced or (cx, sy) in base_water:
+                print(f"{af['id']}: el manantial cae en {(cx, sy)}, en el borde o en el agua; mueve el nacimiento.",
+                      file=sys.stderr)
+                return 1
         else:
             cx = sx - (PEAK_HALF + 1) if af["lado"] == "O" else sx + (PEAK_HALF + 1)
         for y in range(sy - PEAK_HALF - RING_LEVEL_2, sy + PEAK_HALF + RING_LEVEL_2 + 1):
@@ -349,6 +356,12 @@ def main() -> int:
         nav = len(river) - d["exit_at"]
         print(f"{d['nombre']} ({af['id']}, {af['lado']}): {len(river)} px ({len(river) - nav} estrecho, {nav} navegable),"
               f" nace en {river[0]}, llega al Sara junto a {river[-1]}, rótulo en {(lx, ly)} — {af['sigue']}")
+    for n, d in enumerate(info):
+        if d["af"].get("nacimiento", "cumbre") == "manantial":
+            mx, my = d["river"][0][0] - 1, d["river"][0][1]
+            notas = (f"Nacimiento del {d['nombre']}, en la cordillera occidental (Urd Gumnavis). "
+                     "Fila escrita por tools/world/paint_afluentes.py.")
+            rows.append(f"manantial_{n + 1},Nacimiento del {d['nombre']},manantial,{mx},{my},,,\"{notas}\"")
     write_places(rows)
 
     agua.save(REGION_DIR / "agua.png")
