@@ -18,7 +18,7 @@ extends RefCounted
 ## Inmutable tras build(): las consultas solo leen y devuelven copias, así que los ChunkBuilder
 ## (M6+) pueden leerlo a la vez desde varios hilos. No construye chunks ni toca la escena.
 
-const GENERATOR_VERSION: int = 2
+const GENERATOR_VERSION: int = 3
 ## Umbrales de elevación de los niveles 1, 2 y 3 (los del spike).
 const HEIGHT_THRESHOLDS: Array[float] = [-0.1, 0.32, 0.62]
 const LEVEL_MAX: int = 3
@@ -382,7 +382,9 @@ func _build_water(authoring: RegionAuthoring, terrain_region: Dictionary) -> voi
 
 ## Desplaza cada celda de agua pintada ±1 celda gruesa según dos ruidos suaves (x e y) y une con
 ## una L las celdas que eran vecinas, así que un río no se corta ni cambia de forma de red. Cerca
-## de un lugar (MEANDER_KEEP) el agua se queda donde se pintó. No pisa las cumbres.
+## de un lugar (MEANDER_KEEP) el agua se queda donde se pintó, y también junto a una cumbre (el
+## nacimiento de un río al pie de Larr o de su cumbre: si se moviera, caería en la cumbre y el
+## trozo de río de al lado quedaría suelto). No pisa las cumbres.
 func _meander(src: PackedByteArray) -> void:
 	var w: int = size_macro.x
 	var n: int = size_macro.x * size_macro.y
@@ -404,7 +406,7 @@ func _meander(src: PackedByteArray) -> void:
 			continue
 		var x: int = i % w
 		var y: int = i / w
-		if keep[i] == 0:
+		if keep[i] == 0 and not _next_to_peak(x, y):
 			x = clampi(x + clampi(roundi(noise_x.get_noise_2d(x, y) * MEANDER_GAIN), -1, 1), 0, w - 1)
 			y = clampi(y + clampi(roundi(noise_y.get_noise_2d(x, y) * MEANDER_GAIN), -1, 1), 0, size_macro.y - 1)
 		dest[i] = y * w + x
@@ -417,6 +419,14 @@ func _meander(src: PackedByteArray) -> void:
 			_water_line(dest[i], dest[i + 1], _stronger(src[i], src[i + 1]))
 		if i + w < n and src[i + w] != RegionAuthoring.Water.NONE:
 			_water_line(dest[i], dest[i + w], _stronger(src[i], src[i + w]))
+
+
+func _next_to_peak(x: int, y: int) -> bool:
+	for d: Vector2i in [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]:
+		var c := Vector2i(x, y) + d
+		if in_macro(c) and _height[c.y * size_macro.x + c.x] == LEVEL_PEAK:
+			return true
+	return false
 
 
 static func _stronger(a: int, b: int) -> int:
