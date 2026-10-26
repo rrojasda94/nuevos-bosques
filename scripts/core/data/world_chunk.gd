@@ -32,13 +32,15 @@ enum ObjectKind {
 }
 ## Tipos de letrero (mismos valores que ChunkData.SignKind).
 enum SignKind { BOSQUE_VILLA, HOME_VILLA }
+## Puntos de interés (mundo-2.md §4). POINT_IDS da el id de datos de cada uno.
+enum PointKind { HILL, LANDMARK_TREE, STONE_CIRCLE, GROVE, POND, MEADOW, PLACE }
 
 const SIZE: int = WorldCoords.CHUNK
 const CELLS: int = WorldCoords.CHUNK_CELLS
 const MAX_LEVEL: int = 3
 const NO_OBJECT: int = -1
 ## Versión del formato de to_dict. Súbela si cambian las capas, los enums o las claves.
-const FORMAT_VERSION: int = 1
+const FORMAT_VERSION: int = 2
 ## Bordes del chunk, como dirección hacia fuera.
 const SIDES: Array[Vector2i] = [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]
 
@@ -58,6 +60,10 @@ const LAYER_KEYS: Array[String] = ["ground", "level", "cliff", "decor", "blocked
 const _OBJECT_STRIDE: int = 6
 ## Campos por letrero: cell.x, cell.y, kind, direction.x, direction.y.
 const _SIGN_STRIDE: int = 5
+## Campos por punto de interés: kind, rect (x, y, w, h), cell.x, cell.y.
+const _POINT_STRIDE: int = 7
+## Id de datos (`points_of_interest.weights` de la región) de cada PointKind.
+const POINT_IDS: Array[String] = ["colina", "hito", "circulo_piedras", "arboleda", "laguna", "pradera", "lugar"]
 
 var seed_value: int = 0
 var coord: Vector2i = Vector2i.ZERO
@@ -74,6 +80,9 @@ var objects: Array[Dictionary] = []
 ## Letreros: {cell: Vector2i, kind: SignKind, direction: Vector2i (lado hacia el que señala)}.
 ## Cada letrero es además un objeto SIGN de 1×1 en su casilla.
 var signs: Array[Dictionary] = []
+## Puntos de interés: {kind: PointKind, rect: Rect2i (huella en casillas), cell: Vector2i (casilla
+## del sendero que llega a él)}. Los lugares del CSV que caen en el chunk también están aquí.
+var points: Array[Dictionary] = []
 ## Casilla transitable a la que llegan todos los senderos (aparición y accesibilidad).
 var hub: Vector2i = Vector2i(SIZE / 2, SIZE / 2)
 ## Huella del Nujio en este chunk (tamaño 0 si no lo hay).
@@ -326,6 +335,11 @@ func to_dict() -> Dictionary:
 		flat_signs[s + 3] = dir.x
 		flat_signs[s + 4] = dir.y
 		s += _SIGN_STRIDE
+	var flat_points := PackedInt32Array()
+	for p: Dictionary in points:
+		var r: Rect2i = p.rect
+		var pc: Vector2i = p.cell
+		flat_points.append_array(PackedInt32Array([p.kind, r.position.x, r.position.y, r.size.x, r.size.y, pc.x, pc.y]))
 	return {
 		"format": FORMAT_VERSION,
 		"seed": seed_value,
@@ -338,6 +352,7 @@ func to_dict() -> Dictionary:
 		"variant": variant,
 		"objects": flat_objects,
 		"signs": flat_signs,
+		"points": flat_points,
 		"hub": hub,
 		"nujio_rect": nujio_rect,
 		"has_villa": has_villa,
@@ -382,5 +397,14 @@ static func from_dict(data: Dictionary) -> WorldChunk:
 			"cell": Vector2i(flat_signs[s], flat_signs[s + 1]),
 			"kind": flat_signs[s + 2],
 			"direction": Vector2i(flat_signs[s + 3], flat_signs[s + 4]),
+		})
+	var flat_points: PackedInt32Array = data.get("points", PackedInt32Array())
+	if flat_points.size() % _POINT_STRIDE != 0:
+		return null
+	for k: int in range(0, flat_points.size(), _POINT_STRIDE):
+		chunk.points.append({
+			"kind": flat_points[k],
+			"rect": Rect2i(flat_points[k + 1], flat_points[k + 2], flat_points[k + 3], flat_points[k + 4]),
+			"cell": Vector2i(flat_points[k + 5], flat_points[k + 6]),
 		})
 	return chunk
