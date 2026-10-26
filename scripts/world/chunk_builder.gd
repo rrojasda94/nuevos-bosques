@@ -21,9 +21,9 @@ extends RefCounted
 ## nunca se contradicen.
 ##
 ## Red de senderos: nodos = puertas + puntos de interés + ancla (villa o Nujio; si no, el primer
-## punto de interés; si no, la primera puerta). Prim sobre la distancia en celdas gruesas (entre
-## puertas de camino, a mitad de precio); cada arista se traza con AStarGrid2D sobre la rejilla
-## gruesa de 20×20 (agua, caras, casas y Nujio cuestan; lo ya trazado abarata). Cada paso grueso
+## punto de interés; si no, la primera puerta). Prim sobre la distancia en celdas gruesas (las
+## puertas de camino se unen entre sí antes que nada); cada arista se traza con AStarGrid2D sobre la
+## rejilla gruesa de 20×20 (agua, caras, casas y Nujio cuestan; lo trazado abarata). Cada paso grueso
 ## son 4 casillas en línea recta. Después, un Dijkstra por casillas repara lo que falte
 ## (escaleras, rampas y puentes) para que todo nodo se alcance desde el hub.
 ##
@@ -146,7 +146,7 @@ const RANDOM_POINTS: int = 6
 const FLAT_POINTS: int = (1 << WorldChunk.PointKind.HILL) | (1 << WorldChunk.PointKind.POND) \
 		| (1 << WorldChunk.PointKind.LANDMARK_TREE) | (1 << WorldChunk.PointKind.STONE_CIRCLE)
 ## Tipos del CSV que son punto de interés (las villas y los Bosques clave son anclas).
-const CSV_POINTS: Array[String] = ["hito", "tarca", "lugar"]
+const CSV_POINTS: Array[String] = ["hito", "tarca", "lugar", "manantial"]
 ## Puntos de interés por defecto (mundo-2.md §4); la región los cambia con "points_of_interest".
 const DEFAULT_POI: Dictionary = {
 	"count_weights": {"2": 55, "3": 45},

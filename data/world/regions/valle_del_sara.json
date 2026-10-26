@@ -56,6 +56,18 @@
     "muerto": [1, 2],
     "enojado_percent": 25
   },
+  "points_of_interest": {
+    "$comment": "Puntos de interés por chunk (mundo-2.md §4; ADR 0014 §5, paso 3). count_weights: % de chunks sin villa ni Nujio con 2 o 3. near_anchor: cuántos en un chunk con villa o Nujio. border_margin: casillas mínimas del centro del punto al borde del chunk. min_gap: casillas mínimas entre centros de puntos (y del Nujio). weights: pesos por tipo en el norte (fila 0), el centro y el sur, interpolados por fila. Estructura de world-gen-dev, valores de game-designer (provisionales). Lo aplica ChunkBuilder (M7).",
+    "count_weights": {"2": 55, "3": 45},
+    "near_anchor": 1,
+    "border_margin": 12,
+    "min_gap": 24,
+    "weights": {
+      "north": {"colina": 35, "hito": 20, "circulo_piedras": 20, "arboleda": 15, "laguna": 5, "pradera": 5},
+      "center": {"colina": 20, "hito": 20, "circulo_piedras": 15, "arboleda": 15, "laguna": 15, "pradera": 15},
+      "south": {"colina": 5, "hito": 15, "circulo_piedras": 10, "arboleda": 15, "laguna": 30, "pradera": 25}
+    }
+  },
   "refuges": {
     "$comment": "Reparto de refugios (navegacion.md, tiempo-y-riutash.md, bosques-y-relacion.md; ADR 0006). per_bosque: mínimo de refugios por Bosque (el primero en su chunk de Nujio, a <= 3 casillas del Nujio si no hay villa). min_spacing: distancia mínima en chunks (Manhattan) entre refugios del reparto general; 2 = nunca en chunks vecinos, sale ~1 de cada 2-3 chunks, con camino o sin él. max_distance: ningún chunk queda a más de estos chunks de un refugio. Valores provisionales de game-designer.",
     "per_bosque": 1,
