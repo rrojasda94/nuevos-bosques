@@ -193,7 +193,7 @@ Lugares del mapa cultural wertrak: Bectan, Sindare Mal, Cram, Wertrew, Clavac, A
 
 **Cordillera occidental** — Franja de norte a sur en el borde oeste del Valle del Sara, entre el Valle del Sara y Dorias, cruzada por ríos. "No tan agreste": son "colinas y montañas bastante transitables". En ella están Azhin (extremo norte) y la Tarca de Trastas (lado de Dorias, hacia el centro). [Chat 2026-10]
 
-**Azhin** — Villa pequeña al noroeste del Valle del Sara, la más septentrional, pegada a la cordillera occidental. De ahí se originaron los primeros Nuevos Bosques, con la llegada de los ledai de la Tarca de Trastas. Tiene una tarca que es templo garelino. [Chat 2026-10]
+**Azhin** — Villa pequeña al noroeste del Valle del Sara, en Lean, la más septentrional, pegada a la cordillera occidental. De ahí se originaron los primeros Nuevos Bosques, con la llegada de los ledai de la Tarca de Trastas. Tiene una tarca que es templo garelino. [Chat 2026-10]
 
 **Sicabis** — Lugares muy bonitos y sagrados donde no se puede entrar con armas; regeneran Luz y ayudan a conectar con la Luz y el Bosque. Son un espacio geográfico hermoso, como un jardín con un pequeño lago y muchas plantas ornamentales que solo existen en esos lugares. [Chat 2026-10]
 

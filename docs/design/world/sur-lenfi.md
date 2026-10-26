@@ -164,7 +164,7 @@ Lo que se lee *(lectura)*:
   - Tiene una **tarca** que es templo garelino (`docs/design/mechanics/lugares-e-interiores.md`).
   - De allí salieron los **primeros Nuevos Bosques**.
   - Ubicación según la captura del dueño (2026-10-26): en el **extremo norte de la cordillera occidental**, pegada al **borde norte** (Larr).
-  - *(lectura)* Por posición coincide con la subregión **Lean** de `Sur-Lenfi_02.jpg` (norte-oeste). La captura no muestra los colores de las subregiones, así que queda **probable, sin confirmar** (#182).
+  - **Está en la subregión Lean** (dueño, #182: "Azhin está en Lean").
 - **Tarca de Trastas** (glosario §7: en Dorias): en la **misma cordillera occidental**, del **lado de Dorias** (zona salmón de la captura), hacia la **parte central** de la franja (dueño).
 - **Cordillera occidental** (dueño: "la cordillera no tan agreste es la que esta rodeada en rojo, son colinas y montañas bastante transitables"):
   - **franja alargada de norte a sur** en el borde oeste del Valle del Sara, a caballo con Dorias;
@@ -179,7 +179,7 @@ Lo que se lee *(lectura)*:
 - Muy rara: Nosie (al este del Valle del Sara).
 - Casi imposible: Alciss (extremo este del mapa).
 - *(lectura)* La frecuencia baja de oeste a este, coherente con una expansión iniciada en el noroeste del Valle del Sara.
-- **Confirmado con Azhin** (dueño): la expansión empezó en **Azhin** (noroeste, junto a la cordillera occidental), con los ledai que cruzaron desde la Tarca de Trastas (Dorias). Encaja con la frecuencia alta en Lean, Tossie y Ostie, las subregiones del oeste que lindan con Dorias. No hay contradicción. Solo hace falta confirmar que Azhin está en Lean.
+- **Confirmado con Azhin** (dueño): la expansión empezó en **Azhin** (noroeste, junto a la cordillera occidental), con los ledai que cruzaron desde la Tarca de Trastas (Dorias). Encaja con la frecuencia alta en Lean, Tossie y Ostie, las subregiones del oeste que lindan con Dorias. No hay contradicción. Azhin está en Lean (confirmado).
 
 ## Pendiente para pasar a `data/world/`
 - Nombre del nivel "subregión" (#100).

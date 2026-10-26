@@ -1,5 +1,7 @@
 # ADR 0009 — Cruce entre Bosques y primer combate por turnos (implementación)
 
+> **Presentación sustituida por ADR 0016** (combate táctico en cuadrícula, estilo Final Fantasy Tactics Advance). Las reglas de cruce, pago y memoria siguen vigentes (con ADR 0013).
+
 > Diseño: `docs/design/mechanics/cruce-y-combate-v1.md` (game-designer). Este ADR recoge solo las decisiones técnicas.
 
 ## Contexto
