@@ -40,7 +40,16 @@ Palabras del dueño (2026-10-25): "Despues tambien podemos empezar a crear los e
   - Son lugares de los ledai y campamentos garelinos (`dos-caminos.md`).
 - **La mayoría de las tarcas** (dueño): "son lugares vacios y ocupados por algunos seres espirituales".
   - **Cómo son esos seres** (dueño, #178): "Son cuerpos etereos y amorfos de tamaño pequeño o mediano." Se registra tal cual: sin nombre ni comportamiento inventados.
-  - Si son hostiles, neutrales o se pueden ignorar: por definir (#180).
+  - **Actitud** (dueño, #180: "Los espiritus de la tarca normalmente son neutros, pero puede tocar una que sean hostiles. Igual puedes atacarlos y provocarles."):
+    - **neutros** por defecto;
+    - a veces **hostiles** (según la tarca);
+    - el jugador **puede atacarlos o provocarlos**.
+  - **Mecánica propuesta (provisional)**:
+    - **Por tarca vacía**: 2–4 espíritus. Con probabilidad **1/5** (por seed), la tarca es **hostil**: sus espíritus atacan al ver al jugador.
+    - **Neutros**: flotan y se apartan. Con E se pueden **atacar** (combate en grupo). **Provocar** (pasar pegado varias veces o atacar a uno) vuelve hostiles a todos los de esa tarca hasta el siguiente riutash.
+    - **Stats** (pequeño / mediano): PV 10 / 20, ATQ 3 / 5, DEF 1 / 2. Perfil de IA "agresivo" si son hostiles (`ia-de-combate.md`). `fatal_at: []`.
+    - **No son Únicos** de un Bosque: atacarlos no cambia la hostilidad ni la relación de ningún Bosque. Propuesta: Senda −1 si los provocas sin motivo.
+    - **Recompensa**: XP como un Único de d = 1 (pequeño) o d = 2 (mediano). Sin botín. Al caer, ¿se disipan? Se registra solo "cuerpos etéreos", sin más lore.
 - Cuántas: 1–2 por subregión montañosa (propuesta).
 
 ### Sicabis (término nuevo del dueño)
@@ -85,6 +94,6 @@ Palabras del dueño (2026-10-25): "Despues tambien podemos empezar a crear los e
 ## Preguntas abiertas
 - **#175** (en parte): sicabis: jardín con un pequeño lago y plantas ornamentales exclusivas; un garelino no puede entrar. Queda abierto añadir el término al glosario (lo hace el dueño) y confirmar las mecánicas propuestas (+1 Luz cada 30 s, Meditar, relación +5 y Senda +1, 1 por subregión).
 - ~~#177 y #178~~ Resueltas: Azhin, villa del noroeste; seres etéreos y amorfos, pequeños o medianos.
-- **#179**: ¿en qué subregión está Azhin (¿Lean?) y por dónde pasa la cordillera occidental en el mapa?
-- **#180**: los seres espirituales de las tarcas, ¿son hostiles, neutrales o se pueden ignorar?
-- **#181**: añadir al glosario Azhin, sicabis y los seres espirituales (lo hace el dueño).
+- ~~#179, #180, #181~~ Resueltas: cordillera occidental transitable y Larr al norte (`docs/design/world/sur-lenfi.md`); espíritus neutros por defecto, a veces hostiles, y se les puede atacar o provocar; glosario actualizado con autorización del dueño.
+- **#182**: ¿Azhin está en la subregión Lean? (Probable por posición; la captura no muestra subregiones.)
+- **#183**: ¿se confirman la mecánica y los stats propuestos para los espíritus de las tarcas?
