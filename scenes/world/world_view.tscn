@@ -1,0 +1,38 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/world/world_view.gd" id="1_view"]
+[ext_resource type="Script" path="res://scripts/world/player_controller.gd" id="2_player"]
+
+[node name="WorldView" type="Node2D"]
+script = ExtResource("1_view")
+
+[node name="Ground" type="TileMapLayer" parent="."]
+collision_enabled = false
+navigation_enabled = false
+
+[node name="Overlay" type="TileMapLayer" parent="."]
+collision_enabled = false
+navigation_enabled = false
+
+[node name="Objects" type="Node2D" parent="."]
+y_sort_enabled = true
+
+[node name="Player" type="Node2D" parent="Objects"]
+script = ExtResource("2_player")
+
+[node name="Sprite2D" type="Sprite2D" parent="Objects/Player"]
+
+[node name="Camera2D" type="Camera2D" parent="Objects/Player"]
+
+[node name="Hud" type="CanvasLayer" parent="."]
+layer = 2
+
+[node name="Label" type="Label" parent="Hud"]
+offset_left = 4.0
+offset_top = 2.0
+offset_right = 316.0
+offset_bottom = 30.0
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_outline_color = Color(0.094, 0.078, 0.145, 1)
+theme_override_constants/outline_size = 2
+theme_override_font_sizes/font_size = 8
