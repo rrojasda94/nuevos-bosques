@@ -63,6 +63,20 @@ const PLAYER: Array[String] = [
 	"o###o",
 	".ooo.",
 ]
+## Aldea (Mundo 2.0, mapa con RegionPlan): casita pequeña.
+const ALDEA: Array[String] = [
+	"..o..",
+	".o#o.",
+	"o###o",
+	"o#+#o",
+	"ooooo",
+]
+## Lugar con nombre (tarca, hito, afluente, manantial): punto.
+const PLACE: Array[String] = [
+	".o.",
+	"o#o",
+	".o.",
+]
 ## Botarramas visto: cabecita de ave con pico.
 const MONSTER: Array[String] = [
 	".oo..",

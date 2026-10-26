@@ -4,6 +4,8 @@ extends CanvasLayer
 ## Solo lee GameState; la dirección la calcula MapLogic.compass. Se pausa con el árbol.
 ## Con una misión lejana activa (FarQuests), una segunda fila plateada debajo apunta al siguiente
 ## Bosque de su ruta de salvoconducto (y, dentro del Bosque que llama, a su objetivo).
+## Mundo 2.0 (ADR 0014 §7, M16): con RegionPlan (MapLogic.region_plan), apunta en píxeles a un
+## `world_pos` exacto (MapLogic.compass_world); sin plan, por chunks como siempre.
 
 const ARROW_COLOR := Color("feae34")
 const ARROW_SHINE := Color("fee761")
@@ -40,8 +42,15 @@ func _process(_delta: float) -> void:
 	if GameState.chunk_coord.x < 0:
 		return
 	_update_far()
-	var result: Dictionary = MapLogic.compass(MapLogic.current_bosques(), GameState.chunk_coord, GameState.player_cell,
-			GameState.objective_chunk, GameState.objective_cell, GameState.objective_label)
+	var result: Dictionary
+	var plan: RegionPlan = MapLogic.region_plan()
+	if plan != null:
+		result = MapLogic.compass_world(plan, _player_world_pos(), GameState.objective_chunk,
+				GameState.objective_cell, GameState.objective_label)
+	else:
+		# ponytail: borrar en M17 (brújula por chunks del mundo viejo).
+		result = MapLogic.compass(MapLogic.current_bosques(), GameState.chunk_coord, GameState.player_cell,
+				GameState.objective_chunk, GameState.objective_cell, GameState.objective_label)
 	if result.index == _index and result.label == _text:
 		return
 	_index = result.index
@@ -58,8 +67,15 @@ func _update_far() -> void:
 	if not quests.is_empty():
 		var map: BosqueMap = MapLogic.current_bosques()
 		var target: Vector2i = FarQuests.compass_chunk(map, quests[0], GameState.chunk_coord)
-		var result: Dictionary = MapLogic.compass(map, GameState.chunk_coord, GameState.player_cell, target,
-				Vector2i(-1, -1), Texts.get_text("compass_far_quest"))
+		var result: Dictionary
+		var plan: RegionPlan = MapLogic.region_plan()
+		if plan != null:
+			result = MapLogic.compass_world(plan, _player_world_pos(), target, Vector2i(-1, -1),
+					Texts.get_text("compass_far_quest"))
+		else:
+			# ponytail: borrar en M17.
+			result = MapLogic.compass(map, GameState.chunk_coord, GameState.player_cell, target,
+					Vector2i(-1, -1), Texts.get_text("compass_far_quest"))
 		index = result.index
 		text = result.label
 	if index == _far_index and text == _far_text:
@@ -68,6 +84,12 @@ func _update_far() -> void:
 	_far_text = text
 	_far_label.text = text
 	_far_arrow.queue_redraw()
+
+
+## Pies del jugador en píxeles del mundo. Hasta M17 sale de chunk + casilla del guardado; el
+## cambio al Mundo 2.0 lo leerá de su `world_pos`.
+func _player_world_pos() -> Vector2:
+	return WorldCoords.cell_to_world_pos(GameState.chunk_coord, GameState.player_cell)
 
 
 func _on_far_arrow_draw() -> void:
