@@ -417,6 +417,7 @@ static func reward_bosque_defense(bosque_id: int) -> void:
 
 
 ## Distancia (Chebyshev) de una casilla a la huella del Nujio del chunk (-1 si no hay Nujio).
+# ponytail: borrar en M17 (lo sustituye la versión _world)
 static func distance_to_nujio(chunk: ChunkData, cell: Vector2i) -> int:
 	var rect: Rect2i = chunk.nujio_rect
 	if rect.size.x <= 0:
@@ -428,6 +429,7 @@ static func distance_to_nujio(chunk: ChunkData, cell: Vector2i) -> int:
 
 ## Lugar de descanso junto al Nujio: a nujio_rest_radius casillas o menos de su huella, o la plaza
 ## de su villa (en un chunk con Nujio).
+# ponytail: borrar en M17 (lo sustituye la versión _world)
 static func is_near_nujio(chunk: ChunkData, cell: Vector2i) -> bool:
 	if chunk == null or not ChunkData.in_bounds(cell):
 		return false
@@ -440,6 +442,7 @@ static func is_near_nujio(chunk: ChunkData, cell: Vector2i) -> bool:
 ## El riutash pasa con el Adoc en (chunk, cell) del Bosque `bosque_id`: si estaba refugiado junto
 ## a su Nujio, relación + per_nujio_rest (una vez por riutash: se llama una vez en cada uno).
 ## Devuelve si sumó.
+# ponytail: borrar en M17 (lo sustituye la versión _world)
 static func riutash_near_nujio(chunk: ChunkData, cell: Vector2i, bosque_id: int, sheltered: bool) -> bool:
 	if not sheltered or bosque_id < 0 or not is_near_nujio(chunk, cell):
 		return false
@@ -997,6 +1000,7 @@ static func respawn_target(map: BosqueMap, fell_at: Vector2i, home: int) -> int:
 ## Casilla donde se despierta en el chunk del Nujio: una transitable junto a su huella (también en
 ## diagonal) y a la que se llega desde el hub, la más cercana a la casilla al sur de su centro
 ## (empates por fila y columna). Sin ninguna, el hub (en un Bosque con villa, la plaza).
+# ponytail: borrar en M17 (lo sustituye la versión _world)
 static func respawn_cell(chunk: ChunkData) -> Vector2i:
 	var rect: Rect2i = chunk.nujio_rect
 	if rect.size.x <= 0:
@@ -1112,6 +1116,7 @@ static func damage_villa(luz_factor: float) -> void:
 
 
 ## La casilla toca (también en diagonal) la huella del Nujio del chunk.
+# ponytail: borrar en M17 (lo sustituye la versión _world)
 static func is_next_to_nujio(chunk: ChunkData, cell: Vector2i) -> bool:
 	return chunk.nujio_rect.size.x > 0 and chunk.nujio_rect.grow(1).has_point(cell) \
 		and not chunk.nujio_rect.has_point(cell)
@@ -1119,6 +1124,7 @@ static func is_next_to_nujio(chunk: ChunkData, cell: Vector2i) -> bool:
 
 ## Se descansa en una villa: en su plaza o junto al Nujio de un Bosque con villa. Un Nujio sin
 ## villa no cura.
+# ponytail: borrar en M17 (lo sustituye la versión _world)
 static func is_villa_rest(chunk: ChunkData, cell: Vector2i) -> bool:
 	if not chunk.has_villa or not ChunkData.in_bounds(cell):
 		return false
@@ -1132,8 +1138,97 @@ static func rest() -> void:
 
 
 ## Refugio frente al riutash: una casilla REFUGE o un lugar de descanso de villa.
+# ponytail: borrar en M17 (lo sustituye la versión _world)
 static func is_riutash_shelter(chunk: ChunkData, cell: Vector2i) -> bool:
 	return chunk != null and ChunkData.in_bounds(cell) and (chunk.is_refuge(cell) or is_villa_rest(chunk, cell))
+
+
+# --- Mundo 2.0 (WorldChunk, ADR 0014 §7): las mismas reglas, con casillas del chunk de 80×80 ------
+# `cell` es la casilla dentro del chunk (0..79). La exploración nueva las llama desde cell_changed.
+
+## Distancia (Chebyshev) de una casilla a la huella del Nujio del chunk (-1 si no hay Nujio).
+static func distance_to_nujio_world(chunk: WorldChunk, cell: Vector2i) -> int:
+	return _distance_to_rect(chunk.nujio_rect, cell)
+
+
+## Lugar de descanso junto al Nujio: a nujio_rest_radius casillas o menos de su huella, o la plaza
+## de su villa (en un chunk con Nujio). Como is_near_nujio.
+static func is_near_nujio_world(chunk: WorldChunk, cell: Vector2i) -> bool:
+	if chunk == null or not WorldChunk.in_bounds(cell):
+		return false
+	var d: int = distance_to_nujio_world(chunk, cell)
+	if d < 0:
+		return false
+	return d <= int(_relation_cfg().nujio_rest_radius) \
+		or (chunk.has_villa and chunk.get_ground(cell) == WorldChunk.Ground.PLAZA)
+
+
+## Como riutash_near_nujio, con un WorldChunk.
+static func riutash_near_nujio_world(chunk: WorldChunk, cell: Vector2i, bosque_id: int, sheltered: bool) -> bool:
+	if not sheltered or bosque_id < 0 or not is_near_nujio_world(chunk, cell):
+		return false
+	change_relation(bosque_id, int(_relation_cfg().per_nujio_rest))
+	return true
+
+
+## La casilla toca (también en diagonal) la huella del Nujio del chunk.
+static func is_next_to_nujio_world(chunk: WorldChunk, cell: Vector2i) -> bool:
+	return chunk.nujio_rect.size.x > 0 and chunk.nujio_rect.grow(1).has_point(cell) \
+		and not chunk.nujio_rect.has_point(cell)
+
+
+## Se descansa en una villa: en su plaza (suelo PLAZA) o junto al Nujio de un chunk con villa.
+static func is_villa_rest_world(chunk: WorldChunk, cell: Vector2i) -> bool:
+	if not chunk.has_villa or not WorldChunk.in_bounds(cell):
+		return false
+	return chunk.get_ground(cell) == WorldChunk.Ground.PLAZA or is_next_to_nujio_world(chunk, cell)
+
+
+## Refugio del Mundo 2.0: la casilla es de un objeto refugio (árbol hueco o cueva), desde
+## cualquiera de sus casillas (occupant). Solo cuentan las que se pisan.
+static func is_refuge_world(chunk: WorldChunk, cell: Vector2i) -> bool:
+	if chunk == null or chunk.is_blocked(cell):
+		return false
+	var kind: int = chunk.object_at(cell).get("kind", -1)
+	return kind == WorldChunk.ObjectKind.REFUGE_TREE or kind == WorldChunk.ObjectKind.CAVE
+
+
+## Refugio frente al riutash: un objeto refugio o un lugar de descanso de villa (la plaza).
+static func is_riutash_shelter_world(chunk: WorldChunk, cell: Vector2i) -> bool:
+	return chunk != null and WorldChunk.in_bounds(cell) \
+		and (is_refuge_world(chunk, cell) or is_villa_rest_world(chunk, cell))
+
+
+## Como respawn_cell, con un WorldChunk: casilla transitable junto a la huella del Nujio (también en
+## diagonal) a la que se llega desde el hub, la más cercana a la del sur de su centro.
+static func respawn_cell_world(chunk: WorldChunk) -> Vector2i:
+	var rect: Rect2i = chunk.nujio_rect
+	if rect.size.x <= 0:
+		return chunk.hub
+	var south := Vector2i(rect.position.x + rect.size.x / 2, rect.end.y)
+	var ring: Rect2i = rect.grow(1)
+	var best: Vector2i = chunk.hub
+	var best_score: int = 1 << 30
+	for y: int in range(ring.position.y, ring.end.y):
+		for x: int in range(ring.position.x, ring.end.x):
+			var c := Vector2i(x, y)
+			if rect.has_point(c) or not chunk.is_walkable(c) or not chunk.is_reachable(c):
+				continue
+			var score: int = (absi(c.x - south.x) + absi(c.y - south.y)) * WorldChunk.CELLS \
+				+ y * WorldChunk.SIZE + x
+			if score < best_score:
+				best = c
+				best_score = score
+	return best
+
+
+## Distancia (Chebyshev) de `cell` a `rect` (0 dentro; -1 si el rect está vacío).
+static func _distance_to_rect(rect: Rect2i, cell: Vector2i) -> int:
+	if rect.size.x <= 0:
+		return -1
+	var dx: int = maxi(0, maxi(rect.position.x - cell.x, cell.x - (rect.end.x - 1)))
+	var dy: int = maxi(0, maxi(rect.position.y - cell.y, cell.y - (rect.end.y - 1)))
+	return maxi(dx, dy)
 
 
 ## PV tras el riutash (pura). Expuesto: pierde el % de los PV máximos (redondeo hacia abajo) sin

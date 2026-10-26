@@ -45,6 +45,10 @@ var is_ready: bool = false
 var move_dir: Vector2 = Vector2.ZERO
 
 var _last_pos: Vector2 = Vector2.ZERO
+## Gancho de prueba de la interacción (M14), hasta que la exploración nueva (M17) abra diálogos:
+## la última casilla de los pies y la línea que se muestra bajo el HUD de depuración.
+var _last_cell: Vector2i = Vector2i.ZERO
+var _notice: String = ""
 
 @onready var ground: TileMapLayer = $Ground
 @onready var overlay: TileMapLayer = $Overlay
@@ -104,6 +108,8 @@ func _setup() -> void:
 	streamer.mount_all(player.position, view_rect())
 	_last_pos = player.position
 	player.input_enabled = true
+	_last_cell = player.mover.cell
+	player.cell_changed.connect(_on_cell_changed)
 	is_ready = true
 	world_ready.emit()
 	var capture_path: String = _arg_string("--capture=")
@@ -141,6 +147,51 @@ func _process(_delta: float) -> void:
 			Engine.get_frames_per_second(), WorldCoords.world_cell_to_chunk(cell),
 			WorldCoords.world_cell_to_cell(cell), streamer.mounted_sectors().size(),
 			streamer.pending_mounts, streamer.loaded_chunks().size(), streamer.last_update_usec / 1000.0]
+		if not _notice.is_empty():
+			_label.text += "\n" + _notice
+
+
+# --- Gancho de prueba de la interacción (M14). La exploración nueva (M17) lo sustituye. --------
+
+## Letreros por cell_changed (ADR 0014 §2): al llegar junto a uno, se lee.
+func _on_cell_changed(world_cell: Vector2i) -> void:
+	var near: Dictionary = Signpost.sign_entered(streamer.chunk, _last_cell, world_cell)
+	_last_cell = world_cell
+	if not near.is_empty():
+		_notice = _sign_text(streamer.chunk(near.coord), near.cell)
+
+
+func _unhandled_input(event: InputEvent) -> void:
+	if is_ready and event.is_action_pressed(&"interact"):
+		get_viewport().set_input_as_handled()
+		_notice = interact_text()
+
+
+## Lo que diría la interacción con E desde la posición del jugador (sin tocar GameState).
+func interact_text() -> String:
+	var target: Dictionary = Interaction.find_world(streamer.chunk, player.mover.world_pos, player.mover.facing)
+	var chunk: WorldChunk = streamer.chunk(target.chunk)
+	match target.kind:
+		Interaction.Kind.SIGN:
+			return _sign_text(chunk, target.local)
+		Interaction.Kind.REFUGE:
+			return Texts.get_text("refuge_prompt")
+		Interaction.Kind.FRUIT_TREE:
+			return Texts.get_text("fruit_prompt" if FruitRules.has_fruit_world(chunk, target.local) else "fruit_empty")
+		Interaction.Kind.NUJIO:
+			return Texts.get_text("nujio_prompt")
+		Interaction.Kind.REST:
+			return Texts.get_text("rest_prompt")
+	return ""
+
+
+func _sign_text(chunk: WorldChunk, cell: Vector2i) -> String:
+	var home: int = plan.bosque_at(plan.home_chunk)
+	var dest: Dictionary = Signpost.destination_world(plan.bosques, chunk, cell, home)
+	if dest.is_empty() or dest.bosque_id < 0:
+		return ""
+	var villa: String = Signpost.villa_name(plan.seed_value, dest.bosque_id)
+	return Signpost.text_world(villa, dest.to_home, dest.delta, dest.chunks)
 
 
 func _arg_string(prefix: String) -> String:
