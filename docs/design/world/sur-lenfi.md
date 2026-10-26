@@ -100,6 +100,21 @@ Notas:
 | **Ness** | Centro-este, entre Sass y Alciss; muy montañosa al norte; toca el lago | Sí, en varios lugares (dueño). Su norte montañoso podría ser cordillera de Ungol, sin lenfi *(lectura)* |
 | **Alciss** | Extremo este; del lago a la costa; montañas al este. "La más alejada" | Sí, en varios lugares (dueño) |
 
+## Mapa cultural lenfi (dueño, 2026-10-26)
+Imagen: [`Sur-Lenfi_cultural.png`](Sur-Lenfi_cultural.png). El dueño la pasa "para cuando ampliemos más el mundo": no cambia nada de la 0.4 (solo se juega el Valle del Sara).
+
+Cuatro regiones culturales lenfi, de oeste a este (posiciones *(lectura)* del mapa; las equivalencias con las zonas de arriba están por confirmar):
+
+| Cultura | Dónde *(lectura)* | Zona del mapa que parece cubrir |
+|---|---|---|
+| **Lenfi sáfico** | Extremo oeste, de las montañas a la península del sur | Safis |
+| **Lenfi dórico** | Al este de Safis, del norte a la costa, con su red de ríos | Dorias |
+| **Lenfi límaco** | La franja central más grande, del norte a la costa sur, con el río Sara y la red de ríos del este | Valle del Sara y Nosie (y quizá el oeste de Alcuss) |
+| **Lenfi námco** | Noreste, alrededor del lago (Ungol) y los ríos que bajan a él | Naca |
+
+- Las zonas sin color (la cordillera del norte, Balasu y el sur del lago) no tienen cultura lenfi marcada, coherente con "en la cordillera de Ungol no hay lenfi".
+- Pendiente para cuando se amplíe el mundo: confirmar las equivalencias, qué distingue a cada cultura (lengua, nombres de villas, estilos de Bosque, oficios) y si cada una tiene su propia lista de nombres (`data/text/nombres_villas.json`). Lo ve `narrative-writer` con el dueño.
+
 ## Regiones del glosario
 Las regiones del glosario §8 (Nan, Gumna, Ungol, Amuss, Hagat, Uta, Sanag, Sunasem, Ifa, Foss, etc.) son, según el dueño, **grupos de áreas dentro de las regiones del mapa** y "se integrarán en un futuro" (#94). Todavía no están ubicadas.
 
