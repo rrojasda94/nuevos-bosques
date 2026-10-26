@@ -27,6 +27,15 @@ Todos los cambios que nota el jugador. Formato [Keep a Changelog](https://keepac
   - Enemigos con carácter: Botarramas, Ofomni y Aledra van a por el de menos PV; los reparep atacan juntos y el último huye si le queda poca vida (sin dar su XP); el Ofomni descarriado no huye nunca.
 
 - Combate táctico, primeras piezas internas (todavía no se juega; ADR 0016, valores provisionales): un tablero de 8 × 6 casillas con alturas de 0 a 3, escaleras y rampas, agua con vados y obstáculos; cada bando se coloca en las 2 columnas de su lado. Turnos por CT al estilo de FFTA (más Agilidad, más turnos; mover y actuar cuesta 100, solo una de las dos 80 y esperar 60), y movimiento según la Agilidad: Mov 3 + (Agilidad − 5) / 2, entre 2 y 6, y Salto 1 + Agilidad / 7 niveles. Se podrá huir desde cualquier casilla del borde.
+- Combate táctico, acciones (todavía no se juega; valores provisionales):
+  - **Atacar** a una casilla vecina, no en diagonal, y solo si el desnivel no supera tu Salto.
+  - **Evasión** del que recibe: de frente 5 + 2 × Agilidad %, de flanco la mitad y por la espalda 0. Pierde 10 por cada nivel que el atacante esté por encima y gana 10 por cada nivel por debajo. Siempre hay al menos un 5% de acierto. Si esquiva, sale "Falla".
+  - **Daño**: el de siempre, más 1 de flanco, 2 por la espalda y 1 por cada nivel a favor.
+  - **Defender** reduce el daño a la mitad hasta tu siguiente turno. **Esperar** acaba el turno sin actuar y ya no da el ×1,25.
+  - **Ofrecer Luz u ofrenda** paga y termina el combate.
+  - **Huir** funciona desde cualquier casilla del borde, siempre y con todo tu grupo.
+  - Los caídos salen del tablero. Ganas cuando no queda ningún enemigo y pierdes si cae tu adoc.
+  - Los roles de los aliados en el tablero: Cubrir protege a un aliado vecino, Vendar y Animar llegan a 2 casillas y Remate funciona igual.
 
 ### Cambiado
 - La cordillera occidental del Valle del Sara (Urd Gumnavis) ya no tiene cumbres: son colinas y montañas que se cruzan a pie. Los afluentes del oeste que la atraviesan llegan desde el lado de Dorias.
