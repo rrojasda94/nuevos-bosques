@@ -1,5 +1,7 @@
 # Ficha: Cruce de Bosques y combate v2 (0.3 "El Bosque recuerda")
 
+> **Presentación del combate sustituida por ADR 0016** (`combate-tactico.md`, cuadrícula estilo FFTA). Las reglas de esta ficha siguen vigentes: cruce, menú del borde, pago, Bosque forzado o pagado, hostilidad, relación, fórmula de daño, XP y derrota.
+
 > Dueño: `game-designer`. Estado: v2, **vigente desde la 0.3** (PR 1). Sustituye a `cruce-y-combate-v1.md`, que queda como historial (feedback, propuestas de ajuste y decisiones anteriores).
 > **Valores PROVISIONALES**, en `data/combat/balance.json`. Implementación: `rpg-systems-dev`.
 > Fuentes: ADR 0013 (el Bosque recuerda), ADR 0010 (Luz, ofrendas, curación), ADR 0012 (tiempo), ADR 0004 (fatales), `monstruos.md`, `ofrendas-v1.md`, `progresion-adoc.md`, `mision-ofomni.md`.

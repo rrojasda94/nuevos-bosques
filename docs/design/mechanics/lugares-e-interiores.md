@@ -44,7 +44,7 @@ Palabras del dueño (2026-10-25): "Despues tambien podemos empezar a crear los e
     - **neutros** por defecto;
     - a veces **hostiles** (según la tarca);
     - el jugador **puede atacarlos o provocarlos**.
-  - **Mecánica propuesta (provisional)**:
+  - **Mecánica (confirmada por el dueño, #183: "me sirve tu idea"; valores provisionales)**:
     - **Por tarca vacía**: 2–4 espíritus. Con probabilidad **1/5** (por seed), la tarca es **hostil**: sus espíritus atacan al ver al jugador.
     - **Neutros**: flotan y se apartan. Con E se pueden **atacar** (combate en grupo). **Provocar** (pasar pegado varias veces o atacar a uno) vuelve hostiles a todos los de esa tarca hasta el siguiente riutash.
     - **Stats** (pequeño / mediano): PV 10 / 20, ATQ 3 / 5, DEF 1 / 2. Perfil de IA "agresivo" si son hostiles (`ia-de-combate.md`). `fatal_at: []`.
@@ -95,5 +95,4 @@ Palabras del dueño (2026-10-25): "Despues tambien podemos empezar a crear los e
 - **#175** (en parte): sicabis: jardín con un pequeño lago y plantas ornamentales exclusivas; un garelino no puede entrar. Queda abierto añadir el término al glosario (lo hace el dueño) y confirmar las mecánicas propuestas (+1 Luz cada 30 s, Meditar, relación +5 y Senda +1, 1 por subregión).
 - ~~#177 y #178~~ Resueltas: Azhin, villa del noroeste; seres etéreos y amorfos, pequeños o medianos.
 - ~~#179, #180, #181~~ Resueltas: cordillera occidental transitable y Larr al norte (`docs/design/world/sur-lenfi.md`); espíritus neutros por defecto, a veces hostiles, y se les puede atacar o provocar; glosario actualizado con autorización del dueño.
-- **#182**: ¿Azhin está en la subregión Lean? (Probable por posición; la captura no muestra subregiones.)
-- **#183**: ¿se confirman la mecánica y los stats propuestos para los espíritus de las tarcas?
+- ~~#182 y #183~~ Resueltas: Azhin está en Lean; la mecánica de los espíritus está confirmada.

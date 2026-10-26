@@ -1,5 +1,15 @@
 # Ficha: IA de combate (iniciativa, formación, roles y órdenes)
 
+> **Implementado en el PR #67** (CHANGELOG `[Sin publicar]`). **Revisión por ADR 0016** (combate táctico en cuadrícula, `combate-tactico.md`): ver la sección "Traducción a la cuadrícula" al final.
+>
+> **Decisiones de implementación del PR #67**:
+> - En el **1 contra 1**, el jugador sigue actuando primero salvo que el rival le saque **3 de AGI o más**.
+> - "Defender" pasa a un submenú **Táctica**, junto a Apresurar, Esperar, cambiar de fila y la orden al grupo.
+> - **Animar** da +2 ATQ al **siguiente golpe** del aliado, no durante una ronda.
+> - El orden de la próxima ronda se ve en una línea de iconos arriba a la izquierda.
+> - AGI de Aledra: 5.
+> - Enemigos: Botarramas, Ofomni y Aledra van a por el de menos PV; los reparep atacan juntos y el último huye con poca vida, sin dar su XP; el Ofomni descarriado nunca huye.
+
 > Dueño: `game-designer`. **Versión 0.5 "Dos caminos"**, PR propio antes del grupo garelino (`roadmap-0.5.md`). Valores **provisionales**.
 > Fuentes: palabras del dueño (abajo); `monstruos.md` (combate en grupo, reparep, garelinos, Ofomni descarriado), `otros-adoc.md` (aliados), `dos-caminos.md` (grupo garelino de hasta 5), `cruce-y-combate-v2.md` (acciones y fórmula de daño), `moralidad-y-progresion.md` (stats, skills).
 
@@ -115,6 +125,28 @@ Una orden de grupo que dura hasta que se cambie. Cambiarla **no gasta turno** (u
 - Los aliados parecen listos: curan o cubren al herido sin que se lo pidan (pregunta directa).
 - El jugador cambia de orden ("Defender") al menos una vez en un combate difícil.
 - El dueño siente que hay "formaciones" y que la IA "sabe atacar y defender" (pregunta directa).
+
+## Traducción a la cuadrícula (ADR 0016)
+Qué se conserva y qué cambia al pasar al combate táctico (`combate-tactico.md`):
+
+| Pieza del PR #67 | En la cuadrícula |
+|---|---|
+| **Iniciativa por AGI** (ronda + tirada) | Se conserva la AGI como base, pero el orden pasa a ser un **CT** al estilo de FFTA (CT += AGI por tick; juega quien llega a 100) |
+| **Apresurar** | **Desaparece**: moverse sin actuar (CT −80) o esperar (CT −60) ya adelanta el siguiente turno |
+| **Esperar** (último, ×1,25) | Pasa a ser **Esperar** sin actuar (CT −60). Se pierde el ×1,25 |
+| **Defender** | Se conserva: daño ×0,5 hasta tu siguiente turno; cuenta como acción |
+| **Dos filas** (delante / detrás, 75% a delante, ×0,75 desde detrás) | **Desaparecen**: pasan a ser **posición real**. Estar "delante" es estar al alcance; "detrás" es estar lejos o tras un defensor. Se pierde el ×0,75 |
+| **Cambiar de fila** | Desaparece (es moverse) |
+| **Remate** (atacante) | Igual |
+| **Cubrir** (defensor) | Se lleva los golpes dirigidos a un aliado **adyacente** a él durante una ronda (cada 2 rondas) |
+| **Vendar / Animar** (apoyo) | Alcance **2 casillas**. Animar: +2 ATQ al siguiente golpe |
+| **Perfil agresivo** | Se mueve hacia el de menos PV que pueda alcanzar y lo ataca. Si no llega, se acerca |
+| **Perfil enjambre** (reparep) | **Rodea**: buscan casillas adyacentes al mismo objetivo para el ataque conjunto; el último huye con poca vida |
+| **Perfil táctico** (garelinos) | Busca **flanco o espalda**; ataca primero al apoyo si llega; se retira por debajo del 25% |
+| **Perfil berserk** (Ofomni descarriado) | Carga contra el más cercano. Anuncia el Latigazo (área 3 × 2 delante) |
+| **Órdenes al grupo** | Igual (Libre, Atacar a tu objetivo, Defender), más el movimiento: "Defender" hace que los aliados se agrupen junto al jugador |
+| **Aliados que se protegen ante un Latigazo** | **Salen del área marcada**; si no pueden, Defender |
+| **Retirarse atrás con poca vida** | Se alejan del enemigo más cercano |
 
 ## Preguntas abiertas
 - ~~**#174**: ¿AGI con puntos o derivada del nivel?~~ Resuelta: automática con el nivel (5 + ⌊nivel/2⌋), sin puntos.
