@@ -12,6 +12,8 @@ extends RefCounted
 ## - Validación: colores desconocidos con coordenadas (suavizado), PNG de tamaños distintos,
 ##   lugares fuera del mapa, en el agua o en una cumbre, Bosques clave fuera de 4–16 chunks,
 ##   ríos que se cortan y villas sin acceso a pie (sobre la rejilla gruesa). Errores en español.
+## - Un río une dos sitios: bordes del mapa, lago, mar, cumbre o un `manantial` (lugar de
+##   lugares.csv en nivel 2 o 3, junto al río: nace en la montaña sin cumbre ni borde).
 ## Clase pura: no genera nada. La pasada de región (RegionPlan, M5) la consume; no la modifica.
 
 const PALETTE_PATH: String = "res://data/world/authoring_palette.json"
@@ -31,7 +33,7 @@ const LAYERS: Array[String] = ["height", "water", "roads", "bosques"]
 enum Height { NONE, LEVEL_0, LEVEL_1, LEVEL_2, LEVEL_3, PEAK }
 enum Water { NONE, RIVER_NAVIGABLE, RIVER_NARROW, LAKE, SEA, FORD }
 enum Road { NONE, ROAD, BRIDGE }
-const PLACE_TYPES: Array[String] = ["villa", "villa_natal", "hito", "tarca", "bosque", "lugar"]
+const PLACE_TYPES: Array[String] = ["villa", "villa_natal", "hito", "tarca", "bosque", "lugar", "manantial"]
 const CSV_COLUMNS: Array[String] = ["id", "nombre", "tipo", "x", "y", "color", "estilo", "notas"]
 const CSV_REQUIRED: Array[String] = ["id", "nombre", "tipo", "x", "y"]
 
@@ -443,6 +445,15 @@ func _validate_places() -> void:
 			_error("%s está en el agua (%s) en %s." % [label, water_names[w], _where(cell)], cell)
 		if height_at(cell) == Height.PEAK:
 			_error("%s está en una cumbre en %s." % [label, _where(cell)], cell)
+		elif p.type == "manantial":
+			var h: int = height_at(cell)
+			if has_layer.get("height", false) and h != Height.LEVEL_2 and h != Height.LEVEL_3:
+				_error("%s: un manantial tiene que estar en la montaña (nivel 2 o 3) en %s." % [label, _where(cell)], cell)
+			var touches: bool = false
+			for d: Vector2i in [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]:
+				touches = touches or _is_river(water_at(cell + d))
+			if has_layer.get("water", false) and not touches:
+				_error("%s: el manantial no toca ningún río (pon el río pegado a él, por un lado) en %s." % [label, _where(cell)], cell)
 
 
 ## Bosques clave: cada uno ocupa los chunks donde está pintado su color (o, si no se pinta, el
@@ -519,7 +530,7 @@ func _is_river(w: int) -> bool:
 
 
 ## Un río (navegable, estrecho y sus vados, 4-conectado) tiene que tener al menos dos
-## desembocaduras distintas: borde del mapa, lago, mar o cumbre (nacimiento). Si solo tiene una
+## desembocaduras distintas: borde del mapa, lago, mar, cumbre o manantial (nacimiento). Si solo tiene una
 ## o ninguna, se corta: se señala la celda del río más lejana a su desembocadura.
 func _validate_rivers() -> void:
 	if not has_layer.get("water", false):
@@ -567,7 +578,7 @@ func _validate_rivers() -> void:
 		if clusters >= 2:
 			continue
 		var end: Vector2i = _farthest(comp[0] if mouths.is_empty() else mouths.keys()[0], in_comp)
-		_error("agua.png: el río se corta en %s. Un río tiene que unir dos sitios: bordes del mapa, un lago, el mar o una cumbre."
+		_error("agua.png: el río se corta en %s. Un río tiene que unir dos sitios: bordes del mapa, un lago, el mar, una cumbre o un manantial."
 				% _where(end), end)
 
 
@@ -578,6 +589,9 @@ func _is_mouth(c: Vector2i) -> bool:
 		var n: Vector2i = c + d
 		var nw: int = water_at(n)
 		if nw == Water.LAKE or nw == Water.SEA or height_at(n) == Height.PEAK:
+			return true
+	for p: Dictionary in places_of_type("manantial"):
+		if absi(p.cell.x - c.x) + absi(p.cell.y - c.y) == 1:
 			return true
 	return false
 

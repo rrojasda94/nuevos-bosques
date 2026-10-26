@@ -31,10 +31,12 @@ const SHADOW_COLOR: Color = Color("#000000")
 const PLACE_COLORS: Dictionary = {
 	"villa_natal": Color("#ffd23c"), "villa": Color("#ffffff"), "hito": Color("#ff8a3c"),
 	"tarca": Color("#c070ff"), "bosque": Color("#60ff70"), "lugar": Color("#50e0ff"),
+	"manantial": Color("#a0d8ff"),
 }
 const PLACE_NAMES: Dictionary = {
 	"villa_natal": "villa natal", "villa": "villa", "hito": "hito",
 	"tarca": "tarca", "bosque": "Nujio de Bosque clave", "lugar": "lugar",
+	"manantial": "manantial (nacimiento de río)",
 }
 
 ## Fuente de 3×5 (mayúsculas sin tildes, cifras y algo de puntuación). Filas de arriba abajo.

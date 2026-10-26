@@ -7,7 +7,7 @@ Todos los cambios que nota el jugador. Formato [Keep a Changelog](https://keepac
 ### Añadido
 - Afluentes del río Sara: siete ríos bajan de las Urd Gumnavis (oeste) y de las Gumnada Gumnavis (este) hasta el Sara, siguiendo los límites entre subregiones del Valle del Sara. Nacen estrechos en la montaña y se hacen navegables al salir a tierra baja (los dos del norte, el 6to y el 7mo, en su último tramo antes del Sara); tienen vados y puentes donde los cruza un camino. De sur a norte se llaman "1ro del Sara", "2do del Sara"… hasta "7mo del Sara".
 - Larr, la cordillera norte del Sur Lenfi, cierra el Valle del Sara por el norte: una pared de cumbres que no se puede cruzar. El río Sara nace a su pie.
-- Azhin, la villa más septentrional del Valle del Sara, en el noroeste, al pie de Larr, con un camino que la une a los de Lean.
+- Azhin, la villa más septentrional del Valle del Sara, en el noroeste, al pie de Larr, con un camino que la une a los de Lean, y la Tarca de Azhin, junto a la villa.
 - Senda (valores provisionales): tu forma de tratar a los Bosques y a sus Únicos va formando tu Senda, de violenta a respetuosa. No se ve ningún número: un icono arriba a la derecha del HUD (fauces rojas si es violenta, un círculo gris si es neutral, una hoja verde si es respetuosa) y su nombre en la pantalla I. Cuando el icono cambia, el HUD lo avisa ("Tu Senda se vuelve violenta.").
   - **La oscurecen**: vencer a un Botarramas o a otro Único del Bosque (−3), atacar a un Único de un Bosque que te había abierto el paso (−2 más), robar (−10) y sacar frutos guardados de su Bosque (−1 por fruto).
   - **La aclaran**: pagar el peaje con Luz (+1) o con una ofrenda (+2), también en combate; dejar una ofrenda ante un Nujio (+1); vencer junto a otro adoc (+2); apagar un incendio o defender un Bosque (+5); y cumplir una misión lejana (+3).
@@ -38,7 +38,7 @@ Todos los cambios que nota el jugador. Formato [Keep a Changelog](https://keepac
   - Los roles de los aliados en el tablero: Cubrir protege a un aliado vecino, Vendar y Animar llegan a 2 casillas y Remate funciona igual.
 
 ### Cambiado
-- La cordillera occidental del Valle del Sara (Urd Gumnavis) ya no tiene cumbres: son colinas y montañas que se cruzan a pie. Los afluentes del oeste que la atraviesan llegan desde el lado de Dorias.
+- La cordillera occidental del Valle del Sara (Urd Gumnavis) ya no tiene cumbres: son colinas y montañas que se cruzan a pie. El 3ro, el 5to y el 7mo del Sara nacen en manantiales de esa cordillera y bajan desde allí al Sara.
 - El Ofomni descarriado tiene más PV (×0,85 en vez de ×0,7: 29 con d = 4) para que siga siendo un reto con los puntos de stat. En nivel 3 lo vence cualquier reparto de combate (todo ATQ, todo DEF, equilibrado o, más justo, todo Vigor); en nivel 2 o con todo a Luz sigue perdiendo casi siempre.
 - El guardado pasa a la versión 18 (Senda, bando, puntos sin gastar, puntos gastados por stat y skills). Las partidas anteriores conservan su nivel, recalculan los stats con el crecimiento automático nuevo y reciben todos los puntos de stat y de skill de su nivel para repartirlos.
 
