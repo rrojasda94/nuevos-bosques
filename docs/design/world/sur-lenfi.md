@@ -72,7 +72,7 @@ Confirmado por el dueño:
 - **Son navegables en cuanto salen de la zona montañosa.** Dentro de ella son río estrecho.
 - **Nombres**: "1ro del Sara", "2do del Sara"… en el orden en que se unen al Sara, **de sur a norte**, contando las dos orillas.
 
-Están pintados en `data/world/regions/valle_del_sara/agua.png` y salen de `tools/world/paint_afluentes.py` (puntos de control editables). Cada uno nace en una cumbre pequeña con colinas alrededor (`altura.png`). Donde cruza un camino lleva puente (`caminos.png`) y tiene algún vado. Su nombre está en `lugares.csv` como `lugar`, junto al río, y la vista previa lo rotula. El trazado sigue los límites del mapa a mano *(lectura)*, pasado a la escala de la autoría (el Valle del Sara del mapa → 12×16 chunks, 240×320 px).
+Están pintados en `data/world/regions/valle_del_sara/agua.png` y salen de `tools/world/paint_afluentes.py` (puntos de control editables). Los del este y el 1ro nacen en una cumbre pequeña con colinas alrededor (`altura.png`). El 3ro, el 5to y el 7mo cruzan la cordillera occidental, que es transitable (dueño, 2026-10-26): entran por el borde oeste del mapa (vienen del lado de Dorias), con colinas de nivel 3 y 2 en el nacimiento y sin cumbre. Donde cruza un camino lleva puente (`caminos.png`) y tiene algún vado. Su nombre está en `lugares.csv` como `lugar`, junto al río, y la vista previa lo rotula. El trazado sigue los límites del mapa a mano *(lectura)*, pasado a la escala de la autoría (el Valle del Sara del mapa → 12×16 chunks, 240×320 px).
 
 **Estrecho o navegable** (regla del script): el afluente es estrecho desde el nacimiento y pasa a navegable en el primer píxel de nivel 0-1 a partir del cual ya no vuelve a cruzar 8 celdas seguidas de nivel 2 o más. Si lo navegable del final mide menos de 8 celdas, se queda todo estrecho. El norte del valle (Lean, Causie, Tossie, Alss) es casi todo nivel 2-3 y allí el propio Sara también es estrecho, así que el 6to y el 7mo no llegan a salir de la montaña. Por petición del dueño (2026-10-26: "Sí, dales un tramo navegable al 6to y al 7mo antes de unirse al Sara") tienen además un **tramo final navegable de 30 celdas** (1,5 chunks) antes de la confluencia (`navegable_min` en el script). El Sara sigue estrecho en esas dos confluencias: el validador y `RegionPlan` no exigen nada al cambiar de tipo de río, así que no se ha tocado.
 
@@ -82,11 +82,11 @@ Están pintados en `data/world/regions/valle_del_sara/agua.png` y salen de `tool
 |---|---|---|---|---|---|---|
 | **1ro del Sara** | Oeste | Urd Gumnavis (colina del sur) | Ninguno: es el pequeño afluente del sur de Cassie, que el mapa no dibuja | (84, 303), chunk (4, 15) | (104, 300), chunk (5, 15) | 7 / 17 |
 | **2do del Sara** | Este | Gumnada Gumnavis | Vastie–Cassie | (235, 160), chunk (11, 8) | (93, 194), chunk (4, 9) | 6 / 179 |
-| **3ro del Sara** | Oeste | Urd Gumnavis | Ostie–Cassie (por la franja occidental de Cassie) | (4, 128), chunk (0, 6) | (91, 170), chunk (4, 8) | 9 / 121 |
+| **3ro del Sara** | Oeste | Urd Gumnavis | Ostie–Cassie (por la franja occidental de Cassie) | (0, 128), borde oeste, chunk (0, 6) | (91, 170), chunk (4, 8) | 11 / 123 |
 | **4to del Sara** | Este | Gumnada Gumnavis | Alss–Vastie | (235, 104), chunk (11, 5) | (120, 125), chunk (6, 6) | 125 / 32 |
-| **5to del Sara** | Oeste | Urd Gumnavis | Tossie–Ostie (borde sur de Tossie) | (4, 62), chunk (0, 3) | (98, 101), chunk (4, 5) | 56 / 84 |
+| **5to del Sara** | Oeste | Urd Gumnavis | Tossie–Ostie (borde sur de Tossie) | (0, 62), borde oeste, chunk (0, 3) | (98, 101), chunk (4, 5) | 60 / 84 |
 | **6to del Sara** | Este | Gumnada Gumnavis | Causie–Alss | (235, 36), chunk (11, 1) | (115, 90), chunk (5, 4) | 159 / 30 |
-| **7mo del Sara** | Oeste | Urd Gumnavis | Lean–Tossie (borde norte de Tossie) | (4, 30), chunk (0, 1) | (116, 56), chunk (5, 2) | 117 / 30 |
+| **7mo del Sara** | Oeste | Urd Gumnavis | Lean–Tossie (borde norte de Tossie) | (0, 30), borde oeste, chunk (0, 1) | (116, 56), chunk (5, 2) | 123 / 30 |
 
 Notas:
 - El tramo alto del Sara en el mapa baja por el límite Lean–Causie y después por Tossie–Alss y Ostie–Vastie. El Sara de la autoría ya iba por esa franja central y no se ha movido.
@@ -165,14 +165,18 @@ Lo que se lee *(lectura)*:
   - De allí salieron los **primeros Nuevos Bosques**.
   - Ubicación según la captura del dueño (2026-10-26): en el **extremo norte de la cordillera occidental**, pegada al **borde norte** (Larr).
   - **Está en la subregión Lean** (dueño, #182: "Azhin está en Lean").
+  - **En la autoría** (`tools/world/paint_relieve_autor.py`): fila `villa_azhin` de `lugares.csv` en (16, 4), chunk (0, 0), al pie de Larr, con un camino hasta el camino de Lean.
 - **Tarca de Trastas** (glosario §7: en Dorias): en la **misma cordillera occidental**, del **lado de Dorias** (zona salmón de la captura), hacia la **parte central** de la franja (dueño).
+  - **Pendiente**: queda fuera del Valle del Sara; no está en la autoría. Se pondrá cuando exista la región de Dorias.
 - **Cordillera occidental** (dueño: "la cordillera no tan agreste es la que esta rodeada en rojo, son colinas y montañas bastante transitables"):
   - **franja alargada de norte a sur** en el borde oeste del Valle del Sara, a caballo con Dorias;
   - va desde el **borde norte** casi hasta la **costa sur**;
   - **la cruzan ríos**;
   - **colinas y montañas transitables**, no una barrera.
   - Para la generación: relieve de colinas, con pasos y ríos que la atraviesan.
+  - **En la autoría**: franja `x < 40` (2 chunks) desde el pie de Larr hasta la fila 259 (casi la costa), toda en niveles 1-3 y sin cumbres. Las escaleras y rampas entre niveles las pone el generador.
 - **Cordillera de Larr** (dueño: "La cordillera norte de todo el Sur Lenfi es Larr y es una pared impenetrable"): la **franja de montañas del borde norte** de todo el mapa es Larr. **Impenetrable**: es el límite norte del mundo jugable.
+  - **En la autoría**: las 3 filas de arriba de `altura.png` (12 casillas) son cumbre de lado a lado; el Sara nace a su pie.
 
 ## Frecuencia de Nuevos Bosques sobre el mapa (ADR 0007)
 - Alta: Lean, Tossie, Ostie (noroeste del Valle del Sara, junto a Dorias).
@@ -187,4 +191,5 @@ Lo que se lee *(lectura)*:
 - Nivel de Safis, Dorias, Nosie, Naca, Balasu y Cabuta (#102).
 - Ríos grandes (navegables) y estrechos (#74). Pasos (#88). Afluentes del Sara: estrechos en la montaña y navegables fuera de ella (dueño, 2026-10-25).
 - Significado de la marca azul (#96).
+- Tarca de Trastas: cuando exista la región de Dorias (está del lado de Dorias de la cordillera occidental).
 - Ubicación de las regiones del glosario como grupos de áreas (#94, "más adelante").
