@@ -30,6 +30,12 @@
     "ai": { "help_below": 0.3, "finish_below": 0.3, "retreat_below": 0.2, "swarm_flee_below": 0.3, "tactical_retreat_below": 0.25 },
     "garelino": { "agi": 5, "ai": "tactical" }
   },
+  "tactical": {
+    "$comment": "Combate táctico en cuadrícula (combate-tactico.md, ADR 0016; T1 y T2). board: tablero de width x height casillas; cada bando se coloca en deploy_columns columnas de su lado (hasta max_per_side combatientes); ford_cost: coste de Mov de pisar un vado (1 = como el suelo). movement: Mov = mov_base + floor((AGI - mov_agi_ref) / mov_agi_div), entre mov_min y mov_max; Salto (niveles que se suben entre casillas vecinas) = jump_base + floor(AGI / jump_agi_div); se baja hasta Salto + drop_extra niveles; escaleras y rampas no gastan Salto. ct: cada tick CT += AGI; juega quien llega a threshold; CT inicial = AGI x start_per_agi; tras el turno, CT -= cost_move_and_act (movió y actuó), cost_single (solo una de las dos) o cost_wait (ninguna). Empate de CT: primero el bando del jugador; dentro de un bando, un orden fijo sorteado con la seed del combate. Provisionales: game-designer.",
+    "board": { "width": 8, "height": 6, "deploy_columns": 2, "max_per_side": 3, "ford_cost": 1 },
+    "movement": { "mov_base": 3, "mov_agi_ref": 5, "mov_agi_div": 2, "mov_min": 2, "mov_max": 6, "jump_base": 1, "jump_agi_div": 7, "drop_extra": 1 },
+    "ct": { "threshold": 100, "start_per_agi": 10, "cost_move_and_act": 100, "cost_single": 80, "cost_wait": 60 }
+  },
   "stat_points": {
     "$comment": "Reparto de los puntos de stat (moralidad-y-progresion.md, ajuste #162): cada compra cuesta cost puntos y da gain al stat. atk y def: ATQ y DEF; vigor: PV máx. (los PV actuales suben lo mismo); luz: límite de Luz suelta (luz_max). Los puntos no gastados se guardan. Provisionales: game-designer.",
     "order": ["atk", "def", "vigor", "luz"],
