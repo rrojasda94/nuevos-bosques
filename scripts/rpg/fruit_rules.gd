@@ -134,6 +134,52 @@ static func bosque_entered(bosque_id: int) -> int:
 	return taken_out
 
 
+# --- Mundo 2.0 (WorldChunk, ADR 0014 §7) --------------------------------------------------------
+# El frutal es un objeto FRUIT_TREE de 2×2. Su clave en emptied_fruit_trees es key(coord, esquina
+# noroeste del objeto), así que da igual desde cuál de sus casillas se pregunte. El fruto se toma
+# desde cualquier casilla vecina (también en diagonal). Las reglas son las de arriba.
+
+## Esquina noroeste (casilla del chunk) del frutal que tapa `cell`, o (-1, -1) si no es un frutal.
+static func tree_origin(chunk: WorldChunk, cell: Vector2i) -> Vector2i:
+	var obj: Dictionary = chunk.object_at(cell)
+	if obj.get("kind", -1) != WorldChunk.ObjectKind.FRUIT_TREE:
+		return Vector2i(-1, -1)
+	return obj.cell
+
+
+## Es un frutal (cualquiera de sus casillas).
+static func is_fruit_tree_world(chunk: WorldChunk, cell: Vector2i) -> bool:
+	return tree_origin(chunk, cell).x >= 0
+
+
+## Clave del frutal que tapa `cell`: chunk y esquina noroeste.
+static func key_world(chunk: WorldChunk, cell: Vector2i) -> Vector4i:
+	return key(chunk.coord, tree_origin(chunk, cell))
+
+
+## El frutal que tapa `cell` tiene fruto (false si no es un frutal).
+static func has_fruit_world(chunk: WorldChunk, cell: Vector2i) -> bool:
+	return is_fruit_tree_world(chunk, cell) and has_fruit(chunk.coord, tree_origin(chunk, cell))
+
+
+## Con los pies en la casilla global `feet_world_cell` se llega al frutal que tapa `cell`: los pies
+## están en una de las casillas vecinas de su 2×2 (también en diagonal).
+static func can_reach_world(chunk: WorldChunk, cell: Vector2i, feet_world_cell: Vector2i) -> bool:
+	if not is_fruit_tree_world(chunk, cell):
+		return false
+	var obj: Dictionary = chunk.object_at(cell)
+	var rect := Rect2i(WorldCoords.to_world_cell(chunk.coord, obj.cell), obj.size)
+	return Interaction.is_beside(rect, feet_world_cell) and not rect.has_point(feet_world_cell)
+
+
+## Como take(), con el frutal que tapa `cell` (cualquiera de sus casillas). {} si no es un frutal,
+## no tiene fruto o no cabe al guardar.
+static func take_world(chunk: WorldChunk, cell: Vector2i, bosque_id: int, home: int, store: bool = false) -> Dictionary:
+	if not is_fruit_tree_world(chunk, cell):
+		return {}
+	return take(chunk.coord, tree_origin(chunk, cell), bosque_id, home, store)
+
+
 ## Riutash: todos los frutales rebrotan y ningún Bosque ha dado fruto en el nuevo Momento.
 static func regrow() -> void:
 	GameState.emptied_fruit_trees.clear()
