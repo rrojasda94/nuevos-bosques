@@ -24,12 +24,21 @@ Palabras del dueño:
 
 ### Tablero y vista
 - **Vista: cenital (top-down) con alturas por capas** (decisión del dueño): el mismo relieve en capas estilo Zelda del Mundo 2.0 (ADR 0014).
+- **Todos los combates van en tablero**, también el 1 contra 1 contra un Botarramas (dueño, #187: "Sí, todos").
 - **De dónde sale**: un **recorte del terreno** alrededor del punto donde empieza el combate.
-  - Conserva árboles y rocas (obstáculos), agua (no transitable salvo en vados) y **alturas** (capas 0–2 del Mundo 2.0, con escaleras y rampas).
+  - Se pide a la consulta del Mundo 2.0 `WorldQuery.rect(origin_world_cell, size)`, que devuelve por casilla `level`, `blocked`, `stair/ramp`, `water/ford` y `object_kind` (la ofrece la otra sesión).
+  - Conserva árboles y rocas (obstáculos), agua (no transitable salvo en vados) y alturas.
   - Antes del Mundo 2.0, el recorte es llano.
-- **Tamaño**: **12 × 8 casillas** (a 16 px son 192 × 128 en una pantalla de 320 × 180, y queda sitio para la interfaz).
-- **Recorte jugable**: si menos del 50% de las casillas son transitables, se desplaza el recorte al claro más cercano (a 1 chunk como mucho).
-- **Colocación**: el jugador y sus aliados aparecen en las **2 columnas del lado por donde llegó**; los enemigos, alrededor del punto de encuentro, del lado opuesto.
+- **Tamaño**: **8 × 6 casillas** (dueño, #185: "Más chico, 3 por bando"). A 16 px son 128 × 96 en una pantalla de 320 × 180, con sitio de sobra para la interfaz.
+- **Alturas en el tablero** (el mundo tiene **niveles 0–3**, ADR 0014 §3; en el mundo, cada nivel de risco ocupa **2 filas** de cara, que bloquean):
+  1. **Se buscan recortes con poco desnivel**: el recorte se elige, dentro de 1 chunk del punto de encuentro, para que tenga **como mucho 2 niveles** de diferencia y al menos un **70% de casillas transitables**.
+  2. **Las caras de risco se comprimen**: en el tablero, cada casilla toma el **nivel** del terreno, y las filas de cara de risco **desaparecen**. El risco queda como un **salto de altura entre casillas vecinas**, como en FFTA, en lugar de 2 filas bloqueadas por nivel. Así el desnivel no se come el tablero.
+  3. **Escaleras y rampas** se conservan y unen niveles sin gastar Salto.
+  4. **Tablero conexo**: debe existir un camino a pie (con escaleras o rampas) entre los dos bandos. Si no, se elige otro recorte.
+- **Colocación** (tablero 8 × 6):
+  - el jugador y sus aliados, en las **2 columnas del lado por donde llegó** (12 casillas para hasta 3);
+  - los enemigos, en las **2 columnas del lado opuesto**;
+  - entre ambos quedan 4 columnas: con Mov 3 se llega al contacto en 1–2 turnos.
 
 ### Stats que influyen (dueño: "los stats igual influyen")
 | Stat | Influye en |
@@ -44,9 +53,10 @@ Palabras del dueño:
   - Botarramas (AGI 3): 2, porque renquea.
   - Ofomni y Aledra: 3.
   - Reparep: 4.
-- **Salto** (capas que puede subir) = 1 + ⌊AGI/7⌋.
+- **Salto** (niveles que puede subir **entre dos casillas vecinas**) = 1 + ⌊AGI/7⌋.
   - Adoc: 1 en nivel 1 y 2 desde AGI 7.
   - Reparep: 2.
+  - Un salto de 3 niveles (de 0 a 3) solo se sube por escalera o rampa: nadie llega a Salto 3 en la práctica.
 - Se baja hasta Salto + 1 capas. Las **escaleras y rampas** se suben sin gastar Salto.
 
 ### Turnos (estilo CT de FFTA)
@@ -75,7 +85,8 @@ Palabras del dueño:
 | **Flanco** | La mitad |
 | **Espalda** | 0 |
 
-  - **Altura**: −10 puntos de evasión por cada capa que el atacante esté por **encima** y +10 por cada capa por **debajo**.
+  - **Altura** (niveles 0–3 del mundo; en el tablero, como mucho 2 de diferencia): −10 puntos de evasión por cada **nivel** que el atacante esté por **encima** y +10 por cada nivel por **debajo**.
+  - **Cuerpo a cuerpo entre niveles**: solo se puede atacar a una casilla vecina si la diferencia de nivel es ≤ el Salto del atacante (si no, no llega).
 - **Daño**: max(1, ATQ − DEF + aleatorio de −1 a +2), más:
   - **flanco** +1;
   - **espalda** +2;
@@ -97,7 +108,7 @@ Palabras del dueño:
 | **Defender** | El daño recibido ×0,5 hasta tu siguiente turno; cuenta como acción |
 | **Esperar** | No actúas; CT −60 |
 | **Ofrecer Luz / Ofrecer ofrenda** | Sin cambios: pagas N y el Único **apaciguable** se va; termina el combate (ADR 0013). Desactivado con los no apaciguables (Ofomni descarriado, Aledra) |
-| **Huir** | Solo desde una casilla del **borde por el que llegaste** (2 columnas). Funciona siempre (provisional, #184). El enemigo recupera PV (como hoy) |
+| **Huir** | Desde **cualquier casilla del borde** del tablero, **siempre** con éxito (dueño, #184: "Cualquier borde, seguro"). Huye todo tu bando. El enemigo recupera PV (como hoy) |
 | **Orden al grupo** | Libre / Atacar a tu objetivo / Defender (PR #67), sin gastar acción |
 
 - **Apresurar** (PR #67) desaparece: el sistema CT ya premia moverse sin actuar o esperar.
@@ -105,24 +116,31 @@ Palabras del dueño:
 
 ### Ataques en área y especiales
 - **Latigazo múltiple del Ofomni** (cada 3 ataques, ×3):
-  - **área de 3 × 2 casillas** delante de él;
+  - **área de 3 × 1 casillas**: la línea de 3 justo delante de él (antes 3 × 2; se reduce porque en un tablero de 8 × 6 con hasta 3 por bando, un 3 × 2 cubre medio frente);
   - se **anuncia** en su turno anterior marcando las casillas; salir del área lo esquiva;
   - **Defender** lo reduce a la mitad.
-- **Ataque conjunto de los reparep**: cuando **2 o más reparep están adyacentes al mismo objetivo**, atacan juntos en el turno del primero, con daño = suma de ATQ − DEF (una sola vez). Los demás reparep se acercan para rodear.
+- **Ataque conjunto de los reparep**: cuando **2 o 3 reparep están adyacentes al mismo objetivo**, atacan juntos en el turno del primero, con daño = suma de ATQ − DEF (una sola vez). Los demás reparep se acercan para rodear. Con como mucho 3 reparep, un objetivo puede tener a los 3 alrededor (quedan 4 lados ortogonales).
 - **Vendar y Animar** (apoyo): alcance **2 casillas**.
 
 ### Grupo y tamaño
-- **Por bando**: hasta **6** en el tablero:
-  - el jugador más 0–2 aliados adoc (más con "Llamada del Bosque");
-  - el grupo garelino de hasta 5;
-  - enemigos de 1 a 4 (reparep 2–4, garelinos 2–3).
-  - Si un bando supera los 6, los que sobran entran como **refuerzo** cuando cae uno (provisional, #185).
+- **Por bando: hasta 3** en el tablero (dueño, #185: "Más chico, 3 por bando"). **Sin refuerzos**.
+  - **Bando del jugador**: el adoc más hasta **2** aliados.
+    - Los aliados adoc (0–2) encajan.
+    - **Llamada del Bosque** solo trae a su Único si queda hueco.
+    - **Grupo garelino** (hasta 5 miembros, `dos-caminos.md`): llevas al combate **los 2 primeros de tu formación**; los demás esperan fuera y pueden sustituir a un miembro retirado en el combate **siguiente**, no en este.
+  - **Enemigos: de 1 a 3**.
+    - **Reparep**: los grupos pasan de 2–4 a **2–3**.
+    - Garelinos: 2–3.
+    - Únicos solos: 1.
 - **Aliados caídos**: se retiran (no mueren; regla de no matar).
 
 ### Lo que no cambia
 - Encuentro con los Botarramas: primero el **menú del borde** (pagar, ofrenda, Imponerse, enfrentar, retroceder). "Enfrentar" abre el tablero.
 - El Bosque recuerda, hostilidad, relación, XP por victoria, `fatal_at`, reaparición tras una derrota no fatal, Senda.
-- **Textos**: frases cortas sobre el tablero ("¡Golpe por la espalda!", números de daño). La narración larga mensaje a mensaje se reduce (#186).
+- **Textos** (dueño, #186: "Textos cortos y números"):
+  - **números de daño flotando** sobre el que recibe el golpe ("Falla" si esquiva);
+  - una **línea corta** con el nombre de la acción, como en FFTA ("Golpe por la espalda", "Latigazo múltiple", "Vendar").
+  - **Se acaba la narración mensaje a mensaje** (estilo Pokémon).
 
 ## Inputs / outputs
 - **Inputs:** terreno del punto de encuentro (alturas, obstáculos, agua), combatientes (stats, AGI, rol), estado de detección (sorpresa), acciones.
@@ -138,8 +156,9 @@ Palabras del dueño:
 ## Casos límite
 - **Recorte con agua o riscos que separan a los bandos**: el recorte se desplaza o se garantiza un camino (el tablero debe ser conexo).
 - **Nadie puede alcanzar a nadie** (Mov bajo y tablero grande): los perfiles de IA se acercan cada turno; el tablero de 12 × 8 lo limita.
-- **Combate contra un solo Botarramas**: también en tablero (#187); rápido por su Mov 2.
-- **Huir sin estar en el borde de entrada**: la opción no aparece; hay que caminar hasta allí.
+- **Combate contra un solo Botarramas**: también en tablero (#187); rápido por su Mov 2 en un tablero de 8 × 6.
+- **Huir sin estar en el borde**: la opción no aparece; hay que caminar hasta cualquier casilla del borde (en un 8 × 6, nunca más de 3 casillas).
+- **Recorte sin zona de poco desnivel en 1 chunk**: se usa el mejor disponible, con las caras de risco comprimidas a saltos de altura.
 - **Emboscada con aliados lejos**: los aliados aparecen junto al jugador.
 
 ## Criterios de éxito para playtest
@@ -151,17 +170,19 @@ Palabras del dueño:
 ## Plan de PR (pequeños)
 | # | PR | Agentes | Depende de |
 |---|---|---|---|
-| T1 | **Tablero lógico** (clase pura): casillas, alturas, obstáculos, recorte del terreno, colocación inicial; tests | rpg-systems-dev, engine-architect | — (llano hasta que haya relieve) |
+| T1 | **Tablero lógico** (clase pura, 8 × 6): casillas, niveles 0–3 con las caras comprimidas, obstáculos, elección del recorte (poco desnivel, 70% transitable, conexo), colocación inicial; tests. Consume `WorldQuery.rect` cuando exista | rpg-systems-dev, engine-architect | — (llano hasta que haya relieve) |
 | T2 | **Turnos CT, movimiento** (Mov, Salto, caminos) **y orientación**; tests | rpg-systems-dev | T1 |
-| T3 | **Acciones**: atacar con evasión, orientación y altura; Defender, Esperar, Ofrecer, Huir desde el borde; tests | rpg-systems-dev | T2 |
-| T4 | **Escena táctica**: cursor, rangos resaltados, menú Mover / Actuar / Esperar / Orientación, línea de turnos, textos cortos | ui-ux-dev | T3 |
+| T3 | **Acciones**: atacar con evasión, orientación y altura; Defender, Esperar, Ofrecer, Huir desde cualquier borde; tests | rpg-systems-dev | T2 |
+| T4 | **Escena táctica**: cursor, rangos resaltados, menú Mover / Actuar / Esperar / Orientación, línea de turnos, números de daño flotando y línea corta de acción | ui-ux-dev | T3 |
 | T5 | **IA en la cuadrícula**: perfiles con movimiento, roles (Cubrir, Remate, Vendar, Animar), órdenes | rpg-systems-dev | T3 |
 | T6 | **Especiales**: Latigazo en área anunciado, ataque conjunto de reparep, sorpresa y emboscada | rpg-systems-dev | T5 |
 | T7 | **Arte**: sprites de combate en 4 direcciones; tablero desde el relieve del Mundo 2.0 | pixel-artist, world-gen-dev (sesión del Mundo 2.0) | T4; 0.4 |
 | T8 | Retirar la escena antigua y ajustar el balance tras el playtest | rpg-systems-dev, game-designer | T6 |
 
 ## Preguntas abiertas
-- **#184**: Huir: ¿solo desde el borde por el que llegaste y siempre con éxito, o con probabilidad desde cualquier sitio?
-- **#185**: tamaño: ¿tablero de 12 × 8 y hasta 6 por bando (con refuerzos)?
-- **#186**: ¿se conserva algo de la narración mensaje a mensaje (estilo Pokémon) o solo textos cortos sobre el tablero?
-- **#187**: ¿todos los combates van en tablero, también el 1 contra 1 contra un Botarramas?
+- ~~#184–#187~~ Resueltas por el dueño:
+  - Huir desde cualquier borde, siempre;
+  - tablero de 8 × 6 y 3 por bando;
+  - textos cortos y números;
+  - todos los combates en tablero.
+- **#188**: grupo garelino en combate: ¿llevas a los 2 primeros de tu formación (propuesta) o eliges antes de cada combate?
