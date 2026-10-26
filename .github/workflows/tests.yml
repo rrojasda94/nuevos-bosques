@@ -26,3 +26,6 @@ jobs:
         # ADR 0014 §6: mediana y p95 de 50 chunks, seed 42. Las máquinas de CI varían.
         continue-on-error: true
         run: '"$GODOT" --headless --path . -s tools/world/bench_chunks.gd'
+      - name: Banco del ChunkBuilder del Mundo 2.0 (aviso, nunca falla)
+        continue-on-error: true
+        run: '"$GODOT" --headless --path . -s tools/world/bench_chunks.gd -- --builder=world'

@@ -6,19 +6,58 @@
     "luz_max": 10
   },
   "levels": {
-    "$comment": "Niveles del Adoc (progresion-adoc.md), uno por fila desde el nivel 1: XP acumulada para alcanzarlo y stats en ese nivel. El último es el tope. Al subir, los PV actuales suben lo mismo que los máximos.",
-    "table": [
-      { "xp": 0, "max_hp": 30, "atk": 6, "def": 3 },
-      { "xp": 10, "max_hp": 34, "atk": 7, "def": 3 },
-      { "xp": 25, "max_hp": 38, "atk": 7, "def": 4 },
-      { "xp": 45, "max_hp": 42, "atk": 8, "def": 4 },
-      { "xp": 70, "max_hp": 46, "atk": 9, "def": 4 },
-      { "xp": 100, "max_hp": 50, "atk": 9, "def": 5 },
-      { "xp": 140, "max_hp": 54, "atk": 10, "def": 5 },
-      { "xp": 190, "max_hp": 58, "atk": 11, "def": 5 },
-      { "xp": 250, "max_hp": 62, "atk": 11, "def": 6 },
-      { "xp": 320, "max_hp": 66, "atk": 12, "def": 6 }
-    ]
+    "$comment": "Niveles del Adoc (moralidad-y-progresion.md, 0.5; sustituye a la tabla de progresion-adoc.md). xp: XP acumulada para alcanzar cada nivel desde el 1 (el último es el tope). base: stats en el nivel 1. Automático desde el nivel 2: +auto_hp PV máx. y +1 ATQ en los niveles impares o +1 DEF en los pares. points_per_level: puntos de stat a mano por nivel (bloque stat_points). skill_levels: niveles que dan 1 punto de skill (bloque skills). Al subir, los PV actuales suben lo mismo que los máximos. Provisionales: game-designer.",
+    "xp": [0, 10, 25, 45, 70, 100, 140, 190, 250, 320],
+    "base": { "max_hp": 30, "atk": 6, "def": 3 },
+    "auto_hp": 3,
+    "auto_atk_odd": 1,
+    "auto_def_even": 1,
+    "points_per_level": 3,
+    "skill_levels": [2, 4, 6, 8, 10]
+  },
+  "stat_points": {
+    "$comment": "Reparto de los puntos de stat (moralidad-y-progresion.md, ajuste #162): cada compra cuesta cost puntos y da gain al stat. atk y def: ATQ y DEF; vigor: PV máx. (los PV actuales suben lo mismo); luz: límite de Luz suelta (luz_max). Los puntos no gastados se guardan. Provisionales: game-designer.",
+    "order": ["atk", "def", "vigor", "luz"],
+    "atk": { "cost": 3, "gain": 1 },
+    "def": { "cost": 3, "gain": 1 },
+    "vigor": { "cost": 1, "gain": 2 },
+    "luz": { "cost": 1, "gain": 1 }
+  },
+  "senda": {
+    "$comment": "Senda (moralidad-y-progresion.md): valor de min a max, empieza en 0. Icono: violenta con violent_at o menos, respetuosa con respectful_at o más, neutral entre medias (no se muestra el número). acts: cuánto la mueve cada acto (guardian_defeated: vencer a un Botarramas; unico_defeated: vencer a otro Único del Bosque; offend: atacar a un Único de un Bosque con el paso abierto, además del unico_defeated; theft: robar; fruit_taken_out: por cada fruto guardado que sacas de su Bosque; pay_luz: pagar el peaje con Luz; pay_ofrenda: pagarlo con una ofrenda; ofrenda_left: dejar una ofrenda ante un Nujio; adoc_helped: vencer junto a otro adoc; bosque_saved: apagar un incendio o defender un Bosque; far_quest_done: cumplir una misión lejana). Vencer al Ofomni descarriado de una misión no la mueve. Bando (dos-caminos.md): de fiel pasa a en_duda con doubt_at o menos y vuelve a fiel con faithful_at o más; garelino solo con el encuentro de historia. Provisionales: game-designer.",
+    "min": -100,
+    "max": 100,
+    "violent_at": -30,
+    "respectful_at": 30,
+    "acts": {
+      "guardian_defeated": -3,
+      "unico_defeated": -3,
+      "offend": -2,
+      "theft": -10,
+      "fruit_taken_out": -1,
+      "pay_luz": 1,
+      "pay_ofrenda": 2,
+      "ofrenda_left": 1,
+      "adoc_helped": 2,
+      "bosque_saved": 5,
+      "far_quest_done": 3
+    },
+    "bando": { "doubt_at": -40, "faithful_at": -20 }
+  },
+  "skills": {
+    "$comment": "Skills por Senda (moralidad-y-progresion.md): dos ramas en cadena (hay que tener la anterior de la rama). Cada skill exige la Senda en su umbral: senda_max (o menos) en Sombra, senda_min (o más) en Confianza. Lo aprendido se conserva aunque cambie la Senda. Un punto de skill por cada nivel de levels.skill_levels; los no gastados se guardan. Efectos: paso_quedo.vision (casillas que se restan a la visión de los Únicos), golpe_fuerte (factor de daño de un ataque, como mucho una vez cada every turnos: pasiva, el primer ataque disponible), botin (chance de que un Único vencido deje una ofrenda de valor values [mín, máx]), imponerse (el Botarramas se aparta sin pelear si tu nivel >= d + level_margin; no en un Bosque enojado; cuenta como vencerlo, sin XP), palabra_suave (toll: peaje menos esto, mínimo 1), rostro_conocido (los otros adoc aceptan siempre tu ayuda), descanso_nujio (heal_pct: % de los PV que faltan que cura el riutash en refugio dentro de un Bosque pagado), llamada_bosque (allies Únicos del Bosque pelean a tu lado en los combates dentro de un Bosque con relación >= relation contra quien no es un Único suyo). Nombres y descripciones en data/text/sistema.json (skill_<id>_name, skill_<id>_desc). Provisionales: game-designer.",
+    "branches": {
+      "sombra": ["paso_quedo", "golpe_fuerte", "botin", "imponerse"],
+      "confianza": ["palabra_suave", "rostro_conocido", "descanso_nujio", "llamada_bosque"]
+    },
+    "paso_quedo": { "senda_max": -10, "vision": 2 },
+    "golpe_fuerte": { "senda_max": -20, "factor": 1.5, "every": 3 },
+    "botin": { "senda_max": -35, "chance": 0.25, "values": [3, 4] },
+    "imponerse": { "senda_max": -50, "level_margin": 2 },
+    "palabra_suave": { "senda_min": 10, "toll": 1 },
+    "rostro_conocido": { "senda_min": 20 },
+    "descanso_nujio": { "senda_min": 35, "heal_pct": 75 },
+    "llamada_bosque": { "senda_min": 50, "relation": 30, "allies": 1 }
   },
   "unico": {
     "hp_base": 18,
@@ -178,14 +217,16 @@
     "night_percent": 50
   },
   "otros_adoc": {
-    "$comment": "Otros adoc como aliados (otros-adoc.md, versión mínima de la 0.3). En one_in de cada N Bosques (nunca el natal; por seed) hay un adoc NPC a punto de pelear contra un grupo de reparep o un Único de enemies, en un chunk del Bosque y a min_hub_distance casillas o más de la plaza. Si el Bosque deja pasar al Adoc en paz (pagado o amistoso), su rival es siempre un grupo de reparep. El aliado tiene los stats de adoc de un nivel entre level_min y level_max (por seed), no muere (a 0 PV se retira) y no hace daño al jugador. Ganar con él: relation_reward con ese Bosque y fama_reward de fama. Nombres en data/npcs/otros_adoc.json. Provisionales: game-designer.",
+    "$comment": "Otros adoc como aliados (otros-adoc.md, versión mínima de la 0.3). En one_in de cada N Bosques (nunca el natal; por seed) hay un adoc NPC a punto de pelear contra un grupo de reparep o un Único de enemies, en un chunk del Bosque y a min_hub_distance casillas o más de la plaza. Si el Bosque deja pasar al Adoc en paz (pagado o amistoso), su rival es siempre un grupo de reparep. El aliado tiene los stats de adoc de un nivel entre level_min y level_max (por seed), no muere (a 0 PV se retira) y no hace daño al jugador. Ganar con él: relation_reward con ese Bosque y fama_reward de fama. Afinidad (otros-adoc.md, 0.5): cada adoc tiene su Senda (por seed, de -senda_range a +senda_range); si la diferencia con la tuya es affinity_gap o más, no quiere trabajar contigo (no te ataca). Con la skill rostro_conocido aceptan siempre. Nombres en data/npcs/otros_adoc.json. Provisionales: game-designer.",
     "one_in": 3,
     "level_min": 1,
     "level_max": 3,
     "enemies": ["reparep", "reparep", "botarramas"],
     "min_hub_distance": 8,
     "relation_reward": 5,
-    "fama_reward": 1
+    "fama_reward": 1,
+    "senda_range": 80,
+    "affinity_gap": 60
   },
   "sleep": {
     "$comment": "Dormir (bosques-y-relacion.md, 'Dormir y Pensamiento'; dueño: 'solo se debe dormir de noche, dormir de dia consume Luz. Gietos detesta el descanso.'). Se duerme con E en un refugio, en la plaza de una villa o junto a su Nujio. De noche se salta hasta el riutash del amanecer (gratis, pasado refugiado); de día, hasta el del atardecer y cuesta 1 de Luz suelta por cada day_seconds_per_luz segundos de reloj saltados (redondeo hacia arriba), como mucho day_luz_max; sin Luz suficiente no se puede. vision_chance: probabilidad de una visión de Pensamiento al dormir de noche (determinista por seed y día). Provisionales: game-designer.",
@@ -228,7 +269,7 @@
       "special_factor": 1.0
     },
     "ofomni_descarriado": {
-      "$comment": "Ofomni descarriado de la misión: un Único que perdió el control. No acepta Luz ni ofrendas (appeasable false): hay que vencerlo. d fija. Latigazo múltiple: cada 3 ataques, x3 de daño. hp_factor multiplica los PV de su bloque de stats (0.7 en la 0.3, al quitar el daño de Ofrecer Luz: ganable desde nivel 3; d = 4 -> 24 PV, d = 5 -> 27 PV; mision-ofomni.md, Balance 0.3).",
+      "$comment": "Ofomni descarriado de la misión: un Único que perdió el control. No acepta Luz ni ofrendas (appeasable false): hay que vencerlo. d fija. Latigazo múltiple: cada 3 ataques, x3 de daño. hp_factor multiplica los PV de su bloque de stats (0.85 desde la 0.5, con los puntos de stat: ganable desde nivel 3 con cualquier build de combate; d = 4 -> 29 PV, d = 5 -> 32 PV; moralidad-y-progresion.md, Comprobación; en la 0.3 era 0.7).",
       "name_key": "monster_ofomni_descarriado",
       "stats": "unico",
       "appeasable": false,
@@ -242,7 +283,7 @@
       "engage_cooldown": 3.0,
       "retreat_cells": 2,
       "fatal_at": [],
-      "hp_factor": 0.7,
+      "hp_factor": 0.85,
       "special_every": 3,
       "special_factor": 3.0,
       "texts": {

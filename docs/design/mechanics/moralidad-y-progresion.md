@@ -134,6 +134,18 @@ Builds de nivel 3 (2 subidas = 6 puntos):
 
 - Los puntos de skill que no se pueden gastar (Senda neutral) se guardan.
 
+## Decisiones de implementación (PR #62, `[Sin publicar]`)
+Valores en `data/combat/balance.json` (`levels`, `stat_points`, `senda`, `skills`, `otros_adoc`). Diferencias o precisiones respecto a lo escrito arriba:
+- **Golpe fuerte es pasivo**: tu primer ataque disponible hace ×1,5, una vez cada 3 turnos. No es una acción nueva del menú.
+- **Ofender a un Bosque baja la Senda −5 en total**: −3 por vencer al Único y −2 más por ofender (atacar a un Único de un Bosque que te había abierto el paso).
+- **Misión lejana cumplida: Senda +3** (acto nuevo, `far_quest_done`).
+- **Afinidad de los otros adoc, activa**: cada adoc tiene su Senda en ±80 y no pelea a tu lado si la diferencia es de 60 o más (`affinity_gap`). **Rostro conocido** hace que acepten siempre. En la implementación, Rostro conocido no da los 2 favores de Sarua ni la recompensa +1 (los Sarua llegan en la 0.6).
+- **Botín**: solo con **Únicos del Bosque** (Botarramas, Ofomni, cazadores, los que rondan). No con el Ofomni descarriado ni con los reparep.
+- **Llamada del Bosque**: el aliado del Bosque solo pelea contra los reparep (los grupos).
+- **Reparto en borrador**: en la pestaña "Crecer" eliges las compras, ves cómo quedan tus stats y confirmas o deshaces.
+- **Vencer al Ofomni descarriado o a los reparep no mueve la Senda.**
+- El bando (fiel / en duda) ya está activo, con sus iconos. El sfida natal comenta si estás en duda. El camino garelino llegará con el encuentro (`dos-caminos.md`).
+
 ## Bandos (0.5 "Dos caminos", ADR 0015)
 - La Senda alimenta el **estado de bando** (`dos-caminos.md`):
   - **fiel**;

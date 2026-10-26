@@ -8,8 +8,8 @@ extends SceneTree
 ##
 ## Opciones (todas opcionales, detrás de `--`):
 ##   --builder=legacy  ChunkGenerator.generate (64×64, el actual). Por defecto.
-##   --builder=world   ChunkBuilder.build(seed, coord, region, bosques) -> WorldChunk, cuando exista
-##                     (M5–M9). Si la clase aún no existe, sale con código 2.
+##   --builder=world   ChunkBuilder.build(plan, coord) -> WorldChunk (M6+). El RegionPlan de la
+##                     seed se construye una vez fuera de la medición, como en la partida.
 ##   --count=N         chunks medidos (50). Se recorre la región fila a fila desde (0, 0).
 ##   --seed=S          seed de la partida (42).
 ##   --region=ID       región de data/world/regions/ (valle_del_sara).
@@ -20,7 +20,6 @@ const DEFAULT_BUILDER: String = "legacy"
 const DEFAULT_COUNT: int = 50
 const DEFAULT_SEED: int = 42
 const DEFAULT_REGION: String = "valle_del_sara"
-const NEW_BUILDER_CLASS: StringName = &"ChunkBuilder"
 
 
 func _initialize() -> void:
@@ -30,22 +29,29 @@ func _initialize() -> void:
 	var seed_value: int = int(args.get("seed", DEFAULT_SEED))
 	var region_id: String = args.get("region", DEFAULT_REGION)
 
-	var build: Callable = _make_builder(builder_name)
-	if not build.is_valid():
-		printerr("bench_chunks: generador '%s' no disponible" % builder_name)
-		quit(2)
-		return
-
-	# La región y los Bosques se preparan fuera de la medición: el banco mide solo el chunk.
+	# La región, los Bosques y el plan se preparan fuera de la medición: el banco mide solo el chunk.
 	var region: Dictionary = ChunkGenerator.load_region(StringName(region_id))
-	var bosques: BosqueMap = BosqueMap.for_region(seed_value, region)
-	var coords: Array[Vector2i] = _coords(region, count)
+	var build: Callable
+	var size_chunks: Vector2i = ChunkGenerator.region_size(region)
+	match builder_name:
+		"legacy":
+			var bosques: BosqueMap = BosqueMap.for_region(seed_value, region)
+			build = func(coord: Vector2i) -> void: ChunkGenerator.generate(seed_value, coord, region, bosques)
+		"world":
+			var plan: RegionPlan = RegionPlan.for_region(seed_value, StringName(region_id))
+			size_chunks = plan.size_chunks
+			build = func(coord: Vector2i) -> void: ChunkBuilder.build(plan, coord)
+		_:
+			printerr("bench_chunks: generador '%s' no disponible" % builder_name)
+			quit(2)
+			return
+	var coords: Array[Vector2i] = _coords(size_chunks, count)
 
-	build.call(seed_value, coords[0], region, bosques) # Calentamiento, no cuenta.
+	build.call(coords[0]) # Calentamiento, no cuenta.
 	var times: PackedFloat64Array = PackedFloat64Array()
 	for coord: Vector2i in coords:
 		var start: int = Time.get_ticks_usec()
-		build.call(seed_value, coord, region, bosques)
+		build.call(coord)
 		times.append((Time.get_ticks_usec() - start) / 1000.0)
 	times.sort()
 
@@ -58,24 +64,10 @@ func _initialize() -> void:
 	quit(0)
 
 
-## Callable(seed: int, coord: Vector2i, region: Dictionary, bosques: BosqueMap) -> chunk.
-func _make_builder(builder_name: String) -> Callable:
-	match builder_name:
-		"legacy":
-			return ChunkGenerator.generate
-		"world":
-			for info: Dictionary in ProjectSettings.get_global_class_list():
-				if info["class"] == NEW_BUILDER_CLASS:
-					var script: Script = load(info["path"])
-					return Callable(script, "build")
-	return Callable()
-
-
 ## Los primeros `count` chunks de la región, fila a fila (se repite si la región es más pequeña).
-func _coords(region: Dictionary, count: int) -> Array[Vector2i]:
-	var size_arr: Array = region.get("size_chunks", ChunkGenerator.DEFAULT_SIZE_CHUNKS)
-	var width: int = maxi(1, int(size_arr[0]))
-	var height: int = maxi(1, int(size_arr[1]))
+func _coords(size_chunks: Vector2i, count: int) -> Array[Vector2i]:
+	var width: int = maxi(1, size_chunks.x)
+	var height: int = maxi(1, size_chunks.y)
 	var out: Array[Vector2i] = []
 	for i: int in maxi(1, count):
 		var j: int = i % (width * height)

@@ -187,7 +187,7 @@ func test_quest_battle_uses_its_own_attempts_and_completes_on_victory() -> void:
 	var d: int = int(GameState.quests[Q].ofomni_d)
 	var logic: BattleLogic = AdventureRules.start_quest_battle(Q, d)
 	assert_eq(logic.unico_name, "Ofomni descarriado")
-	assert_eq(logic.unico_max_hp, roundi((18 + 4 * d) * 0.7), "PV x0,7 (Balance 0.3)")
+	assert_eq(logic.unico_max_hp, roundi((18 + 4 * d) * 0.85), "PV x0,85 (0.5)")
 	assert_false(logic.accepts_payment, "descarriado: no acepta Luz ni ofrendas")
 	assert_eq(logic.special_every, 3)
 	assert_eq(int(GameState.quests[Q].battle_attempts), 1)

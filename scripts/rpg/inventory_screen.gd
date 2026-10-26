@@ -13,6 +13,9 @@ extends CanvasLayer
 ## Pausa el árbol (y con él WorldClock) mientras está abierta; sigue activa en pausa (process_mode
 ## ALWAYS). Las reglas están en InventoryLogic y AdventureRules. Iconos de placeholder: un cuadro
 ## con el color de su tipo y la inicial (hasta que pixel-artist haga los sprites).
+## Pestañas (0.5, moralidad-y-progresion.md), con Tab y Mayús+Tab: Bolsa (lo de arriba, con los
+## iconos de Senda y bando junto a la ficha), Crecer (reparto de los puntos de stat, GrowthPage) y
+## Senda (árbol de skills, SkillsPage). Las pestañas con puntos por gastar lo dicen en su nombre.
 
 ## Textos de placeholder; los revisa narrative-writer.
 const TEXT_TITLE: String = "Estado del Adoc"
@@ -36,6 +39,14 @@ const TEXT_EQUIPPED: String = "Te equipas: %s."
 const TEXT_UNEQUIPPED: String = "Guardas: %s."
 const TEXT_OFRENDA_USE: String = "Las ofrendas se dejan ante un Nujio."
 const TEXT_HINT: String = "Aceptar: usar/equipar/guardar   I / Esc: cerrar"
+const TEXT_HINT_CLOSE: String = "   I / Esc: cerrar"
+## Pestañas.
+const TAB_BAG: int = 0
+const TAB_GROW: int = 1
+const TAB_SKILLS: int = 2
+const TAB_COUNT: int = 3
+const COLOR_TAB := Color("8b9bb4")
+const COLOR_TAB_ON := Color("fee761")
 
 const COLUMNS: int = 4
 const ROWS: int = 3
@@ -70,6 +81,13 @@ var _relation: String = ""
 ## Bosque en el que está el Adoc al abrir (-1 si no se conoce) y el natal.
 var _bosque_id: int = -1
 var _home: int = -1
+## Pestaña abierta y sus nodos.
+var _tab: int = TAB_BAG
+var _tab_labels: Array[Label] = []
+var _growth: GrowthPage
+var _skills: SkillsPage
+var _senda_icons: SendaHud
+var _senda_label: Label
 
 @onready var _root: Control = $Root
 @onready var _title: Label = $Root/Title
@@ -92,6 +110,32 @@ func _ready() -> void:
 		_cells.append(_make_cell(_grid, Vector2((i % COLUMNS) * (CELL + GAP), (i / COLUMNS) * (CELL + GAP))))
 	for i: int in EQUIP_CELLS:
 		_cells.append(_make_cell(_equip_row, Vector2(i * (CELL + GAP), 0)))
+	_senda_icons = SendaHud.new()
+	_senda_icons.show_points = false
+	_senda_icons.backing = true
+	_senda_icons.position = Vector2(196, 21)
+	_senda_icons.size = Vector2(24, 9)
+	_root.add_child(_senda_icons)
+	_senda_label = Label.new()
+	_senda_label.position = Vector2(220, 17)
+	_senda_label.size = Vector2(82, 24)
+	_senda_label.add_theme_constant_override(&"line_spacing", -2)
+	_root.add_child(_senda_label)
+	_growth = GrowthPage.new()
+	_skills = SkillsPage.new()
+	for page: Control in [_growth, _skills]:
+		page.size = _root.size
+		page.visible = false
+		_root.add_child(page)
+	var x: float = 300.0
+	for i: int in range(TAB_COUNT - 1, -1, -1):
+		var label := Label.new()
+		label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		label.size = Vector2(60, 12)
+		label.position = Vector2(x - 60, 3)
+		x -= 62.0
+		_root.add_child(label)
+		_tab_labels.push_front(label)
 
 
 func is_open() -> bool:
@@ -99,6 +143,23 @@ func is_open() -> bool:
 
 
 # --- Lógica de presentación (pura sobre GameState: la usan la pantalla y los tests) -------------
+
+## Senda y bando junto a sus iconos, sin número: "Senda neutral" y "Fiel".
+static func senda_lines() -> String:
+	return "%s\n%s" % [Texts.get_text("skills_senda") % Senda.icon_name(Senda.icon()), Senda.bando_name(GameState.bando)]
+
+
+## Nombre de una pestaña, con los puntos por gastar si los hay ("Crecer (3)", "Senda (1)").
+static func tab_name(tab: int) -> String:
+	match tab:
+		TAB_GROW:
+			var text: String = Texts.get_text("growth_tab_grow")
+			return text + (" (%d)" % GameState.stat_points if GameState.stat_points > 0 else "")
+		TAB_SKILLS:
+			var text: String = Texts.get_text("growth_tab_skills")
+			return text + (" (%d)" % GameState.skill_points if GameState.skill_points > 0 else "")
+	return Texts.get_text("growth_tab_bag")
+
 
 ## Líneas de estado del Adoc. El ATQ incluye el arma equipada (y muestra cuánto suma); la DEF, lo
 ## que restan las máscaras pesadas.
@@ -271,6 +332,22 @@ func open() -> void:
 	_message = ""
 	visible = true
 	get_tree().paused = true
+	_set_tab(TAB_BAG)
+
+
+## Cambia de pestaña: muestra sus nodos y empieza su página de cero (el borrador de Crecer se
+## descarta).
+func _set_tab(tab: int) -> void:
+	_tab = posmod(tab, TAB_COUNT)
+	var bag: bool = _tab == TAB_BAG
+	for node: CanvasItem in [_grid, _equip_title, _equip_row, _equip_list, _stats, _item_name, _item_desc, _senda_icons, _senda_label]:
+		node.visible = bag
+	_growth.visible = _tab == TAB_GROW
+	_skills.visible = _tab == TAB_SKILLS
+	if _tab == TAB_GROW:
+		_growth.reset()
+	elif _tab == TAB_SKILLS:
+		_skills.reset()
 	_refresh()
 
 
@@ -292,7 +369,17 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed(&"open_inventory") or event.is_action_pressed(&"ui_cancel"):
 		close()
 		return
-	if event.is_action_pressed(&"ui_accept") or event.is_action_pressed(&"interact"):
+	if event.is_action_pressed(&"ui_focus_next") or event.is_action_pressed(&"ui_focus_prev"):
+		_set_tab(_tab + (-1 if event.is_action_pressed(&"ui_focus_prev") else 1))
+		Sfx.play(&"menu_move")
+		return
+	var accept: bool = event.is_action_pressed(&"ui_accept") or event.is_action_pressed(&"interact")
+	if _tab == TAB_GROW or _tab == TAB_SKILLS:
+		var page_used: bool = _growth.handle(event, accept) if _tab == TAB_GROW else _skills.handle(event, accept)
+		if page_used:
+			_refresh_tabs()
+		return
+	if accept:
 		_message = activate(_cursor, _bosque_id, _home)
 		Sfx.play(&"menu_accept")
 		_refresh()
@@ -327,7 +414,26 @@ func _current_bosque() -> int:
 	return _map.bosque_at(GameState.chunk_coord)
 
 
+## Nombres de las pestañas (la abierta resaltada) y la ayuda de abajo.
+func _refresh_tabs() -> void:
+	for i: int in _tab_labels.size():
+		_tab_labels[i].text = tab_name(i)
+		_tab_labels[i].add_theme_color_override(&"font_color", COLOR_TAB_ON if i == _tab else COLOR_TAB)
+	var hint: String = TEXT_HINT
+	match _tab:
+		TAB_GROW:
+			hint = Texts.get_text("growth_hint") + TEXT_HINT_CLOSE
+		TAB_SKILLS:
+			hint = Texts.get_text("skills_hint") + TEXT_HINT_CLOSE
+	_hint.text = Texts.get_text("growth_tabs_hint") + "   " + hint
+	_title.text = [TEXT_TITLE, Texts.get_text("growth_title"), Texts.get_text("skills_title")][_tab]
+
+
 func _refresh() -> void:
+	_refresh_tabs()
+	if _tab != TAB_BAG:
+		return
+	_senda_label.text = senda_lines()
 	var lines: Array[String] = stat_lines()
 	if _relation != "":
 		lines.append(_relation)

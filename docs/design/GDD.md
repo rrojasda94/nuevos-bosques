@@ -13,7 +13,10 @@
 >   - Como garelino: reúne un grupo (quedarse sin miembros es solo un retroceso) y **persuade villas** (necesidad, diálogo, fuerza sin matar, regalar Piedras). La villa natal también se puede convertir, pero es difícil. **Tala Bosques muertos** (él o su grupo) y **siembra Piedras de los Nuevos Bosques** donde el Bosque de Nujio ya no está.
 >   - Los Bosques con Nujio solo aceptan el peaje de un garelino si lleva un **artefacto que oculte su Luz**; sin él, lo atacan.
 > - **Villas vivas** ([`mechanics/npcs-y-villas.md`](mechanics/npcs-y-villas.md)): oficios con prioridad (siempre Pholua, Ildo, Sfida, Folas/Folat y Sarua; luego habituales y especializaciones), cada uno en su sitio, trabajan de día y duermen de noche en las casas.
-> - **Para la 0.6**: interiores, tarcas y **sicabis**, lugares sagrados sin armas que regeneran Luz ([`mechanics/lugares-e-interiores.md`](mechanics/lugares-e-interiores.md)).
+> - **Para la 0.6** ([`mechanics/lugares-e-interiores.md`](mechanics/lugares-e-interiores.md)):
+>   - **Interiores**.
+>   - **Tarcas**: la mayoría vacías y ocupadas por seres espirituales; solo unas pocas son templos garelinos (Trastas, Azhin, Lean…).
+>   - **Sicabis**: jardines sagrados con un pequeño lago y plantas ornamentales exclusivas, sin armas, que regeneran Luz; un garelino no puede entrar.
 > - **IA de combate** ([`mechanics/ia-de-combate.md`](mechanics/ia-de-combate.md)): orden de turnos por Agilidad (automática con el nivel; con Apresurar y Esperar), filas delante y detrás, roles atacante, defensor y apoyo, perfiles de enemigo y órdenes al grupo (Atacar / Defender / Libre).
 >   - Puede **redimirse** con un gran costo (incluye pedir asilo de magra).
 >   - Los finales por camino quedan aparcados.

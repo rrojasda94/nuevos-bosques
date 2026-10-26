@@ -9,7 +9,10 @@ extends RefCounted
 ##   su nivel; no muere: a 0 PV se retira). Ganar: relación con el Bosque + relation_reward y fama +
 ##   fama_reward (finish_battle).
 ## - Cada encuentro pasa una sola vez: queda resuelto (GameState.adoc_encounters) al ayudar (gane o
-##   no) o al seguir tu camino. La afinidad por Senda (0.5) aún no existe: todos aceptan tu ayuda.
+##   no) o al seguir tu camino. Ganar con él sube la Senda (Senda.ADOC_HELPED).
+## - Afinidad (otros-adoc.md, 0.5): cada adoc tiene su Senda por seed; si la diferencia con la tuya
+##   llega a affinity_gap, no quiere trabajar contigo (accepts_help). Con la skill Rostro conocido
+##   aceptan siempre.
 ## Números en data/combat/balance.json (bloque otros_adoc); nombres y ropa en
 ## data/npcs/otros_adoc.json.
 
@@ -26,6 +29,7 @@ const SALT_LEVEL: int = 97
 const SALT_ENEMY: int = 101
 const SALT_CELL: int = 103
 const SALT_CLOTHES: int = 107
+const SALT_SENDA: int = 109
 const CELL_TRIES: int = 400
 
 static var _data: Dictionary = {}
@@ -110,6 +114,21 @@ static func resolve(id: String, outcome: String) -> void:
 	GameState.adoc_encounters[id] = outcome
 
 
+## Senda del adoc del encuentro `id` (por seed): de -senda_range a +senda_range.
+static func adoc_senda(seed_value: int, id: String) -> int:
+	var span: int = int(config().get("senda_range", 80))
+	return ChunkGenerator.hash_ints([seed_value, id.hash(), SALT_SENDA]) % (2 * span + 1) - span
+
+
+## El adoc acepta tu ayuda: la diferencia entre su Senda y la tuya no llega a affinity_gap, o tienes
+## la skill Rostro conocido (aceptan siempre).
+static func accepts_help(e: Dictionary, seed_value: int = GameState.seed_value) -> bool:
+	if AdocGrowth.has_skill(AdocGrowth.ROSTRO_CONOCIDO):
+		return true
+	var gap: int = int(config().get("affinity_gap", 60))
+	return absi(adoc_senda(seed_value, str(e.get("id", ""))) - GameState.senda) < gap
+
+
 ## El adoc como aliado: stats de adoc de su nivel (AdventureRules.adoc_stats).
 static func ally_of(e: Dictionary) -> Dictionary:
 	var s: Dictionary = AdventureRules.adoc_stats(int(e.level))
@@ -136,6 +155,7 @@ static func finish(e: Dictionary, outcome: StringName) -> PackedStringArray:
 		var fama: int = int(cfg.get("fama_reward", 0))
 		AdventureRules.change_relation(int(e.bosque_id), relation)
 		GameState.fama += fama
+		Senda.record(Senda.ADOC_HELPED)
 		lines.append(Texts.get_text("adoc_encounter_thanks") % str(e.name))
 		lines.append(Texts.get_text("adoc_encounter_reward") % [relation, fama])
 	elif outcome == &"appeased":

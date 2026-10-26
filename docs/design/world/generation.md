@@ -1,7 +1,7 @@
-# Generación del mundo: pasada de región (`RegionPlan`)
+# Generación del mundo: pasada de región (`RegionPlan`) y pasada de chunk (`ChunkBuilder`)
 
 Dueño: `world-gen-dev`. Decisión: [ADR 0014 §5 y §6](../../decisions/0014-mundo-2-relieve-movimiento-libre-y-mundo-hibrido.md). Villas procedurales: [ficha del Mundo 2.0 §6](../mechanics/mundo-2.md) (opción C, decidida por el dueño el 2026-10-25).
-La pasada de chunk (`ChunkBuilder`) llega en M6–M9 y solo lee este plan.
+La pasada de chunk (`ChunkBuilder`, M6–M9) solo lee este plan; ver la sección del final.
 
 ## Entrada y determinismo
 - Entrada: `seed`, `region_id`, el JSON de la región y su autoría (`RegionAuthoring`: PNG + `lugares.csv`).
@@ -50,3 +50,35 @@ Ni los datos (`"areas"` del JSON solo da nombres) ni el código anterior definí
 ## Pruebas y vista previa
 - `tests/unit/world/test_region_plan.gd`: determinismo, 4–16 chunks, Bosques recorribles por puertas, puertas simétricas, villas del CSV, aldeas de la opción C, altura sin celdas sueltas, meandro sin cortes y tiempo (aviso).
 - `bash tools/world/preview_region.sh valle_del_sara <seed>` dibuja el plan encima de la autoría (leyenda en [`autoria.md`](autoria.md)).
+
+## Pasada de chunk (`ChunkBuilder`)
+`ChunkBuilder.build(plan, coord) -> WorldChunk`. Solo lee el `RegionPlan` (inmutable) y devuelve un chunk nuevo: crea su propio `FastNoiseLite` y sus arreglos de trabajo, no usa `randi()` ni `GameState` y no toca la escena, así que se puede construir en cualquier orden y en hilos (`WorkerThreadPool`) con el mismo resultado byte a byte. Hoy (M6) hace los pasos 1 y 2 de la ADR 0014 §5; M7–M8 añaden puntos de interés, senderos, formas grandes y decoración.
+
+### 1. Suelo base y pedregal
+- Agua de la celda gruesa del plan (río navegable, estrecho, lago, mar, vado) a escala de celda; el resto, hierba.
+- Pedregal: ruido propio (`hash(plan_seed, 140)`), muestreado en `world_cell` para que case entre chunks. Una casilla es pedregal si el ruido supera el umbral de su nivel. Parámetros en el bloque `chunk_ground` de la región (por defecto `rocky_frequency` 0,045 y `rocky_by_level` [1, 0,6, 0,3, -0,05]: nunca en el nivel 0, casi todo el nivel 3).
+
+### 2. Relieve
+| Pieza | Dónde | `cliff` | `variant` |
+|---|---|---|---|
+| Nivel | `level[]` = nivel de la celda gruesa (0–3). La cumbre cuenta como 3 | — | — |
+| Cara | Al sur de una meseta, en las casillas de **arriba** del nivel de abajo: 2 filas por nivel de caída. Una caída de 3 niveles (6 filas) sigue en la celda gruesa siguiente | `FACE` | fila (0 labio, 1 intermedia, 2 base) \| columna << 2 (0 extremo izq., 1–3 medios A/B/C por hash de la columna, 4 extremo der., 5 suelta) |
+| Borde | Casillas de la meseta con un vecino más bajo al norte, este u oeste | `EDGE` | máscara: 1 norte, 2 este, 8 oeste (spec de arte §3.2) |
+| Cumbre | Toda la celda gruesa pintada como cumbre: bloquea | `EDGE` | 15 (`EDGE_PEAK`) |
+| Cascada | Cara cuya celda gruesa y la de la meseta de encima tienen agua. Bloquea | `WATERFALL` | fila \| columna << 2 (0 izq., 1 medio, 2 der.) |
+| Escalera | Columna entera de una cara que cruza una puerta o el enlace de una puerta | `STAIRS` | como la cascada |
+| Rampa | Casilla de borde que cruza una puerta o el enlace de una puerta | `RAMP` | máscara del borde |
+| Sombra al pie | Casilla sin risco debajo de la base de una cara | `decor` = `SHADOW_FOOT` | — |
+| Sombra este | Casilla sin risco al este de un borde este | `decor` = `SHADOW_EAST` | — |
+
+- **Invariante** (ADR 0014 §3): como las caras y los bordes van en la frontera de cada celda gruesa con otro nivel, dos casillas transitables de distinto nivel nunca son vecinas ortogonales salvo por una escalera o una rampa, dentro del chunk y entre chunks.
+- **Puertas** (provisional hasta la red de senderos de M7): cada casilla de puerta del plan que cae en una cara se vuelve escalera (la columna entera dentro del chunk) y la que cae en un borde, rampa. Cada chunk abre su propio lado, así que una cara partida por el borde del chunk queda abierta en los dos.
+- **Enlace con el hub**: si una puerta no se alcanza desde el hub sin cruzar riscos (el agua no corta: los puentes son de M7), un Dijkstra desde la puerta busca el cruce más barato (casilla 1, agua 4, risco 6). Las caras se cruzan en vertical y solo si caben enteras en el chunk; los bordes, en el eje de su máscara. Lo cruzado se vuelve escalera o rampa, de 2 de ancho si la cara o el borde vecino es igual. Por eso un chunk nunca cambia el relieve de su vecino.
+- **Hub** provisional: la casilla transitable más cercana al centro. En M7 pasa al ancla del chunk (villa, Nujio o punto de interés).
+- **Límite conocido**: un río que baja por un borde este u oeste (en el Valle del Sara, seed 42, hay 38 pares de celdas gruesas con agua y distinto nivel en horizontal) queda como borde sobre agua; la spec de arte no tiene pieza de "rápido" (§3.5).
+
+### Rendimiento
+`godot --headless --path . -s tools/world/bench_chunks.gd -- --builder=world` (50 chunks de las filas del norte, seed 42, el plan fuera de la medición). Medido en M6: mediana 19,5 ms, p95 26,5 ms (objetivo de M9: ≤ 80 ms con todos los pasos).
+
+### Pruebas
+`tests/unit/world/test_relief.gd`: el invariante en la región entera de 3 seeds y en las 3 filas del norte de otras 17 (dentro de cada chunk y entre chunks vecinos), puertas unidas al hub, cascadas exactamente donde el agua cruza una cara, caras de 2 filas por nivel, cumbres que bloquean, sombras, determinismo (mismos bytes), orden de construcción y construcción en paralelo.
