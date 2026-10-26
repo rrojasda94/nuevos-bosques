@@ -304,3 +304,107 @@ func test_valle_del_sara_authoring_is_valid_and_matches_the_region() -> void:
 	assert_eq(a.home_chunk(), ChunkGenerator.region_start_chunk(region), "la villa natal está en start_chunk")
 	for layer: String in RegionAuthoring.LAYERS:
 		assert_true(a.has_layer[layer], "existe %s" % RegionAuthoring.layer_file(_palette, layer))
+
+
+## Afluentes del Sara (tools/world/paint_afluentes.py; sur-lenfi.md): la red de agua del valle es
+## una sola y le llegan al menos 4 afluentes desde el oeste (Urd Gumnavis) y 3 desde el este
+## (Gumnada Gumnavis). El Sara es el pasillo de agua de norte a sur: las celdas que están a 3 pasos
+## o menos de más que el camino más corto entre los dos bordes. Lo que queda son los afluentes:
+## cuenta cada trozo que toca el Sara y nace en una cumbre o en el borde oeste o este. Nacen como
+## río estrecho; lo navegable va sobre todo por tierra baja (nivel 0-1), y cada uno tiene su nombre,
+## "1ro del Sara"... "7mo del Sara", como lugar de lugares.csv.
+func test_valle_del_sara_has_the_sara_tributaries() -> void:
+	var a := RegionAuthoring.load_region(&"valle_del_sara")
+	var water: Dictionary = {}
+	for y: int in a.size_px.y:
+		for x: int in a.size_px.x:
+			if a.water_at(Vector2i(x, y)) != RegionAuthoring.Water.NONE:
+				water[Vector2i(x, y)] = true
+	assert_false(water.is_empty(), "agua.png tiene agua")
+	if water.is_empty():
+		return
+	assert_eq(_flood(water, [water.keys()[0]]).size(), water.size(), "la red de agua es conexa")
+	var top: Array = water.keys().filter(func(c: Vector2i) -> bool: return c.y == 0)
+	var bottom: Array = water.keys().filter(func(c: Vector2i) -> bool: return c.y == a.size_px.y - 1)
+	assert_false(top.is_empty() or bottom.is_empty(), "el Sara va del borde norte al sur")
+	if top.is_empty() or bottom.is_empty():
+		return
+	var from_top: Dictionary = _flood(water, top)
+	var from_bottom: Dictionary = _flood(water, bottom)
+	var shortest: int = 1 << 30
+	for c: Vector2i in bottom:
+		shortest = mini(shortest, from_top.get(c, 1 << 30))
+	var sara: Dictionary = {}
+	var rest: Dictionary = {}
+	for c: Vector2i in water:
+		if from_top.get(c, 1 << 30) + from_bottom.get(c, 1 << 30) <= shortest + 3:
+			sara[c] = true
+		else:
+			rest[c] = true
+	var west: int = 0
+	var east: int = 0
+	var with_navigable: int = 0
+	var navigable: int = 0
+	var navigable_low: int = 0
+	var done: Dictionary = {}
+	for c: Vector2i in rest:
+		if done.has(c):
+			continue
+		var part: Dictionary = _flood(rest, [c])
+		var touches_sara: bool = false
+		var source_x: int = -1
+		var source_kind: int = RegionAuthoring.Water.NONE
+		var nav: int = 0
+		var nav_low: int = 0
+		for p: Vector2i in part:
+			done[p] = true
+			if p.x == 0 or p.x == a.size_px.x - 1:
+				source_x = p.x
+			if a.water_at(p) == RegionAuthoring.Water.RIVER_NAVIGABLE:
+				nav += 1
+				var h: int = a.height_at(p)
+				nav_low += 1 if h == RegionAuthoring.Height.LEVEL_0 or h == RegionAuthoring.Height.LEVEL_1 else 0
+			for d: Vector2i in [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]:
+				touches_sara = touches_sara or sara.has(p + d)
+				if a.height_at(p + d) == RegionAuthoring.Height.PEAK:
+					source_x = p.x
+					source_kind = a.water_at(p)
+		if touches_sara and source_x >= 0:
+			if source_kind != RegionAuthoring.Water.NONE:
+				assert_eq(source_kind, RegionAuthoring.Water.RIVER_NARROW, "el afluente nace estrecho en %s" % part.keys()[0])
+			with_navigable += 1 if nav > 0 else 0
+			navigable += nav
+			navigable_low += nav_low
+			if source_x < a.size_px.x / 2:
+				west += 1
+			else:
+				east += 1
+	gut.p("Afluentes del Sara: %d al oeste, %d al este." % [west, east])
+	assert_gte(west, 4, "afluentes del oeste (Urd Gumnavis)")
+	assert_gte(east, 3, "afluentes del este (Gumnada Gumnavis)")
+	assert_gte(with_navigable, 4, "los afluentes que bajan a tierra baja se hacen navegables")
+	assert_gte(navigable_low, ceili(navigable * 0.75), "lo navegable de los afluentes va por tierra baja (nivel 0-1)")
+	var names: Array = []
+	for p: Dictionary in a.places_of_type("lugar"):
+		names.append(p.name)
+	for n: String in ["1ro", "2do", "3ro", "4to", "5to", "6to", "7mo"]:
+		assert_has(names, "%s del Sara" % n, "nombre del afluente en lugares.csv")
+
+
+## Distancia en pasos (4-vecindad) desde `starts` a cada celda alcanzable de `cells`.
+func _flood(cells: Dictionary, starts: Array) -> Dictionary:
+	var dist: Dictionary = {}
+	var queue: Array[Vector2i] = []
+	for s: Vector2i in starts:
+		dist[s] = 0
+		queue.append(s)
+	var head: int = 0
+	while head < queue.size():
+		var c: Vector2i = queue[head]
+		head += 1
+		for d: Vector2i in [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]:
+			var n: Vector2i = c + d
+			if cells.has(n) and not dist.has(n):
+				dist[n] = dist[c] + 1
+				queue.append(n)
+	return dist
