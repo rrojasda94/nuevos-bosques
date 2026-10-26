@@ -51,7 +51,8 @@ Todos los cambios que nota el jugador. Formato [Keep a Changelog](https://keepac
   - **Orden** en el menú (Libre, Atacar o Defender), sin gastar nada: con Atacar, los aliados en Auto van a por tu último objetivo; con Defender, se agrupan a tu lado, vendan, cubren y se defienden.
 
 ### Cambiado
-- La cordillera occidental del Valle del Sara (Urd Gumnavis) ya no tiene cumbres: son colinas y montañas que se cruzan a pie. El 3ro, el 5to y el 7mo del Sara nacen en manantiales de esa cordillera y bajan desde allí al Sara.
+- La cordillera occidental del Valle del Sara (Urd Gumnavis) ya no tiene cumbres: son colinas y montañas que se cruzan a pie. El 3ro, el 5to y el 7mo del Sara nacen en fuentes de esa cordillera y bajan desde allí al Sara.
+- Los siete afluentes del Sara nacen en una fuente ("Fuente del 1ro"… "Fuente del 7mo") en lo alto de una colina que se puede pisar, en vez de en una cumbre.
 - El Ofomni descarriado tiene más PV (×0,85 en vez de ×0,7: 29 con d = 4) para que siga siendo un reto con los puntos de stat. En nivel 3 lo vence cualquier reparto de combate (todo ATQ, todo DEF, equilibrado o, más justo, todo Vigor); en nivel 2 o con todo a Luz sigue perdiendo casi siempre.
 - El guardado pasa a la versión 18 (Senda, bando, puntos sin gastar, puntos gastados por stat y skills). Las partidas anteriores conservan su nivel, recalculan los stats con el crecimiento automático nuevo y reciben todos los puntos de stat y de skill de su nivel para repartirlos.
 

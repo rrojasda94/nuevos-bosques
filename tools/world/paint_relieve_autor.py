@@ -54,8 +54,8 @@ AZHIN_ROW = ("villa_azhin,Azhin,villa,{x},{y},,,\"Villa pequeña, la más septen
 # punto toca un camino que ya existe (el de Lean, al norte del 7mo del Sara).
 AZHIN_ROAD = [(16, 5), (16, 12), (44, 12), (51, 29)]
 # En lo alto de la montaña al oeste de Azhin (dueño, 2026-10-26: "a 20 o más casillas, pero más al
-# oeste, en las montañas, en lo alto de una montaña"): nivel 3, sin cumbre, a unos 9 px (38 casillas).
-TARCA = (8, 9)
+# oeste, en las montañas, en lo alto de una montaña"): nivel 3, sin cumbre, a unos 9 px (36 casillas).
+TARCA = (8, 8)
 TARCA_MIN_PX = 5  # 20 casillas
 TARCA_ROW = ("tarca_azhin,Tarca de Azhin,tarca,{x},{y},,,\"Tarca (templo garelino) de Azhin, en lo alto de la montaña al oeste de la villa. "
              "Aparece en la historia en el encuentro con los ledai de Estrellazul (dueño, 2026-10-26). "

@@ -15,14 +15,14 @@ Modifica las PNG de data/world/regions/valle_del_sara/ (no las regenera desde el
   2 o más (mountain_exit). El
   trazo se para en el primer píxel que era agua del Sara en BASE_REF: el último punto de control puede caer
   dentro o más allá del río, y el afluente queda unido a él por un lado.
-- altura.png: en el nacimiento pone una cumbre de 3x3 px (el afluente nace pegado a ella, así que
-  el validador lo da por unido: "nacer en una cumbre") rodeada de nivel 3 y nivel 2. Solo sube el
-  relieve, nunca lo baja. Excepción: los afluentes con "nacimiento": "manantial" (los tres de la
-  cordillera occidental, que es transitable y sin cumbres; dueño, 2026-10-26: "no nacen en el
-  Valle, no pueden nacer en Dorias porque la cordillera lo impide") nacen dentro de la cordillera,
-  en una colina de nivel 3 y 2 sin cumbre, junto a un lugar de tipo manantial (fila manantial_<n>
-  de lugares.csv, "Fuente del <n>", un px al oeste del nacimiento). El validador da por unido un río que toca un
-  manantial.
+- altura.png: cada afluente nace en un manantial pisable (dueño, 2026-10-26: los 7 nacen en un
+  manantial; antes los del este y el 1ro nacían en una cumbre de 3x3): un lugar de tipo manantial
+  (fila manantial_<n> de lugares.csv, "Fuente del <n>") un px aguas arriba del nacimiento (al
+  oeste en la orilla oeste, al este en la orilla este), en lo alto de una colina de nivel 3 y 2
+  sin cumbre. El validador da por unido un río que toca un manantial. Los de la cordillera
+  occidental nacen dentro de ella ("no nacen en el Valle, no pueden nacer en Dorias porque la
+  cordillera lo impide"). Solo sube el relieve, nunca lo baja. (Queda el modo "nacimiento":
+  "cumbre", con cumbre de 3x3, por si algún afluente lo necesita.)
 - caminos.png: donde un camino pintado cruza un afluente, ese píxel pasa a puente.
 - lugares.csv: una fila de tipo lugar por afluente (id afluente_<n>, nombre "<n> del Sara"), junto
   a su tramo medio, para que la vista previa lo rotule, y una de tipo manantial (id manantial_<n>)
@@ -95,7 +95,7 @@ AFLUENTES: list[dict] = [
     {
         "id": "este_1", "lado": "E",
         "sigue": "límite Causie–Alss",
-        "puntos": [(235, 36), (222, 43), (205, 45), (175, 40), (160, 48), (145, 62), (135, 75), (128, 85), (110, 90)],
+        "puntos": [(232, 38), (222, 43), (205, 45), (175, 40), (160, 48), (145, 62), (135, 75), (128, 85), (110, 90)],
         "vados": [0.3, 0.7],
         "navegable_min": 30,
     },
@@ -281,12 +281,12 @@ def main() -> int:
     # 1) Colinas y cumbre de nacimiento (antes del agua: la navegabilidad lee la altura final).
     for af in AFLUENTES:
         sx, sy = rivers[af["id"]][0]
-        borde = af.get("nacimiento", "cumbre") == "manantial"
+        borde = af.get("nacimiento", "manantial") == "manantial"
         if borde:
-            # Nace en un manantial de la cordillera, un px al oeste del nacimiento: colina de
-            # nivel 3 centrada en él, sin cumbre, para que la cordillera se cruce a pie.
-            cx = sx - 1
-            if cx < 1 or (cx, sy) in traced or (cx, sy) in base_water:
+            # Nace en un manantial pisable, un px aguas arriba (al oeste en la orilla oeste, al
+            # este en la orilla este): colina de nivel 3 centrada en él, sin cumbre.
+            cx = sx - 1 if af["lado"] == "O" else sx + 1
+            if cx < 1 or cx > w - 2 or (cx, sy) in traced or (cx, sy) in base_water:
                 print(f"{af['id']}: el manantial cae en {(cx, sy)}, en el borde o en el agua; mueve el nacimiento.",
                       file=sys.stderr)
                 return 1
@@ -357,9 +357,11 @@ def main() -> int:
         print(f"{d['nombre']} ({af['id']}, {af['lado']}): {len(river)} px ({len(river) - nav} estrecho, {nav} navegable),"
               f" nace en {river[0]}, llega al Sara junto a {river[-1]}, rótulo en {(lx, ly)} — {af['sigue']}")
     for n, d in enumerate(info):
-        if d["af"].get("nacimiento", "cumbre") == "manantial":
-            mx, my = d["river"][0][0] - 1, d["river"][0][1]
-            notas = (f"Fuente (nacimiento) del {d['nombre']}, en la cordillera occidental (Urd Gumnavis). "
+        if d["af"].get("nacimiento", "manantial") == "manantial":
+            mx = d["river"][0][0] + (-1 if d["af"]["lado"] == "O" else 1)
+            my = d["river"][0][1]
+            sierra = "la cordillera occidental (Urd Gumnavis)" if d["af"]["lado"] == "O" else "las Gumnada Gumnavis"
+            notas = (f"Fuente (nacimiento) del {d['nombre']}, en {sierra}. "
                      "Fila escrita por tools/world/paint_afluentes.py.")
             rows.append(f"manantial_{n + 1},Fuente del {ORDINALES[n]},manantial,{mx},{my},,,\"{notas}\"")
     write_places(rows)
