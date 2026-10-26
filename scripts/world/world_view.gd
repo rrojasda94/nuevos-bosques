@@ -41,6 +41,9 @@ var pregen: WorldPregen
 var painter: WorldPainter
 var streamer: WorldStreamer
 var is_ready: bool = false
+## Monstruos del Mundo 2.0 (gancho de M15) y límite de Bosque (null sin `--borders`).
+var monsters: MonsterField
+var border: BosqueBorder
 ## Desplazamiento del jugador en el último fotograma (píxeles).
 var move_dir: Vector2 = Vector2.ZERO
 
@@ -94,6 +97,7 @@ func _setup() -> void:
 	var start: WorldChunk = pregen.get_chunk(start_chunk)
 	player.place_at_cell(_arg_vec("--cell=", WorldCoords.to_world_cell(start_chunk, start.hub)))
 	player.is_blocked = streamer.is_blocked
+	_setup_monsters()
 	var size_px: Vector2i = plan.size_chunks * WorldCoords.CHUNK_PX
 	camera.limit_left = 0
 	camera.limit_top = 0
@@ -109,6 +113,34 @@ func _setup() -> void:
 	var capture_path: String = _arg_string("--capture=")
 	if not capture_path.is_empty():
 		_capture(capture_path)
+
+
+# ponytail: gancho de M15 para ver los monstruos del Mundo 2.0 hasta que M17 monte la exploración
+# nueva (que conectará `engaged` y `bosque_border_reached` al cruce). Los monstruos salen siempre;
+# el límite de Bosque solo con `-- --borders` (sin el menú del cruce no se podría salir del natal).
+func _setup_monsters() -> void:
+	var home: int = plan.bosque_at(plan.home_chunk)
+	if OS.get_cmdline_user_args().has("--borders"):
+		border = BosqueBorder.new(BosqueBorder.plan_bosque_at(plan),
+			func(b: int) -> bool: return not AdventureRules.is_passable(b, home))
+		player.is_blocked = border.blocks(streamer.is_blocked)
+	monsters = MonsterField.new()
+	monsters.name = &"Monsters"
+	monsters.y_sort_enabled = true
+	objects.add_child(monsters)
+	monsters.world_player = player
+	monsters.terrain_blocked = streamer.is_blocked
+	monsters.area_walkable = func(c: Vector2i) -> bool: return not streamer.is_blocked(c)
+	monsters.populate_world(plan, home, streamer.chunk)
+	monsters.engaged.connect(func(m: OverworldMonster) -> void: m.calm(float(m.cfg.get("engage_cooldown", 3.0))))
+	if border != null:
+		border.contacted.connect(func(b: int, c: Vector2i) -> void: monsters.summon_nearest(b, c))
+
+
+func _physics_process(_delta: float) -> void:
+	if border != null and is_ready:
+		var input: Vector2 = Input.get_vector(&"move_left", &"move_right", &"move_up", &"move_down")
+		border.tick(player.mover.cell, player.input_enabled and input != Vector2.ZERO)
 
 
 func _exit_tree() -> void:

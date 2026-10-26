@@ -20,6 +20,8 @@ signal chunk_entered(chunk_coord: Vector2i, bosque_id: int, bosque_size: int)
 ## empuja contra el borde de un Bosque cerrado sin nadie que le persiga (abre el menú del borde,
 ## ADR 0009, monstruos.md).
 ## bosque_id = -1 si el borde es el límite de la región.
+## Mundo 2.0 (ADR 0014 §2): lo emite BosqueBorder una vez por contacto al chocar con una casilla de
+## un Bosque cerrado, en una puerta o fuera de ella.
 signal bosque_border_reached(bosque_id: int)
 ## El jugador lee un letrero de piedra. direction = "norte", "sureste"... hacia la villa.
 ## kind = ChunkData.SignKind: villa del Bosque actual o villa natal (camino principal).

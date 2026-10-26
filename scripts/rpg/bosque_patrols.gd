@@ -99,13 +99,25 @@ static func is_out(monster_id: StringName, momento: StringName) -> bool:
 
 ## Casilla del puesto de un Único que ronda (`key`): alcanzable, libre (`can_use`) y a min_hub_distance
 ## o más del hub (lejos de la plaza de la villa). Determinista. (-1, -1) si no hay.
+## ponytail: borrar en M17 (ChunkData); el Mundo 2.0 usa post_cell_world.
 static func post_cell(chunk: ChunkData, seed_value: int, key: String, can_use: Callable) -> Vector2i:
+	return _post_cell(ChunkData.SIZE, chunk.hub, chunk.is_reachable, seed_value, key, can_use)
+
+
+## Igual que post_cell, sobre un WorldChunk del Mundo 2.0 (casillas 0..79 del chunk; `can_use`
+## recibe también la casilla del chunk).
+static func post_cell_world(chunk: WorldChunk, seed_value: int, key: String, can_use: Callable) -> Vector2i:
+	return _post_cell(WorldChunk.SIZE, chunk.hub, chunk.is_reachable, seed_value, key, can_use)
+
+
+static func _post_cell(size: int, hub: Vector2i, is_reachable: Callable, seed_value: int, key: String,
+		can_use: Callable) -> Vector2i:
 	var gap: int = int(config().get("min_hub_distance", 10))
 	var margin: int = 4
 	for t: int in CELL_TRIES:
 		var h: int = ChunkGenerator.hash_ints([seed_value, key.hash(), t, SALT_CELL])
-		var span: int = ChunkData.SIZE - 2 * margin
+		var span: int = size - 2 * margin
 		var c := Vector2i(margin + h % span, margin + (h / span) % span)
-		if MonsterSteering.chebyshev(c, chunk.hub) >= gap and chunk.is_reachable(c) and can_use.call(c):
+		if MonsterSteering.chebyshev(c, hub) >= gap and is_reachable.call(c) and can_use.call(c):
 			return c
 	return Vector2i(-1, -1)
