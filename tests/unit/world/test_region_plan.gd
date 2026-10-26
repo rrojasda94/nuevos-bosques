@@ -359,6 +359,23 @@ func test_painted_water_meanders_without_cutting_rivers() -> void:
 		assert_eq(_plan42.water_at(p.cell), RegionAuthoring.Water.NONE, "%s fuera del agua" % p.id)
 
 
+## Fallo heredado de M7: un rótulo de río (`lugar`) o un `manantial` sobre el agua no la borra
+## (no deja un hueco seco en el río); un lugar que ocupa tierra (aquí, un hito) sí.
+func test_water_labels_keep_their_water() -> void:
+	var water := Image.create_empty(60, 80, false, Image.FORMAT_RGBA8)
+	var river: Color = RegionAuthoring.palette_color(_palette, "water", "river_narrow")
+	for y: int in 80:
+		water.set_pixel(10, y, river)
+	var images: Dictionary = { "roads": Image.create_empty(60, 80, false, Image.FORMAT_RGBA8), "water": water }
+	var csv: String = "\n".join([HEADER, "villa_natal,Casa,villa_natal,40,40,,,",
+			"afluente_x,1ro de prueba,lugar,10,20,,,", "manantial_x,Nacimiento,manantial,10,50,,,",
+			"hito_x,Hito,hito,10,70,,,"]) + "\n"
+	var plan := _build(42, _region, RegionAuthoring.from_sources(images, csv, _palette))
+	assert_eq(plan.water_at(Vector2i(10, 20)), RegionAuthoring.Water.RIVER_NARROW, "el rótulo no seca el río")
+	assert_eq(plan.water_at(Vector2i(10, 50)), RegionAuthoring.Water.RIVER_NARROW, "el manantial no seca el río")
+	assert_eq(plan.water_at(Vector2i(10, 70)), RegionAuthoring.Water.NONE, "un hito no queda en el agua")
+
+
 func test_painted_roads_over_water_are_bridges() -> void:
 	for y: int in _plan42.size_macro.y:
 		for x: int in _plan42.size_macro.x:

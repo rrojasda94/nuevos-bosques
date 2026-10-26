@@ -48,6 +48,10 @@
     "per_chunk": [3, 6],
     "min_spacing": 5
   },
+  "chunk_fruit": {
+    "$comment": "Frutales 2×2 del Mundo 2.0 (ChunkBuilder, M8): lo que cambia respecto al bloque fruit, que sigue valiendo para el generador viejo hasta M17. min_spacing: casillas mínimas (Chebyshev) entre las esquinas noroeste de dos frutales (mundo-2.md §3: 5 → 6). Valor de game-designer.",
+    "min_spacing": 6
+  },
   "bosque_states": {
     "$comment": "Reparto de estados de Bosque por seed (bosques-y-relacion.md, #133; BosqueMap). safe_distance: el Bosque natal y los que están a esta distancia o menos (saltos de adyacencia) nacen siempre sanos. necesita_ayuda, corrupto y muerto: [mín, máx] Bosques de la región con ese estado (los muertos, sin villa: no tienen Nujio). enojado_percent: % de los demás candidatos que nacen enojados. El resto, sanos. Valores provisionales de game-designer.",
     "safe_distance": 1,
