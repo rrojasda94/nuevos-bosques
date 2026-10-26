@@ -26,6 +26,8 @@ Todos los cambios que nota el jugador. Formato [Keep a Changelog](https://keepac
   - **Órdenes al grupo** (Libre, Atacar a tu objetivo, Defender), una vez por ronda y sin gastar turno.
   - Enemigos con carácter: Botarramas, Ofomni y Aledra van a por el de menos PV; los reparep atacan juntos y el último huye si le queda poca vida (sin dar su XP); el Ofomni descarriado no huye nunca.
 
+- Combate táctico, primeras piezas internas (todavía no se juega; ADR 0016, valores provisionales): un tablero de 8 × 6 casillas con alturas de 0 a 3, escaleras y rampas, agua con vados y obstáculos; cada bando se coloca en las 2 columnas de su lado. Turnos por CT al estilo de FFTA (más Agilidad, más turnos; mover y actuar cuesta 100, solo una de las dos 80 y esperar 60), y movimiento según la Agilidad: Mov 3 + (Agilidad − 5) / 2, entre 2 y 6, y Salto 1 + Agilidad / 7 niveles. Se podrá huir desde cualquier casilla del borde.
+
 ### Cambiado
 - La cordillera occidental del Valle del Sara (Urd Gumnavis) ya no tiene cumbres: son colinas y montañas que se cruzan a pie. Los afluentes del oeste que la atraviesan llegan desde el lado de Dorias.
 - El Ofomni descarriado tiene más PV (×0,85 en vez de ×0,7: 29 con d = 4) para que siga siendo un reto con los puntos de stat. En nivel 3 lo vence cualquier reparto de combate (todo ATQ, todo DEF, equilibrado o, más justo, todo Vigor); en nivel 2 o con todo a Luz sigue perdiendo casi siempre.
