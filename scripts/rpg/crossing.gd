@@ -22,6 +22,9 @@ extends CanvasLayer
 ## Solo escucha EventBus y lee GameState: no conoce la escena de exploración.
 
 const BATTLE_SCENE: PackedScene = preload("res://scenes/rpg/battle.tscn")
+## Escena del combate táctico (combate-tactico.md, T4): se abre en vez de la de menú con
+## tactical.enabled en balance.json (TacticalBridge.is_enabled). Mismas entradas y salidas.
+const TACTICAL_SCENE: PackedScene = preload("res://scenes/rpg/tactical_battle_scene.tscn")
 ## Textos de placeholder; los revisa narrative-writer.
 const TITLE: String = "El Bosque te observa. Su Nujio exige Luz."
 const TEXT_OFRENDA_MENU: String = "Ofrecer una ofrenda"
@@ -294,11 +297,16 @@ func _on_group_battle_requested(bosque_id: int, monster_id: StringName, count: i
 
 
 func _open_battle(logic: BattleLogic, style: Dictionary, kind: UnicoArt.Kind) -> void:
-	_battle = BATTLE_SCENE.instantiate()
+	_battle = battle_scene(AdventureRules.balance()).instantiate()
 	add_child(_battle)
 	_battle.finished.connect(_on_battle_finished)
 	_battle.begin(logic, style, kind, _ally_kinds)
 	_ally_kinds = []
+
+
+## Escena de combate según el interruptor tactical.enabled de balance.json.
+static func battle_scene(balance_data: Dictionary) -> PackedScene:
+	return TACTICAL_SCENE if TacticalBridge.is_enabled(balance_data) else BATTLE_SCENE
 
 
 func _on_battle_finished(logic: BattleLogic) -> void:
