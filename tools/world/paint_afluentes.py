@@ -17,7 +17,10 @@ Modifica las PNG de data/world/regions/valle_del_sara/ (no las regenera desde el
   dentro o más allá del río, y el afluente queda unido a él por un lado.
 - altura.png: en el nacimiento pone una cumbre de 3x3 px (el afluente nace pegado a ella, así que
   el validador lo da por unido: "nacer en una cumbre") rodeada de nivel 3 y nivel 2. Solo sube el
-  relieve, nunca lo baja.
+  relieve, nunca lo baja. Excepción: los afluentes con "nacimiento": "borde" (los tres de la
+  cordillera occidental, que es transitable; dueño, 2026-10-26) nacen en el borde oeste del mapa
+  (vienen del lado de Dorias, y el validador los da por unidos por tocar el borde) y en el
+  nacimiento solo tienen colinas de nivel 3 y 2, sin cumbre.
 - caminos.png: donde un camino pintado cruza un afluente, ese píxel pasa a puente.
 - lugares.csv: una fila de tipo lugar por afluente (id afluente_<n>, nombre "<n> del Sara"), junto
   a su tramo medio, para que la vista previa lo rotule. Sustituye las filas afluente_* que hubiera y
@@ -31,7 +34,8 @@ parte de las PNG de ese commit y vuelve a pintar todo, así no quedan restos del
 Uso (desde la raíz del repo; necesita Pillow):
     python tools/world/paint_afluentes.py                    # pinta sobre las PNG actuales
     python tools/world/paint_afluentes.py --from-ref e15e3e1  # rehace desde la base
-Después: bash tools/world/preview_region.sh valle_del_sara 7
+Después: python tools/world/paint_relieve_autor.py (Larr, cordillera occidental y Azhin; orden en
+docs/design/world/autoria.md §1) y bash tools/world/preview_region.sh valle_del_sara 7
 """
 from __future__ import annotations
 
@@ -60,21 +64,24 @@ AFLUENTES: list[dict] = [
     {
         "id": "oeste_1", "lado": "O",
         "sigue": "límite Lean–Tossie (borde norte de Tossie)",
-        "puntos": [(4, 30), (20, 29), (40, 33), (60, 40), (80, 50), (100, 56), (125, 58)],
-        "vados": [0.35, 0.75],
+        "nacimiento": "borde",
+        "puntos": [(0, 30), (20, 29), (40, 33), (60, 40), (80, 50), (100, 56), (125, 58)],
+        "vados": [0.02, 0.35, 0.75],
         "navegable_min": 30,
     },
     {
         "id": "oeste_2", "lado": "O",
         "sigue": "límite Tossie–Ostie (borde sur de Tossie)",
-        "puntos": [(4, 62), (25, 66), (32, 69), (42, 71), (46, 82), (60, 92), (80, 98), (105, 102)],
-        "vados": [0.3, 0.7],
+        "nacimiento": "borde",
+        "puntos": [(0, 62), (25, 66), (32, 69), (42, 71), (46, 82), (60, 92), (80, 98), (105, 102)],
+        "vados": [0.02, 0.3, 0.7],
     },
     {
         "id": "oeste_3", "lado": "O",
         "sigue": "límite Ostie–Cassie (franja occidental de Cassie)",
-        "puntos": [(4, 128), (16, 132), (28, 150), (50, 160), (70, 165), (85, 169), (100, 170)],
-        "vados": [0.3, 0.7],
+        "nacimiento": "borde",
+        "puntos": [(0, 128), (16, 132), (28, 150), (50, 160), (70, 165), (85, 169), (100, 170)],
+        "vados": [0.02, 0.3, 0.7],
     },
     {
         "id": "oeste_4", "lado": "O",
@@ -271,13 +278,21 @@ def main() -> int:
     # 1) Colinas y cumbre de nacimiento (antes del agua: la navegabilidad lee la altura final).
     for af in AFLUENTES:
         sx, sy = rivers[af["id"]][0]
-        cx = sx - (PEAK_HALF + 1) if af["lado"] == "O" else sx + (PEAK_HALF + 1)
+        borde = af.get("nacimiento", "cumbre") == "borde"
+        if borde:
+            # Nace en el borde del mapa (viene del otro lado de la cordillera): colina de nivel 3
+            # centrada en el nacimiento, sin cumbre, para que la cordillera se cruce a pie.
+            cx = sx
+        else:
+            cx = sx - (PEAK_HALF + 1) if af["lado"] == "O" else sx + (PEAK_HALF + 1)
         for y in range(sy - PEAK_HALF - RING_LEVEL_2, sy + PEAK_HALF + RING_LEVEL_2 + 1):
             for x in range(cx - PEAK_HALF - RING_LEVEL_2, cx + PEAK_HALF + RING_LEVEL_2 + 1):
                 d = math.hypot(max(0, abs(x - cx) - PEAK_HALF), max(0, abs(y - sy) - PEAK_HALF))
                 if d > RING_LEVEL_2 + 0.5:
                     continue
                 level = 4 if d == 0 else (3 if d <= RING_LEVEL_3 + 0.5 else 2)
+                if borde:
+                    level = min(level, 3)
                 if (x, y) in base_water or (x, y) in traced:
                     level = min(level, 3)  # nunca una cumbre bajo el agua
                 if level == 4 and 0 <= x < w and 0 <= y < h and caminos.getpixel((x, y))[3]:

@@ -7,6 +7,13 @@ extends GutTest
 const HEADER: String = "id,nombre,tipo,x,y,color,estilo,notas"
 const HOME_ROW: String = "villa_natal,Casa,villa_natal,1,1,,,"
 const TMP_DIR: String = "user://test_region_authoring/"
+## Relieve del dueño en el Valle del Sara (tools/world/paint_relieve_autor.py, mismas constantes):
+## px de cumbre de Larr en el borde norte y franja de la cordillera occidental (x < STRIP_W,
+## LARR_ROWS <= y < STRIP_END).
+const LARR_ROWS: int = 3
+const STRIP_W: int = 40
+const STRIP_END: int = 260
+const RELIEF_SEEDS: Array[int] = [7, 15, 42]
 
 var _palette: Dictionary
 
@@ -325,9 +332,10 @@ func test_valle_del_sara_has_the_sara_tributaries() -> void:
 	if water.is_empty():
 		return
 	assert_eq(_flood(water, [water.keys()[0]]).size(), water.size(), "la red de agua es conexa")
-	var top: Array = water.keys().filter(func(c: Vector2i) -> bool: return c.y == 0)
+	# El Sara nace al pie de Larr (la cumbre del borde norte) y llega al borde sur.
+	var top: Array = water.keys().filter(func(c: Vector2i) -> bool: return c.y == LARR_ROWS)
 	var bottom: Array = water.keys().filter(func(c: Vector2i) -> bool: return c.y == a.size_px.y - 1)
-	assert_false(top.is_empty() or bottom.is_empty(), "el Sara va del borde norte al sur")
+	assert_false(top.is_empty() or bottom.is_empty(), "el Sara va del pie de Larr al borde sur")
 	if top.is_empty() or bottom.is_empty():
 		return
 	var from_top: Dictionary = _flood(water, top)
@@ -390,6 +398,105 @@ func test_valle_del_sara_has_the_sara_tributaries() -> void:
 		names.append(p.name)
 	for n: String in ["1ro", "2do", "3ro", "4to", "5to", "6to", "7mo"]:
 		assert_has(names, "%s del Sara" % n, "nombre del afluente en lugares.csv")
+
+
+## Larr (dueño, 2026-10-26: "una pared impenetrable"): las LARR_ROWS filas del norte son cumbre de
+## lado a lado, así que ninguna celda del borde norte se pisa, y ningún agua las cruza.
+func test_valle_del_sara_larr_closes_the_north_edge() -> void:
+	var a := RegionAuthoring.load_region(&"valle_del_sara")
+	var open: Array[Vector2i] = []
+	for y: int in LARR_ROWS:
+		for x: int in a.size_px.x:
+			var c := Vector2i(x, y)
+			if a.height_at(c) != RegionAuthoring.Height.PEAK or a.water_at(c) != RegionAuthoring.Water.NONE 					or a.road_at(c) != RegionAuthoring.Road.NONE:
+				open.append(c)
+	assert_eq(open.size(), 0, "huecos en Larr: %s" % [open.slice(0, 8)])
+	for x: int in a.size_px.x:
+		assert_false(a.is_walkable(Vector2i(x, 0)), "borde norte transitable en x=%d" % x)
+
+
+## Cordillera occidental (dueño: "colinas y montañas bastante transitables"): en la franja oeste no
+## hay cumbres ni llano (niveles 1-3), y se cruza a pie de oeste a este en cada fila de chunks.
+func test_valle_del_sara_west_range_is_walkable_hills() -> void:
+	var a := RegionAuthoring.load_region(&"valle_del_sara")
+	var peaks: Array[Vector2i] = []
+	var flat: int = 0
+	for y: int in range(LARR_ROWS, STRIP_END):
+		for x: int in STRIP_W:
+			var h: int = a.height_at(Vector2i(x, y))
+			if h == RegionAuthoring.Height.PEAK:
+				peaks.append(Vector2i(x, y))
+			elif h == RegionAuthoring.Height.LEVEL_0:
+				flat += 1
+	assert_eq(peaks.size(), 0, "cumbres en la cordillera occidental: %s" % [peaks.slice(0, 8)])
+	assert_eq(flat, 0, "celdas de nivel 0 en la cordillera occidental")
+	var bands: int = 0
+	for band: int in range(0, STRIP_END, WorldCoords.MACROS_PER_CHUNK):
+		var y0: int = maxi(band, LARR_ROWS)
+		var y1: int = mini(band + WorldCoords.MACROS_PER_CHUNK, STRIP_END)
+		var cells: Dictionary = {}
+		var starts: Array = []
+		for y: int in range(y0, y1):
+			for x: int in STRIP_W:
+				if a.is_walkable(Vector2i(x, y)):
+					cells[Vector2i(x, y)] = true
+					if x == 0:
+						starts.append(Vector2i(x, y))
+		var reach: Dictionary = _flood(cells, starts)
+		var crosses: bool = false
+		for y: int in range(y0, y1):
+			crosses = crosses or reach.has(Vector2i(STRIP_W - 1, y))
+		assert_true(crosses, "la cordillera se cruza a pie de oeste a este entre y=%d y y=%d" % [y0, y1 - 1])
+		bands += 1
+	assert_eq(bands, ceili(STRIP_END / float(WorldCoords.MACROS_PER_CHUNK)))
+
+
+## Azhin (dueño): villa, la más septentrional, al pie de Larr en el noroeste, con acceso a pie desde
+## la villa natal (el validador lo exige de toda villa; aquí se comprueba también a mano).
+func test_valle_del_sara_has_azhin_at_the_foot_of_larr() -> void:
+	var a := RegionAuthoring.load_region(&"valle_del_sara")
+	assert_true(a.is_valid(), "%s" % [a.errors])
+	var azhin: Dictionary = {}
+	for p: Dictionary in a.places:
+		if p.name == "Azhin":
+			azhin = p
+	assert_false(azhin.is_empty(), "Azhin está en lugares.csv")
+	if azhin.is_empty():
+		return
+	assert_eq(azhin.type, "villa")
+	var cell: Vector2i = azhin.cell
+	assert_true(a.is_walkable(cell), "Azhin en terreno transitable")
+	assert_lt(cell.x, STRIP_W, "Azhin en la cordillera occidental (noroeste)")
+	assert_lte(cell.y, LARR_ROWS + 3, "Azhin pegada a Larr")
+	for p: Dictionary in a.places_of_type("villa") + a.places_of_type("villa_natal"):
+		if p.id != azhin.id:
+			assert_gt(p.cell.y, cell.y, "Azhin es la villa más septentrional (frente a %s)" % p.id)
+	var walk: Dictionary = {}
+	for y: int in a.size_px.y:
+		for x: int in a.size_px.x:
+			if a.is_walkable(Vector2i(x, y)):
+				walk[Vector2i(x, y)] = true
+	assert_true(_flood(walk, [a.home_villa().cell]).has(cell), "Azhin se alcanza a pie desde la villa natal")
+
+
+## La red de agua del plan sigue siendo una sola en varias seeds (el meandro no la corta junto a
+## Larr ni en los nacimientos del borde oeste).
+func test_valle_del_sara_water_network_stays_connected_across_seeds() -> void:
+	var region: Dictionary = ChunkGenerator.load_region(&"valle_del_sara")
+	var a := RegionAuthoring.load_region(&"valle_del_sara")
+	for seed_value: int in RELIEF_SEEDS:
+		var plan := RegionPlan.build(seed_value, &"valle_del_sara", region, a)
+		var water: Dictionary = {}
+		for y: int in plan.size_macro.y:
+			for x: int in plan.size_macro.x:
+				if plan.water_at(Vector2i(x, y)) != RegionAuthoring.Water.NONE:
+					water[Vector2i(x, y)] = true
+		assert_false(water.is_empty())
+		if water.is_empty():
+			continue
+		assert_eq(_flood(water, [water.keys()[0]]).size(), water.size(), "red de agua conexa con la seed %d" % seed_value)
+		for x: int in plan.size_macro.x:
+			assert_eq(plan.level_at(Vector2i(x, 0)), RegionPlan.LEVEL_PEAK, "Larr en el plan, seed %d, x=%d" % [seed_value, x])
 
 
 ## Distancia en pasos (4-vecindad) desde `starts` a cada celda alcanzable de `cells`.
