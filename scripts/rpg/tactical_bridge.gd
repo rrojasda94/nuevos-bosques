@@ -7,7 +7,8 @@ extends RefCounted
 ## - build_battle: un TacticalBattle con el Adoc (leader), sus aliados y los enemigos del
 ##   BattleLogic, sus PV, stats, AGI y roles, y el pago (peaje, Luz, ofrendas). Hasta
 ##   board.max_per_side por bando (los demás no entran). El tablero, llano hasta el Mundo 2.0.
-## - apply_to_logic: devuelve al BattleLogic el resultado, los PV, la Luz y la ofrenda entregada,
+## - apply_to_logic: devuelve al BattleLogic el resultado, los PV, la Luz, la ofrenda entregada y
+##   quién huyó por el borde (gone; el reparep que huye no da su XP),
 ##   para que AdventureRules aplique victoria, pago, huida, derrota, XP y Bosque recuerda como
 ##   siempre.
 ## - end_lines: las líneas del final (resultado, XP, niveles nuevos, botín).
@@ -49,7 +50,7 @@ static func _fighter(c: Dictionary, id: StringName, side: int, roles: Dictionary
 	return {
 		"id": id, "side": side, "agi": int(c.get("agi", 0)), "hp": int(c.hp), "max_hp": int(c.max_hp),
 		"atk": int(c.atk) - int(bonus.get("atk_bonus", 0)), "def": int(c.def) - int(bonus.get("def_bonus", 0)),
-		"role": role, "accepts_payment": accepts,
+		"role": role, "accepts_payment": accepts, "ai": StringName(str(c.get("ai", ""))),
 	}
 
 
@@ -88,7 +89,17 @@ static func apply_to_logic(battle: TacticalBattle, logic: BattleLogic) -> void:
 			a.hp = hp
 			a.retired = hp <= 0
 		elif s.begins_with("enemy_"):
-			logic.enemies[logic_index(u.id)].hp = hp
+			var e: Dictionary = logic.enemies[logic_index(u.id)]
+			if u.fled:
+				# Huyó o se retiró por el borde: sigue con sus PV y no está en pie (BattleLogic.gone).
+				e.hp = int(u.hp)
+				e.gone = true
+				if u.ai == BattleLogic.AI_SWARM:
+					# El reparep que huye no da su XP (como en el combate por menú).
+					logic.victory_xp = maxi(0, logic.victory_xp - logic.enemy_xp)
+					logic.level_ups = logic.level_ups_fled.duplicate()
+			else:
+				e.hp = hp
 
 
 ## Líneas del final: el resultado y, tras una victoria, la XP, cada nivel nuevo, el aviso de puntos

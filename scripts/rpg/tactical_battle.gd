@@ -37,6 +37,11 @@ extends RefCounted
 ##   el combate (APPEASED); no vale si algún enemigo en pie no acepta pagos. Huir: desde cualquier
 ##   casilla del borde, siempre, con todo el bando (FLED; el enemigo recupera PV porque el siguiente combate lo crea entero, como
 ##   hoy).
+## - Retirada por el borde (T5): leave() saca del tablero al combatiente en su turno si está en una
+##   casilla del borde (el último reparep que huye, el garelino que se retira; TacticalAI decide
+##   cuándo). Queda `fled` y no cuenta como caído; check_end puede dar la victoria.
+## - Orden al grupo (T5): group_order (BattleLogic.GroupOrder; Libre por defecto) y player_target (el
+##   último enemigo al que atacó el `leader`), que lee TacticalAI. Cambiarla no gasta acción.
 ## - RNG propio sembrado con la seed del combate: las tiradas son deterministas.
 
 const SIDE_PLAYER: int = 0
@@ -62,6 +67,7 @@ const KIND_CHEER: StringName = &"cheer"
 const KIND_OFFER_LUZ: StringName = &"offer_luz"
 const KIND_OFRENDA: StringName = &"ofrenda"
 const KIND_FLEE: StringName = &"flee"
+const KIND_LEAVE: StringName = &"leave"
 ## Claves de texto corto (data/text/sistema.json, las escribe narrative-writer en T4).
 const TEXT_MISS: StringName = &"tactical_miss"
 const TEXT_ATTACK: StringName = &"tactical_attack"
@@ -77,6 +83,8 @@ const TEXT_CHEER: StringName = &"tactical_cheer"
 const TEXT_OFFER_LUZ: StringName = &"tactical_offer_luz"
 const TEXT_OFRENDA: StringName = &"tactical_ofrenda"
 const TEXT_FLEE: StringName = &"tactical_flee"
+const TEXT_ENEMY_FLEE: StringName = &"tactical_enemy_flee"
+const TEXT_RETREAT: StringName = &"tactical_retreat"
 ## Roles (ids de balance.json, tactics.roles; los mismos que BattleLogic).
 const ROLE_ATTACKER: StringName = &"attacker"
 const ROLE_DEFENDER: StringName = &"defender"
@@ -92,6 +100,11 @@ var attack_cfg: Dictionary
 var roles_cfg: Dictionary
 var defend_factor: float = 0.5
 var finish_below: float = 0.3
+## Umbrales de la IA (tactics.ai: help_below, retreat_below, swarm_flee_below...; TacticalAI).
+var ai_cfg: Dictionary = {}
+## Orden al grupo del jugador (BattleLogic.GroupOrder) y último enemigo al que atacó el `leader`.
+var group_order: int = BattleLogic.GroupOrder.FREE
+var player_target: int = NONE
 var rng := RandomNumberGenerator.new()
 var result: Result = Result.ONGOING
 ## Pago (set_payment): peaje en Luz, Luz suelta y ofrendas de la bolsa ([{ id, luz }]).
@@ -105,7 +118,7 @@ var covers: Dictionary = {}
 ## Lado por donde llegó el jugador (sus columnas de colocación).
 var player_side: TacticalBoard.Side = TacticalBoard.Side.LEFT
 ## Combatientes: [{ id, side, agi, mov, jump, drop, cell, facing, ct, tie, alive, hp, max_hp, atk,
-## def, role, leader, accepts_payment, strong_every, strong_factor, strong_cooldown, defending,
+## def, role, ai, fled, leader, accepts_payment, strong_every, strong_factor, strong_cooldown, defending,
 ## cheer, heals_left, cheers_left, finishes_left, cover_ready, turns }]. `turns`: turnos propios
 ## empezados (Cubrir vuelve a estar listo cuando turns ≥ cover_ready).
 var units: Array[Dictionary] = []
@@ -128,6 +141,7 @@ func _init(tactical: Dictionary, battle_board: TacticalBoard, fighters: Array, r
 	roles_cfg = tactical.get("roles", {})
 	defend_factor = float(tactical.get("defend_factor", 0.5))
 	finish_below = float(tactical.get("finish_below", 0.3))
+	ai_cfg = tactical.get("ai", {})
 	rng.seed = rng_seed + ACTION_SALT
 	player_side = arrival_side
 	var tie_rng := RandomNumberGenerator.new()
@@ -150,6 +164,8 @@ func _init(tactical: Dictionary, battle_board: TacticalBoard, fighters: Array, r
 			"atk": int(data.get("atk", 0)) + _role_num(role, "atk_bonus", 0),
 			"def": int(data.get("def", 0)) + _role_num(role, "def_bonus", 0),
 			"role": role,
+			"ai": StringName(str(data.get("ai", ""))),
+			"fled": false,
 			"leader": bool(data.get("leader", false)),
 			"accepts_payment": bool(data.get("accepts_payment", true)),
 			"strong_every": int(data.get("strong_every", 0)),
@@ -188,6 +204,7 @@ static func config_from_balance(balance_data: Dictionary) -> Dictionary:
 		cfg["defend_factor"] = balance_data.defend_factor
 	cfg["roles"] = tactics.get("roles", {})
 	cfg["finish_below"] = (tactics.get("ai", {}) as Dictionary).get("finish_below", 0.3)
+	cfg["ai"] = (tactics.get("ai", {}) as Dictionary).duplicate(true)
 	return cfg
 
 
@@ -457,6 +474,8 @@ func attack(target: int, finish: bool = false) -> Dictionary:
 	active_acted = true
 	a.facing = TacticalBoard.facing_toward(a.cell, t.cell, a.facing)
 	var out: Dictionary = _result(KIND_FINISH if finish else KIND_ATTACK, target)
+	if a.leader:
+		player_target = target
 	out.receiver = target
 	out.hit_chance = preview.hit_chance
 	out.relation = preview.relation
@@ -657,6 +676,33 @@ func flee() -> Dictionary:
 	out.text_key = TEXT_FLEE
 	out.result = result
 	return out
+
+
+## Retirarse por el borde: el combatiente en su turno está en una casilla del borde y sale del
+## tablero (no cae: queda `fled`). Termina su turno. `retreat`: texto de retirada (garelino) en vez
+## del de huida (reparep).
+func can_leave() -> bool:
+	return can_act() and board.is_edge(units[active].cell)
+
+
+func leave(retreat: bool = false) -> Dictionary:
+	if not can_leave():
+		return {}
+	var who: int = active
+	active_acted = true
+	var out: Dictionary = _result(KIND_LEAVE, who)
+	units[who].fled = true
+	remove_unit(who)
+	turn_count += 1
+	check_end()
+	out.text_key = TEXT_RETREAT if retreat else TEXT_ENEMY_FLEE
+	out.result = result
+	return out
+
+
+## Cambia la orden al grupo (BattleLogic.GroupOrder). No gasta acción.
+func set_group_order(order: int) -> void:
+	group_order = clampi(order, BattleLogic.GroupOrder.FREE, BattleLogic.GroupOrder.DEFEND)
 
 
 func _valid(index: int) -> bool:

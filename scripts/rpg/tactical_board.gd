@@ -40,6 +40,9 @@ var _water: PackedByteArray
 var _ford: PackedByteArray
 var _object: Array[StringName] = []
 var _walkable_objects: Array[StringName] = []
+## Transitable por casilla (caché de is_walkable para las búsquedas; se rehace tras set_cell).
+var _walk: PackedByteArray
+var _walk_dirty: bool = true
 
 
 func _init(board_width: int, board_height: int) -> void:
@@ -67,6 +70,7 @@ static func from_cells(board_width: int, board_height: int, cells: Dictionary,
 	var board := TacticalBoard.new(board_width, board_height)
 	for kind: Variant in walkable_objects:
 		board._walkable_objects.append(StringName(kind))
+	board._walk_dirty = true
 	for key: Variant in cells:
 		if not key is Vector2i:
 			continue
@@ -101,6 +105,7 @@ func set_cell(cell: Vector2i, level: int = 0, blocked: bool = false, stair: bool
 	_water[i] = 1 if (water or ford) else 0
 	_ford[i] = 1 if ford else 0
 	_object[i] = object_kind
+	_walk_dirty = true
 
 
 func in_bounds(cell: Vector2i) -> bool:
@@ -215,6 +220,53 @@ func path_to(from: Vector2i, to: Vector2i, mov: int, jump: int, drop: int,
 	return out
 
 
+## Coste a pie (sin límite de Mov) desde cada casilla hasta la meta más cercana de `goals`: { Vector2i:
+## coste }. Búsqueda hacia atrás desde las metas (subir y bajar se invierten) por cubos de coste: lineal
+## en casillas. `blocked`: casillas que no se cruzan. Para que la IA se acerque (TacticalAI, T5).
+func walk_cost_to(goals: Array[Vector2i], jump: int, drop: int, blocked: Dictionary = {}) -> Dictionary:
+	_refresh_walk()
+	var dist: Dictionary = {}
+	var buckets: Array = [[]]
+	for g: Vector2i in goals:
+		if is_walkable(g) and not blocked.has(g) and not dist.has(g):
+			dist[g] = 0
+			(buckets[0] as Array).append(g)
+	var k: int = 0
+	while k < buckets.size():
+		var bucket: Array = buckets[k]
+		var n: int = 0
+		while n < bucket.size():
+			var x: Vector2i = bucket[n]
+			n += 1
+			if int(dist[x]) != k:
+				continue
+			var xi: int = _index(x)
+			var x_level: int = _level[xi]
+			var x_stair: bool = _stair[xi] == 1
+			var enter: int = ford_cost if _ford[xi] == 1 else 1
+			for dir: Vector2i in NEIGHBOR_DIRS:
+				var y: Vector2i = x + dir
+				if y.x < 0 or y.y < 0 or y.x >= width or y.y >= height or blocked.has(y):
+					continue
+				var yi: int = y.y * width + y.x
+				if _walk[yi] == 0:
+					continue
+				# Paso real (hacia delante): de y a x.
+				if not x_stair and _stair[yi] == 0:
+					var rise: int = x_level - _level[yi]
+					if (rise >= 0 and rise > jump) or (rise < 0 and -rise > drop):
+						continue
+				var c: int = k + enter
+				if dist.has(y) and int(dist[y]) <= c:
+					continue
+				dist[y] = c
+				while buckets.size() <= c:
+					buckets.append([])
+				(buckets[c] as Array).append(y)
+		k += 1
+	return dist
+
+
 ## Hay camino a pie (sin límite de Mov) entre alguna casilla de `a` y alguna de `b`. Para validar que
 ## el tablero es conexo entre los bandos.
 func has_walk_path(a: Array[Vector2i], b: Array[Vector2i], jump: int, drop: int) -> bool:
@@ -305,14 +357,17 @@ func _center_rows() -> Array[int]:
 	return rows
 
 
-## Dijkstra sobre el tablero (pocas casillas: frontera ordenada a mano). { cost, came }.
+## Dijkstra sobre el tablero (pocas casillas: frontera ordenada a mano). { cost, came }. Los pasos
+## son los de can_step, con las comprobaciones en línea (se llama mucho: IA, T5).
 func _search(from: Vector2i, mov: int, jump: int, drop: int, impassable: Dictionary) -> Dictionary:
 	var cost: Dictionary = {}
 	var came: Dictionary = {}
 	if not in_bounds(from):
 		return { "cost": cost, "came": came }
+	_refresh_walk()
 	cost[from] = 0
 	var frontier: Array[Vector2i] = [from]
+	var queued: Dictionary = { from: true }
 	while not frontier.is_empty():
 		var best: int = 0
 		for k in range(1, frontier.size()):
@@ -320,18 +375,41 @@ func _search(from: Vector2i, mov: int, jump: int, drop: int, impassable: Diction
 				best = k
 		var cell: Vector2i = frontier[best]
 		frontier.remove_at(best)
+		queued.erase(cell)
+		var ci: int = _index(cell)
+		var cell_cost: int = int(cost[cell])
+		var cell_level: int = _level[ci]
+		var cell_stair: bool = _stair[ci] == 1
 		for dir: Vector2i in NEIGHBOR_DIRS:
 			var next: Vector2i = cell + dir
-			if impassable.has(next) or not can_step(cell, next, jump, drop):
+			if next.x < 0 or next.y < 0 or next.x >= width or next.y >= height or impassable.has(next):
 				continue
-			var c: int = int(cost[cell]) + step_cost(next)
+			var ni: int = next.y * width + next.x
+			if _walk[ni] == 0:
+				continue
+			if not cell_stair and _stair[ni] == 0:
+				var rise: int = _level[ni] - cell_level
+				if (rise >= 0 and rise > jump) or (rise < 0 and -rise > drop):
+					continue
+			var c: int = cell_cost + (ford_cost if _ford[ni] == 1 else 1)
 			if c > mov or (cost.has(next) and int(cost[next]) <= c):
 				continue
 			cost[next] = c
 			came[next] = cell
-			if not frontier.has(next):
+			if not queued.has(next):
 				frontier.append(next)
+				queued[next] = true
 	return { "cost": cost, "came": came }
+
+
+func _refresh_walk() -> void:
+	if not _walk_dirty:
+		return
+	_walk.resize(width * height)
+	for y in height:
+		for x in width:
+			_walk[y * width + x] = 1 if is_walkable(Vector2i(x, y)) else 0
+	_walk_dirty = false
 
 
 func _index(cell: Vector2i) -> int:
