@@ -129,10 +129,12 @@ static func accepts_help(e: Dictionary, seed_value: int = GameState.seed_value) 
 	return absi(adoc_senda(seed_value, str(e.get("id", ""))) - GameState.senda) < gap
 
 
-## El adoc como aliado: stats de adoc de su nivel (AdventureRules.adoc_stats).
-static func ally_of(e: Dictionary) -> Dictionary:
+## El adoc como aliado: stats de adoc de su nivel (AdventureRules.adoc_stats), su Agilidad y su rol
+## de combate (por seed y su id; ia-de-combate.md).
+static func ally_of(e: Dictionary, seed_value: int = GameState.seed_value) -> Dictionary:
 	var s: Dictionary = AdventureRules.adoc_stats(int(e.level))
-	return { "name": str(e.name), "max_hp": int(s.max_hp), "atk": int(s.atk), "def": int(s.def), "kind": &"adoc" }
+	return { "name": str(e.name), "max_hp": int(s.max_hp), "atk": int(s.atk), "def": int(s.def), "kind": &"adoc",
+		"agi": AdocGrowth.agility(int(e.level)), "role": AdventureRules.recruit_role(seed_value, str(e.get("id", ""))) }
 
 
 ## Pregunta del encuentro: "Tavra, un adoc, está a punto de pelear contra 3 reparep."

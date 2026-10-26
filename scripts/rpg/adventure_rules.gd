@@ -28,6 +28,7 @@ const SALT_QUEST_BATTLE: int = 23
 const SALT_REFUGE_LOOT: int = 29
 const SALT_GROUP: int = 31
 const SALT_LOOT: int = 37
+const SALT_ROLE: int = 41
 const ADOC_ID: StringName = &"adoc"
 ## Valor de GameState.open_until para un paso pagado que no caduca (amistad alta).
 const OPEN_PERMANENT: int = -1
@@ -106,12 +107,21 @@ static func weapon_atk_bonus() -> int:
 
 
 ## Stats con los que pelea el Adoc ahora: los de su nivel y sus puntos, más el ATQ del arma equipada
-## y menos la DEF que restan las máscaras pesadas (Stealth.def_penalty, sin bajar de 0).
+## y menos la DEF que restan las máscaras pesadas (Stealth.def_penalty, sin bajar de 0), y su
+## Agilidad (automática con el nivel).
 static func adoc_combat_stats() -> Dictionary:
 	var stats: Dictionary = AdocGrowth.player_stats()
 	stats.atk = int(stats.atk) + weapon_atk_bonus()
 	stats.def = maxi(0, int(stats.def) - Stealth.def_penalty())
+	stats.agi = AdocGrowth.agility(GameState.level)
 	return stats
+
+
+## Rol de combate de un aliado o miembro de grupo (ia-de-combate.md: "por seed al reclutarlos"):
+## uno de tactics.roles.order, determinista por seed de partida y `key` (id del reclutado).
+static func recruit_role(seed_value: int, key: String) -> StringName:
+	var order: Array = (balance().get("tactics", {}) as Dictionary).get("roles", {}).get("order", ["attacker", "defender", "support"])
+	return StringName(str(order[ChunkGenerator.hash_ints([seed_value, key.hash(), SALT_ROLE]) % order.size()]))
 
 
 ## Con el arma en la mano, el Bosque `bosque_id` no le deja pasar en paz (sigilo-y-robo.md, regla
@@ -487,6 +497,11 @@ static func make_monster(monster_id: StringName, d: int) -> Dictionary:
 	unico.special_every = int(cfg.get("special_every", 0))
 	unico.special_factor = float(cfg.get("special_factor", 1.0))
 	unico.texts = cfg.get("texts", {})
+	# IA de combate (ia-de-combate.md): Agilidad, perfil y ataques en área.
+	unico.agi = int(cfg.get("agi", 0))
+	unico.ai = str(cfg.get("ai", ""))
+	unico.area_attack = bool(cfg.get("area_attack", false))
+	unico.special_area = bool(cfg.get("special_area", false))
 	return unico
 
 
@@ -533,7 +548,8 @@ static func bosque_allies(bosque_id: int, monster_id: StringName, d: int) -> Arr
 	for i: int in n:
 		var u: Dictionary = make_monster(kind, d)
 		out.append({ "name": Texts.get_text("battle_ally_unico_name") % u.name, "max_hp": u.max_hp,
-			"atk": u.atk, "def": u.def, "kind": kind })
+			"atk": u.atk, "def": u.def, "kind": kind, "agi": u.agi,
+			"role": recruit_role(GameState.seed_value, "bosque_ally:%d:%d" % [bosque_id, i]) })
 	return out
 
 
@@ -721,7 +737,8 @@ static func pay_toll_with_ofrenda(bosque_id: int, cost: int, index: int) -> bool
 ## semilla) y el rival empieza siempre con todos sus PV: huir o retroceder no conserva el daño hecho.
 ## Combate en grupo (monstruos.md): `count` enemigos del mismo tipo (numerados si son más de uno;
 ## los de joint_attack atacan juntos) y XP por cada uno. Aliados: `allies` (p. ej. un adoc NPC,
-## AdocEncounters) y los Únicos del Bosque si su estado los da (bosque_allies), 2 como mucho.
+## AdocEncounters) y los Únicos del Bosque si su estado los da (bosque_allies), 2 como mucho; cada
+## uno con su rol y su AGI (ia-de-combate.md).
 static func start_battle(bosque_id: int, d: int, monster_id: StringName = &"botarramas", count: int = 1,
 		allies: Array[Dictionary] = []) -> BattleLogic:
 	var key: String = str(bosque_id)
@@ -746,6 +763,9 @@ static func start_battle(bosque_id: int, d: int, monster_id: StringName = &"bota
 	_prepare(logic, cfg, d)
 	logic.victory_xp = monster_xp(monster_id, d) * count
 	logic.level_ups = levels_gained(GameState.xp, logic.victory_xp)
+	# Un reparep que huye no da su XP (ia-de-combate.md): niveles sin ella, para anunciarlos bien.
+	logic.enemy_xp = monster_xp(monster_id, d)
+	logic.level_ups_fled = levels_gained(GameState.xp, maxi(0, logic.victory_xp - logic.enemy_xp))
 	if not is_outsider(monster_id):
 		logic.loot_id = loot_for(GameState.seed_value, bosque_id, attempt)
 	logic.toll = toll_for(bosque_id, d)
@@ -895,7 +915,8 @@ static func called_allies(bosque_id: int, monster_id: StringName, d: int) -> Arr
 	for i: int in int(cfg.get("allies", 1)):
 		var u: Dictionary = make_monster(&"botarramas", d)
 		out.append({ "name": Texts.get_text("battle_ally_unico_name") % u.name, "max_hp": u.max_hp,
-			"atk": u.atk, "def": u.def, "kind": &"botarramas" })
+			"atk": u.atk, "def": u.def, "kind": &"botarramas", "agi": u.agi,
+			"role": recruit_role(GameState.seed_value, "called_ally:%d:%d" % [bosque_id, i]) })
 	return out
 
 
