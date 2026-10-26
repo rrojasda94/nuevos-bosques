@@ -310,7 +310,9 @@ func test_valle_del_sara_authoring_is_valid_and_matches_the_region() -> void:
 ## una sola y le llegan al menos 4 afluentes desde el oeste (Urd Gumnavis) y 3 desde el este
 ## (Gumnada Gumnavis). El Sara es el pasillo de agua de norte a sur: las celdas que están a 3 pasos
 ## o menos de más que el camino más corto entre los dos bordes. Lo que queda son los afluentes:
-## cuenta cada trozo que toca el Sara y nace en una cumbre o en el borde oeste o este.
+## cuenta cada trozo que toca el Sara y nace en una cumbre o en el borde oeste o este. Nacen como
+## río estrecho; lo navegable va sobre todo por tierra baja (nivel 0-1), y cada uno tiene su nombre,
+## "1ro del Sara"... "7mo del Sara", como lugar de lugares.csv.
 func test_valle_del_sara_has_the_sara_tributaries() -> void:
 	var a := RegionAuthoring.load_region(&"valle_del_sara")
 	var water: Dictionary = {}
@@ -341,6 +343,9 @@ func test_valle_del_sara_has_the_sara_tributaries() -> void:
 			rest[c] = true
 	var west: int = 0
 	var east: int = 0
+	var with_navigable: int = 0
+	var navigable: int = 0
+	var navigable_low: int = 0
 	var done: Dictionary = {}
 	for c: Vector2i in rest:
 		if done.has(c):
@@ -348,15 +353,28 @@ func test_valle_del_sara_has_the_sara_tributaries() -> void:
 		var part: Dictionary = _flood(rest, [c])
 		var touches_sara: bool = false
 		var source_x: int = -1
+		var source_kind: int = RegionAuthoring.Water.NONE
+		var nav: int = 0
+		var nav_low: int = 0
 		for p: Vector2i in part:
 			done[p] = true
 			if p.x == 0 or p.x == a.size_px.x - 1:
 				source_x = p.x
+			if a.water_at(p) == RegionAuthoring.Water.RIVER_NAVIGABLE:
+				nav += 1
+				var h: int = a.height_at(p)
+				nav_low += 1 if h == RegionAuthoring.Height.LEVEL_0 or h == RegionAuthoring.Height.LEVEL_1 else 0
 			for d: Vector2i in [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]:
 				touches_sara = touches_sara or sara.has(p + d)
 				if a.height_at(p + d) == RegionAuthoring.Height.PEAK:
 					source_x = p.x
+					source_kind = a.water_at(p)
 		if touches_sara and source_x >= 0:
+			if source_kind != RegionAuthoring.Water.NONE:
+				assert_eq(source_kind, RegionAuthoring.Water.RIVER_NARROW, "el afluente nace estrecho en %s" % part.keys()[0])
+			with_navigable += 1 if nav > 0 else 0
+			navigable += nav
+			navigable_low += nav_low
 			if source_x < a.size_px.x / 2:
 				west += 1
 			else:
@@ -364,6 +382,13 @@ func test_valle_del_sara_has_the_sara_tributaries() -> void:
 	gut.p("Afluentes del Sara: %d al oeste, %d al este." % [west, east])
 	assert_gte(west, 4, "afluentes del oeste (Urd Gumnavis)")
 	assert_gte(east, 3, "afluentes del este (Gumnada Gumnavis)")
+	assert_gte(with_navigable, 4, "los afluentes que bajan a tierra baja se hacen navegables")
+	assert_gte(navigable_low, ceili(navigable * 0.75), "lo navegable de los afluentes va por tierra baja (nivel 0-1)")
+	var names: Array = []
+	for p: Dictionary in a.places_of_type("lugar"):
+		names.append(p.name)
+	for n: String in ["1ro", "2do", "3ro", "4to", "5to", "6to", "7mo"]:
+		assert_has(names, "%s del Sara" % n, "nombre del afluente en lugares.csv")
 
 
 ## Distancia en pasos (4-vecindad) desde `starts` a cada celda alcanzable de `cells`.

@@ -3,16 +3,25 @@
 Petición del dueño (2026-10-25): 4 afluentes al oeste, que bajan de las Urd Gumnavis, y 3 al este,
 que bajan de las Gumnada Gumnavis, siguiendo en lo posible los límites de subregión y las líneas de
 río del mapa a mano (docs/design/world/Sur-Lenfi_02.jpg; lectura en docs/design/world/sur-lenfi.md).
+Al oeste, los 3 que dibuja el mapa y uno pequeño cerca del sur. "Todos los afluentes son navegables
+una vez que salen de la zona montañosa", y se llaman "1ro del Sara", "2do del Sara"... por orden de
+confluencia con el Sara de sur a norte, contando las dos orillas.
 
 Modifica las PNG de data/world/regions/valle_del_sara/ (no las regenera desde el generador):
 - agua.png: cada afluente es una polilínea de puntos de control (px de la PNG, 1 px = celda gruesa)
-  rasterizada con un trazo de 1 px conectado en 4-vecindad, en río estrecho, con algún vado. El
+  rasterizada con un trazo de 1 px conectado en 4-vecindad, con algún vado. Es río estrecho en la
+  zona montañosa y río navegable desde que sale de ella hasta el Sara: es navegable desde el primer
+  píxel de nivel 0-1 tras el nacimiento a partir del cual ya no cruza HIGH_RUN px seguidos de nivel
+  2 o más (mountain_exit). El
   trazo se para en el primer píxel que era agua del Sara en BASE_REF: el último punto de control puede caer
   dentro o más allá del río, y el afluente queda unido a él por un lado.
 - altura.png: en el nacimiento pone una cumbre de 3x3 px (el afluente nace pegado a ella, así que
   el validador lo da por unido: "nacer en una cumbre") rodeada de nivel 3 y nivel 2. Solo sube el
   relieve, nunca lo baja.
 - caminos.png: donde un camino pintado cruza un afluente, ese píxel pasa a puente.
+- lugares.csv: una fila de tipo lugar por afluente (id afluente_<n>, nombre "<n> del Sara"), junto
+  a su tramo medio, para que la vista previa lo rotule. Sustituye las filas afluente_* que hubiera y
+  deja el resto igual.
 
 Es idempotente: volver a ejecutarlo sobre su propia salida no cambia nada. Para ajustar un afluente,
 cambia sus puntos y ejecuta con --from-ref <commit> (por defecto la base anterior a los afluentes):
@@ -66,9 +75,9 @@ AFLUENTES: list[dict] = [
     },
     {
         "id": "oeste_4", "lado": "O",
-        "sigue": "sin línea en el mapa: cruza el sur de Cassie (añadido para llegar a 4)",
-        "puntos": [(4, 232), (25, 236), (45, 242), (65, 246), (90, 250)],
-        "vados": [0.5],
+        "sigue": "ninguno: pequeño afluente del sur de Cassie (el mapa no lo dibuja; el dueño lo pidió cerca del sur)",
+        "puntos": [(84, 303), (92, 302), (100, 300), (110, 299)],
+        "vados": [0.6],
     },
     {
         "id": "este_1", "lado": "E",
@@ -95,6 +104,9 @@ WIGGLE_AMP = 2.0  # px de desplazamiento máximo
 PEAK_HALF = 1      # cumbre de 3x3 px
 RING_LEVEL_3 = 2   # px alrededor de la cumbre con nivel 3 como mínimo
 RING_LEVEL_2 = 6   # px con nivel 2 como mínimo (corona redondeada: distancia euclídea)
+HIGH_RUN = 8       # px seguidos de nivel 2 o más que cuentan como zona montañosa
+ORDINALES = ["1ro", "2do", "3ro", "4to", "5to", "6to", "7mo", "8vo", "9no", "10mo"]
+NOMBRE = "{} del Sara"
 
 
 def hex_rgba(h: str) -> tuple[int, int, int, int]:
@@ -171,6 +183,43 @@ def trace(puntos: list[tuple[int, int]]) -> list[tuple[int, int]]:
     return path
 
 
+def mountain_exit(levels_along: list[int]) -> int:
+    """Índice del primer píxel navegable: el afluente ya salió de la montaña (dejó la altura de
+    nivel 2 o más del nacimiento) y no vuelve a cruzar HIGH_RUN px seguidos de nivel 2 o más."""
+    n = len(levels_along)
+    high = [lv >= 2 for lv in levels_along]
+    exit_at = next((i for i in range(n) if not high[i]), n)
+    run = 0
+    for i in range(n):
+        run = run + 1 if high[i] else 0
+        if run >= HIGH_RUN:
+            exit_at = max(exit_at, i + 1)
+    # Un tramo navegable de menos de HIGH_RUN px al final no se nota: se queda estrecho.
+    return n if n - exit_at < HIGH_RUN else exit_at
+
+
+def label_cell(at: tuple[int, int], agua: Image.Image, altura: Image.Image, caminos: Image.Image,
+               levels: list) -> tuple[int, int]:
+    """Celda de tierra junto al río para el rótulo: ni agua, ni cumbre, ni camino."""
+    w, h = agua.size
+    for r in range(2, 8):
+        for dx, dy in [(0, -r), (0, r), (-r, 0), (r, 0), (-r, -r), (r, -r), (-r, r), (r, r)]:
+            x, y = at[0] + dx, at[1] + dy
+            if 0 <= x < w and 0 <= y < h and agua.getpixel((x, y))[3] == 0 \
+                    and caminos.getpixel((x, y))[3] == 0 and altura.getpixel((x, y)) != levels[4]:
+                return (x, y)
+    raise SystemExit(f"No hay sitio para el rótulo junto a {at}")
+
+
+def write_places(rows: list[str]) -> None:
+    path = REGION_DIR / "lugares.csv"
+    lines = path.read_text(encoding="utf-8").splitlines()
+    kept = [ln for ln in lines if not ln.startswith("afluente_")]
+    while kept and kept[-1].strip() == "":
+        kept.pop()
+    path.write_bytes(("\n".join(kept + rows) + "\n").encode("utf-8"))
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--from-ref", nargs="?", const=BASE_REF, default=None,
@@ -201,45 +250,72 @@ def main() -> int:
             if level > cur:
                 altura.putpixel((x, y), levels[level])
 
+    # Trazos: cada afluente se para en el primer píxel del Sara.
+    rivers: dict[str, list[tuple[int, int]]] = {}
     for af in AFLUENTES:
-        path = trace(af["puntos"])
         river: list[tuple[int, int]] = []
-        for p in path:
+        for p in trace(af["puntos"]):
             if p in base_water:
                 break
             river.append(p)
         else:
             print(f"{af['id']}: no llega al Sara; alarga sus puntos.", file=sys.stderr)
             return 1
-        fords = {river[min(len(river) - 1, round(f * (len(river) - 1)))] for f in af["vados"]}
-        for p in river:
-            agua.putpixel(p, water_c["ford"] if p in fords else water_c["river_narrow"])
-            if caminos.getpixel(p)[3] != 0:
-                caminos.putpixel(p, road_c["bridge"])
-        # Cumbre de nacimiento, hacia fuera del mapa: el primer píxel del trazo la toca por un lado.
-        sx, sy = river[0]
+        rivers[af["id"]] = river
+    traced = {p for r in rivers.values() for p in r}
+
+    # 1) Colinas y cumbre de nacimiento (antes del agua: la navegabilidad lee la altura final).
+    for af in AFLUENTES:
+        sx, sy = rivers[af["id"]][0]
         cx = sx - (PEAK_HALF + 1) if af["lado"] == "O" else sx + (PEAK_HALF + 1)
         for y in range(sy - PEAK_HALF - RING_LEVEL_2, sy + PEAK_HALF + RING_LEVEL_2 + 1):
             for x in range(cx - PEAK_HALF - RING_LEVEL_2, cx + PEAK_HALF + RING_LEVEL_2 + 1):
-                dx = max(0, abs(x - cx) - PEAK_HALF)
-                dy = max(0, abs(y - sy) - PEAK_HALF)
-                d = math.hypot(dx, dy)
+                d = math.hypot(max(0, abs(x - cx) - PEAK_HALF), max(0, abs(y - sy) - PEAK_HALF))
                 if d > RING_LEVEL_2 + 0.5:
                     continue
-                if d == 0:
-                    level = 4
-                elif d <= RING_LEVEL_3 + 0.5:
-                    level = 3
-                else:
-                    level = 2
-                if (x, y) in base_water or (0 <= x < w and 0 <= y < h and agua.getpixel((x, y))[3]):
+                level = 4 if d == 0 else (3 if d <= RING_LEVEL_3 + 0.5 else 2)
+                if (x, y) in base_water or (x, y) in traced:
                     level = min(level, 3)  # nunca una cumbre bajo el agua
                 if level == 4 and 0 <= x < w and 0 <= y < h and caminos.getpixel((x, y))[3]:
                     print(f"{af['id']}: la cumbre de nacimiento pisa un camino en {(x, y)}.", file=sys.stderr)
                     return 1
                 raise_to(x, y, level)
-        print(f"{af['id']} ({af['lado']}): {len(river)} px, nace en {river[0]}, llega al Sara junto a {river[-1]}"
-              f" — {af['sigue']}")
+
+    def level_at(p: tuple[int, int]) -> int:
+        c = altura.getpixel(p)
+        return levels.index(c) if c in levels else 0
+
+    # 2) Agua: estrecho en la montaña, navegable desde el primer tramo bajo; vados y puentes.
+    info: list[dict] = []
+    for af in AFLUENTES:
+        river = rivers[af["id"]]
+        exit_at = mountain_exit([level_at(p) for p in river])
+        fords = {river[min(len(river) - 1, round(f * (len(river) - 1)))] for f in af["vados"]}
+        for i, p in enumerate(river):
+            if p in fords:
+                kind = "ford"
+            else:
+                kind = "river_narrow" if i < exit_at else "river_navigable"
+            agua.putpixel(p, water_c[kind])
+            if caminos.getpixel(p)[3] != 0:
+                caminos.putpixel(p, road_c["bridge"])
+        info.append({"af": af, "river": river, "exit_at": exit_at})
+
+    # 3) Nombres por orden de confluencia de sur a norte (las dos orillas juntas).
+    info.sort(key=lambda d: (-d["river"][-1][1], d["river"][-1][0]))
+    rows: list[str] = []
+    for n, d in enumerate(info):
+        af, river = d["af"], d["river"]
+        d["nombre"] = NOMBRE.format(ORDINALES[n])
+        mid = (d["exit_at"] + len(river)) // 2 if d["exit_at"] < len(river) else len(river) // 2
+        lx, ly = label_cell(river[mid], agua, altura, caminos, levels)
+        orilla = "oeste, de las Urd Gumnavis" if af["lado"] == "O" else "este, de las Gumnada Gumnavis"
+        notas = f"Afluente del Sara (orilla {orilla}). Sigue: {af['sigue']}. Fila escrita por tools/world/paint_afluentes.py."
+        rows.append(f"afluente_{n + 1},{d['nombre']},lugar,{lx},{ly},,,\"{notas}\"")
+        nav = len(river) - d["exit_at"]
+        print(f"{d['nombre']} ({af['id']}, {af['lado']}): {len(river)} px ({len(river) - nav} estrecho, {nav} navegable),"
+              f" nace en {river[0]}, llega al Sara junto a {river[-1]}, rótulo en {(lx, ly)} — {af['sigue']}")
+    write_places(rows)
 
     agua.save(REGION_DIR / "agua.png")
     altura.save(REGION_DIR / "altura.png")

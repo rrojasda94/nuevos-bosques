@@ -50,10 +50,10 @@
 |---|---|---|---|
 | **Lean** | Norte, oeste | Causie (E), Tossie (S), Dorias (O); al norte, la franja de montañas | Montañas en el norte. |
 | **Causie** | Norte, este | Lean (O), Alss (S), Nosie (E); posible contacto con Tossie en la esquina SO | Montañas en el norte y el este. |
-| **Tossie** | Norte-centro, oeste (bajo Lean) | Lean (N), Alss (E), Ostie (S y O); posible contacto con Dorias y Causie en las esquinas | Bordeada por afluentes del Sara: Oeste 1 al norte y Oeste 2 al sur (autoría). |
+| **Tossie** | Norte-centro, oeste (bajo Lean) | Lean (N), Alss (E), Ostie (S y O); posible contacto con Dorias y Causie en las esquinas | Bordeada por afluentes del Sara: el 7mo al norte y el 5to al sur (autoría). |
 | **Alss** | Norte-centro, este (bajo Causie) | Causie (N), Tossie (O), Vastie (S), Nosie (E); posible contacto con Ostie en la esquina SO | Montañas. |
-| **Ostie** | Centro, oeste | Tossie (N), Alss (NE, posible), Vastie (E), Cassie (S y O); posible contacto con Dorias en el NO | El Sara en su límite con Vastie; afluente Oeste 3 en su límite con Cassie (autoría). |
-| **Vastie** | Centro, este | Ostie (O), Alss (N), Nosie (E), Cassie (S) | Muy montañosa. Afluentes Este 2 (límite con Alss) y Este 3 (límite con Cassie) (autoría). |
+| **Ostie** | Centro, oeste | Tossie (N), Alss (NE, posible), Vastie (E), Cassie (S y O); posible contacto con Dorias en el NO | El Sara en su límite con Vastie; el 3ro del Sara en su límite con Cassie (autoría). |
+| **Vastie** | Centro, este | Ostie (O), Alss (N), Nosie (E), Cassie (S) | Muy montañosa. Afluentes 4to del Sara (límite con Alss) y 2do del Sara (límite con Cassie) (autoría). |
 | **Cassie** | Sur; llega a la costa. Tiene además una franja estrecha al oeste, entre Dorias y Ostie | Ostie (N), Vastie (N/NE), Dorias (O), Nosie (E), Cabuta (SE, en la costa); al sur, la costa | **El río Sara la cruza** de norte a sur hasta la desembocadura (marca azul). Algunas montañas. |
 
 **Norte y sur del Valle del Sara** (para "más agreste al norte; sur más plano con claros ribereños", ADR 0007):
@@ -63,22 +63,33 @@
 
 ## Afluentes del Sara
 > Dueño, 2026-10-25: "tambien deberia tener algunos afluentes el río Sara. Estos bajan de las montañas y colinas que el vale del Sara tiene al oeste las Urd Gumnavis y al este las Gumnada Gumnavis. Pon tres afluentes al este y 4 al oeste. Que respeten un poco el mapa de las subregiones que tenemos en la imagen hecha a mano del mapa del sur lenfi."
+>
+> Y después: "pon tres donde aparecen y un pequeño afluente cerca de sur del lugar. todos los afluentes son navegables una vez que salen de la zona montañosa. de sur a norte se llaman "1ro del Sara", "2do del Sara" y asi sucesivamente a medida que van uniendose al rio Sara".
 
-Confirmado: **4 afluentes al oeste** (de las Urd Gumnavis) y **3 al este** (de las Gumnada Gumnavis). Están pintados en `data/world/regions/valle_del_sara/agua.png` como río estrecho, con algún vado, y salen de `tools/world/paint_afluentes.py` (puntos de control editables). Cada uno nace en una cumbre pequeña junto al borde de la región, con colinas alrededor (`altura.png`), y donde cruza un camino lleva puente (`caminos.png`). El trazado sigue los límites del mapa a mano *(lectura)*, pasado a la escala de la autoría (el Valle del Sara del mapa → 12×16 chunks, 240×320 px):
+Confirmado por el dueño:
+- **4 afluentes al oeste** (de las Urd Gumnavis): los 3 que dibuja el mapa y **uno pequeño cerca del sur**.
+- **3 afluentes al este** (de las Gumnada Gumnavis).
+- **Son navegables en cuanto salen de la zona montañosa.** Dentro de ella son río estrecho.
+- **Nombres**: "1ro del Sara", "2do del Sara"… en el orden en que se unen al Sara, **de sur a norte**, contando las dos orillas.
 
-| Afluente | Baja de | Límite que sigue (mapa a mano) | Nace (px, chunk) | Llega al Sara (px, chunk) |
-|---|---|---|---|---|
-| Oeste 1 | Urd Gumnavis | Lean–Tossie (borde norte de Tossie) | (4, 30), chunk (0, 1) | (116, 56), chunk (5, 2) |
-| Oeste 2 | Urd Gumnavis | Tossie–Ostie (borde sur de Tossie) | (4, 62), chunk (0, 3) | (99, 100), chunk (4, 5) |
-| Oeste 3 | Urd Gumnavis | Ostie–Cassie (por la franja occidental de Cassie) | (4, 128), chunk (0, 6) | (91, 170), chunk (4, 8) |
-| Oeste 4 | Urd Gumnavis | Ninguno: el mapa solo dibuja 3 al oeste. Cruza el sur de Cassie, lejos de las villas | (4, 232), chunk (0, 11) | (83, 249), chunk (4, 12) |
-| Este 1 | Gumnada Gumnavis | Causie–Alss | (235, 36), chunk (11, 1) | (117, 88), chunk (5, 4) |
-| Este 2 | Gumnada Gumnavis | Alss–Vastie | (235, 104), chunk (11, 5) | (120, 125), chunk (5, 6) |
-| Este 3 | Gumnada Gumnavis | Vastie–Cassie | (235, 160), chunk (11, 8) | (93, 194), chunk (4, 9) |
+Están pintados en `data/world/regions/valle_del_sara/agua.png` y salen de `tools/world/paint_afluentes.py` (puntos de control editables). Cada uno nace en una cumbre pequeña con colinas alrededor (`altura.png`). Donde cruza un camino lleva puente (`caminos.png`) y tiene algún vado. Su nombre está en `lugares.csv` como `lugar`, junto al río, y la vista previa lo rotula. El trazado sigue los límites del mapa a mano *(lectura)*, pasado a la escala de la autoría (el Valle del Sara del mapa → 12×16 chunks, 240×320 px).
+
+**Estrecho o navegable** (regla del script): el afluente es estrecho desde el nacimiento y pasa a navegable en el primer píxel de nivel 0-1 a partir del cual ya no vuelve a cruzar 8 celdas seguidas de nivel 2 o más. Si lo navegable del final mide menos de 8 celdas, se queda todo estrecho. El norte del valle (Lean, Causie, Tossie, Alss) es casi todo nivel 2-3 y allí el propio Sara también es estrecho; por eso el 6to y el 7mo no llegan a salir de la montaña y son estrechos enteros.
+
+| Nombre | Orilla | Baja de | Límite que sigue (mapa a mano) | Nace (px, chunk) | Llega al Sara (px, chunk) | Estrecho / navegable (celdas) |
+|---|---|---|---|---|---|---|
+| **1ro del Sara** | Oeste | Urd Gumnavis (colina del sur) | Ninguno: es el pequeño afluente del sur de Cassie, que el mapa no dibuja | (84, 303), chunk (4, 15) | (104, 300), chunk (5, 15) | 7 / 17 |
+| **2do del Sara** | Este | Gumnada Gumnavis | Vastie–Cassie | (235, 160), chunk (11, 8) | (93, 194), chunk (4, 9) | 6 / 179 |
+| **3ro del Sara** | Oeste | Urd Gumnavis | Ostie–Cassie (por la franja occidental de Cassie) | (4, 128), chunk (0, 6) | (91, 170), chunk (4, 8) | 9 / 121 |
+| **4to del Sara** | Este | Gumnada Gumnavis | Alss–Vastie | (235, 104), chunk (11, 5) | (120, 125), chunk (6, 6) | 125 / 32 |
+| **5to del Sara** | Oeste | Urd Gumnavis | Tossie–Ostie (borde sur de Tossie) | (4, 62), chunk (0, 3) | (99, 100), chunk (4, 5) | 49 / 89 |
+| **6to del Sara** | Este | Gumnada Gumnavis | Causie–Alss | (235, 36), chunk (11, 1) | (117, 88), chunk (5, 4) | 179 / 0 |
+| **7mo del Sara** | Oeste | Urd Gumnavis | Lean–Tossie (borde norte de Tossie) | (4, 30), chunk (0, 1) | (116, 56), chunk (5, 2) | 147 / 0 |
 
 Notas:
-- El tramo alto del Sara en el mapa baja por el límite Lean–Causie y después por Tossie–Alss y Ostie–Vastie; el Sara de la autoría ya iba por esa franja central y no se ha movido.
-- Pendiente de confirmar con el dueño: dónde va el cuarto afluente del oeste, si alguno debe ser navegable y sus nombres.
+- El tramo alto del Sara en el mapa baja por el límite Lean–Causie y después por Tossie–Alss y Ostie–Vastie. El Sara de la autoría ya iba por esa franja central y no se ha movido.
+- *(lectura)* "Cerca de sur del lugar" se ha leído como el sur del Valle del Sara: el 1ro nace en una colina de Cassie, al oeste del Sara, en la última fila de chunks (la del borde sur).
+- Pendiente de confirmar con el dueño: si el 6to y el 7mo deben tener tramo navegable aunque el norte sea montañoso y el Sara sea estrecho allí.
 
 ## Alcuss: subregiones
 | Subregión | Posición (lectura del mapa) | Lenfi |
@@ -102,6 +113,6 @@ Las regiones del glosario §8 (Nan, Gumna, Ungol, Amuss, Hagat, Uta, Sanag, Suna
 - Nombre del nivel "subregión" (#100).
 - Cuántas áreas tiene cada subregión y cómo se dividen (#101).
 - Nivel de Safis, Dorias, Nosie, Naca, Balasu y Cabuta (#102).
-- Ríos grandes (navegables) y estrechos (#74). Pasos (#88). Los afluentes del Sara son estrechos de momento.
+- Ríos grandes (navegables) y estrechos (#74). Pasos (#88). Afluentes del Sara: estrechos en la montaña y navegables fuera de ella (dueño, 2026-10-25).
 - Significado de la marca azul (#96).
 - Ubicación de las regiones del glosario como grupos de áreas (#94, "más adelante").

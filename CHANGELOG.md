@@ -4,6 +4,9 @@ Todos los cambios que nota el jugador. Formato [Keep a Changelog](https://keepac
 
 ## [Sin publicar]
 
+### Añadido
+- Afluentes del río Sara: siete ríos bajan de las Urd Gumnavis (oeste) y de las Gumnada Gumnavis (este) hasta el Sara, siguiendo los límites entre subregiones del Valle del Sara. Nacen estrechos en la montaña y se hacen navegables al salir a tierra baja; tienen vados y puentes donde los cruza un camino. De sur a norte se llaman "1ro del Sara", "2do del Sara"… hasta "7mo del Sara".
+
 ## [0.3.0] - 2026-10-25
 "El Bosque recuerda": los Bosques tienen memoria, relación y estado; frutos, inventario y equipo; sigilo; Únicos que rondan, cazan y persiguen; combate en grupo con aliados; dormir y Pensamiento; reloj del riutash y arte de terreno.
 
