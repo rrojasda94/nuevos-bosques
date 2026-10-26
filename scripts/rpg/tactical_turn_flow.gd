@@ -1,12 +1,15 @@
 class_name TacticalTurnFlow
 extends RefCounted
 ## Máquina de estados del turno del jugador en la escena táctica (combate-tactico.md, ADR 0016; PR
-## T4) y ayudas puras de la vista: entrada -> dirección, cursor sobre el tablero, cámara y la IA
-## provisional. No dibuja ni toca GameState: la escena (TacticalBattleScene) le pasa la entrada y
+## T4) y ayudas puras de la vista: entrada -> dirección, cursor sobre el tablero y cámara. La IA de
+## los enemigos y del "Auto" está en TacticalAI (T5). No dibuja ni toca GameState: la escena (TacticalBattleScene) le pasa la entrada y
 ## anima lo que devuelve. Funciona con tableros de cualquier tamaño (lee width y height del
 ## TacticalBoard) y con cualquier número de combatientes por bando.
 ## Flujo del turno de un combatiente del jugador (el jugador lleva a todo su bando):
-## - MENU: Mover / Actuar / Esperar ("Terminar" si ya movió o actuó).
+## - MENU: Mover / Actuar / Auto / Esperar ("Terminar" si ya movió o actuó) y, si hay aliados, la
+##   orden al grupo ("Orden: Libre / Atacar / Defender"; cada pulsación pasa a la siguiente y no gasta
+##   nada). Auto (T5, solo aliados, no el Adoc): ese aliado juega el turno con su IA de rol
+##   (TacticalAI); el flujo pasa a IDLE y la escena lo ejecuta.
 ## - MOVE: casillas alcanzables resaltadas y un cursor libre; confirmar mueve (una vez por turno).
 ## - ACT: submenú con Atacar, Defender, Vendar / Animar / Cubrir (según el rol), Ofrecer Luz,
 ##   Ofrenda y Huir (solo en una casilla del borde).
@@ -22,6 +25,8 @@ enum State { IDLE, MENU, MOVE, ACT, TARGET, OFRENDA, FACING, OVER }
 const MAIN_MOVE: StringName = &"move"
 const MAIN_ACT: StringName = &"act"
 const MAIN_WAIT: StringName = &"wait"
+const MAIN_AUTO: StringName = &"auto"
+const MAIN_ORDER: StringName = &"order"
 const ACT_ATTACK: StringName = &"attack"
 const ACT_DEFEND: StringName = &"defend"
 const ACT_BANDAGE: StringName = &"bandage"
@@ -136,43 +141,6 @@ static func camera_offset(focus: Vector2, board: Vector2, view: Vector2, current
 	return out
 
 
-## Plan de la IA provisional para el enemigo `index`: { move_to, target } (target NONE si no llega
-## a nadie). Se acerca al combatiente del jugador más cercano y le ataca si queda vecino.
-# ponytail: IA provisional hasta T5
-static func provisional_ai(b: TacticalBattle, index: int) -> Dictionary:
-	var u: Dictionary = b.units[index]
-	var foes: Array[int] = []
-	for i in b.units.size():
-		if b.units[i].alive and b.units[i].side != u.side:
-			foes.append(i)
-	if foes.is_empty():
-		return { "move_to": u.cell, "target": TacticalBattle.NONE }
-	var reach: Dictionary = b.reachable_for(index)
-	var cells: Array = reach.keys()
-	cells.sort_custom(func(a: Vector2i, c: Vector2i) -> bool: return a.y < c.y or (a.y == c.y and a.x < c.x))
-	var best: Vector2i = u.cell
-	var best_key: Array = []
-	for c: Vector2i in cells:
-		var target: int = _weakest_in_reach(b, c, int(u.jump), foes)
-		var dist: int = 1 << 20
-		for f: int in foes:
-			dist = mini(dist, TacticalRules.distance(c, b.units[f].cell))
-		var key: Array = [0 if target != TacticalBattle.NONE else 1, dist, int(reach[c])]
-		if best_key.is_empty() or key < best_key:
-			best_key = key
-			best = c
-	return { "move_to": best, "target": _weakest_in_reach(b, best, int(u.jump), foes) }
-
-
-static func _weakest_in_reach(b: TacticalBattle, from: Vector2i, jump: int, foes: Array[int]) -> int:
-	var out: int = TacticalBattle.NONE
-	for f: int in foes:
-		if TacticalRules.can_melee(b.board, from, b.units[f].cell, jump):
-			if out == TacticalBattle.NONE or int(b.units[f].hp) < int(b.units[out].hp):
-				out = f
-	return out
-
-
 # --- Turno del jugador --------------------------------------------------------------------------
 
 ## Empieza el turno del combatiente activo (del jugador): menú principal, cursor sobre él.
@@ -184,15 +152,40 @@ func begin_player_turn() -> void:
 	pending = &""
 
 
-## Menú principal: [{ id, text, enabled }].
+## Menú principal: [{ id, text, enabled }]. Auto, solo para los aliados (no el `leader`); la orden
+## al grupo, solo si hay algún aliado en pie.
 func main_entries() -> Array[Dictionary]:
 	var did_something: bool = battle.active_moved or battle.active_acted
-	return [
+	var out: Array[Dictionary] = [
 		{ "id": MAIN_MOVE, "text": Texts.get_text("tactical_menu_move"), "enabled": not battle.active_moved },
 		{ "id": MAIN_ACT, "text": Texts.get_text("tactical_menu_act"), "enabled": battle.can_act() },
-		{ "id": MAIN_WAIT, "text": Texts.get_text("tactical_menu_end" if did_something else "tactical_menu_wait"),
-			"enabled": true },
 	]
+	if not battle.units[battle.active].leader:
+		out.append({ "id": MAIN_AUTO, "text": Texts.get_text("tactical_menu_auto"), "enabled": true })
+	out.append({ "id": MAIN_WAIT, "text": Texts.get_text("tactical_menu_end" if did_something else "tactical_menu_wait"),
+		"enabled": true })
+	if has_allies():
+		out.append({ "id": MAIN_ORDER, "text": Texts.get_text("battle_tactic_order") % order_name(battle.group_order),
+			"enabled": true })
+	return out
+
+
+## Hay algún aliado en pie en el bando del jugador (alguien que no es el `leader`).
+func has_allies() -> bool:
+	for u: Dictionary in battle.units:
+		if u.alive and int(u.side) == TacticalBattle.SIDE_PLAYER and not u.leader:
+			return true
+	return false
+
+
+## Nombre de una orden al grupo (BattleLogic.GroupOrder; textos del combate por menú).
+static func order_name(order: int) -> String:
+	match order:
+		BattleLogic.GroupOrder.ATTACK:
+			return Texts.get_text("battle_order_attack")
+		BattleLogic.GroupOrder.DEFEND:
+			return Texts.get_text("battle_order_defend")
+	return Texts.get_text("battle_order_free")
 
 
 func choose_main(id: StringName) -> void:
@@ -210,6 +203,13 @@ func choose_main(id: StringName) -> void:
 				state = State.ACT
 		MAIN_WAIT:
 			_go_facing()
+		MAIN_AUTO:
+			if not battle.units[battle.active].leader:
+				state = State.IDLE
+				highlight = []
+		MAIN_ORDER:
+			if has_allies():
+				battle.set_group_order((battle.group_order + 1) % 3)
 
 
 ## Submenú Actuar: [{ id, text, enabled }]. Vendar y Animar solo con rol de apoyo, Cubrir con el de

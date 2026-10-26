@@ -13,7 +13,8 @@ extends CanvasLayer
 ##   orientación. Barra de PV pequeña encima.
 ## - Arriba, la línea de orden de los próximos turnos (iconos; el primero, enmarcado).
 ## - Números de daño flotando ("Falla" si esquiva) y una línea corta con el nombre de la acción.
-## - Turnos de la IA: TacticalTurnFlow.provisional_ai (provisional hasta T5).
+## - Turnos de la IA (T5): los enemigos siempre con TacticalAI; los aliados, cuando el jugador elige
+##   Auto en su menú. Quien huye o se retira por el borde se desvanece.
 ## No aplica nada a GameState.
 
 signal finished(logic: BattleLogic)
@@ -234,45 +235,28 @@ func _next_turn() -> void:
 		_run_ai(i)
 
 
-# ponytail: IA provisional hasta T5
+## Turno de la IA (enemigo, o aliado en Auto): plan de TacticalAI, mover, actuar y orientarse.
 func _run_ai(i: int) -> void:
 	_busy = true
+	_menu_box.visible = not _ended
+	_menu.visible = false
+	_hint.text = _hint_text()
 	await get_tree().create_timer(AI_THINK_TIME).timeout
-	var plan: Dictionary = TacticalTurnFlow.provisional_ai(battle, i)
+	var plan: Dictionary = TacticalAI.plan(battle, i)
 	if plan.move_to != battle.units[i].cell:
 		var path: Array[Vector2i] = battle.move_active(plan.move_to)
 		await _animate_path(i, path)
-	if int(plan.target) != TacticalBattle.NONE and battle.can_attack(i, int(plan.target)):
-		var res: Dictionary = battle.attack(int(plan.target))
+	var res: Dictionary = TacticalAI.apply_action(battle, plan)
+	if not res.is_empty():
 		await _show_result(res)
 	if battle.is_over():
 		_busy = false
 		_finish()
 		return
-	var facing: TacticalBoard.Facing = battle.units[i].facing
-	var nearest: int = _nearest_foe(i)
-	if nearest != TacticalBattle.NONE:
-		facing = TacticalBoard.facing_toward(battle.units[i].cell, battle.units[nearest].cell, facing)
-	if battle.active_moved or battle.active_acted:
-		battle.end_turn(facing)
-	else:
-		battle.wait_turn(facing)
+	TacticalAI.finish_turn(battle)
 	_update_unit(i)
 	_busy = false
 	_next_turn()
-
-
-func _nearest_foe(i: int) -> int:
-	var best: int = TacticalBattle.NONE
-	var best_d: int = 1 << 20
-	for j in battle.units.size():
-		var u: Dictionary = battle.units[j]
-		if u.alive and u.side != battle.units[i].side:
-			var d: int = TacticalRules.distance(u.cell, battle.units[i].cell)
-			if d < best_d:
-				best_d = d
-				best = j
-	return best
 
 
 ## Anima un resultado del flujo del jugador o de la IA y sigue.
@@ -343,6 +327,12 @@ func _show_result(res: Dictionary) -> void:
 			t.tween_property(node, "modulate:a", 0.0, 0.4)
 			await t.finished
 			_place_unit(receiver)
+	elif kind == TacticalBattle.KIND_LEAVE:
+		var gone: Node2D = _views[int(res.target)].node
+		var fade := gone.create_tween()
+		fade.tween_property(gone, "modulate:a", 0.0, 0.4)
+		await fade.finished
+		_place_unit(int(res.target))
 	elif kind == TacticalBattle.KIND_BANDAGE:
 		_float_text(int(res.target), "+%d" % int(res.get("amount", 0)), COLOR_HEAL)
 		_update_unit(int(res.target))
@@ -446,9 +436,12 @@ func _choose(choice: int) -> void:
 	match flow.state:
 		TacticalTurnFlow.State.MENU:
 			flow.choose_main(id)
+			if flow.state == TacticalTurnFlow.State.IDLE:
+				_run_ai(battle.active)
+				return
 			if flow.state == TacticalTurnFlow.State.FACING:
 				flow.facing = battle.units[battle.active].facing
-			_show_state()
+			_show_state(id == TacticalTurnFlow.MAIN_ORDER)
 		TacticalTurnFlow.State.ACT:
 			var res: Dictionary = flow.choose_act(id)
 			if res.is_empty():
@@ -466,7 +459,7 @@ func _choose(choice: int) -> void:
 # --- Interfaz -----------------------------------------------------------------------------------
 
 ## Menú o ayuda según el paso del turno.
-func _show_state() -> void:
+func _show_state(keep_cursor: bool = false) -> void:
 	var texts: Array[String] = []
 	var enabled: Array[bool] = []
 	_menu_ids = []
@@ -488,7 +481,7 @@ func _show_state() -> void:
 	_menu_box.visible = not _ended
 	_menu.visible = has_menu
 	if has_menu:
-		_menu.set_options(texts, enabled)
+		_menu.set_options(texts, enabled, keep_cursor)
 	_hint.text = _hint_text()
 	_refresh()
 

@@ -208,7 +208,7 @@ Palabras del dueño:
 | T2 | **Turnos CT, movimiento** (Mov, Salto, caminos) **y orientación**; tests | rpg-systems-dev | T1 |
 | T3 | **Acciones**: atacar con evasión, orientación y altura; Defender, Esperar, Ofrecer, Huir desde cualquier borde; tests | rpg-systems-dev | T2 |
 | T4 | **Escena táctica**: cursor, rangos resaltados, menú Mover / Actuar / Esperar / Orientación, línea de turnos, números de daño flotando y línea corta de acción | ui-ux-dev | T3 |
-| T5 | **IA en la cuadrícula**: perfiles con movimiento, roles (Cubrir, Remate, Vendar, Animar), órdenes | rpg-systems-dev | T3 |
+| T5 | **IA en la cuadrícula** (**hecho**: `TacticalAI`): perfiles con movimiento, roles (Cubrir, Remate, Vendar, Animar), órdenes | rpg-systems-dev | T3 |
 | T6 | **Especiales**: Latigazo en área anunciado, ataque conjunto de reparep, sorpresa y emboscada | rpg-systems-dev | T5 |
 | T7 | **Arte**: sprites de combate en 4 direcciones; tablero desde el relieve del Mundo 2.0 | pixel-artist, world-gen-dev (sesión del Mundo 2.0) | T4; 0.4 |
 | T8 | Retirar la escena antigua y ajustar el balance tras el playtest | rpg-systems-dev, game-designer | T6 |
