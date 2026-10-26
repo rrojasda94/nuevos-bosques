@@ -123,6 +123,32 @@ Reglas:
 - **Terreno**: ni `colina` ni `laguna` sobre una celda de nivel 3 o de cumbre; `laguna` solo sobre celdas gruesas de un mismo nivel. Si el tipo elegido no cabe, se vuelve a sortear entre los que quedan (como mucho 3 intentos; si no cabe ninguno, el chunk se queda con uno menos).
 - **Variedad entre vecinos** (recomendación para `world-gen-dev`): el tipo de cada punto de interés se puede decidir en la pasada de región (es barato: solo hashes), y así se evita que **dos chunks vecinos ortogonales tengan un `hito` o un `circulo_piedras`** a la vez. La posición y el trazado siguen en la pasada de chunk.
 - **Clave propuesta** en el JSON de región (estructura de `world-gen-dev`): `points_of_interest: { "count_weights": {"2": 55, "3": 45}, "near_anchor": 1, "border_margin": 12, "min_gap": 24, "weights": { "north": {...}, "center": {...}, "south": {...} } }` con los valores de la tabla.
+- **La `laguna` no es una sicabi** (dueño, 2026-10-26: "lagos normales si"):
+  - la laguna es un punto de interés del mapa abierto y **sí puede estar en el chunk de una villa o aldea**, como su único punto de interés, o junto a él;
+  - las sicabis son raras, tienen entrada escondida y escena interior, y van a ≥ 2 chunks de cualquier villa (`lugares-e-interiores.md`, "Cómo se encuentran en el mundo").
+
+#### Fuentes de los afluentes (dueño, 2026-10-26: "se ven en el juego")
+**Para `world-gen-dev`, después de M9.** Valores provisionales.
+
+Cada uno de los **7 afluentes** tiene su fuente **visible** en el sitio donde nace (`docs/design/world/sur-lenfi.md`, §Afluentes del Sara).
+
+- **Qué es**: un punto de interés pequeño, un manantial con rocas y agua que brota.
+  - **Huella**: **3×3 casillas**. La casilla central es el agua que brota y es la única que bloquea, como el agua. Las 8 de alrededor son rocas bajas mojadas que se pisan.
+  - El río sale por el lado de la casilla de agua que da cuesta abajo, el mismo que pinta `agua.png`.
+  - Alrededor, un **claro de 1 celda gruesa (4×4)** sin árboles ni decoración que bloquee, para que se vea de un vistazo (pilar 3).
+- **Dónde**:
+  - **3ro, 5to y 7mo**: en su lugar `manantial_<n>` de `lugares.csv`, que ya existe.
+  - **1ro, 2do, 4to y 6to**: nacen en una cumbre, que no se pisa. Su fuente va en la **primera casilla transitable del río al pie de la cumbre**. Para eso hacen falta 4 filas nuevas `manantial_1`, `manantial_2`, `manantial_4` y `manantial_6`, que escribe `tools/world/paint_afluentes.py`, igual que las otras.
+  - Cuenta como uno de los puntos de interés del chunk (ya es un `PLACE` del CSV, `generation.md` §3) y le llega sendero.
+- **Nombre al acercarse**: a **≤ 4 casillas** del borde de la huella sale un rótulo con el nombre del lugar (columna `nombre` de `lugares.csv`) durante 3 s, una vez por visita.
+  - Desde ese momento queda marcado en el mapa M.
+  - El texto lo fija `narrative-writer` con el dueño. Hoy pone "Nacimiento del 3ro del Sara"; el cambio a "Fuente del 3ro del Sara" va en su propio cambio.
+- **Sin mecánica nueva** en la 0.4: no cura, no da Luz ni es refugio.
+- **Presión de supervivencia**: **alivia** un poco, porque orienta: río abajo siempre se llega al Sara.
+- **Claves propuestas** (estructura de `world-gen-dev`):
+  - objeto `SPRING` de 3×3 (`variant` = volteo 0–1; solo bloquea la casilla central);
+  - en la región, bloque `springs: { "size": 3, "clearing": 4, "label_radius": 4, "label_seconds": 3 }`;
+  - en `lugares.csv`, el tipo `manantial`, que ya existe.
 
 ### 5. Monstruos: velocidad y distancia de encuentro
 El ADR pasa los monstruos a `GridMover` con `speed_px` = 16 / `step_time` y define el encuentro cuando las cajas están a ≤ `engage_px`.
@@ -214,6 +240,7 @@ Propuestas, a confirmar con el dueño:
 | 2026-10-25 | "tambien deberia tener algunos afluentes el río Sara. Estos bajan de las montañas y colinas que el vale del Sara tiene al oeste las Urd Gumnavis y al este las Gumnada Gumnavis. Pon tres afluentes al este y 4 al oeste. Que respeten un poco el mapa de las subregiones" | 7 afluentes de río estrecho pintados en `agua.png` con `tools/world/paint_afluentes.py`, cada uno nace en una cumbre de las Urd Gumnavis (4, oeste) o de las Gumnada Gumnavis (3, este) y sigue un límite de subregión del mapa a mano. Detalle en `docs/design/world/sur-lenfi.md` §Afluentes del Sara. |
 | 2026-10-25 | "pon tres donde aparecen y un pequeño afluente cerca de sur del lugar. todos los afluentes son navegables una vez que salen de la zona montañosa. de sur a norte se llaman \"1ro del Sara\", \"2do del Sara\" y asi sucesivamente a medida que van uniendose al rio Sara" | El 4º del oeste pasa a ser un afluente pequeño en el sur de Cassie. Río estrecho en la montaña y navegable desde que sale de ella. Nombres "1ro del Sara"… "7mo del Sara" de sur a norte, en la tabla de `sur-lenfi.md` y como `lugar` en `lugares.csv`. |
 | 2026-10-26 | "Sí, dales un tramo navegable al 6to y al 7mo antes de unirse al Sara." | Tramo final navegable de 30 celdas en el 6to y el 7mo (`navegable_min` en `tools/world/paint_afluentes.py`); el Sara sigue estrecho en esas confluencias. Tabla en `sur-lenfi.md`. |
+| 2026-10-26 | Sobre las fuentes de los afluentes: "se ven en el juego." Sobre las sicabis: "Los sicabis tambien pero son lugares muy pequeños quizas podría accederse como a una caverna o edificio, si vas por entre un bosque o montaña, puede haber una entrada especial y al entrar es un sicabi." Y: "solo reuerda que las sicabis son lugares raros de hallar. no puede haber tantos cerca de una villa. lagos normales si." | **Fuentes** visibles, de 3×3 casillas con claro de 4×4 y nombre al acercarse, en los 7 afluentes (§4, "Fuentes de los afluentes"). **Sicabis**: entrada especial (arco de raíces en bosque tupido o grieta en un risco) fuera de los caminos, con escena interior. Como mucho 1 por subregión (probabilidad 0,6), a ≥ 2 chunks de cualquier villa o aldea y a ≥ 4 de otra sicabi (`lugares-e-interiores.md`). Las lagunas sí pueden estar junto a las villas (§4). Para `world-gen-dev` después de M9. |
 | _playtest M19_ | | |
 
 ## Decisiones a confirmar con el dueño
@@ -228,4 +255,7 @@ Propuestas, a confirmar con el dueño:
 - Cansancio al correr (#73): con chunks de 80 correr es casi obligatorio; la estamina lo equilibrará.
 - Navegación por ríos grandes (#74): con lagunas y ríos pintados, ¿barca en la 0.4 o más adelante?
 - Bosques que no dejan andar de noche (#75): con el relieve, ¿mesetas que de noche solo se suben por escalera?
+- **Fuentes de los afluentes que nacen en una cumbre** (1ro, 2do, 4to y 6to):
+  - propuesta: la fuente va al pie de la cumbre, en la primera casilla del río que se pisa;
+  - pregunta al dueño: ¿le vale, o prefiere que esos 4 nazcan también en un manantial que se pisa, como el 3ro, el 5to y el 7mo?
 - ¿Los Únicos ven a través de los riscos? El ADR deja `level[]` preparado; propuesta para más adelante: no ven a un nivel más alto que el suyo a más de 3 casillas.
