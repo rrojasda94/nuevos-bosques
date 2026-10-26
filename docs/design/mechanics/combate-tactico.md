@@ -29,16 +29,31 @@ Palabras del dueño:
   - Se pide a la consulta del Mundo 2.0 `WorldQuery.rect(origin_world_cell, size)`, que devuelve por casilla `level`, `blocked`, `stair/ramp`, `water/ford` y `object_kind` (la ofrece la otra sesión).
   - Conserva árboles y rocas (obstáculos), agua (no transitable salvo en vados) y alturas.
   - Antes del Mundo 2.0, el recorte es llano.
-- **Tamaño**: **8 × 6 casillas** (dueño, #185: "Más chico, 3 por bando"). A 16 px son 128 × 96 en una pantalla de 320 × 180, con sitio de sobra para la interfaz.
+- **Tamaño variable según el espacio** (dueño: "la cantidad de personajes que pueden entrar en un campo de batalla debe ser proporcional al espacio que haya disponible [...] si es un espacio reducido, podrian entrar solo 1 a 3 por bando y es un mapa muy abierto como un desierto o una villa, podría ser el 6v6"):
+
+| Tablero | Casillas | Dónde | Cámara |
+|---|---|---|---|
+| **Pequeño** | 8 × 6 | Bosque denso, tarca, cueva, interiores | Fija (cabe en 320 × 180) |
+| **Medio** | 10 × 8 | Bosque claro, senderos, orillas de río | Fija o con poco desplazamiento |
+| **Grande** | 14 × 10 | Desierto, pradera, sabana, villa | Se desplaza con el cursor |
+
+  - **Cómo se elige** (propuesta):
+    1. Primero se elige el recorte (reglas de abajo: poco desnivel, transitable, conexo).
+    2. Luego se mira qué proporción de un recorte **grande** (14 × 10) alrededor del punto de encuentro es transitable:
+       - **≥ 80%** → grande;
+       - **≥ 60%** → medio;
+       - si no → pequeño.
+    3. El **bioma** solo desempata.
+  - La escena de UI (T4) ya admite tamaño variable y cámara con desplazamiento.
+  - El "8 × 6 y 3 por bando" de #185 pasa a ser **lo típico en espacios cerrados**, no un tope (ADR 0016).
 - **Alturas en el tablero** (el mundo tiene **niveles 0–3**, ADR 0014 §3; en el mundo, cada nivel de risco ocupa **2 filas** de cara, que bloquean):
   1. **Se buscan recortes con poco desnivel**: el recorte se elige, dentro de 1 chunk del punto de encuentro, para que tenga **como mucho 2 niveles** de diferencia y al menos un **70% de casillas transitables**.
   2. **Las caras de risco se comprimen**: en el tablero, cada casilla toma el **nivel** del terreno, y las filas de cara de risco **desaparecen**. El risco queda como un **salto de altura entre casillas vecinas**, como en FFTA, en lugar de 2 filas bloqueadas por nivel. Así el desnivel no se come el tablero.
   3. **Escaleras y rampas** se conservan y unen niveles sin gastar Salto.
   4. **Tablero conexo**: debe existir un camino a pie (con escaleras o rampas) entre los dos bandos. Si no, se elige otro recorte.
-- **Colocación** (tablero 8 × 6):
-  - el jugador y sus aliados, en las **2 columnas del lado por donde llegó** (12 casillas para hasta 3);
-  - los enemigos, en las **2 columnas del lado opuesto**;
-  - entre ambos quedan 4 columnas: con Mov 3 se llega al contacto en 1–2 turnos.
+- **Colocación**:
+  - cada bando, en las columnas del lado por donde llegó (o el opuesto, los enemigos): **2 columnas** en el tablero pequeño y el medio, **3** en el grande;
+  - entre ambos quedan 4 columnas (pequeño), 6 (medio) u 8 (grande). Con Mov 3–5 se llega al contacto en 1–3 turnos.
 
 ### Stats que influyen (dueño: "los stats igual influyen")
 | Stat | Influye en |
@@ -116,22 +131,39 @@ Palabras del dueño:
 
 ### Ataques en área y especiales
 - **Latigazo múltiple del Ofomni** (cada 3 ataques, ×3):
-  - **área de 3 × 1 casillas**: la línea de 3 justo delante de él (antes 3 × 2; se reduce porque en un tablero de 8 × 6 con hasta 3 por bando, un 3 × 2 cubre medio frente);
+  - área según el tablero: **3 × 1** (la línea de 3 justo delante) en el pequeño y el medio, y **3 × 2** en el grande, donde hay más sitio para esquivar;
   - se **anuncia** en su turno anterior marcando las casillas; salir del área lo esquiva;
   - **Defender** lo reduce a la mitad.
-- **Ataque conjunto de los reparep**: cuando **2 o 3 reparep están adyacentes al mismo objetivo**, atacan juntos en el turno del primero, con daño = suma de ATQ − DEF (una sola vez). Los demás reparep se acercan para rodear. Con como mucho 3 reparep, un objetivo puede tener a los 3 alrededor (quedan 4 lados ortogonales).
+- **Ataque conjunto de los reparep**: cuando **2 o más reparep están adyacentes al mismo objetivo** (como mucho 4, uno por lado ortogonal), atacan juntos en el turno del primero, con daño = suma de ATQ − DEF (una sola vez). Los demás se acercan para rodear.
 - **Vendar y Animar** (apoyo): alcance **2 casillas**.
 
 ### Grupo y tamaño
-- **Por bando: hasta 3** en el tablero (dueño, #185: "Más chico, 3 por bando"). **Sin refuerzos**.
-  - **Bando del jugador**: el adoc más hasta **2** aliados.
-    - Los aliados adoc (0–2) encajan.
-    - **Llamada del Bosque** solo trae a su Único si queda hueco.
-    - **Grupo garelino** (hasta 5 miembros, `dos-caminos.md`): llevas al combate **los 2 primeros de tu formación**; los demás esperan fuera y pueden sustituir a un miembro retirado en el combate **siguiente**, no en este.
-  - **Enemigos: de 1 a 3**.
-    - **Reparep**: los grupos pasan de 2–4 a **2–3**.
-    - Garelinos: 2–3.
-    - Únicos solos: 1.
+- **Cupo por bando, proporcional al espacio** (idea del dueño; fórmula propuesta, valores en datos):
+  - **Cupo** = clamp(⌊casillas transitables del tablero / (N × 2)⌋, 1, 6), con **N = 8** casillas por personaje.
+  - El coordinador propuso N ≈ 6; con 8 el tablero medio da 4 y no 5, más cerca del "1 a 3 en reducido, 6 en abierto" del dueño.
+
+  | Tablero (transitable) | Casillas libres | Cupo |
+  |---|---|---|
+  | 8 × 6 al 70% | ~33 | 2 |
+  | 8 × 6 al 100% | 48 | 3 |
+  | 10 × 8 al 80% | ~64 | 4 |
+  | 14 × 10 al 90% | ~126 | 6 (tope) |
+
+  - El mismo cupo vale para los **dos bandos**.
+- **Tu party** (dueño, #188: "eliges tu party inicial"):
+  - **Antes del combate** eliges quiénes entran, hasta el cupo, entre tus aliados presentes (adoc aliados, miembros del grupo garelino, el Único de la Llamada del Bosque).
+  - La elección viene **preseleccionada** con la última que usaste; confirmar es un botón.
+  - En una **emboscada del enemigo** no hay tiempo: entra la última party guardada.
+  - El jugador siempre entra.
+- **Si un grupo es mayor que el cupo** (los dos bandos, propuesta):
+  - los que sobran **esperan en su borde** y entran como **refuerzo** cuando cae o se retira uno de su bando, por su columna de colocación;
+  - así un grupo grande sigue siendo una amenaza en un espacio pequeño, pero escalonada;
+  - la huida por cualquier borde sigue disponible.
+- **Tamaños de grupo**:
+  - **Reparep**: vuelven a grupos de **2–4**, como dijo el dueño ("de 2 hasta 4"). En un tablero pequeño (cupo 2–3), el resto entra como refuerzo.
+  - **Garelinos**: 2–4; en espacios abiertos pueden llegar a 6.
+  - **Grupo garelino propio**: hasta 5 miembros (`dos-caminos.md`); entran según el cupo y tu elección.
+  - **Únicos solos**: 1.
 - **Aliados caídos**: se retiran (no mueren; regla de no matar).
 
 ### Lo que no cambia
@@ -157,7 +189,9 @@ Palabras del dueño:
 - **Recorte con agua o riscos que separan a los bandos**: el recorte se desplaza o se garantiza un camino (el tablero debe ser conexo).
 - **Nadie puede alcanzar a nadie** (Mov bajo y tablero grande): los perfiles de IA se acercan cada turno; el tablero de 12 × 8 lo limita.
 - **Combate contra un solo Botarramas**: también en tablero (#187); rápido por su Mov 2 en un tablero de 8 × 6.
-- **Huir sin estar en el borde**: la opción no aparece; hay que caminar hasta cualquier casilla del borde (en un 8 × 6, nunca más de 3 casillas).
+- **Huir sin estar en el borde**: la opción no aparece; hay que caminar hasta cualquier casilla del borde. En un 8 × 6 son 3 casillas como mucho; en un 14 × 10, hasta 5 (huir en abierto cuesta más, y está bien).
+- **Cupo 1** (espacio muy cerrado): solo el jugador contra un enemigo; el resto de los dos bandos entra como refuerzo.
+- **Refuerzo enemigo con su columna ocupada**: entra por la casilla libre más cercana de su borde.
 - **Recorte sin zona de poco desnivel en 1 chunk**: se usa el mejor disponible, con las caras de risco comprimidas a saltos de altura.
 - **Emboscada con aliados lejos**: los aliados aparecen junto al jugador.
 
@@ -170,7 +204,7 @@ Palabras del dueño:
 ## Plan de PR (pequeños)
 | # | PR | Agentes | Depende de |
 |---|---|---|---|
-| T1 | **Tablero lógico** (clase pura, 8 × 6): casillas, niveles 0–3 con las caras comprimidas, obstáculos, elección del recorte (poco desnivel, 70% transitable, conexo), colocación inicial; tests. Consume `WorldQuery.rect` cuando exista | rpg-systems-dev, engine-architect | — (llano hasta que haya relieve) |
+| T1 | **Tablero lógico** (clase pura; **hecho**): casillas, niveles 0–3 con las caras comprimidas, obstáculos, elección del recorte (poco desnivel, 70% transitable, conexo), colocación inicial; tests. Consume `WorldQuery.rect` cuando exista | rpg-systems-dev, engine-architect | — (llano hasta que haya relieve) |
 | T2 | **Turnos CT, movimiento** (Mov, Salto, caminos) **y orientación**; tests | rpg-systems-dev | T1 |
 | T3 | **Acciones**: atacar con evasión, orientación y altura; Defender, Esperar, Ofrecer, Huir desde cualquier borde; tests | rpg-systems-dev | T2 |
 | T4 | **Escena táctica**: cursor, rangos resaltados, menú Mover / Actuar / Esperar / Orientación, línea de turnos, números de daño flotando y línea corta de acción | ui-ux-dev | T3 |
@@ -185,4 +219,8 @@ Palabras del dueño:
   - tablero de 8 × 6 y 3 por bando;
   - textos cortos y números;
   - todos los combates en tablero.
-- **#188**: grupo garelino en combate: ¿llevas a los 2 primeros de tu formación (propuesta) o eliges antes de cada combate?
+- ~~**#188**~~ Resuelta (dueño: "eliges tu party inicial").
+- **#189**: tablero y cupo variables: ¿se confirman los 3 tamaños (8 × 6, 10 × 8, 14 × 10), la elección por la proporción transitable, N = 8 casillas por personaje (cupo entre 1 y 6) y los refuerzos por el borde para los que no caben?
+
+### Pendiente en el plan de PR (tablero variable)
+- **T1b**: tamaño de tablero según el espacio, cupo por bando, refuerzos, y pantalla de elección de party (lógica y tests; la UI de T4 ya admite tamaño variable).

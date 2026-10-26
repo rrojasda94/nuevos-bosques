@@ -143,8 +143,9 @@ Qué se conserva y qué cambia al pasar al combate táctico (`combate-tactico.md
 | **Perfil agresivo** | Se mueve hacia el de menos PV que pueda alcanzar y lo ataca. Si no llega, se acerca |
 | **Perfil enjambre** (reparep) | **Rodea**: buscan casillas adyacentes al mismo objetivo para el ataque conjunto; el último huye con poca vida |
 | **Perfil táctico** (garelinos) | Busca **flanco o espalda**; ataca primero al apoyo si llega; se retira por debajo del 25% |
-| **Perfil berserk** (Ofomni descarriado) | Carga contra el más cercano. Anuncia el Latigazo (área 3 × 1 delante, en un tablero de 8 × 6) |
-| **Tamaño** | Hasta **3 por bando** (#185): jugador más 2 aliados; enemigos de 1 a 3; reparep en grupos de 2–3. Sin refuerzos |
+| **Perfil berserk** (Ofomni descarriado) | Carga contra el más cercano. Anuncia el Latigazo (3 × 1 delante en los tableros pequeño y medio; 3 × 2 en el grande) |
+| **Tamaño** | **Cupo por bando proporcional al espacio** (1 a 6; `combate-tactico.md`). Party elegida antes del combate (#188). Reparep en grupos de 2–4. Los que no caben entran como refuerzo por su borde cuando cae uno |
+| **Refuerzos (IA)** | El refuerzo entra en el turno siguiente a la caída con CT 50 y su perfil de siempre |
 | **Órdenes al grupo** | Igual (Libre, Atacar a tu objetivo, Defender), más el movimiento: "Defender" hace que los aliados se agrupen junto al jugador |
 | **Aliados que se protegen ante un Latigazo** | **Salen del área marcada**; si no pueden, Defender |
 | **Retirarse atrás con poca vida** | Se alejan del enemigo más cercano |
