@@ -24,17 +24,25 @@ Se actualiza en cada PR del Mundo 2.0.
 |---|---|
 | M0 | Hecho |
 | M1 ficha | Hecho (PR #47) |
-| M2 spec de arte | PR #51. Por validar en M12/M13: 2 claves de flor nuevas y 2 atlas por Bosque (normal y alto) |
-| M3 autoría | Hecho (PR #53). PNG desde el generador actual (seed 15) y 4 villas provisionales en `lugares.csv` que el dueño nombra o borra |
-| M4 `WorldChunk` y `WorldCoords` | Hecho (PR #50). Bench actual: mediana 37 ms, p95 80 ms (64×64, PC del dueño) |
-| M11 `GridMover` | PR #48. Escena `scenes/world/grid_mover_test.tscn` |
-| M5 `RegionPlan` | En curso. Villas procedurales: opción C |
-| M6–M9 (generación, en serie) | Pendiente |
-| M10, M12 | Pendiente |
-| M13–M16 | Pendiente |
-| M17 | Pendiente. Espera la decisión de conservar al adoc |
-| M18 | Pendiente. Espera la decisión de riscos rectos o con esquinas |
-| M19 | Pendiente |
+| M2 spec de arte | Hecho (PR #51) |
+| M3 autoría | Hecho (PR #53). Después, autoría del dueño: afluentes del Sara (#64, #69, #77), Larr, cordillera occidental transitable y Azhin (#72) |
+| M4 `WorldChunk` y `WorldCoords` | Hecho (PR #50) |
+| M5 `RegionPlan` | Hecho (PR #56). Villas procedurales: opción C |
+| M6 relieve | Hecho (PR #61) |
+| M7 senderos y formas grandes | Hecho (PR #79) |
+| M8 decoración, villa, refugios, frutales y `WorldQuery` | Hecho (PR #82). Generador: mediana ~40 ms por chunk |
+| M9 rendimiento | En curso |
+| M10 caché y pregeneración | Hecho (PR #58) |
+| M11 `GridMover` | Hecho (PR #48) |
+| M12 `WorldView` | Hecho (PR #80). Ruta automática sin fotogramas > 20 ms del mundo |
+| M13 tileset primera pasada | Hecho (PR #59) |
+| M14 interacción | En curso |
+| M15 monstruos | En curso |
+| M16 mapa M y brújula | Hecho (PR #84) |
+| Fuentes visibles y sicabis en el mundo | Pendiente, tras M9 (ficha en PR #83) |
+| M17 cambio al Mundo 2.0 | Pendiente. Decidido: se empieza de cero |
+| M18 arte final | Pendiente. Decidido: riscos con esquinas interiores y diagonales (+1 PR de arte) |
+| M19 playtest y 0.4.0 | Pendiente |
 
 ## Orden de los PR
 | # | PR | Agente | Archivos principales | Depende de | Estim. | Hecho cuando |
@@ -93,6 +101,6 @@ M0 ─┬─────────┤
 - **Riesgo**: la 0.3 aún tiene 5 bloques y la 0.4 es grande. Si el dueño quiere ver el mundo nuevo antes, M1–M4 y M11 se pueden adelantar sin tocar el juego (documentos, autoría, datos y una escena de prueba de movimiento), pero solo si él lo pide.
 
 ## Decisiones del dueño que bloquean
-- **Conservar al adoc** al pasar al Mundo 2.0 (nivel, XP, Luz, inventario, fama) en una partida nueva, o empezar de cero. Bloquea M17.
+- ~~**Conservar al adoc**~~: **decidido** (dueño, 2026-10-26): **se empieza de cero**. Las partidas de la 0.3 se rechazan con el aviso del ADR 0014 y no se conserva nada del adoc.
 - ~~**Villas procedurales**~~: **decidido** (2026-10-25), opción C: aldeas sin nombre con `procedural_villa_chance` 0,2, nunca junto a una villa con nombre, como mucho 2 por área.
-- **Riscos rectos**: aceptar las caras rectas en tramos cortos (como Zelda) o pedir esquinas interiores y diagonales (+1 PR de arte). Bloquea M18, no M13.
+- ~~**Riscos rectos**~~: **decidido** (dueño, 2026-10-26): **esquinas interiores y tramos diagonales** (+1 PR de arte en M18; filas 8–11 de `tileset_relieve.png` reservadas en la spec). El generador tendrá que marcar dónde van (lo ve `world-gen-dev` con `pixel-artist`).
