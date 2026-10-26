@@ -9,6 +9,8 @@ extends CanvasLayer
 ## cobran (muerto, necesita_ayuda) tienen el borde abierto y el menú no se abre.
 ## Sigilo (sigilo-y-robo.md): con el arma en la mano el Bosque no deja pasar en paz aunque esté
 ## pagado: el menú se abre igual, sin pagos ("El Bosque siente tu arma.": enfrentar o retroceder).
+## Con la skill Imponerse (moralidad-y-progresion.md) hay una opción más: si el nivel del Adoc llega
+## a d + 2 y el Bosque no está enojado, el Botarramas se aparta sin pelear (cuenta como vencerlo).
 ## También lleva el combate de misión (Ofomni descarriado, EventBus.quest_battle_requested) y el
 ## combate directo contra un Único de dentro del Bosque (EventBus.unico_battle_requested: Ofomni
 ## que persiguen tras un robo, cazadores, los que rondan o el que se enfrenta a voluntad; sin menú,
@@ -29,8 +31,11 @@ const TEXT_BACK: String = "Volver"
 ## para cada una de las siguientes (alto de línea del título): hostilidad, relación.
 const EXTRA_LINE: float = 10.0
 const NEXT_EXTRA_LINE: float = 15.0
+## Opciones que caben en el panel sin crecer y alto de cada fila de más.
+const BASE_OPTIONS: int = 4
+const OPTION_ROW: float = 14.0
 ## Opciones del menú principal (las que se muestran están en _actions, en orden).
-enum Option { PAY_LUZ, OFRENDA, FIGHT, RETREAT }
+enum Option { PAY_LUZ, OFRENDA, FIGHT, RETREAT, IMPOSE }
 
 var _bosque_id: int = -1
 var _cost: int = 0
@@ -96,9 +101,10 @@ func _open_main_menu() -> void:
 	var lines: int = _title.text.count("\n")
 	var extra: float = 0.0 if lines == 0 else EXTRA_LINE + NEXT_EXTRA_LINE * (lines - 1)
 	_options.offset_top = _options_top + extra
-	# El panel crece hacia arriba: abajo no cabe.
-	_panel.offset_top = _panel_top - extra
 	_actions = actions_for(_bosque_id, _home)
+	# El panel crece hacia arriba: abajo no cabe. Con más de BASE_OPTIONS opciones (Imponerte),
+	# una fila más por cada una.
+	_panel.offset_top = _panel_top - extra - OPTION_ROW * maxi(0, _actions.size() - BASE_OPTIONS)
 	var texts: Array[String] = []
 	var enabled: Array[bool] = []
 	var has_ofrenda: bool = not Ofrendas.payable(AdventureRules.bag_ofrendas(), GameState.luz, _cost).is_empty()
@@ -113,6 +119,9 @@ func _open_main_menu() -> void:
 			Option.FIGHT:
 				texts.append("Enfrentar al Botarramas")
 				enabled.append(true)
+			Option.IMPOSE:
+				texts.append(Texts.get_text("crossing_impose_option"))
+				enabled.append(AdventureRules.can_impose(_bosque_id, _distance))
 			Option.RETREAT:
 				texts.append("Retroceder")
 				enabled.append(true)
@@ -120,11 +129,15 @@ func _open_main_menu() -> void:
 
 
 ## Opciones del menú del borde del Bosque: pagar (Luz u ofrenda), enfrentar y retroceder; si no
-## acepta pagos (enojado, o el Adoc lleva el arma en la mano), solo enfrentar y retroceder.
+## acepta pagos (enojado, o el Adoc lleva el arma en la mano), solo enfrentar y retroceder. Con la
+## skill Imponerse, "Imponerte" tras enfrentar (desactivada si no se puede: nivel o Bosque enojado).
 static func actions_for(bosque_id: int, home: int = -1) -> Array[int]:
+	var out: Array[int] = [Option.PAY_LUZ, Option.OFRENDA, Option.FIGHT, Option.RETREAT]
 	if not AdventureRules.can_pay_toll(bosque_id) or AdventureRules.is_armed_against(bosque_id, home):
-		return [Option.FIGHT, Option.RETREAT]
-	return [Option.PAY_LUZ, Option.OFRENDA, Option.FIGHT, Option.RETREAT]
+		out = [Option.FIGHT, Option.RETREAT]
+	if AdocGrowth.has_skill(AdocGrowth.IMPONERSE):
+		out.insert(out.find(Option.FIGHT) + 1, Option.IMPOSE)
+	return out
 
 
 ## Título del menú: el de siempre; si el Bosque recuerda Botarramas vencidos, su aviso; y si la
@@ -219,6 +232,10 @@ func _unhandled_input(event: InputEvent) -> void:
 			_open_submenu()
 		Option.FIGHT:
 			_start_battle()
+		Option.IMPOSE:
+			if AdventureRules.impose(_bosque_id, _distance):
+				EventBus.notice_requested.emit(Texts.get_text("crossing_imposed"))
+				_close(&"won")
 		Option.RETREAT, OptionMenu.CANCEL:
 			_close(&"retreated")
 

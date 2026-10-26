@@ -13,8 +13,18 @@
 >   - Como garelino: reúne un grupo (quedarse sin miembros es solo un retroceso) y **persuade villas** (necesidad, diálogo, fuerza sin matar, regalar Piedras). La villa natal también se puede convertir, pero es difícil. **Tala Bosques muertos** (él o su grupo) y **siembra Piedras de los Nuevos Bosques** donde el Bosque de Nujio ya no está.
 >   - Los Bosques con Nujio solo aceptan el peaje de un garelino si lleva un **artefacto que oculte su Luz**; sin él, lo atacan.
 > - **Villas vivas** ([`mechanics/npcs-y-villas.md`](mechanics/npcs-y-villas.md)): oficios con prioridad (siempre Pholua, Ildo, Sfida, Folas/Folat y Sarua; luego habituales y especializaciones), cada uno en su sitio, trabajan de día y duermen de noche en las casas.
-> - **Para la 0.6**: interiores, tarcas y **sicabis**, lugares sagrados sin armas que regeneran Luz ([`mechanics/lugares-e-interiores.md`](mechanics/lugares-e-interiores.md)).
-> - **IA de combate** ([`mechanics/ia-de-combate.md`](mechanics/ia-de-combate.md)): orden de turnos por Agilidad (automática con el nivel; con Apresurar y Esperar), filas delante y detrás, roles atacante, defensor y apoyo, perfiles de enemigo y órdenes al grupo (Atacar / Defender / Libre).
+> - **Para la 0.6** ([`mechanics/lugares-e-interiores.md`](mechanics/lugares-e-interiores.md)):
+>   - **Interiores**.
+>   - **Tarcas**: la mayoría vacías y ocupadas por seres espirituales; solo unas pocas son templos garelinos (Trastas, Azhin, Lean…).
+>   - **Sicabis**: jardines sagrados con un pequeño lago y plantas ornamentales exclusivas, sin armas, que regeneran Luz; un garelino no puede entrar.
+> - **Combate táctico en cuadrícula** (ADR 0016, [`mechanics/combate-tactico.md`](mechanics/combate-tactico.md)), estilo *Final Fantasy Tactics Advance*:
+>   - vista cenital con alturas por capas (decisión del dueño), sobre un tablero de 12 × 8 recortado del terreno;
+>   - turnos por CT según AGI; cada turno se mueve (Mov según AGI, Salto) y se actúa;
+>   - evasión según AGI, orientación (frente, flanco, espalda) y altura;
+>   - emboscadas con sigilo;
+>   - ataques en área (Latigazo) y ataque conjunto de los reparep.
+>   - Sustituye a la presentación "estilo Pokémon".
+> - **IA de combate** ([`mechanics/ia-de-combate.md`](mechanics/ia-de-combate.md); hecha en el PR #67 y traducida a la cuadrícula): AGI automática con el nivel, roles atacante, defensor y apoyo, perfiles de enemigo y órdenes al grupo (Atacar / Defender / Libre). Las "filas" pasan a ser posición real.
 >   - Puede **redimirse** con un gran costo (incluye pedir asilo de magra).
 >   - Los finales por camino quedan aparcados.
 >   - El modo Garelino suelto queda como "empezar ya garelino", para más adelante.
@@ -177,7 +187,7 @@ Antes de implementarse necesitan fuente, sumidero y qué pasa si se agotan:
 >
 > **Versión de prueba en curso** (Aventura): un solo personaje, un Adoc (30 PV, ATQ 6, DEF 3, 10 de Luz), con niveles 1–10, en combate por menú contra Únicos con las acciones Atacar, Defender, Ofrecer Luz u ofrenda (pagan el peaje y terminan la pelea, solo contra Únicos apaciguables) y Huir. Números provisionales en [`mechanics/cruce-y-combate-v2.md`](mechanics/cruce-y-combate-v2.md). Tras el playtest de v1, el dueño da por buenos **de momento** la dificultad y el coste en Luz. La narración del combate va mensaje a mensaje, **estilo Pokémon**. Los **Únicos son monstruos, no árboles** (aspecto, tipos y nombres: #119) y **se regeneran con el tiempo** (#120). El Ofomni de la primera misión ataca con **látigos** y cada 3 turnos lanza un **Latigazo múltiple** anunciado (×3; Defender lo reduce a la mitad) ([`mechanics/mision-ofomni.md`](mechanics/mision-ofomni.md)). Cada tipo de monstruo es **fatal o no según el Momento** (ADR 0004, `mechanics/monstruos.md`). La lista siguiente es previa y por revisar.
 - Party de hasta 3. Stats: HP, ATK, DEF, SPD.
-- Combate por turnos, menú: Atacar / Habilidad / Objeto / Huir.
+- ~~Combate por turnos, menú: Atacar / Habilidad / Objeto / Huir.~~ Sustituido por el combate táctico en cuadrícula (ADR 0016).
 - Exploración top-down del chunk; encuentros según bioma de la región.
 - Inventario 12 slots. Equipo: arma, armadura, accesorio.
 
