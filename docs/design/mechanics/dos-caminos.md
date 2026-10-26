@@ -35,6 +35,12 @@ Palabras del dueño (2026-10-25):
 - El bando se ve con un **icono** junto al de la Senda (pantalla de estado).
 - No se puede pasar de fiel a garelino sin estar antes en duda. El cambio es gradual, como pidió el dueño.
 
+### Origen de la expansión (dueño, #177)
+- La expansión de los Nuevos Bosques empezó en **Azhin**, una villa pequeña, la más septentrional del Valle del Sara, en el noroeste, pegada a la cordillera occidental.
+- Llegó con los **ledai de la Tarca de Trastas**, en la misma cordillera pero del lado de Dorias (glosario §7).
+- Encaja con la frecuencia alta de Nuevos Bosques en Lean, Tossie y Ostie (ADR 0007) y con las tarcas templo de Azhin y de Lean (`lugares-e-interiores.md`).
+- **Uso mecánico (propuesta)**: el **campamento garelino** más cercano a la villa natal suele estar hacia el noroeste (Azhin y su tarca). La convicción garelina de las villas cercanas a Azhin empieza más alta (por ejemplo, +20).
+
 ## 2. El encuentro de historia con los garelinos
 - **Cuándo**: la primera vez que se cumplen las dos condiciones:
   - la misión del Ofomni ha terminado (`rewarded` o `failed`), o han pasado 3 días;

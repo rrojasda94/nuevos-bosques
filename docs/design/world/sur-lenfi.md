@@ -71,11 +71,21 @@
 ## Regiones del glosario
 Las regiones del glosario §8 (Nan, Gumna, Ungol, Amuss, Hagat, Uta, Sanag, Sunasem, Ifa, Foss, etc.) son, según el dueño, **grupos de áreas dentro de las regiones del mapa** y "se integrarán en un futuro" (#94). Todavía no están ubicadas.
 
+## Lugares con nombre (dueño)
+- **Azhin** (dueño, 2026-10-25): "Azhin es una villa pequeña al noroeste del valle del Sara, es la villa mas septentrional y pegada a l cordillera occidental. Se supone que de ahi se originan los primeros nuevos bosques con la llegada de los ledai de la tarca de Trastas que está en la misma cordillera pero del lado de dorias, por la parte central de esta."
+  - **Villa pequeña**, la **más septentrional** del Valle del Sara, en el **noroeste**, pegada a la **cordillera occidental**.
+  - Tiene una **tarca** que es templo garelino (`docs/design/mechanics/lugares-e-interiores.md`).
+  - De allí salieron los **primeros Nuevos Bosques**.
+  - *(lectura)* Cae probablemente en la subregión **Lean** (norte-oeste). Por confirmar (#179).
+- **Tarca de Trastas** (glosario §7: en Dorias): en la **misma cordillera occidental**, del **lado de Dorias**, hacia su **parte central** (dueño).
+- **Cordillera occidental**: separa el Valle del Sara de Dorias. *(lectura)* En la imagen (`Sur-Lenfi_02.jpg`) no se ve una cordillera continua entre Dorias y el Valle del Sara: hay símbolos de montaña en el este de Dorias y en el oeste de Lean y Tossie, y la franja de montañas del norte. Conviene que el dueño la marque cuando pinte el mapa del Mundo 2.0 (#179).
+
 ## Frecuencia de Nuevos Bosques sobre el mapa (ADR 0007)
 - Alta: Lean, Tossie, Ostie (noroeste del Valle del Sara, junto a Dorias).
 - Muy rara: Nosie (al este del Valle del Sara).
 - Casi imposible: Alciss (extremo este del mapa).
 - *(lectura)* La frecuencia baja de oeste a este, coherente con una expansión iniciada en el noroeste del Valle del Sara.
+- **Confirmado con Azhin** (dueño): la expansión empezó en **Azhin** (noroeste, junto a la cordillera occidental), con los ledai que cruzaron desde la Tarca de Trastas (Dorias). Encaja con la frecuencia alta en Lean, Tossie y Ostie, las subregiones del oeste que lindan con Dorias. No hay contradicción. Solo hace falta confirmar que Azhin está en Lean.
 
 ## Pendiente para pasar a `data/world/`
 - Nombre del nivel "subregión" (#100).

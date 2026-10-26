@@ -34,11 +34,13 @@ Palabras del dueño (2026-10-25): "Despues tambien podemos empezar a crear los e
   - Contiene **obsidiana** y **metal** (materiales de artesano, `npcs-y-villas.md`) y es buen refugio para el riutash.
 - **Templos garelinos: solo unas pocas** (dueño, #176: "la de Trastas, la de Azhin, la de Lean y algunas más pero la mayoria de tarcas no"):
   - la **Tarca de Trastas** (glosario §7);
-  - la **Tarca de Azhin** (nombre **nuevo** del dueño; hay que añadirlo al glosario, #177);
+  - la **Tarca de Azhin**. Azhin es una villa pequeña, la más septentrional del Valle del Sara, en el noroeste, pegada a la cordillera occidental. De allí salieron los primeros Nuevos Bosques, con los ledai venidos de la Tarca de Trastas (dueño; `docs/design/world/sur-lenfi.md`). Hay que añadirla al glosario (lo hace el dueño, #181);
   - la **Tarca de Lean** (Lean es una subregión del Valle del Sara, `docs/design/world/sur-lenfi.md`);
   - y algunas más.
   - Son lugares de los ledai y campamentos garelinos (`dos-caminos.md`).
-- **La mayoría de las tarcas** (dueño): "son lugares vacios y ocupados por algunos seres espirituales". **Qué seres son: por definir** (#178). Mientras tanto, la tarca común es un lugar vacío y tranquilo, con un encuentro espiritual sin definir.
+- **La mayoría de las tarcas** (dueño): "son lugares vacios y ocupados por algunos seres espirituales".
+  - **Cómo son esos seres** (dueño, #178): "Son cuerpos etereos y amorfos de tamaño pequeño o mediano." Se registra tal cual: sin nombre ni comportamiento inventados.
+  - Si son hostiles, neutrales o se pueden ignorar: por definir (#180).
 - Cuántas: 1–2 por subregión montañosa (propuesta).
 
 ### Sicabis (término nuevo del dueño)
@@ -82,5 +84,7 @@ Palabras del dueño (2026-10-25): "Despues tambien podemos empezar a crear los e
 
 ## Preguntas abiertas
 - **#175** (en parte): sicabis: jardín con un pequeño lago y plantas ornamentales exclusivas; un garelino no puede entrar. Queda abierto añadir el término al glosario (lo hace el dueño) y confirmar las mecánicas propuestas (+1 Luz cada 30 s, Meditar, relación +5 y Senda +1, 1 por subregión).
-- **#177**: añadir "Azhin" (Tarca de Azhin) al glosario. Lo hace el dueño.
-- **#178**: ¿qué son los "seres espirituales" que ocupan las tarcas vacías?
+- ~~#177 y #178~~ Resueltas: Azhin, villa del noroeste; seres etéreos y amorfos, pequeños o medianos.
+- **#179**: ¿en qué subregión está Azhin (¿Lean?) y por dónde pasa la cordillera occidental en el mapa?
+- **#180**: los seres espirituales de las tarcas, ¿son hostiles, neutrales o se pueden ignorar?
+- **#181**: añadir al glosario Azhin, sicabis y los seres espirituales (lo hace el dueño).
