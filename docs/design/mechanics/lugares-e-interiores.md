@@ -53,7 +53,7 @@ Palabras del dueño (2026-10-25): "Despues tambien podemos empezar a crear los e
 - Cuántas: 1–2 por subregión montañosa (propuesta).
 
 ### Sicabis (término nuevo del dueño)
-> Registro literal: "lugares como sicabis que son lugares muy bonitos y sagrados donde no puedes cargar con armas, te regeneran luz, te ayudan a conectar con la Luz y el Bosque". **No está en el glosario**: hay que añadirlo (lo hace el dueño, #175). No se le inventa más lore.
+> Registro literal: "lugares como sicabis que son lugares muy bonitos y sagrados donde no puedes cargar con armas, te regeneran luz, te ayudan a conectar con la Luz y el Bosque". Ya está en el glosario (`docs/glosario_nuevos_bosques.md`, [Chat 2026-10], #181). No se le inventa más lore.
 
 - **Lo que dijo el dueño**:
   - lugares **muy bonitos y sagrados**;
@@ -63,7 +63,7 @@ Palabras del dueño (2026-10-25): "Despues tambien podemos empezar a crear los e
 - **Cómo son** (dueño, #175: "Sicabis son un espacio geografico hermoso, como un jardin con un pequeño lago, muchas plantas hornamentales que solo existen en estos lugares"):
   - un **espacio geográfico hermoso**, como un **jardín** con un **pequeño lago**;
   - **muchas plantas ornamentales que solo existen allí**.
-  - Para `pixel-artist` y `world-gen-dev`: tiles propios de plantas ornamentales exclusivas y una laguna pequeña; ocupa varios chunks o un claro grande del Mundo 2.0.
+  - Para `pixel-artist` y `world-gen-dev`: tiles propios de plantas ornamentales exclusivas y una laguna pequeña. Es un **lugar muy pequeño** con escena interior propia (ver "Cómo se encuentran en el mundo"), no un claro del mapa abierto.
 - **Mecánicas propuestas (provisionales)**:
 
 | Regla | Propuesta |
@@ -73,8 +73,54 @@ Palabras del dueño (2026-10-25): "Despues tambien podemos empezar a crear los e
 | **Conectar con la Luz** | Acción **"Meditar"** (E), una vez por día: entras en **Pensamiento sin dormir**, también de día, y con 1/3 de probabilidad recibes una visión (misión lejana o señal de un Bosque). Enlaza con dormir y Pensamiento (`bosques-y-relacion.md`). |
 | **Conectar con el Bosque** | Meditar sube la **relación +5** con el Bosque donde está la sicabi (una vez por día) y la **Senda +1**. |
 | **Garelino** | **No puede entrar**, ni siquiera sin armas (dueño, #175: "no"). |
-| **Cuántas** | **Raras**: 1 por subregión (propuesta), en lugares bonitos del mapa del dueño (claros, cascadas, lagunas del Mundo 2.0). |
+| **Cuántas** | **Raras** (dueño, 2026-10-26: "son lugares raros de hallar"): **como mucho 1 por subregión**, y solo en 6 de cada 10 subregiones. Lejos de villas y aldeas. Detalle en "Cómo se encuentran en el mundo". |
 | **Respeto** | No hay combate dentro: los Únicos no entran ni atacan allí. |
+
+#### Cómo se encuentran en el mundo (dueño, 2026-10-26)
+> Registro literal: "Los sicabis tambien [se ven en el juego] pero son lugares muy pequeños quizas podría accederse como a una caverna o edificio, si vas por entre un bosque o montaña, puede haber una entrada especial y al entrar es un sicabi." Y: "solo reuerda que las sicabis son lugares raros de hallar. no puede haber tantos cerca de una villa. lagos normales si."
+
+**Para `world-gen-dev`, después de M9.** Valores provisionales.
+
+- **Entrada especial** en el mapa abierto, como la boca de una cueva o la puerta de una casa. Hay dos variantes según el terreno:
+  - **Bosque tupido**: un arco de raíces entre árboles. Objeto de 2×2 casillas que se pisa por su fila de abajo.
+    - Condición: al menos el **70 %** de las casillas a ≤ 6 casillas (Chebyshev) de la entrada tienen árbol.
+  - **Montaña**: una grieta en la base de una cara de risco, de nivel 2 o más. Se coloca como la cueva-refugio (2×2, la fila de abajo es la boca), pero con su propio dibujo, para no confundirla con un refugio.
+- **Fuera de los caminos principales**:
+  - la entrada queda a **≥ 10 casillas** de cualquier `ROAD` (camino de 3) y a **≥ 6 casillas** de cualquier `PATH` (sendero);
+  - no se le traza sendero;
+  - sí se garantiza un **paso libre de al menos 2 casillas de ancho** desde la red de senderos. Sin dibujar: es un hueco entre los árboles o una cornisa. La entrada entra en la comprobación `inaccessible()`.
+  - Es lo contrario que el refugio, que va a ≤ 6 de un sendero y a la vista.
+- **Al entrar** (E en la boca, con el arma desequipada) se cambia a la **escena interior de la sicabi**: el jardín con un pequeño lago y plantas ornamentales exclusivas.
+  - Propuesta de tamaño: **una sola pantalla, 20×11 casillas**, sin cámara que se desplace (pilar 3).
+  - Al salir se vuelve a la boca.
+  - Todas las reglas de la tabla de arriba (Luz, Meditar, sin armas, garelino) se aplican dentro de esa escena.
+- **Rareza** (por región, con el RNG del plan de región):
+  - **Tope: 1 por subregión.**
+  - Cada subregión tiene sicabi con probabilidad **0,6**. En el Valle del Sara, con 7 subregiones, salen de media unas **4 por partida** (entre 0 y 7) en 192 chunks.
+  - Si en una subregión no hay ningún sitio que cumpla las reglas, se queda sin sicabi (no se fuerza).
+- **Distancias mínimas** (en chunks, Chebyshev entre el chunk de la entrada y el otro chunk):
+  - a **cualquier villa o aldea**, con nombre o procedural: **≥ 2 chunks**. Es decir, ni en el chunk de la villa ni en sus 8 vecinos: al menos 80 casillas en línea recta y más por camino;
+  - a **otra sicabi**: **≥ 4 chunks**;
+  - **no en un Bosque muerto**, porque Meditar sube la relación con el Bosque de la sicabi (`bosques-y-relacion.md`).
+  - Puede caer en el chunk de un Nujio. Ahí no cuenta como punto de interés: no lo es, va escondida.
+- **Orden de prioridad**:
+  - si el dueño pinta una sicabi en `lugares.csv` (tipo nuevo `sicabi`), esa es la de su subregión y cuenta para el tope;
+  - si no, el generador sortea el chunk;
+  - las reglas de distancia se aplican igual a las dos.
+- **Las lagunas normales no son sicabis**:
+  - el punto de interés `laguna` del Mundo 2.0 (`mundo-2.md` §4) se ve en el mapa abierto, **sí puede estar en el chunk de una villa o aldea o junto a él** ("lagos normales si"), no tiene interior y no regenera Luz;
+  - la sicabi nunca está en el mapa abierto: su lago está dentro de la escena interior.
+- **Qué irían en `data/`** (nombres de claves propuestos; la estructura la decide `world-gen-dev`):
+  - En el JSON de la región (`data/world/regions/valle_del_sara.json`), bloque `sicabis`:
+    `{ "per_subregion_max": 1, "subregion_chance": 0.6, "min_villa_distance_chunks": 2, "min_sicabi_distance_chunks": 4, "min_road_distance": 10, "min_path_distance": 6, "access_width": 2, "forest_ratio": 0.7, "forest_radius": 6, "cliff_min_level": 2, "allow_dead_bosque": false }`.
+  - En `lugares.csv`: tipo nuevo `sicabi` (id, nombre, x, y), por si el dueño quiere fijar alguna.
+  - En el chunk: objeto nuevo `SICABI_GATE` (2×2, `variant` = 0 bosque, 1 montaña | volteo << 1) y una entrada en `WorldChunk.places` o similar con su celda de boca.
+  - Las reglas de dentro (Luz cada 30 s, Meditar, relación +5, Senda +1, espera de 60 s de los cazadores) son de `rpg-systems-dev`. Propuesta: `data/world/sicabi.json` con `luz_regen_seconds` 30, `meditate_relation` 5, `meditate_senda` 1, `vision_chance` 0.333, `hunter_wait_seconds` 60.
+- **Qué no se inventa**:
+  - los **nombres** de las sicabis, su lore y los textos del umbral y del garelino (`narrative-writer`, con el dueño);
+  - qué plantas son en concreto (`pixel-artist` hace la spec a partir de "plantas ornamentales que solo existen en estos lugares").
+
+**Presión de supervivencia** de la colocación: **añade** un desvío fuera de los senderos para encontrarla, lejos de la villa (sin curación cerca). **Alivia**, una vez encontrada, con la Luz y un refugio para el riutash.
 
 ## Inputs / outputs
 - **Inputs:** posición del jugador, arma equipada, Momento, bando, Bosque de la sicabi.
@@ -86,13 +132,24 @@ Palabras del dueño (2026-10-25): "Despues tambien podemos empezar a crear los e
 - **Riutash dentro de una sicabi**: cuenta como refugio.
 - **Tarca templo garelino siendo fiel** (Trastas, Azhin, Lean y algunas más): territorio garelino; sus grupos te piden que te vayas (combate no letal si insistes).
 - **Garelino ante una sicabi**: el umbral no le deja pasar (texto de `narrative-writer`).
+- **Aldea procedural que caería a menos de 2 chunks de una sicabi**: se colocan antes las villas y las aldeas, y luego las sicabis. Así la sicabi es la que se aparta o desaparece, nunca la aldea.
+- **Subregión pequeña o toda cerca de villas**: se queda sin sicabi. Es aceptable, porque son raras.
+- **Entrada de montaña que coincide con el sitio de una cueva-refugio**: manda el refugio (es supervivencia); la sicabi busca otro sitio.
 
 ## Criterios de éxito para playtest
 - El jugador desvía su ruta para pasar por una sicabi y recargar Luz.
 - El dueño reconoce las sicabis como "lugares muy bonitos y sagrados" (pregunta directa).
+- **Rareza** (test de `world-gen-dev`, 5 seeds):
+  - nunca más de 1 sicabi por subregión;
+  - ninguna a menos de 2 chunks de una villa o aldea, ni a menos de 4 de otra;
+  - entre 2 y 6 por región en al menos 4 de las 5 seeds.
+- **Hallazgo** (playtest): en una partida de 1 hora, el jugador encuentra 1 sicabi como mucho sin buscarla y siente que "la ha descubierto" (pregunta directa).
 
 ## Preguntas abiertas
-- **#175** (en parte): sicabis: jardín con un pequeño lago y plantas ornamentales exclusivas; un garelino no puede entrar. Queda abierto añadir el término al glosario (lo hace el dueño) y confirmar las mecánicas propuestas (+1 Luz cada 30 s, Meditar, relación +5 y Senda +1, 1 por subregión).
+- **#175** (en parte): sicabis: jardín con un pequeño lago y plantas ornamentales exclusivas; un garelino no puede entrar. Queda abierto confirmar las mecánicas propuestas (+1 Luz cada 30 s, Meditar, relación +5 y Senda +1). El término ya está en el glosario. La rareza y la colocación las dio el dueño el 2026-10-26 ("lugares raros de hallar", entrada especial en bosque o montaña). Los números (tope de 1 por subregión, probabilidad 0,6, ≥ 2 chunks de una villa, ≥ 4 entre sicabis) son propuesta.
+- **Nueva: ¿la entrada se ve a simple vista o hay que buscarla?**
+  - Propuesta por defecto (pilar 3): el objeto de la entrada **se ve** si está en pantalla, pero queda fuera de los senderos, sin letrero que lleve a ella y sin marca en el mapa M hasta haberla encontrado.
+  - La alternativa sería esconderla del todo: que solo aparezca al acercarse a ≤ 3 casillas o con una pista (un Bosque, una visión de Meditar). Hay que preguntarlo al dueño.
 - ~~#177 y #178~~ Resueltas: Azhin, villa del noroeste; seres etéreos y amorfos, pequeños o medianos.
 - ~~#179, #180, #181~~ Resueltas: cordillera occidental transitable y Larr al norte (`docs/design/world/sur-lenfi.md`); espíritus neutros por defecto, a veces hostiles, y se les puede atacar o provocar; glosario actualizado con autorización del dueño.
 - ~~#182 y #183~~ Resueltas: Azhin está en Lean; la mecánica de los espíritus está confirmada.
