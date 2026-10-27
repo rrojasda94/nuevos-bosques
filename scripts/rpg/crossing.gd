@@ -24,7 +24,9 @@ extends CanvasLayer
 ## inyecta (tests); en el Mundo 2.0, WorldQuery.rect si el mundo activo da `world_get_chunk` y
 ## `world_player_cell`; si no, el chunk de exploración antiguo, regenerándolo con su seed
 ## (ChunkGenerator.generate, ~30 ms, una vez por combate); sin chunk, el bioma. El bioma
-## (desempate) es "bosque" mientras no haya otros biomas.
+## (desempate) es "bosque" mientras no haya otros biomas. Tablero (T7a): en el Mundo 2.0, el del
+## relieve real alrededor del Adoc (TacticalRelief.arena_config: recorte, riscos comprimidos, cupo
+## contado sobre él); si no, llano.
 ## Apertura (T6): EventBus.battle_opening_set (lo emite la exploración al alcanzarle un Único o al
 ## enfrentarse a uno con E) dice si empieza con sorpresa o con emboscada; se gasta en el siguiente
 ## combate de misión, directo o en grupo (el del borde, tras el menú, y el de ayuda a otro adoc
@@ -340,12 +342,24 @@ func _open_battle(logic: BattleLogic, style: Dictionary, kind: UnicoArt.Kind,
 	add_child(_battle)
 	_battle.finished.connect(_on_battle_finished)
 	if TacticalBridge.is_enabled(balance_data):
-		_battle.begin(logic, style, kind, _ally_kinds,
-			TacticalBridge.arena_config(logic.balance, encounter_ratio(), ARENA_BIOME), null,
+		var arena: Dictionary = encounter_arena(logic.balance)
+		_battle.begin(logic, style, kind, _ally_kinds, arena.cfg, arena.board,
 			opening == TacticalBattle.Opening.AMBUSH, opening == TacticalBattle.Opening.SURPRISE)
 	else:
 		_battle.begin(logic, style, kind, _ally_kinds)
 	_ally_kinds = []
+
+
+## Bloque tactical y tablero del combate táctico: { cfg, board }. En el Mundo 2.0 (el mundo activo da
+## `world_get_chunk` y `world_player_cell`, y no hay `walkable_sampler` inyectado), el tablero sale
+## del relieve real alrededor del Adoc (TacticalRelief, T7a); si no, board = null (llano) y el tamaño
+## sale de encounter_ratio.
+func encounter_arena(balance_data: Dictionary) -> Dictionary:
+	if not walkable_sampler.is_valid() and world_get_chunk.is_valid() and world_player_cell.is_valid():
+		var relief: Dictionary = TacticalRelief.arena_config(balance_data, world_get_chunk,
+			world_player_cell.call(), ARENA_BIOME)
+		return { "cfg": relief.cfg, "board": relief.board }
+	return { "cfg": TacticalBridge.arena_config(balance_data, encounter_ratio(), ARENA_BIOME), "board": null }
 
 
 ## Proporción transitable del recorte del combate táctico alrededor del Adoc (TacticalArena), o -1

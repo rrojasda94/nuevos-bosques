@@ -27,6 +27,7 @@ Palabras del dueño: "una vez vencido al botarrama los demas botarramas deberian
 ### Encuentro
 - Los **Botarramas** (`monstruos.md`) ven al jugador en su `vision_radius`, renquean hacia él y, a `engage_distance`, abren el **menú del borde**.
 - Sin máscara no se puede colarse: tocar la frontera de un Bosque cerrado abre el mismo menú.
+  - **Propuesta tras el playtest (0.5, #192; `ajustes-playtest-0.5.md`, §3)**: tocar la frontera cerrada solo abre el menú si **un Botarramas te ve** en ese momento (a 2 casillas o menos siempre; si no, según su visión menos tu camuflaje, y el doble sin máscara) o si hablas con **E**. Si nadie te ve, te cuelas.
 
 ### Menú del borde
 1. **"Ofrecer N Luz"**: paga con Luz suelta.
@@ -67,7 +68,7 @@ Palabras del dueño: "una vez vencido al botarrama los demas botarramas deberian
   | **Defender** | El daño que recibes en el turno siguiente se reduce a la mitad. |
   | **Ofrecer Luz** | **Pagas el peaje N actual con Luz suelta.** El Único se va y el Bosque queda **pagado**. Sin XP ni Luz de victoria. Desactivada si no tienes N de Luz o contra el Ofomni. |
   | **Ofrecer ofrenda** | Igual que Ofrecer Luz, con una ofrenda (más Luz suelta para completar). Desactivada contra el Ofomni. |
-  | **Huir** | 75% de éxito. Vuelves a tu lado; el Único recupera todos sus PV. |
+  | **Huir** | 75% de éxito. Vuelves a tu lado; el Único recupera todos sus PV. **Ajuste de playtest (0.5)**: `flee_chance` 0,75 → **0,6** mientras el combate por menú siga siendo el de por defecto. En el táctico, la huida con suerte (`ajustes-playtest-0.5.md`, §1). Tras huir, el monstruo queda calmado 1,5 s (`flee_cooldown`) en vez de 3 s; Retroceder en el menú del borde sigue con 3 s. |
 - **El Único** ataca con la misma fórmula. Ataques especiales: `special_every` y `special_factor` (Ofomni: Latigazo múltiple).
 - **Victoria**: XP = 4 + 3·d (`progresion-adoc.md`), +1 de Luz (hasta el límite). Ese Botarramas se disuelve, el Bosque queda **forzado**, su **hostilidad sube 1** y su **relación baja 10**.
 - **Derrota**: según `fatal_at` (`monstruos.md`).
