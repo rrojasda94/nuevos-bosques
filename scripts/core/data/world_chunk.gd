@@ -25,10 +25,12 @@ enum Ground {
 ## Risco de la casilla (ADR 0014 §3). Las caras, los bordes y las cascadas bloquean; las escaleras
 ## (cruzan una cara) y las rampas (cruzan un borde) son el único paso entre niveles.
 enum Cliff { NONE, FACE, EDGE, STAIRS, RAMP, WATERFALL }
-## Objetos de una o varias casillas. Bloquean todos salvo los refugios (el jugador se mete dentro).
+## Objetos de una o varias casillas. Bloquean todos salvo los refugios (el jugador se mete dentro),
+## la fuente (SPRING: solo bloquea su casilla central, que es agua en `ground`) y la entrada de
+## sicabi (SICABI_GATE: bloquea todo menos su fila de abajo, la boca; OBJECT_MOUTH).
 enum ObjectKind {
 	TREE, TREE_YOUNG, TREE_BIG, TREE_DEAD, FRUIT_TREE, ROCK, STUMP, LOG, HOUSE, NUJIO, SIGN,
-	REFUGE_TREE, CAVE, LANDMARK,
+	REFUGE_TREE, CAVE, LANDMARK, SPRING, SICABI_GATE,
 }
 ## Tipos de letrero (mismos valores que ChunkData.SignKind).
 enum SignKind { BOSQUE_VILLA, HOME_VILLA }
@@ -40,7 +42,7 @@ const CELLS: int = WorldCoords.CHUNK_CELLS
 const MAX_LEVEL: int = 3
 const NO_OBJECT: int = -1
 ## Versión del formato de to_dict. Súbela si cambian las capas, los enums o las claves.
-const FORMAT_VERSION: int = 2
+const FORMAT_VERSION: int = 3
 ## Bordes del chunk, como dirección hacia fuera.
 const SIDES: Array[Vector2i] = [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]
 
@@ -53,6 +55,9 @@ const OBJECT_BLOCKING: int = (1 << ObjectKind.TREE) | (1 << ObjectKind.TREE_YOUN
 		| (1 << ObjectKind.ROCK) | (1 << ObjectKind.STUMP) | (1 << ObjectKind.LOG) \
 		| (1 << ObjectKind.HOUSE) | (1 << ObjectKind.NUJIO) | (1 << ObjectKind.SIGN) \
 		| (1 << ObjectKind.LANDMARK)
+## Objetos que bloquean todas sus filas menos la de abajo (la boca, que se pisa). Solo la entrada
+## de sicabi, así que rebuild_blocked() solo los mira si el chunk tiene `sicabi`.
+const OBJECT_MOUTH: int = 1 << ObjectKind.SICABI_GATE
 
 ## Claves de las capas de bytes en to_dict.
 const LAYER_KEYS: Array[String] = ["ground", "level", "cliff", "decor", "blocked", "variant"]
@@ -89,6 +94,9 @@ var hub: Vector2i = Vector2i(SIZE / 2, SIZE / 2)
 var nujio_rect: Rect2i = Rect2i()
 ## Este chunk contiene la villa de su Bosque.
 var has_villa: bool = false
+## Entrada de sicabi del chunk ({} si no hay): {id: String (RegionPlan.sicabis), cell: Vector2i
+## (casilla izquierda de la boca), variant: 0 bosque, 1 montaña}. Es además un objeto SICABI_GATE.
+var sicabi: Dictionary = {}
 
 var _reachable: PackedByteArray = PackedByteArray()
 
@@ -208,6 +216,25 @@ func add_object(kind: int, cell: Vector2i, size: Vector2i = Vector2i.ONE, object
 	return index
 
 
+## Quita el objeto `index` (los índices de los posteriores bajan en 1). No toca `blocked` ni
+## `signs`: es para el generador, antes de rebuild_blocked().
+func remove_object(index: int) -> void:
+	if index < 0 or index >= objects.size():
+		return
+	var obj: Dictionary = objects[index]
+	var cell: Vector2i = obj.cell
+	var size: Vector2i = obj.size
+	objects.remove_at(index)
+	for y: int in range(cell.y, cell.y + size.y):
+		for x: int in range(cell.x, cell.x + size.x):
+			occupant[y * SIZE + x] = NO_OBJECT
+	if index < objects.size():
+		for i: int in CELLS:
+			if occupant[i] > index:
+				occupant[i] -= 1
+	_reachable = PackedByteArray()
+
+
 func object_index_at(cell: Vector2i) -> int:
 	return occupant[WorldCoords.cell_index(cell)] if in_bounds(cell) else NO_OBJECT
 
@@ -260,6 +287,14 @@ func rebuild_blocked() -> void:
 		if occ != NO_OBJECT:
 			b |= object_blocks[occ]
 		blocked[i] = b
+	for obj: Dictionary in objects if not sicabi.is_empty() else []:
+		if (OBJECT_MOUTH >> int(obj.kind)) & 1 == 0:
+			continue
+		var cell: Vector2i = obj.cell
+		var size: Vector2i = obj.size
+		for y: int in range(cell.y, cell.y + size.y - 1):
+			for x: int in range(cell.x, cell.x + size.x):
+				blocked[y * SIZE + x] = 1
 	_reachable = PackedByteArray()
 
 
@@ -356,6 +391,7 @@ func to_dict() -> Dictionary:
 		"hub": hub,
 		"nujio_rect": nujio_rect,
 		"has_villa": has_villa,
+		"sicabi": sicabi.duplicate(),
 	}
 
 
@@ -380,6 +416,9 @@ static func from_dict(data: Dictionary) -> WorldChunk:
 	chunk.hub = data.get("hub", center())
 	chunk.nujio_rect = data.get("nujio_rect", Rect2i())
 	chunk.has_villa = bool(data.get("has_villa", false))
+	var gate: Variant = data.get("sicabi", {})
+	if gate is Dictionary:
+		chunk.sicabi = (gate as Dictionary).duplicate()
 	var flat_objects: PackedInt32Array = data.get("objects", PackedInt32Array())
 	if flat_objects.size() % _OBJECT_STRIDE != 0:
 		return null

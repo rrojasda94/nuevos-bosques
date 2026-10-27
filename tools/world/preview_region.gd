@@ -11,6 +11,11 @@ extends SceneTree
 ##    muertos) con su frontera, caminos de la red procedural (marrón claro), puertas en los bordes
 ##    (blanco = sendero, amarillo = camino, cian = abierta por el árbol del Bosque), refugios
 ##    (cuadro granate) y aldeas (rombo naranja con su nombre), además de los lugares del CSV.
+##    También las subregiones (línea violeta y su nombre) y las sicabis del plan (círculo rosa).
+## 4. Con `--chunks` construye además todos los chunks (ChunkBuilder, unos segundos) y marca lo que
+##    sale de ellos: las fuentes 3×3 (anillo celeste), las entradas de sicabi (rombo rosa con
+##    "sicabi") y los refugios extra de la garantía de 300 pasos (cuadro naranja pequeño).
+##    Uso: tools/world/preview_region.sh valle_del_sara 7 --chunks
 ## Sale con 1 si hay errores de autoría (la imagen se escribe igual) y con 2 si no puede escribirla.
 
 const OUT_DIR: String = "res://build/"
@@ -58,8 +63,13 @@ const ACCENTS: Dictionary = { "Á": "A", "É": "E", "Í": "I", "Ó": "O", "Ú": 
 
 func _initialize() -> void:
 	var args: PackedStringArray = OS.get_cmdline_user_args()
-	var region_id: StringName = StringName(args[0]) if args.size() > 0 else &"valle_del_sara"
-	var seed_value: int = args[1].to_int() if args.size() > 1 else 42
+	var positional: PackedStringArray = []
+	for arg: String in args:
+		if not arg.begins_with("--"):
+			positional.append(arg)
+	var region_id: StringName = StringName(positional[0]) if positional.size() > 0 else &"valle_del_sara"
+	var seed_value: int = positional[1].to_int() if positional.size() > 1 else 42
+	var with_chunks: bool = args.has("--chunks")
 	var authoring := RegionAuthoring.load_region(region_id)
 	print("Región %s, seed %d: %d×%d px de autoría = %d×%d chunks." % [region_id, seed_value,
 			authoring.size_px.x, authoring.size_px.y, authoring.size_chunks().x, authoring.size_chunks().y])
@@ -73,6 +83,8 @@ func _initialize() -> void:
 			% [plan.build_usec / 1000.0, plan.bosques.count(), plan.bosques.area_count,
 			plan.villas().size() - plan.aldeas().size(), plan.aldeas().size(), plan.refuge_chunks().size()])
 	var img: Image = render(authoring, plan)
+	if with_chunks:
+		_draw_chunks(img, plan)
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(OUT_DIR))
 	# Que el editor no importe las vistas previas.
 	if not FileAccess.file_exists(OUT_DIR + ".gdignore"):
@@ -115,6 +127,10 @@ const DOOR_FORCED: Color = Color("#40e0ff")
 const REFUGE_COLOR: Color = Color("#8a1c2c")
 const ALDEA_COLOR: Color = Color("#ff9f40")
 const DEAD_TINT: Color = Color("#8a8a8a")
+const SUBREGION_COLOR: Color = Color("#b070ff")
+const SICABI_COLOR: Color = Color("#ff70c8")
+const SPRING_COLOR: Color = Color("#80e8ff")
+const EXTRA_REFUGE_COLOR: Color = Color("#ff9020")
 
 
 static func _render_plan(a: RegionAuthoring, plan: RegionPlan) -> Image:
@@ -183,14 +199,85 @@ static func _render_plan(a: RegionAuthoring, plan: RegionPlan) -> Image:
 				var rr := Rect2i(origin + Vector2i(chunk_tiles - 14, chunk_tiles - 14), Vector2i(7, 7))
 				_fill_clipped(img, rr.grow(1), SHADOW_COLOR)
 				_fill_clipped(img, rr, REFUGE_COLOR)
+	_draw_subregions(img, plan)
 	for p: Dictionary in a.places:
 		if a.in_map(p.cell):
 			_draw_place(img, p)
 	for v: Dictionary in plan.aldeas():
 		_draw_aldea(img, v)
+	for sc: Dictionary in plan.sicabis():
+		var center: Vector2i = (sc.chunk as Vector2i) * chunk_tiles + half
+		for r: int in [13, 12, 11]:
+			_ring(img, center, r, SHADOW_COLOR if r != 12 else SICABI_COLOR)
 	for c: Vector2i in a.error_cells:
 		_outline(img, Rect2i(c * t - Vector2i(4, 4), Vector2i(t + 8, t + 8)), ERROR_COLOR)
 	return img
+
+
+## Límites de subregión (2 px violeta entre chunks de distinta subregión) y su nombre en el chunk
+## más al noroeste de cada una.
+static func _draw_subregions(img: Image, plan: RegionPlan) -> void:
+	var t: int = WorldCoords.CHUNK
+	var names: Array[String] = plan.subregion_names()
+	var labelled: Dictionary = {}
+	for cy: int in plan.size_chunks.y:
+		for cx: int in plan.size_chunks.x:
+			var c := Vector2i(cx, cy)
+			var s: int = plan.subregion_of(c)
+			if cx > 0 and plan.subregion_of(c + Vector2i.LEFT) != s:
+				_fill_clipped(img, Rect2i(c * t + Vector2i(-1, 0), Vector2i(2, t)), SUBREGION_COLOR)
+			if cy > 0 and plan.subregion_of(c + Vector2i.UP) != s:
+				_fill_clipped(img, Rect2i(c * t + Vector2i(0, -1), Vector2i(t, 2)), SUBREGION_COLOR)
+			if not labelled.has(s) and s >= 0 and s < names.size():
+				labelled[s] = true
+				_text(img, names[s].to_upper(), c * t + Vector2i(4, t - 16), SUBREGION_COLOR)
+
+
+## Construye todos los chunks y marca fuentes, entradas de sicabi y refugios extra.
+static func _draw_chunks(img: Image, plan: RegionPlan) -> void:
+	var t: int = WorldCoords.CHUNK
+	var springs: int = 0
+	var gates: int = 0
+	var extras: int = 0
+	for cy: int in plan.size_chunks.y:
+		for cx: int in plan.size_chunks.x:
+			var c := Vector2i(cx, cy)
+			var chunk: WorldChunk = ChunkBuilder.build(plan, c)
+			var origin: Vector2i = c * t
+			for obj: Dictionary in chunk.objects_of(WorldChunk.ObjectKind.SPRING):
+				springs += 1
+				var center: Vector2i = origin + (obj.cell as Vector2i) + Vector2i.ONE
+				for r: int in [8, 7, 6]:
+					_ring(img, center, r, SHADOW_COLOR if r != 7 else SPRING_COLOR)
+			for obj: Dictionary in chunk.objects_of(WorldChunk.ObjectKind.SICABI_GATE):
+				gates += 1
+				var center: Vector2i = origin + (obj.cell as Vector2i) + Vector2i.ONE
+				for pass_i: int in 2:
+					var rad: int = 7 if pass_i == 0 else 6
+					for dy: int in range(-rad, rad + 1):
+						var w: int = rad - absi(dy)
+						_fill_clipped(img, Rect2i(center + Vector2i(-w, dy), Vector2i(w * 2 + 1, 1)),
+								SHADOW_COLOR if pass_i == 0 else SICABI_COLOR)
+				var kind: String = "sicabi (bosque)" if int(obj.variant) & 1 == 0 else "sicabi (risco)"
+				_text(img, kind, center + Vector2i(-_text_width(kind) / 2, 10), SICABI_COLOR)
+			var refuges: Array[Dictionary] = chunk.objects_of(WorldChunk.ObjectKind.CAVE)
+			refuges.append_array(chunk.objects_of(WorldChunk.ObjectKind.REFUGE_TREE))
+			var planned: int = 1 if plan.has_refuge(c) else 0
+			for k: int in range(planned, refuges.size()):
+				extras += 1
+				var rr := Rect2i(origin + Vector2i(t - 24 - 8 * k, t - 14), Vector2i(5, 5))
+				_fill_clipped(img, rr.grow(1), SHADOW_COLOR)
+				_fill_clipped(img, rr, EXTRA_REFUGE_COLOR)
+	print("Chunks: %d fuentes, %d entradas de sicabi (%d en el plan), %d refugios extra." % [springs, gates,
+			plan.sicabis().size(), extras])
+
+
+## Anillo de 1 px de radio `r` (Chebyshev redondeado a círculo).
+static func _ring(img: Image, center: Vector2i, r: int, color: Color) -> void:
+	for k: int in 64:
+		var a: float = TAU * k / 64.0
+		var p: Vector2i = center + Vector2i(roundi(cos(a) * r), roundi(sin(a) * r))
+		_fill_clipped(img, Rect2i(p, Vector2i.ONE), color)
 
 
 ## El lado del chunk lleva camino pintado (ya se ve en la capa de caminos).
@@ -346,7 +433,9 @@ static func _print_legend(a: RegionAuthoring) -> void:
 	print("  azules = agua, marrón = caminos y puentes, velo de color = Bosque clave, rojo = error.")
 	print("  Plan de la seed: velo = Bosque (gris = muerto), línea oscura = frontera de Bosque, marrón claro = camino")
 	print("  de la red procedural, marcas en los bordes = puertas (blanco sendero, amarillo camino, cian abierta por")
-	print("  el árbol del Bosque), cuadro granate = refugio, rombo naranja = aldea.")
+	print("  el árbol del Bosque), cuadro granate = refugio, rombo naranja = aldea, línea violeta = subregión,")
+	print("  círculo rosa = chunk con sicabi. Con --chunks: anillo celeste = fuente, rombo rosa = entrada de")
+	print("  sicabi, cuadro naranja pequeño = refugio extra (garantía de 300 pasos).")
 	print("Lugares (%d):" % a.places.size())
 	for p: Dictionary in a.places:
 		var c: Vector2i = RegionAuthoring.chunk_of(p.cell)

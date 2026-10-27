@@ -3,7 +3,8 @@ extends RefCounted
 ## Pasada de chunk del Mundo 2.0 (ADR 0014 §5): convierte un chunk del RegionPlan en un
 ## WorldChunk nuevo. Hace los 7 pasos: suelo base y pedregal, relieve, puntos de interés, red de
 ## senderos y formas grandes (M6 y M7); decoración variada, letreros, refugio, frutales y trazado
-## de la villa (M8).
+## de la villa (M8). Después: fuentes de los afluentes (SPRING), entradas de sicabi (SICABI_GATE) y
+## refugios extra hasta cumplir la garantía de ≤ walk_limit casillas a pie (generation.md).
 ##
 ## Relieve (ADR 0014 §3, spec de arte docs/art/specs/mundo-2.md §3):
 ## - `level[]` = nivel de la celda gruesa (0..3; la cumbre cuenta como 3 y además bloquea entera).
@@ -64,7 +65,7 @@ enum Anchor { NONE, VILLA, NUJIO }
 ## Versión de la salida del ChunkBuilder: súbela con cualquier cambio que altere los bytes de un
 ## chunk. WorldCache la combina con RegionPlan.GENERATOR_VERSION y WorldChunk.FORMAT_VERSION
 ## (combined_generator_version), así que invalida la caché. Cabe en 16 bits.
-const VERSION: int = 3
+const VERSION: int = 4
 
 const SIZE: int = WorldCoords.CHUNK
 const LAST: int = SIZE - 1
@@ -241,6 +242,33 @@ const SALT_FRUIT: int = 154
 const SALT_DECOR: int = 155
 const SALT_SMALL: int = 156
 const SALT_VILLA: int = 157
+const SALT_SICABI: int = 159
+const SALT_REFUGE_EXTRA: int = 160
+
+## Fuentes de los afluentes (mundo-2.md §4): huella de `size` casillas (la central es agua y
+## bloquea), claro de `clearing` casillas alrededor. Bloque "springs" de la región.
+const DEFAULT_SPRINGS: Dictionary = {"size": 3, "clearing": 4}
+## Lado por donde sale el río de la fuente (bits 1-2 de su `variant`): este, sur, oeste, norte.
+const SPRING_EXITS: Array[Vector2i] = [Vector2i.RIGHT, Vector2i.DOWN, Vector2i.LEFT, Vector2i.UP]
+## Garantía de refugios (mundo-2.md §3): ninguna casilla que se pisa a más de walk_limit pasos de
+## un refugio; cada puerta de un chunk "de confianza" (con refugio del reparto o villa) a ≤
+## door_reach pasos de su refugio. Bloque "refuges" de la región.
+const DEFAULT_REFUGE_WALK: Dictionary = {"walk_limit": 300, "door_reach": 105}
+## Margen (pasos) que deja el refugio del reparto bajo door_reach para lo que bloquean después los
+## objetos pequeños.
+const REFUGE_SLACK: int = 10
+## Refugios extra que se prueban como mucho por chunk.
+const REFUGE_EXTRA_MAX: int = 6
+## Recargo (pasos) de un refugio extra lejos de un sendero frente a uno junto a él.
+const REFUGE_OFF_TRAIL: int = 40
+## Entrada de sicabi: casillas mínimas al borde del chunk y candidatos que se prueban.
+const SICABI_BORDER: int = 10
+const SICABI_TRIES: int = 60
+## Variantes de SICABI_GATE (bit 0 de `variant`; el volteo va en el bit 1).
+const SICABI_FOREST: int = 0
+const SICABI_CLIFF: int = 1
+## Objetos que cuentan como árbol vecino al quitar árboles (igual que test_no_lone_trees).
+const LONE_COUNTS: int = (1 << WorldChunk.ObjectKind.TREE) | (1 << WorldChunk.ObjectKind.TREE_DEAD) 		| (1 << WorldChunk.ObjectKind.FRUIT_TREE) | (1 << WorldChunk.ObjectKind.REFUGE_TREE) 		| (1 << WorldChunk.ObjectKind.TREE_BIG)
 
 ## Decoración, variantes y objetos pequeños por defecto (paso 6); la región los cambia con su
 ## bloque "chunk_decor".
@@ -287,7 +315,7 @@ const HUERTO_CHANCE: float = 0.6
 const STREET_MAX: int = 24
 ## Tipos de objeto con los que se interactúa (accesibilidad): letrero, frutal, refugios, casa,
 ## Nujio y la tarca.
-const INTERACTIVE: int = (1 << WorldChunk.ObjectKind.SIGN) | (1 << WorldChunk.ObjectKind.FRUIT_TREE) 		| (1 << WorldChunk.ObjectKind.REFUGE_TREE) | (1 << WorldChunk.ObjectKind.CAVE) 		| (1 << WorldChunk.ObjectKind.HOUSE) | (1 << WorldChunk.ObjectKind.NUJIO) 		| (1 << WorldChunk.ObjectKind.LANDMARK)
+const INTERACTIVE: int = (1 << WorldChunk.ObjectKind.SIGN) | (1 << WorldChunk.ObjectKind.FRUIT_TREE) 		| (1 << WorldChunk.ObjectKind.REFUGE_TREE) | (1 << WorldChunk.ObjectKind.CAVE) 		| (1 << WorldChunk.ObjectKind.HOUSE) | (1 << WorldChunk.ObjectKind.NUJIO) 		| (1 << WorldChunk.ObjectKind.LANDMARK) | (1 << WorldChunk.ObjectKind.SPRING) 		| (1 << WorldChunk.ObjectKind.SICABI_GATE)
 const TREE_KINDS: int = (1 << WorldChunk.ObjectKind.TREE) | (1 << WorldChunk.ObjectKind.TREE_YOUNG) 		| (1 << WorldChunk.ObjectKind.TREE_BIG) | (1 << WorldChunk.ObjectKind.TREE_DEAD) 		| (1 << WorldChunk.ObjectKind.FRUIT_TREE) | (1 << WorldChunk.ObjectKind.REFUGE_TREE)
 ## Suelos de sendero (para el refugio y los letreros) y suelos donde va la decoración.
 const TRAIL_GROUND: int = (1 << WorldChunk.Ground.PATH) | (1 << WorldChunk.Ground.ROAD) 		| (1 << WorldChunk.Ground.BRIDGE)
@@ -350,9 +378,14 @@ static func inaccessible(chunk: WorldChunk) -> Array[String]:
 				for y: int in range(cell.y, cell.y + size.y):
 					for x: int in range(cell.x, cell.x + size.x):
 						cells.append(Vector2i(x, y))
-			WorldChunk.ObjectKind.CAVE:
+			WorldChunk.ObjectKind.CAVE, WorldChunk.ObjectKind.SICABI_GATE:
 				for x: int in range(cell.x, cell.x + size.x):
 					cells.append(Vector2i(x, cell.y + size.y - 1))
+			WorldChunk.ObjectKind.SPRING:
+				for y: int in range(cell.y, cell.y + size.y):
+					for x: int in range(cell.x, cell.x + size.x):
+						if x != cell.x + size.x / 2 or y != cell.y + size.y / 2:
+							cells.append(Vector2i(x, y))
 			WorldChunk.ObjectKind.HOUSE:
 				for x: int in range(cell.x, cell.x + size.x):
 					cells.append(Vector2i(x, cell.y + size.y))
@@ -456,6 +489,10 @@ class _Build:
 	var shape: int = 0
 	var decor_params: Dictionary = {}
 	var near_trail := PackedByteArray() # 1 = a ≤ REFUGE_TRAIL_REACH casillas de un sendero
+	# Refugio del reparto: pasos desde cada puerta (uno por puerta) y tope de la puntuación.
+	var door_dists: Array[PackedInt32Array] = []
+	var refuge_target: int = 1 << 20
+	var refuge_strict: bool = true
 	var _t: int = 0 # última marca del perfil (µs)
 
 	func _init(p: RegionPlan, c: Vector2i) -> void:
@@ -505,10 +542,14 @@ class _Build:
 		_flood_blocked()
 		_lap("flood_blocked")
 		_place_refuge()
+		_place_sicabi()
+		_lap("refuge_sicabi")
 		_place_fruit()
-		_lap("refuge_fruit")
+		_lap("fruit")
 		_place_small()
 		_lap("place_small")
+		_ensure_refuges()
+		_lap("ensure_refuges")
 		_paint_grass()
 		_lap("paint_grass")
 		_place_decor()
@@ -675,6 +716,8 @@ class _Build:
 			elif p.type == "tarca":
 				var a := Vector2i(clampi(local.x, 0, MACROS - 1), clampi(local.y - 1, 0, MACROS - 2))
 				_add_point(WorldChunk.PointKind.PLACE, a, Vector2i(1, 2), true)
+			elif p.type == "manantial":
+				_add_spring_point(Vector2i(clampi(local.x, 0, MACROS - 1), clampi(local.y, 0, MACROS - 1)))
 			else:
 				_add_point(WorldChunk.PointKind.PLACE, Vector2i(clampi(local.x, 0, MACROS - 1),
 						clampi(local.y, 0, MACROS - 1)), Vector2i.ONE, true)
@@ -796,6 +839,40 @@ class _Build:
 				if m_peak[k] == 1 or m_water[k] != RegionAuthoring.Water.NONE or m_level[k] != base:
 					return false
 		return true
+
+	## Fuente de un afluente (lugar `manantial`): punto PLACE de una celda gruesa cuyo nodo de
+	## sendero va en la celda vecina más seca y del mismo nivel, del lado contrario al río (el río
+	## sale por `exit`, el lado de la celda con agua). La huella 3×3 se busca en _shape_points.
+	func _add_spring_point(a: Vector2i) -> void:
+		var origin: Vector2i = coord * MACROS
+		var exit: int = 0
+		for e: int in SPRING_EXITS.size():
+			if plan.water_at(origin + a + SPRING_EXITS[e]) != RegionAuthoring.Water.NONE:
+				exit = e
+				break
+		var level: int = m_level[_mk(a.x, a.y)]
+		var best := Vector2i(-1, -1)
+		var best_score: int = 1 << 20
+		for k: int in 4:
+			# Primero el lado opuesto al río, luego los dos de los lados y por último el del río.
+			var e: int = (exit + [2, 1, 3, 0][k]) % 4
+			var m: Vector2i = a + SPRING_EXITS[e]
+			if m.x < 0 or m.y < 0 or m.x >= MACROS or m.y >= MACROS:
+				continue
+			var mk: int = _mk(m.x, m.y)
+			if m_peak[mk] == 1 or m_water[mk] != RegionAuthoring.Water.NONE:
+				continue
+			var score: int = k + (8 if m_level[mk] != level else 0)
+			if score < best_score:
+				best_score = score
+				best = m
+		if best.x < 0:
+			best = (a + Vector2i.DOWN).clamp(Vector2i.ZERO, Vector2i(MACROS - 1, MACROS - 1))
+		_add_point(WorldChunk.PointKind.PLACE, a, Vector2i.ONE, true)
+		var p: Dictionary = points[points.size() - 1]
+		p.spring = true
+		p.exit = exit
+		p.node = ChunkBuilder.lane_cell(best)
 
 	## Registra el punto y su nodo de sendero; la colina sube su huella un nivel.
 	func _add_point(kind: int, a: Vector2i, size: Vector2i, csv: bool) -> void:
@@ -969,14 +1046,81 @@ class _Build:
 				WorldChunk.PointKind.MEADOW:
 					_mark(no_tree, foot)
 				WorldChunk.PointKind.PLACE:
-					_mark(no_tree, foot.grow(2).intersection(Rect2i(0, 0, SIZE, SIZE)))
-					_clearing_blob(p.center, 3.5)
+					if p.get("spring", false) and _shape_spring(p):
+						foot = p.foot
+					else:
+						_mark(no_tree, foot.grow(2).intersection(Rect2i(0, 0, SIZE, SIZE)))
+						_clearing_blob(p.center, 3.5)
 					if size.y > 1:
 						_mark(solid, Rect2i(a * MACRO + Vector2i(1, 1), Vector2i(2, 2)))
 			var node: Vector2i = p.node
 			_mark(keep, Rect2i(node - Vector2i.ONE, Vector2i(3, 3)))
 			nodes.append({"tile": node, "macro": WorldCoords.floor_div_v(node, MACRO), "road": false, "door": {}})
 			chunk.points.append({"kind": p.kind, "rect": foot, "cell": node})
+
+	## Huella de la fuente: `size`×`size` casillas sin risco dentro de su celda gruesa (o cerca),
+	## pegada al lado del río. La casilla central pasa a agua (bloquea) y las demás a claro (rocas
+	## que se pisan, las dibuja el objeto SPRING); alrededor, claro de `clearing` casillas sin
+	## objetos. La huella queda reservada (`solid`): ni senderos ni reparaciones pasan por encima.
+	## false si no hay sitio (queda como un lugar normal).
+	func _shape_spring(p: Dictionary) -> bool:
+		var params: Dictionary = DEFAULT_SPRINGS.merged(plan.region_params.get("springs", {}), true)
+		var n: int = maxi(int(params.size), 1)
+		var exit: Vector2i = SPRING_EXITS[int(p.exit)]
+		var base: Vector2i = (p.a as Vector2i) * MACRO
+		# Posición ideal: pegada al lado del río dentro de la celda gruesa.
+		var ideal := Vector2i((MACRO - n) if exit.x > 0 else 0, (MACRO - n) if exit.y > 0 else 0)
+		if exit.x == 0:
+			ideal.x = (MACRO - n) / 2
+		if exit.y == 0:
+			ideal.y = (MACRO - n) / 2
+		ideal += base
+		var best := Vector2i(-1, -1)
+		var best_d: int = 1 << 20
+		for dy: int in range(-MACRO, MACRO + 1):
+			for dx: int in range(-MACRO, MACRO + 1):
+				var at: Vector2i = ideal + Vector2i(dx, dy)
+				var d: int = dx * dx + dy * dy
+				if d >= best_d or not _spring_fits(Rect2i(at, Vector2i(n, n)), p.node):
+					continue
+				best_d = d
+				best = at
+		if best.x < 0:
+			return false
+		var foot := Rect2i(best, Vector2i(n, n))
+		var clear: Rect2i = foot.grow(int(params.clearing)).intersection(Rect2i(0, 0, SIZE, SIZE))
+		_mark(no_tree, clear)
+		_mark(keep, clear)
+		for y: int in range(clear.position.y, clear.end.y):
+			for x: int in range(clear.position.x, clear.end.x):
+				var i: int = y * SIZE + x
+				if chunk.cliff[i] == WorldChunk.Cliff.NONE and (NATURAL_GROUND >> chunk.ground[i]) & 1 == 1:
+					chunk.ground[i] = WorldChunk.Ground.CLEARING
+		var mid: Vector2i = foot.position + Vector2i(n / 2, n / 2)
+		for y: int in range(foot.position.y, foot.end.y):
+			for x: int in range(foot.position.x, foot.end.x):
+				chunk.ground[y * SIZE + x] = WorldChunk.Ground.RIVER_NARROW if Vector2i(x, y) == mid else WorldChunk.Ground.CLEARING
+		_mark(solid, foot)
+		p.foot = foot
+		return true
+
+	## La huella cabe: dentro del chunk, sin riscos, de un solo nivel y sin el nodo de su sendero.
+	func _spring_fits(r: Rect2i, node: Vector2i) -> bool:
+		if r.position.x < 1 or r.position.y < 1 or r.end.x > LAST or r.end.y > LAST:
+			return false
+		if r.grow(1).intersects(Rect2i(node - Vector2i.ONE, Vector2i(3, 3))):
+			return false
+		var level: int = -1
+		for y: int in range(r.position.y, r.end.y):
+			for x: int in range(r.position.x, r.end.x):
+				var i: int = y * SIZE + x
+				if chunk.cliff[i] != WorldChunk.Cliff.NONE or solid[i] == 1 or keep[i] == 1:
+					return false
+				if level < 0:
+					level = chunk.level[i]
+				elif chunk.level[i] != level:
+					return false
+		return true
 
 	## Claro irregular (radio que ondula con el ángulo) alrededor de `center`.
 	func _clearing_blob(center: Vector2i, radius: float) -> void:
@@ -1248,6 +1392,12 @@ class _Build:
 					_weigh(Rect2i(a, size), WEIGHT_GROVE)
 				WorldChunk.PointKind.LANDMARK_TREE:
 					g_solid[mid.y * MACROS + mid.x] = 1
+				WorldChunk.PointKind.PLACE:
+					if p.has("foot"):
+						var f: Rect2i = p.foot
+						for my: int in range(f.position.y / MACRO, (f.end.y - 1) / MACRO + 1):
+							for mx: int in range(f.position.x / MACRO, (f.end.x - 1) / MACRO + 1):
+								g_solid[my * MACROS + mx] = 1
 		for node: Dictionary in nodes:
 			var m: Vector2i = node.macro
 			var k: int = m.y * MACROS + m.x
@@ -1611,6 +1761,10 @@ class _Build:
 				WorldChunk.PointKind.PLACE:
 					if size.y > 1:
 						chunk.add_object(WorldChunk.ObjectKind.LANDMARK, a * MACRO + Vector2i(1, 1), Vector2i(2, 2))
+					if p.has("foot"):
+						var f: Rect2i = p.foot
+						chunk.add_object(WorldChunk.ObjectKind.SPRING, f.position, f.size,
+								_flip_at(f.position) | (int(p.exit) << 1))
 		_place_signs()
 		_place_rocks()
 		_place_forest()
@@ -2240,11 +2394,77 @@ class _Build:
 		refuge_rng.seed = ChunkGenerator.hash_ints([plan.plan_seed, coord.x, coord.y, SALT_REFUGE])
 		_compute_near_trail()
 		var nujio: bool = chunk.nujio_rect.size.x > 0
-		if _place_cave(nujio, refuge_rng) or _hollow_existing(nujio, refuge_rng) \
-				or _hollow_new(nujio, true, refuge_rng) or _hollow_new(nujio, false, refuge_rng) \
-				or _hollow_new(false, false, refuge_rng):
+		# Garantía de refugios: este chunk es "de confianza", así que el refugio se busca a ≤
+		# door_reach (con margen para los objetos pequeños) de cada puerta. Primero entre los que lo
+		# cumplen (al azar, por orden de preferencia); si ninguno, el que mejor queda de cada tipo.
+		var walk: Dictionary = DEFAULT_REFUGE_WALK.merged(plan.region_params.get("refuges", {}), true)
+		door_dists.clear()
+		if int(walk.walk_limit) > 0:
+			refuge_target = int(walk.door_reach) - REFUGE_SLACK
+			for side: Vector2i in WorldChunk.SIDES:
+				if not plan.has_door(coord, side):
+					continue
+				var door: Dictionary = plan.door(coord, side)
+				var along: Vector2i = Vector2i.DOWN if side.x != 0 else Vector2i.RIGHT
+				var cells := PackedInt32Array()
+				for k: int in int(door.width):
+					var i: int = WorldCoords.cell_index((door.cell as Vector2i) + along * k)
+					if chunk.blocked[i] == 0 and reached[i] == 1:
+						cells.append(i)
+				if not cells.is_empty():
+					door_dists.append(_walk_bfs(cells))
+		for strict: bool in [true, false]:
+			refuge_strict = strict
+			if _place_cave(nujio, refuge_rng) or _hollow_existing(nujio, refuge_rng) \
+					or _hollow_new(nujio, true, refuge_rng) or _hollow_new(nujio, false, refuge_rng):
+				return
+			if door_dists.is_empty():
+				break
+		# Último recurso, sin las reglas del sendero ni del Nujio.
+		refuge_strict = false
+		if _hollow_new(false, false, refuge_rng):
 			return
 		push_warning("ChunkBuilder: chunk %s sin sitio para su refugio" % coord)
+
+	## Peor distancia (pasos) de una puerta del chunk a la casilla más cercana de `cells`.
+	func _door_score(cells: PackedInt32Array) -> int:
+		var worst: int = 0
+		for dd: PackedInt32Array in door_dists:
+			var best: int = 1 << 20
+			for c: int in cells:
+				var v: int = dd[c]
+				if v >= 0 and v < best:
+					best = v
+			worst = maxi(worst, best)
+		return worst
+
+	## Candidato elegido: al azar entre los de puntuación ≤ refuge_target; en la pasada sin
+	## exigencia, el de menor puntuación (el primero si empatan). -1 si no hay.
+	func _pick_refuge(scores: PackedInt32Array, r: RandomNumberGenerator) -> int:
+		if scores.is_empty():
+			return -1
+		if door_dists.is_empty():
+			return r.randi() % scores.size()
+		var ok := PackedInt32Array()
+		var best: int = -1
+		for k: int in scores.size():
+			if scores[k] <= refuge_target:
+				ok.append(k)
+			if best < 0 or scores[k] < scores[best]:
+				best = k
+		if not ok.is_empty():
+			return ok[r.randi() % ok.size()]
+		return -1 if refuge_strict else best
+
+	## Vecinas de un objeto 2×2 (sin esquinas), dentro del chunk.
+	func _ring2(cell: Vector2i) -> PackedInt32Array:
+		var out := PackedInt32Array()
+		for e: int in 8:
+			var x: int = cell.x + (e & 1) if e < 4 else cell.x + (-1 if e < 6 else 2)
+			var y: int = (cell.y - 1 if e < 2 else cell.y + 2) if e < 4 else cell.y + (e & 1)
+			if x >= 0 and y >= 0 and x <= LAST and y <= LAST:
+				out.append(y * SIZE + x)
+		return out
 
 	## Cueva: 2 columnas de la base de una cara (con cara a los dos lados, para que la boca no dé a
 	## otro nivel), sobre suelo seco, con la casilla de debajo del mismo nivel y alcanzable. La
@@ -2275,9 +2495,13 @@ class _Build:
 				if not _rect_near(Rect2i(x, y, 2, 1), nujio):
 					continue
 				cands.append(i)
-		if cands.is_empty():
+		var scores := PackedInt32Array()
+		for i: int in cands:
+			scores.append(_door_score(PackedInt32Array([i + SIZE, i + SIZE + 1])) + 1 if not door_dists.is_empty() else 0)
+		var pick: int = _pick_refuge(scores, r)
+		if pick < 0:
 			return false
-		var at: int = cands[r.randi() % cands.size()]
+		var at: int = cands[pick]
 		var rows: int = _len(at)
 		for c: int in [at, at + 1]:
 			chunk.cliff[c] = WorldChunk.Cliff.NONE
@@ -2302,9 +2526,13 @@ class _Build:
 			if access >= 0:
 				(tiers[access] as Array).append(k)
 		for tier: Array in tiers:
-			if tier.is_empty():
+			var scores := PackedInt32Array()
+			for k: int in tier:
+				scores.append(_door_score(_ring2(chunk.objects[k].cell)) + 1 if not door_dists.is_empty() else 0)
+			var pick: int = _pick_refuge(scores, r)
+			if pick < 0:
 				continue
-			var k: int = tier[r.randi() % tier.size()]
+			var k: int = tier[pick]
 			var obj: Dictionary = chunk.objects[k]
 			obj.kind = WorldChunk.ObjectKind.REFUGE_TREE
 			obj.variant = (int(obj.variant) >> 2) & 1
@@ -2337,9 +2565,14 @@ class _Build:
 				if _access(rect.position, rect.size, TRAIL_GROUND) < 0:
 					continue
 				cands.append(rect.position)
-		if cands.is_empty():
+		var scores := PackedInt32Array()
+		for c: Vector2i in cands:
+			var i: int = c.y * SIZE + c.x
+			scores.append(_door_score(PackedInt32Array([i, i + 1, i + SIZE, i + SIZE + 1])) if not door_dists.is_empty() else 0)
+		var pick: int = _pick_refuge(scores, r)
+		if pick < 0:
 			return false
-		var cell: Vector2i = cands[r.randi() % cands.size()]
+		var cell: Vector2i = cands[pick]
 		chunk.add_object(WorldChunk.ObjectKind.REFUGE_TREE, cell, Vector2i(2, 2), _flip_at(cell))
 		return true
 
@@ -2688,3 +2921,520 @@ class _Build:
 			k = child
 		heap[k] = last
 		return top
+
+	# --- Entrada de sicabi ------------------------------------------------------------------------
+
+	## Entrada de la sicabi del plan (lugares-e-interiores.md, "Cómo se encuentran en el mundo"):
+	## objeto SICABI_GATE de 2×2 cuya fila de abajo es la boca (se pisa) y la de arriba bloquea.
+	## - Bosque tupido: sustituye a un árbol 2×2 del bosque (arco de raíces) si, con el paso ya
+	##   abierto, al menos forest_ratio de las casillas a ≤ forest_radius tienen árbol.
+	## - Risco: en la base de una cara cuya meseta tiene nivel ≥ cliff_min_level, como la cueva
+	##   (la boca pasa a Cliff.NONE). El refugio ya está puesto, así que nunca le quita el sitio.
+	## A ≥ min_road_distance de un camino de 3 y ≥ min_path_distance de un sendero, a ≥ SICABI_BORDER
+	## del borde, sin sendero propio y con un paso libre de 2 casillas (celdas de la rejilla de
+	## árboles) desde la boca hasta una casilla de sendero: se quitan los árboles del paso y los que
+	## quedarían sueltos. Sin sitio, el chunk se queda sin entrada (la sicabi no se fuerza).
+	func _place_sicabi() -> void:
+		var info: Dictionary = plan.sicabi_in_chunk(coord)
+		if info.is_empty():
+			return
+		var params: Dictionary = plan.sicabi_params()
+		var srng := RandomNumberGenerator.new()
+		srng.seed = ChunkGenerator.hash_ints([plan.plan_seed, coord.x, coord.y, SALT_SICABI])
+		var road_near: PackedByteArray = _near_mask(ROAD_W, int(params.min_road_distance) - 1)
+		var path_near: PackedByteArray = _near_mask(1, int(params.min_path_distance) - 1)
+		var lo: int = SICABI_BORDER
+		var hi: int = SIZE - SICABI_BORDER - 2
+		var cands: Array[Vector3i] = [] # x, y (esquina sup. izq.), variante
+		for obj: Dictionary in chunk.objects:
+			var cell: Vector2i = obj.cell
+			if obj.kind == WorldChunk.ObjectKind.TREE and cell.x >= lo and cell.y >= lo and cell.x <= hi and cell.y <= hi:
+				cands.append(Vector3i(cell.x, cell.y, SICABI_FOREST))
+		var min_level: int = int(params.cliff_min_level)
+		var face: int = WorldChunk.Cliff.FACE
+		for y: int in range(lo + (lo & 1), hi + 1, 2):
+			for x: int in range(lo + (lo & 1), hi + 1, 2):
+				var m: int = (y + 1) * SIZE + x # boca (fila de abajo)
+				if chunk.cliff[m] != face or chunk.cliff[m + 1] != face or chunk.cliff[m - 1] != face or chunk.cliff[m + 2] != face:
+					continue
+				var aux: int = _aux(m)
+				if aux != _len(m) - 1 or aux < 1 or _aux(m - 1) != aux or _aux(m + 1) != aux or _aux(m + 2) != aux:
+					continue
+				if chunk.level[m] + _len(m) / FACE_ROWS_PER_LEVEL < min_level:
+					continue
+				if chunk.occupant[m] != WorldChunk.NO_OBJECT or chunk.occupant[m + 1] != WorldChunk.NO_OBJECT \
+						or chunk.occupant[m - SIZE] != WorldChunk.NO_OBJECT or chunk.occupant[m - SIZE + 1] != WorldChunk.NO_OBJECT:
+					continue
+				cands.append(Vector3i(x, y, SICABI_CLIFF))
+		# Bosque tupido antes de abrir el paso (tabla de sumas de las casillas con árbol): descarta
+		# deprisa lo que nunca llegará a forest_ratio.
+		var radius: int = int(params.forest_radius)
+		var ratio: float = float(params.forest_ratio)
+		var sat := PackedInt32Array()
+		sat.resize((SIZE + 1) * (SIZE + 1))
+		for y: int in SIZE:
+			var run: int = 0
+			for x: int in SIZE:
+				var o: int = chunk.occupant[y * SIZE + x]
+				if o != WorldChunk.NO_OBJECT and (LONE_COUNTS >> int(chunk.objects[o].kind)) & 1 == 1:
+					run += 1
+				sat[(y + 1) * (SIZE + 1) + x + 1] = sat[y * (SIZE + 1) + x + 1] + run
+		var kept: Array[Vector3i] = []
+		for c: Vector3i in cands:
+			if c.z == SICABI_FOREST:
+				var r: Rect2i = Rect2i(c.x, c.y, 2, 2).grow(radius).intersection(Rect2i(0, 0, SIZE, SIZE))
+				var w1: int = SIZE + 1
+				var trees: int = sat[r.end.y * w1 + r.end.x] - sat[r.position.y * w1 + r.end.x] 						- sat[r.end.y * w1 + r.position.x] + sat[r.position.y * w1 + r.position.x] - 4
+				if float(trees) / float(maxi(r.get_area() - 4, 1)) < ratio:
+					continue
+			var ok: bool = true
+			for k: int in 4:
+				var i: int = (c.y + (k >> 1)) * SIZE + c.x + (k & 1)
+				if road_near[i] == 1 or path_near[i] == 1 or solid[i] == 1 or keep[i] == 1:
+					ok = false
+					break
+			if ok:
+				kept.append(c)
+		if kept.is_empty():
+			return
+		for i: int in range(kept.size() - 1, 0, -1):
+			var j: int = srng.randi_range(0, i)
+			var tmp: Vector3i = kept[i]
+			kept[i] = kept[j]
+			kept[j] = tmp
+		if info.has("macro"):
+			# La del CSV: lo más cerca posible de la celda que pintó el dueño.
+			var target: Vector2i = ((info.macro as Vector2i) - coord * MACROS) * MACRO + Vector2i(MACRO / 2, MACRO / 2)
+			kept.sort_custom(func(a: Vector3i, b: Vector3i) -> bool:
+				return (Vector2i(a.x, a.y) - target).length_squared() < (Vector2i(b.x, b.y) - target).length_squared())
+		for t: int in mini(kept.size(), SICABI_TRIES):
+			if _try_gate(kept[t], params, String(info.id), srng):
+				return
+
+	## Casillas a ≤ r (Chebyshev) de una casilla con `path` ≥ min_width (r < 0: ninguna).
+	func _near_mask(min_width: int, r: int) -> PackedByteArray:
+		var out := PackedByteArray()
+		out.resize(WorldChunk.CELLS)
+		if r < 0:
+			return out
+		var rows := PackedInt32Array()
+		rows.resize(WorldChunk.CELLS)
+		for y: int in SIZE:
+			var base: int = y * SIZE
+			var count: int = 0
+			for x: int in range(0, mini(r + 1, SIZE)):
+				count += 1 if path[base + x] >= min_width else 0
+			for x: int in SIZE:
+				rows[base + x] = count
+				if x + r + 1 < SIZE and path[base + x + r + 1] >= min_width:
+					count += 1
+				if x - r >= 0 and path[base + x - r] >= min_width:
+					count -= 1
+		for x: int in SIZE:
+			var count: int = 0
+			for y: int in range(0, mini(r + 1, SIZE)):
+				count += rows[y * SIZE + x]
+			for y: int in SIZE:
+				out[y * SIZE + x] = 1 if count > 0 else 0
+				if y + r + 1 < SIZE:
+					count += rows[(y + r + 1) * SIZE + x]
+				if y - r >= 0:
+					count -= rows[(y - r) * SIZE + x]
+		return out
+
+	## Árbol 2×2 (TREE o TREE_DEAD) que llena justo la celda `g` de la rejilla, o -1.
+	func _grid_tree(g: int) -> int:
+		var i: int = (g / GRID) * 2 * SIZE + (g % GRID) * 2
+		var o: int = chunk.occupant[i]
+		if o == WorldChunk.NO_OBJECT:
+			return -1
+		var obj: Dictionary = chunk.objects[o]
+		if (obj.kind == WorldChunk.ObjectKind.TREE or obj.kind == WorldChunk.ObjectKind.TREE_DEAD) \
+				and obj.cell == Vector2i((g % GRID) * 2, (g / GRID) * 2):
+			return o
+		return -1
+
+	## 0 = la celda de la rejilla se pisa entera; 1 = se pisa quitando su árbol; -1 = no se puede.
+	func _grid_pass(g: int) -> int:
+		var i: int = (g / GRID) * 2 * SIZE + (g % GRID) * 2
+		var open: bool = true
+		for k: int in 4:
+			var c: int = i + (k & 1) + (k >> 1) * SIZE
+			if solid[c] == 1:
+				return -1
+			if chunk.blocked[c] == 1:
+				open = false
+		if open:
+			return 0
+		var tree: int = _grid_tree(g)
+		if tree < 0:
+			return -1
+		for k: int in 4:
+			var c: int = i + (k & 1) + (k >> 1) * SIZE
+			if chunk.cliff[c] != WorldChunk.Cliff.NONE or (WorldChunk.GROUND_BLOCKING >> chunk.ground[c]) & 1 == 1:
+				return -1
+		return 1
+
+	## Prueba la entrada en `c`: paso libre, árboles sueltos y bosque tupido. true si la pone.
+	func _try_gate(c: Vector3i, params: Dictionary, id: String, srng: RandomNumberGenerator) -> bool:
+		var gate_g: int = (c.y / 2) * GRID + c.x / 2
+		var start: int = gate_g + GRID
+		if start >= GRID * GRID:
+			return false
+		# Dijkstra en la rejilla (pisar 1, quitar un árbol 3) hasta una celda que se pisa entera, con
+		# sendero y alcanzable desde el hub.
+		var n: int = GRID * GRID
+		var gd := PackedInt32Array()
+		gd.resize(n)
+		gd.fill(-1)
+		var gprev := PackedInt32Array()
+		gprev.resize(n)
+		gprev.fill(-1)
+		var gpass := PackedInt32Array()
+		gpass.resize(n)
+		gpass.fill(-2)
+		if _grid_pass_cached(gpass, start) < 0:
+			return false
+		var buckets: Array = [[start]] # Array de Array: un PackedInt32Array dentro se copiaría al añadir
+		gd[start] = 0
+		var goal: int = -1
+		var d: int = 0
+		while d < buckets.size() and goal < 0:
+			var bucket: Array = buckets[d]
+			var k: int = 0
+			while k < bucket.size():
+				var g: int = bucket[k]
+				k += 1
+				if gd[g] != d:
+					continue
+				if gpass[g] == 0 and _grid_on_trail(g):
+					goal = g
+					break
+				var gx: int = g % GRID
+				for nb: int in [g - GRID if g >= GRID else -1, g + GRID if g < n - GRID else -1,
+						g - 1 if gx > 0 else -1, g + 1 if gx < GRID - 1 else -1]:
+					if nb < 0 or nb == gate_g:
+						continue
+					var pv: int = _grid_pass_cached(gpass, nb)
+					if pv < 0:
+						continue
+					var nd: int = d + (3 if pv == 1 else 1)
+					if gd[nb] >= 0 and gd[nb] <= nd:
+						continue
+					gd[nb] = nd
+					gprev[nb] = g
+					while buckets.size() <= nd:
+						buckets.append([])
+					(buckets[nd] as Array).append(nb)
+			d += 1
+		if goal < 0:
+			return false
+		var corridor := PackedInt32Array()
+		var removed: Dictionary = {} # índice de objeto -> true
+		var g2: int = goal
+		while g2 >= 0:
+			corridor.append(g2)
+			if gpass[g2] == 1:
+				removed[_grid_tree(g2)] = true
+			g2 = gprev[g2]
+		var gate_tree: int = -1
+		if c.z == SICABI_FOREST:
+			gate_tree = _grid_tree(gate_g)
+			if gate_tree < 0:
+				return false
+			removed[gate_tree] = true
+		_prune_lone(removed)
+		if c.z == SICABI_FOREST and _forest_ratio(Rect2i(c.x, c.y, 2, 2), int(params.forest_radius), removed) < float(params.forest_ratio):
+			return false
+		# Se pone: fuera los árboles del paso (de mayor a menor índice), la entrada y el paso reservado.
+		var order: Array = removed.keys()
+		order.sort()
+		for k: int in range(order.size() - 1, -1, -1):
+			chunk.remove_object(int(order[k]))
+		if c.z == SICABI_CLIFF:
+			for x: int in [c.x, c.x + 1]:
+				var m: int = (c.y + 1) * SIZE + x
+				chunk.cliff[m] = WorldChunk.Cliff.NONE
+				chunk.variant[m] = 0
+				if m + SIZE < WorldChunk.CELLS and chunk.decor[m + SIZE] == Decor.SHADOW_FOOT:
+					chunk.decor[m + SIZE] = Decor.NONE
+		var variant: int = c.z | ((srng.randi() & 1) << 1)
+		chunk.add_object(WorldChunk.ObjectKind.SICABI_GATE, Vector2i(c.x, c.y), Vector2i(2, 2), variant)
+		chunk.sicabi = {"id": id, "cell": Vector2i(c.x, c.y + 1), "variant": c.z}
+		for g: int in corridor:
+			var i: int = (g / GRID) * 2 * SIZE + (g % GRID) * 2
+			_mark(keep, Rect2i(i % SIZE, i / SIZE, 2, 2))
+		chunk.rebuild_blocked()
+		_flood_blocked()
+		return true
+
+	func _grid_pass_cached(gpass: PackedInt32Array, g: int) -> int:
+		if gpass[g] == -2:
+			gpass[g] = _grid_pass(g)
+		return gpass[g]
+
+	## La celda de la rejilla tiene una casilla de sendero alcanzable desde el hub.
+	func _grid_on_trail(g: int) -> bool:
+		var i: int = (g / GRID) * 2 * SIZE + (g % GRID) * 2
+		for k: int in 4:
+			var c: int = i + (k & 1) + (k >> 1) * SIZE
+			if path[c] > 0 and reached[c] == 1:
+				return true
+		return false
+
+	## Árbol del bosque de la celda `g` (para contar vecinos, como test_no_lone_trees), o -1.
+	func _grid_forest(g: int) -> int:
+		var o: int = chunk.occupant[(g / GRID) * 2 * SIZE + (g % GRID) * 2]
+		if o == WorldChunk.NO_OBJECT:
+			return -1
+		var kind: int = chunk.objects[o].kind
+		return o if (LONE_COUNTS >> kind) & 1 == 1 else -1
+
+	## Añade a `removed` los árboles 2×2 (TREE) que se quedarían con menos de forest_min_neighbours
+	## árboles alrededor al quitar los de `removed`, hasta que no quede ninguno suelto.
+	func _prune_lone(removed: Dictionary) -> void:
+		var params: Dictionary = DEFAULT_SHAPES.merged(plan.region_params.get("chunk_shapes", {}), true)
+		var min_n: int = int(params.forest_min_neighbours)
+		var queue: Array = removed.keys()
+		var head: int = 0
+		while head < queue.size():
+			var o: int = queue[head]
+			head += 1
+			var cell: Vector2i = chunk.objects[o].cell
+			var g0: int = (cell.y / 2) * GRID + cell.x / 2
+			for dy: int in range(-1, 2):
+				for dx: int in range(-1, 2):
+					var gx: int = g0 % GRID + dx
+					var gy: int = g0 / GRID + dy
+					if (dx == 0 and dy == 0) or gx < 0 or gy < 0 or gx >= GRID or gy >= GRID:
+						continue
+					var t: int = _grid_forest(gy * GRID + gx)
+					if t < 0 or removed.has(t) or chunk.objects[t].kind != WorldChunk.ObjectKind.TREE \
+							or chunk.objects[t].cell != Vector2i(gx * 2, gy * 2):
+						continue
+					var count: int = 0
+					for ey: int in range(-1, 2):
+						for ex: int in range(-1, 2):
+							var hx: int = gx + ex
+							var hy: int = gy + ey
+							if (ex == 0 and ey == 0) or hx < 0 or hy < 0 or hx >= GRID or hy >= GRID:
+								continue
+							var u: int = _grid_forest(hy * GRID + hx)
+							if u >= 0 and not removed.has(u):
+								count += 1
+					if count < min_n:
+						removed[t] = true
+						queue.append(t)
+
+	## Parte de las casillas a ≤ radius (Chebyshev) de `r`, sin contar `r`, que tienen árbol (sin
+	## contar los de `removed`).
+	func _forest_ratio(r: Rect2i, radius: int, removed: Dictionary) -> float:
+		var area: Rect2i = r.grow(radius).intersection(Rect2i(0, 0, SIZE, SIZE))
+		var total: int = 0
+		var trees: int = 0
+		for y: int in range(area.position.y, area.end.y):
+			for x: int in range(area.position.x, area.end.x):
+				if r.has_point(Vector2i(x, y)):
+					continue
+				total += 1
+				var o: int = chunk.occupant[y * SIZE + x]
+				if o != WorldChunk.NO_OBJECT and not removed.has(o) and (LONE_COUNTS >> int(chunk.objects[o].kind)) & 1 == 1:
+					trees += 1
+		return float(trees) / float(maxi(total, 1))
+
+	# --- Refugios garantizados --------------------------------------------------------------------
+
+	## Garantía de mundo-2.md §3 (≤ walk_limit pasos a pie desde cualquier casilla que se pisa hasta un
+	## refugio o la plaza de una villa), por construcción y sin mirar otros chunks:
+	## - Un chunk "de confianza" (refugio del reparto o villa) deja cada casilla de sus puertas a ≤
+	##   door_reach pasos de su propio refugio.
+	## - Cada casilla de un chunk está a ≤ walk_limit de un refugio suyo, o a ≤ walk_limit −
+	##   door_reach − 1 de una puerta hacia un vecino de confianza (y de ahí, ≤ door_reach dentro de él).
+	## Si algo no se cumple, se añade un refugio extra (árbol hueco) cerca de la casilla peor servida y
+	## se vuelve a medir. Va después de los objetos pequeños, los últimos que bloquean.
+	func _ensure_refuges() -> void:
+		var params: Dictionary = DEFAULT_REFUGE_WALK.merged(plan.region_params.get("refuges", {}), true)
+		var limit: int = int(params.walk_limit)
+		var reach: int = int(params.door_reach)
+		if limit <= 0:
+			return
+		var trusted: bool = _trusted(coord)
+		var relay := PackedInt32Array()
+		var own_doors := PackedInt32Array()
+		for side: Vector2i in WorldChunk.SIDES:
+			if not plan.has_door(coord, side):
+				continue
+			var door: Dictionary = plan.door(coord, side)
+			var along: Vector2i = Vector2i.DOWN if side.x != 0 else Vector2i.RIGHT
+			var neighbour_ok: bool = _trusted(coord + side)
+			for k: int in int(door.width):
+				var i: int = WorldCoords.cell_index((door.cell as Vector2i) + along * k)
+				if chunk.blocked[i] == 1 or reached[i] == 0:
+					continue
+				own_doors.append(i)
+				if neighbour_ok:
+					relay.append(i)
+		var via: PackedInt32Array = _walk_bfs(relay)
+		for attempt: int in REFUGE_EXTRA_MAX + 1:
+			var own: PackedInt32Array = _walk_bfs(_shelter_sources())
+			var worst: int = -1
+			var worst_v: int = -1
+			if trusted:
+				for i: int in own_doors:
+					var v: int = own[i] if not own.is_empty() and own[i] >= 0 else 1 << 20
+					if v > reach and v > worst_v:
+						worst_v = v
+						worst = i
+			if worst < 0:
+				var blocked: PackedByteArray = chunk.blocked
+				for i: int in WorldChunk.CELLS:
+					if reached[i] == 0 or blocked[i] == 1:
+						continue
+					var v: int = own[i] if not own.is_empty() and own[i] >= 0 else 1 << 20
+					if not via.is_empty() and via[i] >= 0:
+						v = mini(v, via[i] + reach + 1)
+					if v > limit and v > worst_v:
+						worst_v = v
+						worst = i
+			if worst < 0:
+				return
+			if attempt == REFUGE_EXTRA_MAX or not _extra_refuge(worst):
+				push_warning("ChunkBuilder: chunk %s sin refugio a menos de %d pasos de %s" % [coord, limit, WorldCoords.index_to_cell(worst)])
+				return
+
+	## El chunk tiene refugio del reparto o villa: sus puertas quedan a ≤ door_reach de él.
+	func _trusted(c: Vector2i) -> bool:
+		if c.x < 0 or c.y < 0 or c.x >= plan.size_chunks.x or c.y >= plan.size_chunks.y:
+			return false
+		return plan.has_refuge(c) or not plan.villa_in_chunk(c).is_empty()
+
+	## Casillas donde se está a cubierto: árbol hueco entero, boca de la cueva y plaza de la villa.
+	func _shelter_sources() -> PackedInt32Array:
+		var out := PackedInt32Array()
+		for obj: Dictionary in chunk.objects:
+			var cell: Vector2i = obj.cell
+			if obj.kind == WorldChunk.ObjectKind.REFUGE_TREE:
+				for k: int in 4:
+					out.append((cell.y + (k >> 1)) * SIZE + cell.x + (k & 1))
+			elif obj.kind == WorldChunk.ObjectKind.CAVE:
+				out.append((cell.y + 1) * SIZE + cell.x)
+				out.append((cell.y + 1) * SIZE + cell.x + 1)
+		if chunk.has_villa:
+			var ground: PackedByteArray = chunk.ground
+			for i: int in WorldChunk.CELLS:
+				if ground[i] == WorldChunk.Ground.PLAZA and chunk.blocked[i] == 0:
+					out.append(i)
+		return out
+
+	## Pasos a pie (según `blocked`, dentro del chunk) desde las casillas de `sources`; -1 = no se
+	## llega. Vacío si no hay fuentes.
+	func _walk_bfs(sources: PackedInt32Array) -> PackedInt32Array:
+		var d := PackedInt32Array()
+		if sources.is_empty():
+			return d
+		d.resize(WorldChunk.CELLS)
+		d.fill(-1)
+		var q := PackedInt32Array()
+		q.resize(WorldChunk.CELLS)
+		var blocked: PackedByteArray = chunk.blocked
+		var tail: int = 0
+		for s0: int in sources:
+			if d[s0] < 0 and blocked[s0] == 0:
+				d[s0] = 0
+				q[tail] = s0
+				tail += 1
+		var head: int = 0
+		var last_row: int = WorldChunk.CELLS - SIZE
+		while head < tail:
+			var i: int = q[head]
+			head += 1
+			var nd: int = d[i] + 1
+			var x: int = i % SIZE
+			var n: int = i - 1
+			if x > 0 and d[n] < 0 and blocked[n] == 0:
+				d[n] = nd
+				q[tail] = n
+				tail += 1
+			n = i + 1
+			if x < LAST and d[n] < 0 and blocked[n] == 0:
+				d[n] = nd
+				q[tail] = n
+				tail += 1
+			n = i - SIZE
+			if i >= SIZE and d[n] < 0 and blocked[n] == 0:
+				d[n] = nd
+				q[tail] = n
+				tail += 1
+			n = i + SIZE
+			if i < last_row and d[n] < 0 and blocked[n] == 0:
+				d[n] = nd
+				q[tail] = n
+				tail += 1
+		return d
+
+	## Refugio extra cerca de la casilla `w`: un árbol 2×2 del bosque que se vuelve hueco (desde una
+	## vecina) o un árbol hueco nuevo en suelo libre, el más cercano a pie, con REFUGE_OFF_TRAIL
+	## pasos de recargo si queda a más de REFUGE_TRAIL_REACH de un sendero. false si no hay sitio.
+	func _extra_refuge(w: int) -> bool:
+		if near_trail.is_empty():
+			_compute_near_trail()
+		var dw: PackedInt32Array = _walk_bfs(PackedInt32Array([w]))
+		if dw.is_empty():
+			return false
+		var best_score: int = 1 << 30
+		var best_tree: int = -1
+		var best_cell := Vector2i(-1, -1)
+		for k: int in chunk.objects.size():
+			var obj: Dictionary = chunk.objects[k]
+			if obj.kind != WorldChunk.ObjectKind.TREE:
+				continue
+			var cell: Vector2i = obj.cell
+			var near: int = 1 << 30
+			for e: int in 8:
+				var x: int = cell.x + (e & 1) if e < 4 else cell.x + (-1 if e < 6 else 2)
+				var y: int = (cell.y - 1 if e < 2 else cell.y + 2) if e < 4 else cell.y + (e & 1)
+				if x < 0 or y < 0 or x > LAST or y > LAST:
+					continue
+				var v: int = dw[y * SIZE + x]
+				if v >= 0 and v < near:
+					near = v
+			if near == 1 << 30:
+				continue
+			var score: int = near + 1 + (0 if _rect_near(Rect2i(cell, Vector2i(2, 2)), false) else REFUGE_OFF_TRAIL)
+			if score < best_score:
+				best_score = score
+				best_tree = k
+		for y: int in range(1, LAST - 1):
+			for x: int in range(1, LAST - 1):
+				var i: int = y * SIZE + x
+				var v: int = dw[i]
+				if v < 0 or v >= best_score:
+					continue
+				var ok: bool = true
+				for k: int in 4:
+					var cx: int = x + (k & 1)
+					var cy: int = y + (k >> 1)
+					if dw[cy * SIZE + cx] < 0 or not _free(cx, cy, NATURAL_GROUND):
+						ok = false
+						break
+				if not ok:
+					continue
+				var score: int = v + (0 if _rect_near(Rect2i(x, y, 2, 2), false) else REFUGE_OFF_TRAIL)
+				if score < best_score:
+					best_score = score
+					best_tree = -1
+					best_cell = Vector2i(x, y)
+		if best_cell.x >= 0:
+			chunk.add_object(WorldChunk.ObjectKind.REFUGE_TREE, best_cell, Vector2i(2, 2), _flip_at(best_cell))
+			return true
+		if best_tree < 0:
+			return false
+		var tree: Dictionary = chunk.objects[best_tree]
+		tree.kind = WorldChunk.ObjectKind.REFUGE_TREE
+		tree.variant = (int(tree.variant) >> 2) & 1
+		var tc: Vector2i = tree.cell
+		for y: int in range(tc.y, tc.y + 2):
+			for x: int in range(tc.x, tc.x + 2):
+				chunk.blocked[y * SIZE + x] = 0
+				reached[y * SIZE + x] = 1
+		return true
