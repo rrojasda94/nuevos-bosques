@@ -14,7 +14,7 @@ Todo vive en `data/world/regions/<region>/`. Para el Valle del Sara: `data/world
 | `agua.png` | Ríos, lagos, mar y vados | Sin agua; el generador puede añadir arroyos de montaña |
 | `caminos.png` | Caminos principales y puentes | El generador traza caminos entre las villas |
 | `bosques.png` | Bosques clave, un color por Bosque | El generador reparte los Bosques (4–16 chunks) |
-| `lugares.csv` | Villas, villa natal, hitos, tarcas, Nujio de los Bosques clave y otros lugares | — |
+| `lugares.csv` | Villas, villa natal, ciudades, hitos, tarcas, Nujio de los Bosques clave y otros lugares | — |
 
 Las PNG que hay ahora salieron del generador actual (seed 15, la primera en la que la villa natal cae donde empieza hoy la partida). Son un punto de partida: retócalas o pinta encima tu mapa del Sur Lenfi.
 
@@ -24,6 +24,7 @@ Encima de los afluentes va **el relieve del dueño** (2026-10-26), de `tools/wor
 - **Larr**, la cordillera norte, "una pared impenetrable": las 3 filas de arriba de `altura.png` (12 casillas) son cumbre de lado a lado, sin huecos. El Sara ya no toca el borde norte: nace al pie de Larr. Debajo, 3 filas de nivel 2 como mínimo.
 - **Cordillera occidental** (Urd Gumnavis, a caballo con Dorias), "colinas y montañas bastante transitables": en la franja `x < 40` (2 chunks), desde el pie de Larr hasta la fila 259 (casi la costa), no hay cumbres (pasan a nivel 3) y el nivel 0 sube a 1: todo es nivel 1-3 y se cruza a pie. Los tres afluentes del oeste (3ro, 5to y 7mo del Sara) **nacen dentro de la cordillera** (dueño: "no nacen en el Valle, no pueden nacer en Dorias porque la cordillera lo impide"), en un **manantial** (§5) sobre una colina de nivel 3 y 2, sin cumbre, y bajan al Sara. Ningún río toca el borde oeste. Los otros cuatro (1ro, 2do, 4to y 6to) también nacen en un manantial pisable en lo alto de su colina, sin cumbre (dueño, 2026-10-26: los 7 afluentes nacen en un manantial; ficha `docs/design/mechanics/mundo-2.md`). Fuera de Larr ningún río nace ya en una cumbre.
 - **Azhin**: fila `villa_azhin` de `lugares.csv` en (16, 4), al pie de Larr en el noroeste (Lean), con un camino hasta el camino de Lean que ya existía. Su **tarca** es un lugar propio, `tarca_azhin` en (8, 8): en lo alto de la montaña al oeste de la villa (nivel 3, sin nada más alto alrededor, a unas 36 casillas de Azhin; dueño: "a 20 o más casillas, pero más al oeste, en las montañas, en lo alto de una montaña"). Aparece en la historia en el encuentro con los ledai de Estrellazul. Los manantiales se llaman "Fuente del 3ro", "Fuente del 5to" y "Fuente del 7mo" (dueño: nombre corto).
+- **Umun Mal** (dueño, 2026-10-27): fila `ciudad_umun_mal` de `lugares.csv` (tipo `ciudad`) en (130, 290), chunk (6, 14), justo al sur de Olss: la ciudad de piedra blanca que ocupa todo el chunk (§5, Ciudades). Escrita a mano; ningún script la toca.
 - **Pendiente**: la **Tarca de Trastas** está en la misma cordillera pero del lado de Dorias, fuera de esta región. Se pondrá cuando exista la región de Dorias.
 
 **Orden de los scripts** (cada uno sobre la salida del anterior; los dos son idempotentes):
@@ -99,13 +100,15 @@ Se edita con cualquier hoja de cálculo (Excel, LibreOffice, Google Sheets) y se
 |---|---|
 | `id` | Identificador único, sin espacios ni tildes: `villa_natal`, `hito_puente_viejo` |
 | `nombre` | El nombre que verá el jugador, con tildes |
-| `tipo` | `villa`, `villa_natal`, `hito`, `tarca`, `bosque` (el Nujio de un Bosque clave), `lugar` o `manantial` (nacimiento de un río; ver §4, Agua) |
+| `tipo` | `villa`, `villa_natal`, `ciudad` (una villa que ocupa su chunk entero, como Umun Mal), `hito`, `tarca`, `bosque` (el Nujio de un Bosque clave), `lugar`, `manantial` (nacimiento de un río; ver §4, Agua) o `sicabi` |
 | `x`, `y` | **Píxeles de las PNG**: los que marca el cursor de tu programa. Sin cuentas de chunks |
 | `color` | Solo para `bosque`: su color en `bosques.png`, como `#3a8f2b` |
 | `estilo` | Opcional: silueta y hojas del Bosque |
 | `notas` | Libre |
 
-Reglas: una sola `villa_natal` (sustituye a `start_chunk`: ahí empieza la partida). Ningún lugar fuera del mapa, en el agua ni en una cumbre. Toda villa tiene que poder alcanzarse a pie desde la villa natal (sin cumbres ni agua sin vado o puente por medio). Las líneas en blanco o que empiezan por `#` se ignoran.
+Reglas: una sola `villa_natal` (sustituye a `start_chunk`: ahí empieza la partida). Ningún lugar fuera del mapa, en el agua ni en una cumbre. Toda villa y toda ciudad tienen que poder alcanzarse a pie desde la villa natal (sin cumbres ni agua sin vado o puente por medio). Las líneas en blanco o que empiezan por `#` se ignoran.
+
+**Ciudades** (tipo `ciudad`, dueño 2026-10-27): una ciudad **ocupa su chunk entero** (el de su `x`, `y`). Para el juego es una villa más (Nujio, servicios, plaza que es refugio, letreros; cuenta para apartar aldeas y sicabis), pero el generador la traza en todo el chunk: aplana el chunk al nivel de altura de su píxel (pinta ese chunk de un solo nivel si quieres verlo igual en tu imagen), calles de 3, una plaza grande con el Nujio en medio y casas de piedra blanca por todas partes, sin bosque ni rocas dentro. El agua que pintes en ese chunk se queda (los ríos no se cortan; la ciudad los cruza con puentes y deja de construir donde hay agua), así que mejor un chunk seco. El validador exige que caiga en tierra y que **en su chunk no haya otra villa, villa natal ni ciudad**. Hoy hay una: **Umun Mal**, en (130, 290), chunk (6, 14), justo al sur de Olss.
 
 Ejemplo:
 

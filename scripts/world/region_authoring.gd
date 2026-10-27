@@ -12,6 +12,8 @@ extends RefCounted
 ## - Validación: colores desconocidos con coordenadas (suavizado), PNG de tamaños distintos,
 ##   lugares fuera del mapa, en el agua o en una cumbre, Bosques clave fuera de 4–16 chunks,
 ##   ríos que se cortan y villas sin acceso a pie (sobre la rejilla gruesa). Errores en español.
+## - Una `ciudad` (Umun Mal) es una villa que ocupa su chunk entero: en tierra, con acceso a pie y
+##   sin otra villa, villa natal ni ciudad en su chunk.
 ## - Un río une dos sitios: bordes del mapa, lago, mar, cumbre o un `manantial` (lugar de
 ##   lugares.csv en nivel 2 o 3, junto al río: nace en la montaña sin cumbre ni borde).
 ## Clase pura: no genera nada. La pasada de región (RegionPlan, M5) la consume; no la modifica.
@@ -33,7 +35,9 @@ const LAYERS: Array[String] = ["height", "water", "roads", "bosques"]
 enum Height { NONE, LEVEL_0, LEVEL_1, LEVEL_2, LEVEL_3, PEAK }
 enum Water { NONE, RIVER_NAVIGABLE, RIVER_NARROW, LAKE, SEA, FORD }
 enum Road { NONE, ROAD, BRIDGE }
-const PLACE_TYPES: Array[String] = ["villa", "villa_natal", "hito", "tarca", "bosque", "lugar", "manantial", "sicabi"]
+const PLACE_TYPES: Array[String] = ["villa", "villa_natal", "hito", "tarca", "bosque", "lugar", "manantial", "sicabi", "ciudad"]
+## Tipos de lugar que son una villa (con Nujio, plaza y casas). La `ciudad` ocupa su chunk entero.
+const VILLA_TYPES: Array[String] = ["villa_natal", "villa", "ciudad"]
 const CSV_COLUMNS: Array[String] = ["id", "nombre", "tipo", "x", "y", "color", "estilo", "notas"]
 const CSV_REQUIRED: Array[String] = ["id", "nombre", "tipo", "x", "y"]
 
@@ -454,6 +458,21 @@ func _validate_places() -> void:
 				touches = touches or _is_river(water_at(cell + d))
 			if has_layer.get("water", false) and not touches:
 				_error("%s: el manantial no toca ningún río (pon el río pegado a él, por un lado) en %s." % [label, _where(cell)], cell)
+	_validate_cities()
+
+
+## Una ciudad ocupa su chunk entero: ninguna otra villa, villa natal ni ciudad en ese chunk.
+func _validate_cities() -> void:
+	for p: Dictionary in places_of_type("ciudad"):
+		if not in_map(p.cell):
+			continue
+		var chunk: Vector2i = chunk_of(p.cell)
+		for other: Dictionary in places:
+			if other == p or not VILLA_TYPES.has(String(other.type)) or not in_map(other.cell):
+				continue
+			if chunk_of(other.cell) == chunk:
+				_error("%s, línea %d: la ciudad '%s' ocupa el chunk %s entero y ahí está también '%s' (%s, línea %d): muévela a otro chunk."
+						% [PLACES_FILE, p.line, p.id, chunk, other.id, other.type, other.line], p.cell)
 
 
 ## Bosques clave: cada uno ocupa los chunks donde está pintado su color (o, si no se pinta, el
@@ -630,7 +649,7 @@ func _validate_villa_access() -> void:
 			if in_map(n) and reach[_idx(n)] == 0 and is_walkable(n):
 				reach[_idx(n)] = 1
 				queue.append(n)
-	for p: Dictionary in places_of_type("villa"):
+	for p: Dictionary in places_of_type("villa") + places_of_type("ciudad"):
 		if in_map(p.cell) and is_walkable(p.cell) and reach[_idx(p.cell)] == 0:
 			_error("%s, línea %d: la villa '%s' en %s no tiene acceso a pie desde la villa natal (la cierran cumbres o agua sin vado ni puente)."
 					% [PLACES_FILE, p.line, p.id, _where(p.cell)], p.cell)

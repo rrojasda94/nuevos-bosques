@@ -102,7 +102,7 @@
     "allow_dead_bosque": false
   },
   "subregions": [
-    {"$comment": "Subregiones del Valle del Sara en rectángulos de chunks [x, y, ancho, alto] (el primero que contiene un chunk manda). PROVISIONAL, lectura de world-gen-dev a confirmar por el dueño (#101): los límites siguen los afluentes de docs/design/world/sur-lenfi.md (7mo Lean–Tossie, 5to Tossie–Ostie, 3ro Ostie–Cassie, 6to Causie–Alss, 4to Alss–Vastie, 2do Vastie–Cassie) y el Sara separa el oeste (columnas 0–5) del este (6–11). Solo la usa el reparto de sicabis.", "id": "lean", "name": "Lean", "rects": [[0, 0, 6, 2]]},
+    {"$comment": "Subregiones del Valle del Sara en rectángulos de chunks [x, y, ancho, alto] (el primero que contiene un chunk manda). Confirmadas por el dueño (2026-10-27, #101: \"estan bien esas regiones\"): los límites siguen los afluentes de docs/design/world/sur-lenfi.md (7mo Lean–Tossie, 5to Tossie–Ostie, 3ro Ostie–Cassie, 6to Causie–Alss, 4to Alss–Vastie, 2do Vastie–Cassie) y el Sara separa el oeste (columnas 0–5) del este (6–11). Solo la usa el reparto de sicabis.", "id": "lean", "name": "Lean", "rects": [[0, 0, 6, 2]]},
     {"id": "tossie", "name": "Tossie", "rects": [[0, 2, 6, 2], [3, 4, 3, 1]]},
     {"id": "ostie", "name": "Ostie", "rects": [[0, 4, 3, 3], [3, 5, 3, 3]]},
     {"id": "causie", "name": "Causie", "rects": [[6, 0, 6, 2], [6, 2, 3, 2]]},

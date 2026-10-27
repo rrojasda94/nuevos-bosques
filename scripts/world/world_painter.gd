@@ -342,7 +342,9 @@ func setup_sprite(sp: Sprite2D, obj: Dictionary, chunk_coord: Vector2i, sign_dir
 			flip = (v / 2) % 2 == 1
 		WorldChunk.ObjectKind.HOUSE:
 			tex = &"casas"
-			region = Rect2i((v % 2) * 64, ((v / 2) % 2) * 48, 64, 48)
+			# Fila = material (0 barro, 1 piedra). La piedra blanca de la ciudad (material 2,
+			# ChunkBuilder.HouseMaterial) aún no tiene arte: se dibuja con la piedra.
+			region = Rect2i((v % 2) * 64, mini(v / 2, 1) * 48, 64, 48)
 		WorldChunk.ObjectKind.NUJIO:
 			tex = &"nujio"
 			region = Rect2i(0, shape * 80, 64, 80)

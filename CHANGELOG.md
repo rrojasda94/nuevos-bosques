@@ -5,6 +5,7 @@ Todos los cambios que nota el jugador. Formato [Keep a Changelog](https://keepac
 ## [Sin publicar]
 
 ### Añadido
+- Umun Mal, una ciudad grande de piedra blanca justo al sur de Olss que ocupa toda su zona del mapa: calles anchas en retícula hacia sus entradas, una gran plaza con su Nujio en el centro y unas cien casas en manzanas con callejones, huertos y árboles de adorno. Sirve como una villa (servicios, plaza para pasar el riutash) y sale en el mapa. Por ahora sus casas se dibujan como las de piedra de las villas.
 - Fuentes de los afluentes en el mundo: donde nace cada uno de los 7 afluentes del Sara hay un manantial de 3×3 casillas (agua que brota en el centro y rocas mojadas que se pisan alrededor), en un claro, con un sendero que llega hasta él. Aún sin dibujo propio.
 - Entradas de sicabi: lugares raros (como mucho 1 por subregión, unas 3 a 5 por partida), escondidos lejos de caminos, senderos, villas y aldeas: un arco de raíces en el bosque tupido o una grieta en la base de un risco alto, con un hueco entre los árboles para llegar. Se ven si pasas cerca, sin letreros ni marcas. Aún sin dibujo propio ni interior.
 - Nunca más de 300 casillas a pie hasta un refugio: si hace falta, el bosque tiene algún árbol hueco más.
