@@ -14,7 +14,11 @@ extends RefCounted
 ##   BosqueMap donde no hay camino pintado que una los Nujios.
 ## - Puertas entre chunks: con camino, siempre; si no, DOOR_PERCENT %; y un árbol de expansión de
 ##   bordes por Bosque abre las que falten para que todo Bosque se recorra a pie.
-## - Refugios: el reparto de BosqueMap (ADR 0006), sin cambios.
+## - Refugios: el reparto de BosqueMap (ADR 0006), sin cambios. La garantía de ≤ 300 casillas a
+##   pie la cierra el ChunkBuilder con refugios extra (generation.md, "Refugios garantizados").
+## - Sicabis (lugares-e-interiores.md): como mucho 1 por subregión, con probabilidad
+##   `sicabis.subregion_chance`, lejos de villas, aldeas y otras sicabis, nunca en un Bosque muerto.
+##   Las subregiones salen del bloque `subregions` de la región o, si falta, de las áreas.
 ## Inmutable tras build(): las consultas solo leen y devuelven copias, así que los ChunkBuilder
 ## (M6+) pueden leerlo a la vez desde varios hilos. No construye chunks ni toca la escena.
 
@@ -53,6 +57,17 @@ const SALT_DOOR_OPEN: int = 134
 const SALT_DOOR_TREE: int = 135
 const SALT_ALDEA_NAME: int = 136
 const SALT_ALDEA_HOUSES: int = 137
+const SALT_SICABI_ROLL: int = 138
+const SALT_SICABI_ORDER: int = 139
+const SALT_SICABI_CHUNK: int = 158
+## Sicabis por defecto (lugares-e-interiores.md, "Qué irían en data/"); la región los cambia con su
+## bloque "sicabis". subregion_chance 0 = sin sicabis (regiones sin el bloque).
+const DEFAULT_SICABIS: Dictionary = {
+	"per_subregion_max": 1, "subregion_chance": 0.0, "min_villa_distance_chunks": 2,
+	"min_sicabi_distance_chunks": 4, "min_road_distance": 10, "min_path_distance": 6,
+	"access_width": 2, "forest_ratio": 0.7, "forest_radius": 6, "cliff_min_level": 2,
+	"allow_dead_bosque": false,
+}
 
 var seed_value: int = 0
 var region_id: StringName = &""
@@ -80,6 +95,10 @@ var _villa_at: Dictionary = {}  # Vector2i chunk -> índice en _villas
 var _places: Array[Dictionary] = []
 var _crossings: Dictionary = {}  # Vector3i borde -> celda gruesa (0..19) por donde lo cruza el camino pintado
 var _doors: Dictionary = {}  # Vector3i borde -> { index, width, road, forced }
+var _subregion: PackedInt32Array = PackedInt32Array()  # por chunk (fila a fila): índice en _subregion_names
+var _subregion_names: Array[String] = []
+var _sicabis: Array[Dictionary] = []
+var _sicabi_at: Dictionary = {}  # Vector2i chunk -> índice en _sicabis
 
 
 ## Plan de la región `region_id` con su JSON y su autoría (data/world/regions/).
@@ -114,6 +133,8 @@ static func build(seed_v: int, id: StringName, region: Dictionary, authoring: Re
 	plan._build_bosques(region, authoring)
 	plan._build_villas(region)
 	plan._build_doors()
+	plan._build_subregions(region)
+	plan._build_sicabis(region)
 	plan.build_usec = Time.get_ticks_usec() - t0
 	return plan
 
@@ -262,6 +283,34 @@ func doors_of(chunk: Vector2i) -> Dictionary:
 		if has_door(chunk, side):
 			out[side] = door(chunk, side)
 	return out
+
+
+## Subregión del chunk (índice en subregion_names()), -1 fuera de la región.
+func subregion_of(chunk: Vector2i) -> int:
+	return _subregion[chunk.y * size_chunks.x + chunk.x] if _in_chunks(chunk) else -1
+
+
+## Ids de las subregiones: los del bloque `subregions` y "area_<n>" para las que salen de las áreas.
+func subregion_names() -> Array[String]:
+	return _subregion_names.duplicate()
+
+
+## Sicabis de la región: { id, chunk, subregion, csv (la pintó el dueño), macro (solo csv) }.
+func sicabis() -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	for s: Dictionary in _sicabis:
+		out.append(s.duplicate())
+	return out
+
+
+## Sicabi del chunk ({} si no hay).
+func sicabi_in_chunk(chunk: Vector2i) -> Dictionary:
+	return (_sicabis[_sicabi_at[chunk]] as Dictionary).duplicate() if _sicabi_at.has(chunk) else {}
+
+
+## Parámetros de las sicabis (DEFAULT_SICABIS con el bloque "sicabis" de la región encima).
+func sicabi_params() -> Dictionary:
+	return DEFAULT_SICABIS.merged(region_params.get("sicabis", {}), true)
 
 
 func has_refuge(chunk: Vector2i) -> bool:
@@ -752,3 +801,122 @@ func _door_fits(edge: Vector3i, index: int, width: int) -> bool:
 			if level_at(c) == LEVEL_PEAK or _is_deep(water_at(c)):
 				return false
 	return true
+
+
+# --- Subregiones y sicabis ---------------------------------------------------------------------
+
+## Subregión de cada chunk. Con el bloque `subregions` de la región ([{ id, name, rects: [[x, y,
+## w, h], ...] }] en chunks; el primero que contiene el chunk manda), esa. Los chunks que no cubre
+## ninguno, y toda la región si no hay bloque, usan el área de su Bosque (BosqueMap, ADR 0007),
+## como subregión "area_<n>".
+func _build_subregions(region: Dictionary) -> void:
+	var n: int = size_chunks.x * size_chunks.y
+	_subregion.resize(n)
+	_subregion.fill(-1)
+	for entry: Variant in region.get("subregions", []):
+		if not entry is Dictionary:
+			continue
+		var index: int = _subregion_names.size()
+		_subregion_names.append(String((entry as Dictionary).get("id", "subregion_%d" % index)))
+		for r: Variant in (entry as Dictionary).get("rects", []):
+			var a: Array = r
+			if a.size() < 4:
+				continue
+			for y: int in range(int(a[1]), int(a[1]) + int(a[3])):
+				for x: int in range(int(a[0]), int(a[0]) + int(a[2])):
+					if _in_chunks(Vector2i(x, y)) and _subregion[y * size_chunks.x + x] < 0:
+						_subregion[y * size_chunks.x + x] = index
+	var area_base: int = _subregion_names.size()
+	var used_area: bool = false
+	for y: int in size_chunks.y:
+		for x: int in size_chunks.x:
+			var i: int = y * size_chunks.x + x
+			if _subregion[i] >= 0:
+				continue
+			var id: int = bosques.bosque_at(Vector2i(x, y))
+			var area: int = bosques.area_of[id] if id >= 0 and id < bosques.area_of.size() else 0
+			_subregion[i] = area_base + maxi(area, 0)
+			used_area = true
+	if used_area:
+		for a: int in maxi(bosques.area_count, 1):
+			_subregion_names.append("area_%d" % a)
+
+
+## Reparto de sicabis (lugares-e-interiores.md, "Cómo se encuentran en el mundo"): primero las del
+## CSV (tipo `sicabi`), que cuentan para el tope de su subregión; después, en orden de hash, cada
+## subregión por debajo del tope tiene una con probabilidad subregion_chance, en un chunk (por
+## hash) que cumple sicabi_chunk_ok. Si no hay ninguno, la subregión se queda sin sicabi. Las
+## villas y las aldeas ya están puestas: la sicabi es la que se aparta. El sitio exacto (bosque
+## tupido o risco) lo busca el ChunkBuilder; si no lo encuentra, ese chunk se queda sin entrada.
+func _build_sicabis(region: Dictionary) -> void:
+	var params: Dictionary = DEFAULT_SICABIS.merged(region.get("sicabis", {}), true)
+	var cap: int = int(params.per_subregion_max)
+	var per_sub: Dictionary = {}
+	for p: Dictionary in _places:
+		if p.type != "sicabi" or not in_macro(p.cell):
+			continue
+		var chunk: Vector2i = WorldCoords.floor_div_v(p.cell, WorldCoords.MACROS_PER_CHUNK)
+		if _sicabi_at.has(chunk):
+			continue
+		var sub: int = subregion_of(chunk)
+		per_sub[sub] = int(per_sub.get(sub, 0)) + 1
+		_add_sicabi({ "id": String(p.id), "chunk": chunk, "subregion": sub, "csv": true, "macro": p.cell })
+	var chance: float = float(params.subregion_chance)
+	if chance <= 0.0 or cap <= 0:
+		return
+	var subs: Array[int] = []
+	var order: Dictionary = {}
+	for s: int in _subregion_names.size():
+		subs.append(s)
+		order[s] = ChunkGenerator.hash_ints([plan_seed, s, SALT_SICABI_ORDER])
+	subs.sort_custom(func(a: int, b: int) -> bool: return order[a] < order[b] or (order[a] == order[b] and a < b))
+	var by_sub: Dictionary = {}
+	for y: int in size_chunks.y:
+		for x: int in size_chunks.x:
+			var s: int = subregion_of(Vector2i(x, y))
+			if not by_sub.has(s):
+				by_sub[s] = []
+			(by_sub[s] as Array).append(Vector2i(x, y))
+	var k: int = 0
+	for s: int in subs:
+		var placed: int = int(per_sub.get(s, 0))
+		while placed < cap:
+			if ChunkGenerator.hash_ints([plan_seed, s, placed, SALT_SICABI_ROLL]) % 1000 >= int(chance * 1000.0):
+				break
+			var cands: Array = []
+			var weight: Dictionary = {}
+			for c: Vector2i in by_sub.get(s, []):
+				if sicabi_chunk_ok(c, params):
+					cands.append(c)
+					weight[c] = ChunkGenerator.hash_ints([plan_seed, c.x, c.y, SALT_SICABI_CHUNK])
+			if cands.is_empty():
+				break
+			cands.sort_custom(func(a: Vector2i, b: Vector2i) -> bool: return weight[a] < weight[b] or (weight[a] == weight[b] and a < b))
+			k += 1
+			_add_sicabi({ "id": "sicabi_%d" % k, "chunk": cands[0], "subregion": s, "csv": false })
+			placed += 1
+
+
+## El chunk puede tener sicabi: lejos de villas, aldeas y otras sicabis, y no en un Bosque muerto.
+func sicabi_chunk_ok(chunk: Vector2i, params: Dictionary) -> bool:
+	if _sicabi_at.has(chunk):
+		return false
+	var id: int = bosques.bosque_at(chunk)
+	if not bool(params.allow_dead_bosque) and id >= 0 and bosques.state_of(id) == BosqueMap.STATE_MUERTO:
+		return false
+	var dv: int = int(params.min_villa_distance_chunks)
+	for v: Dictionary in _villas:
+		var c: Vector2i = v.chunk
+		if maxi(absi(c.x - chunk.x), absi(c.y - chunk.y)) < dv:
+			return false
+	var ds: int = int(params.min_sicabi_distance_chunks)
+	for other: Dictionary in _sicabis:
+		var c: Vector2i = other.chunk
+		if maxi(absi(c.x - chunk.x), absi(c.y - chunk.y)) < ds:
+			return false
+	return true
+
+
+func _add_sicabi(s: Dictionary) -> void:
+	_sicabi_at[s.chunk] = _sicabis.size()
+	_sicabis.append(s)

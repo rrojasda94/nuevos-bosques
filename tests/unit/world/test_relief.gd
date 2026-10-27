@@ -140,8 +140,9 @@ func test_faces_have_two_rows_per_level() -> void:
 					y += 1
 				if y >= SIZE:
 					break # La cara sigue en el chunk de abajo.
-				if c.object_at(Vector2i(x, y)).get("kind", -1) == WorldChunk.ObjectKind.CAVE:
-					continue # La boca de una cueva (M8) es la fila de abajo de la cara, abierta.
+				var mouth: int = c.object_at(Vector2i(x, y)).get("kind", -1)
+				if mouth == WorldChunk.ObjectKind.CAVE or mouth == WorldChunk.ObjectKind.SICABI_GATE:
+					continue # La boca de una cueva (M8) o de una sicabi es la fila de abajo de la cara, abierta.
 				var drop: int = c.level[(top - 1) * SIZE + x] - c.level[top * SIZE + x]
 				assert_eq(y - top, ChunkBuilder.FACE_ROWS_PER_LEVEL * drop,
 						"cara de %s en %s, columna %d" % [Vector2i(x, top), coord, x])

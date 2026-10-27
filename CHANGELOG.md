@@ -5,6 +5,9 @@ Todos los cambios que nota el jugador. Formato [Keep a Changelog](https://keepac
 ## [Sin publicar]
 
 ### Añadido
+- Fuentes de los afluentes en el mundo: donde nace cada uno de los 7 afluentes del Sara hay un manantial de 3×3 casillas (agua que brota en el centro y rocas mojadas que se pisan alrededor), en un claro, con un sendero que llega hasta él. Aún sin dibujo propio.
+- Entradas de sicabi: lugares raros (como mucho 1 por subregión, unas 3 a 5 por partida), escondidos lejos de caminos, senderos, villas y aldeas: un arco de raíces en el bosque tupido o una grieta en la base de un risco alto, con un hueco entre los árboles para llegar. Se ven si pasas cerca, sin letreros ni marcas. Aún sin dibujo propio ni interior.
+- Nunca más de 300 casillas a pie hasta un refugio: si hace falta, el bosque tiene algún árbol hueco más.
 - Afluentes del río Sara: siete ríos bajan de las Urd Gumnavis (oeste) y de las Gumnada Gumnavis (este) hasta el Sara, siguiendo los límites entre subregiones del Valle del Sara. Nacen estrechos en la montaña y se hacen navegables al salir a tierra baja (los dos del norte, el 6to y el 7mo, en su último tramo antes del Sara); tienen vados y puentes donde los cruza un camino. De sur a norte se llaman "1ro del Sara", "2do del Sara"… hasta "7mo del Sara".
 - Larr, la cordillera norte del Sur Lenfi, cierra el Valle del Sara por el norte: una pared de cumbres que no se puede cruzar. El río Sara nace a su pie.
 - Azhin, la villa más septentrional del Valle del Sara, en el noroeste, al pie de Larr, con un camino que la une a los de Lean, y la Tarca de Azhin, en lo alto de la montaña al oeste de la villa.
