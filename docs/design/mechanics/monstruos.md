@@ -77,7 +77,7 @@ Palabras del dueño: "Tendria que dañar el bosque o intentar destruirlo para re
   - Siempre en combate no letal.
 - **Enemigos humanos**, hostiles. Pueden **hacer daño pero no matar**, y el adoc tampoco los mata (ADR 0004). **Combate no letal**: "no matan, no mueren".
 - **Dónde**: atacando Bosques (estado "en necesidad de ayuda" con `hazard: ataque`, `bosques-y-relacion.md`) y en caminos cercanos a esos Bosques.
-- **Combate**: el combate en grupo (son grupos de 2–3; stats humanos provisionales: PV 15 + 3·d, ATQ 3 + d, DEF 2), con Únicos del Bosque como aliados si el Bosque lo necesita.
+- **Combate**: el combate en grupo (son grupos de 2–4, hasta 6 en espacios abiertos, `combate-tactico.md`; stats humanos provisionales: PV 15 + 3·d, ATQ 3 + d, DEF 2), con Únicos del Bosque como aliados si el Bosque lo necesita.
 - **Al ganar tú**: los garelinos **se retiran** (no mueren). El Bosque deja de estar bajo ataque; relación +15 y Senda +5 (salvar el Bosque).
 - **Al perder tú**: no es fatal. Reapareces con el 50% de los PV junto al Nujio aliado más cercano o el último al que pagaste peaje; si no hay ninguno, en tu villa natal (dueño; regla general de derrota no fatal en `cruce-y-combate-v2.md`). Los garelinos siguen dañando el Bosque (cordura −10).
 - **Pueden desatar a un Iserald** si dañan el Bosque hasta la cordura 0.

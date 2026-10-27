@@ -16,6 +16,14 @@ extends RefCounted
 ##   para que AdventureRules aplique victoria, pago, huida, derrota, XP y Bosque recuerda como
 ##   siempre.
 ## - end_lines: las líneas del final (resultado, XP, niveles nuevos, botín).
+## - Especiales (T6): los enemigos llevan su especial (special_every, special_factor, special_area:
+##   el Latigazo múltiple en área anunciada) y, en un grupo de ataque conjunto (logic.joint_attack,
+##   los reparep), `joint`. build_battle aplica la apertura (TacticalBattle.Opening).
+## - Apertura (T6): opening_for_engaged y opening_for_confront deciden, desde la exploración, si el
+##   combate empieza con sorpresa (el Adoc aborda con E a un Único que no le persigue: no le ha
+##   detectado, por Paso quedo, máscara o porque no mira) o con emboscada del enemigo (le alcanza un
+##   cazador, que aparece fuera de la vista, o un Único fatal en ese Momento, Aledra de noche). Lo que
+##   la ficha pide y aún no existe (un ataque al dormir) queda como gancho: opening_for_sleep.
 
 ## Id del Adoc en el TacticalBattle; los aliados y enemigos llevan ally_N / enemy_N.
 const ADOC_ID: StringName = &"adoc"
@@ -54,6 +62,10 @@ static func fighters_from_logic(logic: BattleLogic, chosen: Variant = null) -> A
 		if e.get("gone", false) or int(e.hp) <= 0:
 			continue
 		var f: Dictionary = _fighter(e, StringName("enemy_%d" % i), TacticalBattle.SIDE_ENEMY, roles, logic.accepts_payment)
+		f.special_every = int(e.get("special_every", 0))
+		f.special_factor = float(e.get("special_factor", 1.0))
+		f.special_area = bool(e.get("special_area", false))
+		f.joint = logic.joint_attack
 		out.append(f)
 	return out
 
@@ -71,14 +83,36 @@ static func _fighter(c: Dictionary, id: StringName, side: int, roles: Dictionary
 ## TacticalBattle de un BattleLogic. `cfg`: bloque tactical (por defecto, el de logic.balance con lo
 ## compartido, TacticalBattle.config_from_balance); `board`: por defecto, llano del tamaño de cfg.
 static func build_battle(logic: BattleLogic, cfg: Dictionary = {}, board: TacticalBoard = null,
-		chosen: Variant = null) -> TacticalBattle:
+		chosen: Variant = null, opening: TacticalBattle.Opening = TacticalBattle.Opening.NORMAL) -> TacticalBattle:
 	if cfg.is_empty():
 		cfg = TacticalBattle.config_from_balance(logic.balance)
 	if board == null:
 		board = TacticalBoard.from_config(cfg.get("board", {}))
 	var battle := TacticalBattle.new(cfg, board, fighters_from_logic(logic, chosen), int(logic.rng.seed))
 	battle.set_payment(logic.toll, logic.luz, logic.ofrendas)
+	battle.apply_opening(opening)
 	return battle
+
+
+## Apertura cuando un Único alcanza al Adoc (MonsterField.engaged): emboscada si es un cazador
+## (aparece fuera de la vista) o si perder con él ahora sería fatal (`fatal_now`: Aledra de noche);
+## si no, normal (le vio venir).
+static func opening_for_engaged(role: StringName, fatal_now: bool) -> TacticalBattle.Opening:
+	if role == MonsterField.ROLE_HUNTER or fatal_now:
+		return TacticalBattle.Opening.AMBUSH
+	return TacticalBattle.Opening.NORMAL
+
+
+## Apertura cuando el Adoc se enfrenta con E a un Único: sorpresa si el Único no le persigue (no le
+## ha detectado); normal si ya le perseguía.
+static func opening_for_confront(chasing: bool) -> TacticalBattle.Opening:
+	return TacticalBattle.Opening.NORMAL if chasing else TacticalBattle.Opening.SURPRISE
+
+
+## Gancho (combate-tactico.md: "un ataque al dormir"): aún no hay ataques mientras el Adoc duerme.
+## Cuando los haya, su combate empezará con esta apertura.
+static func opening_for_sleep() -> TacticalBattle.Opening:
+	return TacticalBattle.Opening.AMBUSH
 
 
 ## Bloque tactical (con lo compartido) con el tablero y el cupo de TacticalArena: `ratio`, la
