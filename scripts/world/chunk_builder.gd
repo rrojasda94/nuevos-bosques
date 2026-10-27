@@ -300,6 +300,13 @@ const NO_LEAVES: int = 1 << PlaceholderTileset.Shape.CACTUS
 const ASPECT_PAD: int = 3
 const NO_MUSHROOMS: int = (1 << PlaceholderTileset.Shape.CACTUS) | (1 << PlaceholderTileset.Shape.PALM)
 
+## Perfil por fases para `tools/world/bench_chunks.gd --profile`: con `profiling` activo, cada
+## build() suma a `profile_us` (fase -> µs acumulados) el tiempo de cada fase. Desactivado por
+## defecto y solo para el banco, que construye en serie: con él activo build() NO es apto para
+## hilos (escribe en un static). No cambia la salida.
+static var profiling: bool = false
+static var profile_us: Dictionary = {}
+
 
 ## Construye el chunk `coord` del plan. Nunca devuelve null.
 static func build(plan: RegionPlan, coord: Vector2i) -> WorldChunk:
@@ -449,12 +456,15 @@ class _Build:
 	var shape: int = 0
 	var decor_params: Dictionary = {}
 	var near_trail := PackedByteArray() # 1 = a ≤ REFUGE_TRAIL_REACH casillas de un sendero
+	var _t: int = 0 # última marca del perfil (µs)
 
 	func _init(p: RegionPlan, c: Vector2i) -> void:
 		plan = p
 		coord = c
 
 	func run() -> WorldChunk:
+		if ChunkBuilder.profiling:
+			_t = Time.get_ticks_usec()
 		chunk = WorldChunk.new()
 		chunk.seed_value = plan.seed_value
 		chunk.coord = coord
@@ -465,32 +475,56 @@ class _Build:
 		if bosque_id >= 0 and bosque_id < plan.bosques.styles.size():
 			shape = int(plan.bosques.styles[bosque_id].get("shape", 0))
 		_load_levels()
+		_lap("load_levels")
 		_plan_anchor()
 		_plan_points()
+		_lap("plan_points")
 		_compute_faces()
 		_classify()
+		_lap("faces_classify")
 		_fill()
 		_init_tile_layers()
+		_lap("fill_tiles")
 		var required: PackedInt32Array = _open_doors()
 		_shape_anchor()
 		_shape_points()
+		_lap("doors_shapes")
 		_route_network()
+		_lap("route_network")
 		_place_hub()
 		for node: Dictionary in nodes:
 			required.append(WorldCoords.cell_index(node.tile))
 		_connect(required)
+		_lap("connect")
 		_place_objects()
+		_lap("place_objects")
 		_paint_variants()
 		_paint_shadows()
+		_lap("variants_shadows")
 		chunk.rebuild_blocked()
 		_flood_blocked()
+		_lap("flood_blocked")
 		_place_refuge()
 		_place_fruit()
+		_lap("refuge_fruit")
 		_place_small()
+		_lap("place_small")
 		_paint_grass()
+		_lap("paint_grass")
 		_place_decor()
+		_lap("place_decor")
 		chunk.rebuild_blocked()
+		_lap("rebuild_blocked")
 		return chunk
+
+	## Perfil por fases (ChunkBuilder.profiling): suma al contador de `phase` lo que ha pasado
+	## desde la marca anterior. Sin perfil, solo comprueba el indicador.
+	func _lap(phase: String) -> void:
+		if not ChunkBuilder.profiling:
+			return
+		var now: int = Time.get_ticks_usec()
+		ChunkBuilder.profile_us[phase] = int(ChunkBuilder.profile_us.get(phase, 0)) + now - _t
+		_t = now
 
 	# --- Celdas gruesas -------------------------------------------------------------------------
 
@@ -847,6 +881,11 @@ class _Build:
 				ChunkGenerator.hash_ints([plan.plan_seed, SALT_ROCKY]), float(params.rocky_frequency), 2)
 		var wx0: int = coord.x * SIZE
 		var wy0: int = coord.y * SIZE
+		# Capas en locales y de vuelta al final: escribir `chunk.level[c]` por nombre copia la capa
+		# entera en cada casilla (copia al escribir de los Packed*Array).
+		var levels: PackedByteArray = chunk.level
+		var cliffs: PackedByteArray = chunk.cliff
+		var ground: PackedByteArray = chunk.ground
 		for y: int in SIZE:
 			var my: int = y / MACRO + PAD_N
 			var row_t: int = (y + 1) * TILE_W + 1
@@ -855,14 +894,17 @@ class _Build:
 				var k: int = my * MACRO_W + x / MACRO + PAD_W
 				var c: int = row_c + x
 				var level: int = m_level[k]
-				chunk.level[c] = level
-				chunk.cliff[c] = t_cliff[row_t + x]
+				levels[c] = level
+				cliffs[c] = t_cliff[row_t + x]
 				var water: int = m_water[k]
 				if water != RegionAuthoring.Water.NONE:
-					chunk.ground[c] = WATER_GROUND[water]
+					ground[c] = WATER_GROUND[water]
 				elif any_rocky and thresholds[level] < 1.0 \
 						and noise.get_noise_2d(wx0 + x, wy0 + y) > thresholds[level]:
-					chunk.ground[c] = WorldChunk.Ground.ROCKY
+					ground[c] = WorldChunk.Ground.ROCKY
+		chunk.level = levels
+		chunk.cliff = cliffs
+		chunk.ground = ground
 
 	func _init_tile_layers() -> void:
 		for layer: PackedByteArray in [path, keep, solid, no_tree, force_tree]:
@@ -1393,12 +1435,18 @@ class _Build:
 					cost_h[i] = COST_CLIFF if mask & EDGE_SIDES != 0 else 0
 
 	## Casillas que se pisan alcanzables desde el hub (sin contar los objetos pequeños, que aún no
-	## están: nunca van sobre un sendero).
+	## están: nunca van sobre un sendero). Cola en PackedInt32Array y `_walk` en línea sobre
+	## referencias locales (leer `chunk.cliff[i]` por nombre en cada vecino costaba ~10 ms).
 	func _flood() -> void:
 		reached.fill(0)
 		var start: int = chunk.hub.y * SIZE + chunk.hub.x
 		if not _walk(start):
 			return
+		var cliff: PackedByteArray = chunk.cliff
+		var ground: PackedByteArray = chunk.ground
+		var sol: PackedByteArray = solid
+		var blocking: int = WorldChunk.GROUND_BLOCKING
+		var last_row: int = WorldChunk.CELLS - SIZE
 		reached[start] = 1
 		queue[0] = start
 		var head: int = 0
@@ -1407,21 +1455,26 @@ class _Build:
 			var i: int = queue[head]
 			head += 1
 			var x: int = i % SIZE
-			if x > 0:
-				tail = _flood_visit(i - 1, tail)
-			if x < LAST:
-				tail = _flood_visit(i + 1, tail)
-			if i >= SIZE:
-				tail = _flood_visit(i - SIZE, tail)
-			if i < WorldChunk.CELLS - SIZE:
-				tail = _flood_visit(i + SIZE, tail)
-
-	func _flood_visit(n: int, tail: int) -> int:
-		if reached[n] == 0 and _walk(n):
-			reached[n] = 1
-			queue[tail] = n
-			return tail + 1
-		return tail
+			var n: int = i - 1
+			if x > 0 and reached[n] == 0 and (CLIFF_OPEN >> cliff[n]) & 1 == 1 					and (blocking >> ground[n]) & 1 == 0 and sol[n] == 0:
+				reached[n] = 1
+				queue[tail] = n
+				tail += 1
+			n = i + 1
+			if x < LAST and reached[n] == 0 and (CLIFF_OPEN >> cliff[n]) & 1 == 1 					and (blocking >> ground[n]) & 1 == 0 and sol[n] == 0:
+				reached[n] = 1
+				queue[tail] = n
+				tail += 1
+			n = i - SIZE
+			if i >= SIZE and reached[n] == 0 and (CLIFF_OPEN >> cliff[n]) & 1 == 1 					and (blocking >> ground[n]) & 1 == 0 and sol[n] == 0:
+				reached[n] = 1
+				queue[tail] = n
+				tail += 1
+			n = i + SIZE
+			if i < last_row and reached[n] == 0 and (CLIFF_OPEN >> cliff[n]) & 1 == 1 					and (blocking >> ground[n]) & 1 == 0 and sol[n] == 0:
+				reached[n] = 1
+				queue[tail] = n
+				tail += 1
 
 	## Dijkstra desde `start` hasta lo ya alcanzado desde el hub. Devuelve la primera casilla
 	## alcanzada (su cadena `prev` lleva a `start`) o -1.
@@ -1679,6 +1732,11 @@ class _Build:
 		var wy0: int = coord.y * SIZE
 		var cand := PackedByteArray()
 		cand.resize(GRID * GRID)
+		# Referencias locales y _rect_free en línea: es el bucle más caliente del chunk.
+		var occ: PackedInt32Array = chunk.occupant
+		var cliff: PackedByteArray = chunk.cliff
+		var ground: PackedByteArray = chunk.ground
+		var forced_ground: int = TREE_GROUND | (1 << WorldChunk.Ground.CLEARING)
 		for gy: int in GRID:
 			for gx: int in GRID:
 				var x: int = gx * 2
@@ -1688,11 +1746,19 @@ class _Build:
 						and force_tree[i + SIZE] == 1 and force_tree[i + SIZE + 1] == 1
 				if not forced and (no_tree[i] == 1 or no_tree[i + 1] == 1 or no_tree[i + SIZE] == 1 or no_tree[i + SIZE + 1] == 1):
 					continue
-				if not _rect_free(Rect2i(x, y, 2, 2), TREE_GROUND | (1 << WorldChunk.Ground.CLEARING if forced else 0)):
+				var ground_mask: int = forced_ground if forced else TREE_GROUND
+				var free: bool = true
+				for k: int in 4:
+					var c: int = i + (k & 1) + (k >> 1) * SIZE
+					if occ[c] != WorldChunk.NO_OBJECT or path[c] != 0 or keep[c] != 0 or solid[c] != 0 \
+							or cliff[c] != WorldChunk.Cliff.NONE or (ground_mask >> ground[c]) & 1 == 0:
+						free = false
+						break
+				if not free:
 					continue
 				if not forced:
 					var t: float = threshold
-					if chunk.ground[i] == WorldChunk.Ground.ROCKY:
+					if ground[i] == WorldChunk.Ground.ROCKY:
 						t += rocky_penalty
 					if noise.get_noise_2d(wx0 + x + 1, wy0 + y + 1) <= t:
 						continue
@@ -1746,16 +1812,30 @@ class _Build:
 					chunk.add_object(WorldChunk.ObjectKind.TREE, Vector2i(gx * 2, gy * 2), Vector2i(2, 2),
 							aspects[(gy + ASPECT_PAD) * aw + gx + ASPECT_PAD])
 
+	## Candidatos entre las 8 vecinas de `g` (sin bucles range(): se llama por cada candidato).
 	func _grid_neighbours(cand: PackedByteArray, g: int) -> int:
 		var gx: int = g % GRID
-		var gy: int = g / GRID
+		var left: bool = gx > 0
+		var right: bool = gx < GRID - 1
 		var n: int = 0
-		for dy: int in range(-1, 2):
-			for dx: int in range(-1, 2):
-				var nx: int = gx + dx
-				var ny: int = gy + dy
-				if (dx != 0 or dy != 0) and nx >= 0 and ny >= 0 and nx < GRID and ny < GRID:
-					n += cand[ny * GRID + nx]
+		if left:
+			n += cand[g - 1]
+		if right:
+			n += cand[g + 1]
+		if g >= GRID:
+			var u: int = g - GRID
+			n += cand[u]
+			if left:
+				n += cand[u - 1]
+			if right:
+				n += cand[u + 1]
+		if g < GRID * GRID - GRID:
+			var d: int = g + GRID
+			n += cand[d]
+			if left:
+				n += cand[d - 1]
+			if right:
+				n += cand[d + 1]
 		return n
 
 	# --- Piezas de dibujo ------------------------------------------------------------------------
@@ -1766,19 +1846,22 @@ class _Build:
 		var wx0: int = coord.x * SIZE
 		for x: int in SIZE:
 			middles[x] = FACE_MIDDLE_A + ChunkGenerator.hash_ints([plan.plan_seed, wx0 + x, SALT_FACE_COLUMN]) % FACE_MIDDLES
+		var variants: PackedByteArray = chunk.variant # en local y de vuelta al final (ver _fill)
+		var cliffs: PackedByteArray = chunk.cliff
 		for y: int in SIZE:
 			for x: int in SIZE:
 				var i: int = y * SIZE + x
-				var cliff: int = chunk.cliff[i]
+				var cliff: int = cliffs[i]
 				if cliff == WorldChunk.Cliff.NONE:
 					continue
 				if cliff == WorldChunk.Cliff.EDGE or cliff == WorldChunk.Cliff.RAMP:
-					chunk.variant[i] = _aux(i)
+					variants[i] = _aux(i)
 					continue
 				var pos: int = _aux(i)
 				var row: int = ROW_LIP if pos == 0 else (ROW_BASE if pos == _len(i) - 1 else ROW_MIDDLE)
-				var left: bool = _cliff_at(x - 1, y) == cliff
-				var right: bool = _cliff_at(x + 1, y) == cliff
+				# _cliff_at en línea sobre la capa local.
+				var left: bool = (cliffs[i - 1] if x > 0 else t_cliff[(y + 1) * TILE_W + x]) == cliff
+				var right: bool = (cliffs[i + 1] if x < LAST else t_cliff[(y + 1) * TILE_W + x + 2]) == cliff
 				var column: int
 				if cliff == WorldChunk.Cliff.FACE:
 					if left and right:
@@ -1791,27 +1874,31 @@ class _Build:
 						column = FACE_SINGLE
 				else:
 					column = COLUMN_MIDDLE if left == right else (COLUMN_LEFT if right else COLUMN_RIGHT)
-				chunk.variant[i] = row | (column << VARIANT_COLUMN_SHIFT)
+				variants[i] = row | (column << VARIANT_COLUMN_SHIFT)
+		chunk.variant = variants
 
 	## Sombra al pie de las caras y al este de los bordes este (capa 2). Fuera del chunk se mira el
 	## relieve del margen.
 	func _paint_shadows() -> void:
+		var decor: PackedByteArray = chunk.decor # en local y de vuelta al final (ver _fill)
+		var cliffs: PackedByteArray = chunk.cliff
 		for y: int in SIZE:
 			var row_t: int = (y + 1) * TILE_W + 1
 			for x: int in SIZE:
 				var i: int = y * SIZE + x
-				if chunk.cliff[i] != WorldChunk.Cliff.NONE:
+				if cliffs[i] != WorldChunk.Cliff.NONE:
 					continue
 				var north: int = row_t + x - TILE_W
-				var north_cliff: int = chunk.cliff[i - SIZE] if y > 0 else t_cliff[north]
+				var north_cliff: int = cliffs[i - SIZE] if y > 0 else t_cliff[north]
 				if north_cliff == WorldChunk.Cliff.FACE and t_aux[north] == t_len[north] - 1:
-					chunk.decor[i] = Decor.SHADOW_FOOT
+					decor[i] = Decor.SHADOW_FOOT
 					continue
 				var west: int = row_t + x - 1
-				var west_cliff: int = chunk.cliff[i - 1] if x > 0 else t_cliff[west]
+				var west_cliff: int = cliffs[i - 1] if x > 0 else t_cliff[west]
 				var mask: int = t_aux[west]
 				if west_cliff == WorldChunk.Cliff.EDGE and mask != EDGE_PEAK and mask & EDGE_E != 0:
-					chunk.decor[i] = Decor.SHADOW_EAST
+					decor[i] = Decor.SHADOW_EAST
+		chunk.decor = decor
 
 	# --- Paso 6-7 (M8): letreros ------------------------------------------------------------------
 
@@ -2115,20 +2202,29 @@ class _Build:
 	## Acceso a un objeto: alguna casilla vecina (no las esquinas) que se pisa y se alcanza. 0 si una
 	## de ellas tiene un suelo de `prefer`, 1 si solo otras, -1 si ninguna.
 	func _access(cell: Vector2i, size: Vector2i, prefer: int) -> int:
+		# Sin Array[Vector2i] del anillo y con las capas en locales: se llama por cada árbol. El
+		# resultado no depende del orden en que se miran las vecinas.
+		var blocked: PackedByteArray = chunk.blocked
+		var ground: PackedByteArray = chunk.ground
 		var best: int = -1
-		var ring: Array[Vector2i] = []
-		for x: int in range(cell.x, cell.x + size.x):
-			ring.append(Vector2i(x, cell.y - 1))
-			ring.append(Vector2i(x, cell.y + size.y))
-		for y: int in range(cell.y, cell.y + size.y):
-			ring.append(Vector2i(cell.x - 1, y))
-			ring.append(Vector2i(cell.x + size.x, y))
-		for c: Vector2i in ring:
-			if c.x < 0 or c.y < 0 or c.x > LAST or c.y > LAST:
+		var x0: int = cell.x
+		var y0: int = cell.y
+		var x1: int = cell.x + size.x # columna de la derecha (fuera del objeto)
+		var y1: int = cell.y + size.y # fila de abajo (fuera del objeto)
+		for k: int in 2 * (size.x + size.y):
+			var x: int
+			var y: int
+			if k < 2 * size.x:
+				x = x0 + (k >> 1)
+				y = y0 - 1 if k & 1 == 0 else y1
+			else:
+				y = y0 + ((k - 2 * size.x) >> 1)
+				x = x0 - 1 if k & 1 == 0 else x1
+			if x < 0 or y < 0 or x > LAST or y > LAST:
 				continue
-			var i: int = c.y * SIZE + c.x
-			if chunk.blocked[i] == 0 and reached[i] == 1:
-				if (prefer >> chunk.ground[i]) & 1 == 1:
+			var i: int = y * SIZE + x
+			if blocked[i] == 0 and reached[i] == 1:
+				if (prefer >> ground[i]) & 1 == 1:
 					return 0
 				best = 1
 		return best
@@ -2156,20 +2252,25 @@ class _Build:
 	func _place_cave(nujio: bool, r: RandomNumberGenerator) -> bool:
 		var cands := PackedInt32Array()
 		var face: int = WorldChunk.Cliff.FACE
+		# Solo lectura en el bucle: capas en locales (leerlas por nombre en cada casilla es caro).
+		var cliffs: PackedByteArray = chunk.cliff
+		var blocked: PackedByteArray = chunk.blocked
+		var levels: PackedByteArray = chunk.level
+		var ground: PackedByteArray = chunk.ground
 		for y: int in range(1, LAST):
 			for x: int in range(1, LAST - 2):
 				var i: int = y * SIZE + x
-				if chunk.cliff[i] != face or chunk.cliff[i + 1] != face or chunk.cliff[i - 1] != face or chunk.cliff[i + 2] != face:
+				if cliffs[i] != face or cliffs[i + 1] != face or cliffs[i - 1] != face or cliffs[i + 2] != face:
 					continue
 				var aux: int = _aux(i)
 				if aux != _len(i) - 1 or aux < 1 or _aux(i - 1) != aux or _aux(i + 1) != aux or _aux(i + 2) != aux:
 					continue
 				var b: int = i + SIZE
-				if chunk.blocked[b] == 1 or chunk.blocked[b + 1] == 1 or reached[b] == 0 or reached[b + 1] == 0:
+				if blocked[b] == 1 or blocked[b + 1] == 1 or reached[b] == 0 or reached[b + 1] == 0:
 					continue
-				if chunk.level[b] != chunk.level[i] or chunk.level[b + 1] != chunk.level[i]:
+				if levels[b] != levels[i] or levels[b + 1] != levels[i]:
 					continue
-				if (NATURAL_GROUND >> chunk.ground[i]) & 1 == 0 or (NATURAL_GROUND >> chunk.ground[i + 1]) & 1 == 0:
+				if (NATURAL_GROUND >> ground[i]) & 1 == 0 or (NATURAL_GROUND >> ground[i + 1]) & 1 == 0:
 					continue
 				if not _rect_near(Rect2i(x, y, 2, 1), nujio):
 					continue
@@ -2225,8 +2326,10 @@ class _Build:
 			for x: int in range(area.position.x, area.end.x):
 				var rect := Rect2i(x, y, 2, 2)
 				var ok: bool = true
-				for c: Vector2i in [Vector2i(x, y), Vector2i(x + 1, y), Vector2i(x, y + 1), Vector2i(x + 1, y + 1)]:
-					if not _free(c.x, c.y, NATURAL_GROUND) or chunk.decor[c.y * SIZE + c.x] >= DECOR_PIECE_BASE:
+				for k: int in 4: # sin literal de array en el bucle
+					var cx: int = x + (k & 1)
+					var cy: int = y + (k >> 1)
+					if not _free(cx, cy, NATURAL_GROUND) or chunk.decor[cy * SIZE + cx] >= DECOR_PIECE_BASE:
 						ok = false
 						break
 				if not ok or not _rect_near(rect, nujio, trail):
