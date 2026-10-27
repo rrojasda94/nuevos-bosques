@@ -1,6 +1,7 @@
 # Ficha: Combate táctico en cuadrícula
 
 > Dueño: `game-designer`. ADR 0016. **Versión 0.5** (antes del grupo garelino; `roadmap-0.5.md`). Valores **provisionales**.
+> **Ajustes de playtest (0.5, bloque P; propuesta pendiente de #191)**: `ajustes-playtest-0.5.md`. La huida pasa a ser una tirada (por AGI y por los enemigos cercanos), se añade la acción **Objeto** y las armas tienen alcance propio (la lanza llega a 2). Las filas afectadas de abajo están marcadas con **[P]**.
 > Sustituye la presentación por menú "estilo Pokémon" de `cruce-y-combate-v2.md`. Las reglas de cruce, pago, memoria del Bosque, XP, fatales y reaparición siguen igual. La IA del PR #67 se traduce a la cuadrícula (`ia-de-combate.md`).
 
 ## Objetivo
@@ -91,6 +92,7 @@ Palabras del dueño:
 
 ### Atacar, evasión y orientación
 - **Alcance**: cuerpo a cuerpo a **1 casilla ortogonal** (no en diagonal).
+  - **[P]** Cada arma puede tener su propio alcance (`items.json`, `range` y `line`): la lanza llega a 1–2 en línea y la honda (provisional) a 2–3. El Ofomni ataca a 1–2 con sus látigos (`ajustes-playtest-0.5.md`, §4 y §6).
 - **Precisión** = 100 − **Evasión** del defensor (mínimo 5%, máximo 100%).
 - **Evasión** (provisional):
 
@@ -123,7 +125,8 @@ Palabras del dueño:
 | **Defender** | El daño recibido ×0,5 hasta tu siguiente turno; cuenta como acción |
 | **Esperar** | No actúas; CT −60 |
 | **Ofrecer Luz / Ofrecer ofrenda** | Sin cambios: pagas N y el Único **apaciguable** se va; termina el combate (ADR 0013). Desactivado con los no apaciguables (Ofomni descarriado, Aledra) |
-| **Huir** | Desde **cualquier casilla del borde** del tablero, **siempre** con éxito (dueño, #184: "Cualquier borde, seguro"). Huye todo tu bando. El enemigo recupera PV (como hoy) |
+| **Huir** | Desde **cualquier casilla del borde** del tablero, **siempre** con éxito (dueño, #184: "Cualquier borde, seguro"). Huye todo tu bando. El enemigo recupera PV (como hoy). **[P] Propuesta tras el playtest (#191)**: desde el borde, con probabilidad P = 70 + 5 × (tu AGI − la AGI más alta de los cercanos) − 35 por enemigo adyacente − 10 por enemigo cercano + 10 por intento fallido, entre 5% y 95% (`tactical.flee`). Se ve antes de confirmar. Si falla, pierdes el turno |
+| **Objeto** **[P]** | Usa un objeto de combate de la bolsa (en la 0.5, el fruto: cura el 25% de los PV máximos tuyos o de un aliado adyacente). Cuenta como acción |
 | **Orden al grupo** | Libre / Atacar a tu objetivo / Defender (PR #67), sin gastar acción |
 
 - **Apresurar** (PR #67) desaparece: el sistema CT ya premia moverse sin actuar o esperar.
@@ -189,7 +192,7 @@ Palabras del dueño:
 - **Recorte con agua o riscos que separan a los bandos**: el recorte se desplaza o se garantiza un camino (el tablero debe ser conexo).
 - **Nadie puede alcanzar a nadie** (Mov bajo y tablero grande): los perfiles de IA se acercan cada turno; el tablero de 12 × 8 lo limita.
 - **Combate contra un solo Botarramas**: también en tablero (#187); rápido por su Mov 2 en un tablero de 8 × 6.
-- **Huir sin estar en el borde**: la opción no aparece; hay que caminar hasta cualquier casilla del borde. En un 8 × 6 son 3 casillas como mucho; en un 14 × 10, hasta 5 (huir en abierto cuesta más, y está bien).
+- **Huir sin estar en el borde**: la opción no aparece; hay que caminar hasta cualquier casilla del borde. En un 8 × 6 son 3 casillas como mucho; en un 14 × 10, hasta 5 (huir en abierto cuesta más, y está bien). **[P]** Con la huida con suerte, llegar al borde no basta: hay que llegar lejos de los enemigos, y la IA intenta cortar el paso (`ajustes-playtest-0.5.md`, §1 y §6).
 - **Cupo 1** (espacio muy cerrado): solo el jugador contra un enemigo; el resto de los dos bandos entra como refuerzo.
 - **Refuerzo enemigo con su columna ocupada**: entra por la casilla libre más cercana de su borde.
 - **Recorte sin zona de poco desnivel en 1 chunk**: se usa el mejor disponible, con las caras de risco comprimidas a saltos de altura.
@@ -214,6 +217,7 @@ Palabras del dueño:
 | T8 | Retirar la escena antigua y ajustar el balance tras el playtest | rpg-systems-dev, game-designer | T6 |
 
 ## Preguntas abiertas
+- **#191** (nueva, tras el playtest): ¿se cambia "Cualquier borde, seguro" (#184) por la huida con suerte?
 - ~~#184–#187~~ Resueltas por el dueño:
   - Huir desde cualquier borde, siempre;
   - tablero de 8 × 6 y 3 por bando;
