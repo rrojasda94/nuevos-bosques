@@ -63,6 +63,7 @@ Todos los cambios que nota el jugador. Formato [Keep a Changelog](https://keepac
   - **Sorpresa**: si abordas con E a un Único que no te persigue (no te ha detectado: Paso quedo, una máscara o porque no miraba), tu bando juega primero y los enemigos empiezan de espaldas ("¡Sorpresa!").
   - **Emboscada**: si te alcanza un cazador o Aledra de noche, al revés: ellos juegan primero, tú empiezas de espaldas y entra tu última party sin preguntar ("¡Emboscada!").
   - Un aliado en Auto que se queda solo en su bando ya no huye con poca vida: pelea.
+- Combate táctico, tablero desde el relieve del Mundo 2.0 (sigue apagado por defecto y el Mundo 2.0 aún no se juega; valores provisionales): el tablero es un recorte del terreno real alrededor del encuentro, buscado a 1 chunk como mucho, con como mucho 2 niveles de desnivel, al menos un 70% de casillas transitables y camino entre los dos bandos. Los riscos no se comen el tablero: sus caras pasan a ser un salto de altura entre casillas vecinas. Conserva escaleras y rampas (se suben sin gastar Salto), ríos, lagos y vados, árboles, rocas y casas. Si no hay ningún recorte así, se usa el mejor con camino o, si tampoco, el tablero llano. Demo de prueba: `scenes/rpg/tactical_demo_relief.tscn`.
 
 ### Cambiado
 - La cordillera occidental del Valle del Sara (Urd Gumnavis) ya no tiene cumbres: son colinas y montañas que se cruzan a pie. El 3ro, el 5to y el 7mo del Sara nacen en fuentes de esa cordillera y bajan desde allí al Sara.

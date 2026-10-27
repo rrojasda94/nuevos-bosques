@@ -52,7 +52,13 @@
         "large": { "width": 14, "height": 10, "deploy_columns": 3, "latigazo": [3, 2] }
       },
       "biome_size": { "bosque_denso": "small", "tarca": "small", "cueva": "small", "bosque": "medium", "bosque_claro": "medium", "orilla": "medium", "desierto": "large", "pradera": "large", "sabana": "large", "villa": "large" },
-      "biome_ratio": { "default": 0.65, "bosque_denso": 0.5, "tarca": 0.5, "cueva": 0.5, "bosque": 0.65, "bosque_claro": 0.7, "orilla": 0.7, "desierto": 0.9, "pradera": 0.9, "sabana": 0.85, "villa": 0.85 }
+      "biome_ratio": { "default": 0.65, "bosque_denso": 0.5, "tarca": 0.5, "cueva": 0.5, "bosque": 0.65, "bosque_claro": 0.7, "orilla": 0.7, "desierto": 0.9, "pradera": 0.9, "sabana": 0.85, "villa": 0.85 },
+      "relief": {
+        "$comment": "Recorte con relieve del Mundo 2.0 (combate-tactico.md, alturas; T7a, TacticalRelief). Se prueban recortes del tamaño del plan desplazados de step en step casillas hasta radius (80 = 1 chunk) del encuentro. Válido: proporción transitable >= min_walkable, desnivel (tras comprimir los riscos) <= max_span y camino a pie entre las columnas de colocación con path_jump y path_drop (el Salto más bajo: 1, y bajar Salto + 1). Puntuación = proporción x weight_walkable - desnivel x weight_span - (distancia / radius) x weight_distance; gana la más alta que tenga camino. Con weight_span 0 el desnivel solo filtra (<= max_span): si puntuara, el recorte huiría siempre al llano más cercano y se perdería el relieve del lugar; la distancia pesa más que la proporción por lo mismo. Si ninguno es válido, el mejor con desnivel <= max_span, camino y proporción >= relaxed_min_walkable; si tampoco, el tablero llano. El camino se comprueba como mucho en max_checks recortes por paso (los mejor puntuados). Provisionales: game-designer.",
+        "radius": 80, "step": 4, "max_span": 2, "min_walkable": 0.7, "relaxed_min_walkable": 0.5,
+        "path_jump": 1, "path_drop": 2, "weight_walkable": 0.5, "weight_span": 0.0, "weight_distance": 1.0,
+        "max_checks": 64
+      }
     },
     "actions": { "evasion_base": 5, "evasion_per_agi": 2, "flank_factor": 0.5, "back_factor": 0.0, "height_evasion": 10, "hit_min": 5, "hit_max": 100, "flank_bonus": 1, "back_bonus": 2, "height_bonus": 1, "support_range": 2, "joint_max": 4 }
   },

@@ -86,6 +86,10 @@ Palabras del dueño (2026-10-25): "las villas tienen gente, tienen lugares para 
 
 ### Artesanos de equipo (confirmado)
 - **Paruas** hacen las **armas** y **Sarua** las **máscaras y los talismanes** (dueño: "asi es").
+- **Trueque mínimo adelantado a la 0.5** (ajuste de playtest, #197; `ajustes-playtest-0.5.md`, §5b). Dueño: "los item no tienen ningun valor real aun en la jugabilidad".
+  - En "Servicio → Trueque", el Sarua cambia **ofrendas o Luz suelta** por máscaras y talismanes del catálogo actual (precios de 4 a 6), y el Paruas, por las 2 armas provisionales (5 y 6).
+  - Ofrecen 3 objetos por día, por seed, que se reponen en el riutash del amanecer.
+  - Sin materiales ni mejoras: fabricar y mejorar siguen en la 0.6, igual que los favores del Sarua.
 - **Fabricar** un objeto: cuesta Luz u ofrendas. **Mejorar**: +1 de nivel al objeto (máx. 3).
 
 | Objeto (ranura) | Efecto base (propuesta) | Fabricar | Mejorar (+1) |

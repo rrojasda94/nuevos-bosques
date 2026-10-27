@@ -161,6 +161,13 @@ El letrero y el mapa (M) podrían indicar el estado con texto o color (`navegaci
   - **Sacarlo de su Bosque** baja la relación con él: **−5 por fruto y por salida**. El fruto no se pierde al salir.
   - Tomar o comer más de un fruto (robo) **alerta a los Ofomni**, que persiguen (`sigilo-y-robo.md`, implementado).
   - Tomarlo para guardar cuenta igual para el límite de 1 por Momento y por Bosque.
+- **Ajuste de playtest (0.5, bloque P; `ajustes-playtest-0.5.md`, §2)**. Dueño: "comer un fruto en otro bosque aun lo reconoce como segundo fruto y manda ofomni". La regla **no cambia**; lo que falla es que no se entiende:
+  - **Icono de permiso en el HUD**: verde (permiso), gris (ya tomado este Momento), rojo (forzado, colado o cerrado). Lo calcula `FruitRules.permission_state`.
+  - Al entrar en un Bosque forzado o colado, el aviso de entrada dice que su fruto no es tuyo.
+  - En la confirmación, el título explica el motivo, la opción se llama "Robarlo" y el cursor empieza en "Dejarlo".
+  - Hay que reproducir el caso del dueño (`qa-tester`): comer un fruto guardado no debe contar como tomar.
+  - La descripción de `items.json` está desfasada; el texto nuevo está propuesto en la ficha de ajustes.
+  - **Pregunta #190**: ¿un Bosque forzado debería dar algún permiso?
 
 ## Salvar los Bosques (0.5, propuesta)
 Palabras del dueño (2026-10-24): "salvar los bosques".
