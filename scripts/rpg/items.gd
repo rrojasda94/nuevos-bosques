@@ -78,6 +78,11 @@ static func camouflage(id: StringName) -> int:
 	return int(entry(id).get("camouflage", 0))
 
 
+## Camuflaje que resta un arma enfundada (ajustes-playtest-0.5.md, punto 4a; la lanza, 2).
+static func sheathed_camo_penalty(id: StringName) -> int:
+	return int(entry(id).get("sheathed_camo_penalty", 0))
+
+
 ## Velocidad extra al andar (fracción: 0.3 = un 30% más rápido; talismanes de viaje).
 static func speed_bonus(id: StringName) -> float:
 	return float(entry(id).get("speed_bonus", 0.0))

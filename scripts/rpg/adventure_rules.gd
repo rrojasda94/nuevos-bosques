@@ -95,10 +95,48 @@ static func weapon() -> StringName:
 	return InventoryLogic.equipped_in(GameState.equipped, InventoryLogic.SLOT_MAIN_HAND)
 
 
-## El Adoc lleva un arma equipada. Para el sigilo: con el arma equipada, el Bosque no le deja pasar
-## (sigilo-y-robo.md, regla 2); desequipada, no cierra el paso.
+## El Adoc lleva el arma en la mano (ajustes-playtest-0.5.md, 4a: "en la mano" = el "armado" de la
+## 0.3). Con el arma en la mano, el Bosque no le deja pasar en paz (sigilo-y-robo.md, regla 2) y no
+## puede colarse; enfundada o en la bolsa, no cierra el paso.
 static func is_armed() -> bool:
+	return has_weapon() and GameState.weapon_drawn
+
+
+## Lleva un arma equipada, en la mano o enfundada (en una sicabi no se entra así).
+static func has_weapon() -> bool:
 	return weapon() != &""
+
+
+## Cambia el arma entre la funda y la mano (tecla Q, gratis fuera de combate). `here`: Bosque en el
+## que está el Adoc; si se ha colado en él sin que le vean y la saca, el Bosque lo siente (ya le
+## caza). Avisa con weapon_toggled. Devuelve &"drawn", &"sheathed" o &"none" (no lleva arma).
+static func toggle_weapon(here: int = -1) -> StringName:
+	if not has_weapon():
+		GameState.weapon_drawn = false
+		return &"none"
+	GameState.weapon_drawn = not GameState.weapon_drawn
+	if GameState.weapon_drawn and is_sneaking_unseen(here):
+		GameState.sneaked_bosques[str(here)] = true
+	EventBus.weapon_toggled.emit(GameState.weapon_drawn)
+	return &"drawn" if GameState.weapon_drawn else &"sheathed"
+
+
+## Clave de sistema.json del aviso corto de toggle_weapon.
+static func weapon_toggle_text(result: StringName) -> String:
+	return "weapon_" + String(result)
+
+
+## En una sicabi no se entra con un arma equipada, ni en la mano ni enfundada (dueño, #193: "sicabi
+## prohíbe aun enfundada"). Hay que dejarla en la bolsa.
+static func can_enter_sicabi() -> bool:
+	return not has_weapon()
+
+
+## Al empezar un combate el arma se desenfunda sola, salvo en una emboscada del enemigo (`ambushed`):
+## entonces solo cuenta si ya estaba en la mano. Al terminar vuelve a su estado (no se toca
+## GameState.weapon_drawn).
+static func drawn_at_start(ambushed: bool = false) -> bool:
+	return has_weapon() and (GameState.weapon_drawn or not ambushed)
 
 
 ## ATQ que suma el arma equipada (0 sin arma).
@@ -106,12 +144,13 @@ static func weapon_atk_bonus() -> int:
 	return Items.atk_bonus(weapon())
 
 
-## Stats con los que pelea el Adoc ahora: los de su nivel y sus puntos, más el ATQ del arma equipada
+## Stats con los que pelea el Adoc ahora: los de su nivel y sus puntos, más el ATQ del arma si está
+## desenfundada al empezar (drawn_at_start: siempre, salvo enfundada en una emboscada del enemigo)
 ## y menos la DEF que restan las máscaras pesadas (Stealth.def_penalty, sin bajar de 0), y su
 ## Agilidad (automática con el nivel).
-static func adoc_combat_stats() -> Dictionary:
+static func adoc_combat_stats(ambushed: bool = false) -> Dictionary:
 	var stats: Dictionary = AdocGrowth.player_stats()
-	stats.atk = int(stats.atk) + weapon_atk_bonus()
+	stats.atk = int(stats.atk) + (weapon_atk_bonus() if drawn_at_start(ambushed) else 0)
 	stats.def = maxi(0, int(stats.def) - Stealth.def_penalty())
 	stats.agi = AdocGrowth.agility(GameState.level)
 	return stats
@@ -159,6 +198,9 @@ static func equip_from_bag(index: int) -> bool:
 	var previous: StringName = InventoryLogic.equipped_in(GameState.equipped, slot)
 	if not InventoryLogic.equip(GameState.bag, GameState.equipped, index):
 		return false
+	# Un arma recién equipada va enfundada (ajustes-playtest-0.5.md, 4a); Q la saca.
+	if slot == InventoryLogic.SLOT_MAIN_HAND:
+		GameState.weapon_drawn = false
 	if previous != &"":
 		EventBus.item_unequipped.emit(slot, previous)
 	EventBus.item_equipped.emit(slot, id)
@@ -170,6 +212,8 @@ static func unequip_slot(slot: StringName) -> bool:
 	var id: StringName = InventoryLogic.equipped_in(GameState.equipped, slot)
 	if not InventoryLogic.unequip(GameState.bag, GameState.equipped, slot):
 		return false
+	if slot == InventoryLogic.SLOT_MAIN_HAND:
+		GameState.weapon_drawn = false
 	EventBus.item_unequipped.emit(slot, id)
 	return true
 
@@ -462,11 +506,17 @@ static func riutash_near_nujio(chunk: ChunkData, cell: Vector2i, bosque_id: int,
 ## camuflaje, 1 como mínimo; con él puede llegar a 0 (solo te ve si te echa encima, a su
 ## engage_distance).
 static func vision_radius(bosque_id: int, base: int) -> int:
+	return Stealth.vision_against(raw_vision(bosque_id, base), BosqueStates.stealth_vision_bonus())
+
+
+## Visión de un Único del Bosque con `base` casillas, sin el camuflaje (1 como mínimo): + hostilidad
+## y estado del Bosque, − Paso quedo. La del vigía de Stealth.detects (ajustes-playtest-0.5.md, 3).
+static func raw_vision(bosque_id: int, base: int) -> int:
 	var m: Dictionary = _memory()
 	var radius: int = base + mini(int(m.vision_max_bonus), int(m.hostility_vision) * hostility(bosque_id))
 	radius += BosqueStates.vision_bonus(bosque_state(bosque_id))
 	radius -= AdocGrowth.vision_reduction()
-	return Stealth.vision_against(maxi(1, radius), BosqueStates.stealth_vision_bonus())
+	return maxi(1, radius)
 
 
 ## Stats del Único del Bosque a distancia d (deterministas: solo dependen de d). `unico_name`:
@@ -751,11 +801,11 @@ static func pay_toll_with_ofrenda(bosque_id: int, cost: int, index: int) -> bool
 ## AdocEncounters) y los Únicos del Bosque si su estado los da (bosque_allies), 2 como mucho; cada
 ## uno con su rol y su AGI (ia-de-combate.md).
 static func start_battle(bosque_id: int, d: int, monster_id: StringName = &"botarramas", count: int = 1,
-		allies: Array[Dictionary] = []) -> BattleLogic:
+		allies: Array[Dictionary] = [], ambushed: bool = false) -> BattleLogic:
 	var key: String = str(bosque_id)
 	var attempt: int = int(GameState.battle_attempts.get(key, 0))
 	GameState.battle_attempts[key] = attempt + 1
-	var logic := BattleLogic.new(balance(), adoc_combat_stats(), GameState.hp, GameState.luz,
+	var logic := BattleLogic.new(balance(), adoc_combat_stats(ambushed), GameState.hp, GameState.luz,
 		make_monster(monster_id, d), battle_seed(GameState.seed_value, bosque_id, attempt))
 	var cfg: Dictionary = monster_config(monster_id)
 	count = clampi(count, 1, MAX_ENEMIES)
@@ -772,6 +822,8 @@ static func start_battle(bosque_id: int, d: int, monster_id: StringName = &"bota
 	for ally: Dictionary in all_allies.slice(0, MAX_ALLIES):
 		logic.add_ally(ally)
 	_prepare(logic, cfg, d)
+	# Emboscada del enemigo con el arma enfundada: pelea con el ATQ base (drawn_at_start).
+	logic.unarmed = not drawn_at_start(ambushed)
 	logic.victory_xp = monster_xp(monster_id, d) * count
 	logic.level_ups = levels_gained(GameState.xp, logic.victory_xp)
 	# Un reparep que huye no da su XP (ia-de-combate.md): niveles sin ella, para anunciarlos bien.
@@ -847,18 +899,20 @@ static func unico_defeated(bosque_id: int, home: int, offends: bool = false) -> 
 
 
 ## Combate de misión contra su monstruo (`target` del JSON de la misión, p. ej. el Ofomni descarriado) con su d
-## fija. No abre Bosques y su contador de intentos (semilla) es el de la misión.
-static func start_quest_battle(quest_id: StringName, d: int) -> BattleLogic:
+## fija. No abre Bosques y su contador de intentos (semilla) es el de la misión. `ambushed`: emboscada
+## del enemigo (el arma enfundada no se desenfunda sola, drawn_at_start).
+static func start_quest_battle(quest_id: StringName, d: int, ambushed: bool = false) -> BattleLogic:
 	var q: Dictionary = GameState.quests.get(quest_id, {})
 	var attempt: int = int(q.get("battle_attempts", 0))
 	q.battle_attempts = attempt + 1
 	GameState.quests[quest_id] = q
 	var target: StringName = StringName(str(QuestLogic.data(quest_id).get("target", "")))
 	var rng_seed: int = ChunkGenerator.hash_ints([GameState.seed_value, String(quest_id).hash(), attempt, SALT_QUEST_BATTLE])
-	var logic := BattleLogic.new(balance(), adoc_combat_stats(), GameState.hp, GameState.luz,
+	var logic := BattleLogic.new(balance(), adoc_combat_stats(ambushed), GameState.hp, GameState.luz,
 		make_monster(target, d), rng_seed)
 	# Sin Bosque que cobre: no hay peaje que ofrecer. El Ofomni descarriado, además, no acepta pagos.
 	_prepare(logic, monster_config(target), d)
+	logic.unarmed = not drawn_at_start(ambushed)
 	return logic
 
 
@@ -879,7 +933,7 @@ static func _prepare(logic: BattleLogic, cfg: Dictionary, d: int) -> void:
 	logic.accepts_payment = is_appeasable(cfg)
 	logic.fatal = is_fatal(cfg.get("fatal_at", []), GameState.clock_momento)
 	# Sin arma se pelea con el ATQ base (y el combate lo avisa: "Peleas sin arma").
-	logic.unarmed = not is_armed()
+	logic.unarmed = not has_weapon()
 	logic.victory_xp = victory_xp(d)
 	logic.level_ups = levels_gained(GameState.xp, logic.victory_xp)
 	logic.luz_max = luz_max()

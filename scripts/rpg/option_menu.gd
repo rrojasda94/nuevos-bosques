@@ -38,6 +38,13 @@ func set_options(texts: Array[String], enabled: Array[bool], keep_cursor: bool =
 	_redraw()
 
 
+## Marca la opción `i` (si existe y está activa).
+func set_cursor(i: int) -> void:
+	if i >= 0 and i < _texts.size() and _enabled[i]:
+		index = i
+		_redraw()
+
+
 ## Devuelve el índice elegido con ui_accept, CANCEL con ui_cancel o NONE.
 func handle(event: InputEvent) -> int:
 	var before: int = index

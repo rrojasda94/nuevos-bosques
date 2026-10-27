@@ -63,7 +63,7 @@
       "id": "fruto",
       "kind": "fruit",
       "name": "Fruto del Bosque",
-      "description": "Cura un cuarto de tus PV. Solo se puede comer en su Bosque: sacarlo de él daña tu relación.",
+      "description": "Cura un cuarto de tus PV. Tómalo solo con permiso del Bosque (el natal o uno pagado), uno por Momento. Puedes comerlo en cualquier sitio, pero su Bosque nota que te lo llevas.",
       "stack_max": 5
     },
     {
@@ -72,7 +72,8 @@
       "name": "Lanza de adoc",
       "description": "La lanza de tu oficio. Con ella en la mano, ningún Bosque te deja pasar en paz.",
       "stack_max": 1,
-      "atk_bonus": 2
+      "atk_bonus": 2,
+      "sheathed_camo_penalty": 2
     },
     {
       "id": "mascara_de_corteza",

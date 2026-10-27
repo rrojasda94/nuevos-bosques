@@ -13,6 +13,19 @@ extends RefCounted
 ## choque con el límite (se aparta o se desliza a otra parte) o al cambiar de Bosque (cruzar tras
 ## pagar). Los ticks sin entrada (quieto, menú abierto) no lo acaban: soltar la tecla y volver a
 ## empujar el mismo borde no reabre el menú.
+##
+## Colarse (ajustes-playtest-0.5.md, punto 3): con `decide` (Callable(bosque_id, world_cell) ->
+## Dictionary de Stealth.border_outcome), al empezar el contacto se mira quién te ve. CROSS_MENU:
+## `contacted` y el menú, como siempre. CROSS_SNEAK: nadie te ve; el Bosque queda colado
+## (AdventureRules.sneak_into), deja de bloquear y se emite `sneaked`. CROSS_SEEN: te ve otro Único;
+## sin menú, se emite `seen` para que la exploración lo eche a perseguirte. Sin `decide`, siempre el
+## menú.
+
+## Resultado de un contacto colándose: el Bosque ya está colado; `broken`, los objetos rotos.
+signal sneaked(bosque_id: int, broken: Array[StringName])
+## Resultado de un contacto en el que te ve un Único que no es Botarramas: `outcome` de
+## Stealth.border_outcome (su `index` apunta al vigía de quien decide).
+signal seen(bosque_id: int, outcome: Dictionary)
 
 ## Empezó un contacto con el límite del Bosque `bosque_id` en la casilla `world_cell`.
 signal contacted(bosque_id: int, world_cell: Vector2i)
@@ -24,6 +37,8 @@ var bosque_at: Callable
 var is_closed: Callable
 ## Bosque en el que está el jugador (el de la casilla de sus pies). Sus casillas nunca bloquean.
 var current_bosque: int = -1
+## (int bosque_id, Vector2i world_cell) -> Dictionary: Stealth.border_outcome del contacto. Opcional.
+var decide: Callable
 
 var _hit_bosque: int = -1
 var _hit_cell: Vector2i = Vector2i.ZERO
@@ -73,8 +88,15 @@ func tick(player_cell: Vector2i, had_input: bool) -> void:
 	if hit == _contact_bosque:
 		return
 	_contact_bosque = hit
-	contacted.emit(hit, _hit_cell)
-	EventBus.bosque_border_reached.emit(hit)
+	var outcome: Dictionary = decide.call(hit, _hit_cell) if decide.is_valid() else {}
+	match outcome.get("kind", Stealth.CROSS_MENU):
+		Stealth.CROSS_SNEAK:
+			sneaked.emit(hit, AdventureRules.sneak_into(hit))
+		Stealth.CROSS_SEEN:
+			seen.emit(hit, outcome)
+		_:
+			contacted.emit(hit, _hit_cell)
+			EventBus.bosque_border_reached.emit(hit)
 
 
 ## Hay un contacto en curso con el límite de ese Bosque.

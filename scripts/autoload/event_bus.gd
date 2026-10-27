@@ -52,6 +52,8 @@ signal hp_changed(hp: int, max_hp: int)
 ## Equipo del Adoc (roadmap-0.3.md #113). slot: &"main_hand", &"mask" o &"talisman".
 signal item_equipped(slot: StringName, item_id: StringName)
 signal item_unequipped(slot: StringName, item_id: StringName)
+## El arma equipada pasa a la mano (`drawn` = true) o a la funda (ajustes-playtest-0.5.md, 4a).
+signal weapon_toggled(drawn: bool)
 ## El Adoc descansa en una villa (PV al máximo).
 signal rested_in_villa
 ## El Adoc ha robado al Bosque (p. ej. un fruto sin permiso o un segundo fruto del mismo Bosque

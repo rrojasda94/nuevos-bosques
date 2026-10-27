@@ -35,8 +35,10 @@ extends Node
 ## en hexadecimal) y player_facing. Las partidas anteriores a la v20 NO se cargan: sus
 ## coordenadas, Bosques, frutales, refugios y monstruos son del mundo viejo (SaveManager devuelve
 ## ERR_SAVE_OLD_WORLD). Las migraciones de v1 a v19 siguen en from_dict por si una futura versión
-## del mundo conserva el formato, pero ya no se usan al cargar.
-const SAVE_VERSION: int = 20
+## del mundo conserva el formato, pero ya no se usan al cargar. v21: arma enfundada o en la mano
+## (weapon_drawn, ajustes-playtest-0.5.md, 4a); al migrar desde la v20, un arma equipada queda en la
+## mano, como el "armado" de antes (SaveManager.migrate).
+const SAVE_VERSION: int = 21
 ## Primera versión del guardado con el Mundo 2.0: las anteriores se rechazan.
 const WORLD_2_SAVE_VERSION: int = 20
 ## Versión del mundo (ADR 0014 §7): 2 = Mundo 2.0. Si cambia, las partidas guardadas con otra se
@@ -135,6 +137,9 @@ var party: Array = []
 var bag: Array = []
 ## Equipo (InventoryLogic): { "main_hand", "mask", "talisman" } → id del objeto o "".
 var equipped: Dictionary = {}
+## El arma de la mano principal está en la mano (true) o enfundada (false). Sin arma, false
+## (AdventureRules.is_armed, toggle_weapon).
+var weapon_drawn: bool = false
 ## Misiones: { &"quest_id": estado de QuestLogic.new_quest() }.
 var quests: Dictionary = {}
 ## La villa natal quedó dañada (misión del Ofomni fallida). En la 0.2.0 solo es una marca.
@@ -226,6 +231,7 @@ func new_game(new_seed: int = 0, new_region: StringName = &"valle_del_sara") -> 
 	for item: Dictionary in Items.start_bag():
 		InventoryLogic.add(bag, StringName(str(item.id)), int(item.get("qty", 1)))
 	equipped = InventoryLogic.sanitize_equipped(Items.start_equipped())
+	weapon_drawn = false
 	quests = {}
 	villa_damaged = false
 	fama = 0
@@ -280,6 +286,7 @@ func to_dict() -> Dictionary:
 		"party": party,
 		"bag": bag,
 		"equipped": equipped,
+		"weapon_drawn": weapon_drawn,
 		"quests": quests,
 		"villa_damaged": villa_damaged,
 		"xp": xp,
@@ -445,6 +452,7 @@ func from_dict(data: Dictionary) -> void:
 	citizens = data.get("citizens", [])
 	party = data.get("party", [])
 	_load_inventory(data)
+	weapon_drawn = bool(data.get("weapon_drawn", false)) and str(equipped.get("main_hand", "")) != ""
 	quests = {}
 	var saved_quests: Variant = data.get("quests", {})
 	if saved_quests is Dictionary:

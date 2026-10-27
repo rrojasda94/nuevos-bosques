@@ -56,6 +56,86 @@ static func is_theft(bosque_id: int, home: int) -> bool:
 	return not has_permission(bosque_id, home) or taken_in(bosque_id) > 0
 
 
+# --- Permiso a la vista (ajustes-playtest-0.5.md, punto 2: la regla no cambia) -------------------
+
+## Estados del permiso del fruto en un Bosque (icono del HUD, avisos y confirmación del robo).
+const GRANTED: StringName = &"granted"
+const USED: StringName = &"used"
+const FORCED: StringName = &"forced"
+const SNEAKED: StringName = &"sneaked"
+const CLOSED: StringName = &"closed"
+
+
+## Permiso del fruto ahora en el Bosque `bosque_id` (`home`: natal): GRANTED (natal, pagado,
+## salvoconducto o que no cobra, y sin fruto tomado en el Momento), USED (con permiso, pero ya dio
+## el de este Momento), o sin permiso: FORCED (venciste a un Botarramas sin pagar), SNEAKED (colado)
+## o CLOSED.
+static func permission_state(bosque_id: int, home: int) -> StringName:
+	if has_permission(bosque_id, home):
+		return USED if taken_in(bosque_id) > 0 else GRANTED
+	if AdventureRules.is_forced(bosque_id):
+		return FORCED
+	if AdventureRules.is_sneaked(bosque_id):
+		return SNEAKED
+	return CLOSED
+
+
+## Permiso del fruto donde está el Adoc (GameState.chunk_coord en el reparto de la partida), o &""
+## fuera de un Bosque o sin partida. Lo lee el HUD.
+static func current_permission_state() -> StringName:
+	if MapLogic.region_plan() == null:
+		return &""
+	var bosque_id: int = MapLogic.current_bosques().bosque_at(GameState.chunk_coord)
+	if bosque_id < 0:
+		return &""
+	return permission_state(bosque_id, AdventureRules.current_home())
+
+
+## Línea que el aviso de entrada añade al entrar en un Bosque sin permiso de fruto (forzado o
+## colado), o "" si no hace falta. Una vez por entrada: la exploración la pone con los demás avisos.
+static func entry_notice(bosque_id: int, home: int) -> String:
+	match permission_state(bosque_id, home):
+		FORCED:
+			return Texts.get_text("fruit_entry_forced")
+		SNEAKED:
+			return Texts.get_text("fruit_entry_sneaked")
+	return ""
+
+
+## Pregunta del frutal (`can_store`: cabe en la bolsa): { text, actions, options, cursor }.
+## `actions`: &"eat", &"store" (si cabe) y &"leave"; `options`: sus textos; `cursor`: la opción
+## marcada al abrir. Si sería robo, el título dice el motivo (el estado del permiso), la opción de
+## tomarlo se llama "Robarlo" y el cursor empieza en "Dejarlo".
+static func prompt(bosque_id: int, home: int, store_fits: bool) -> Dictionary:
+	var actions: Array[StringName] = [&"eat"]
+	if store_fits:
+		actions.append(&"store")
+	actions.append(&"leave")
+	var theft: bool = is_theft(bosque_id, home)
+	var options: Array[String] = []
+	for a: StringName in actions:
+		options.append(Texts.get_text(("fruit_steal_" if theft and a != &"leave" else "fruit_") + String(a)))
+	var text: String = Texts.get_text("fruit_prompt")
+	if theft:
+		text = Texts.get_text("fruit_theft_title")
+		var reason: String = theft_reason(permission_state(bosque_id, home))
+		if reason != "":
+			text += "\n" + reason
+	return { "text": text, "actions": actions, "options": options, "cursor": actions.size() - 1 if theft else 0 }
+
+
+## Segunda línea del título del robo según el estado del permiso ("" si no hay motivo que añadir).
+static func theft_reason(state: StringName) -> String:
+	match state:
+		FORCED:
+			return Texts.get_text("fruit_reason_forced")
+		SNEAKED:
+			return Texts.get_text("fruit_reason_sneaked")
+		USED:
+			return Texts.get_text("fruit_reason_used")
+	return ""
+
+
 ## Cabe en la bolsa un fruto de ese Bosque (si no, solo se puede comer).
 static func can_store(bosque_id: int) -> bool:
 	return InventoryLogic.can_add(GameState.bag, Items.FRUIT_ID, 1, bosque_id)

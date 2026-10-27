@@ -98,7 +98,10 @@ func test_catalog_has_masks_and_talismans_with_different_values() -> void:
 	assert_eq(Items.camouflage(PLUMA), 0, "no oculta")
 	var cfg: Dictionary = Stealth.config()
 	assert_eq(int(cfg.camouflage_max), 14)
-	assert_eq(int(cfg.sneak_max_vision), 1)
+	assert_false(cfg.has("sneak_max_vision"), "el umbral fijo se retira (ajustes-playtest-0.5.md, 3)")
+	assert_eq(int(cfg.close_detect), 2)
+	assert_almost_eq(float(cfg.unmasked_vision_factor), 2.0, 0.001)
+	assert_true(bool(cfg.run_breaks_camouflage))
 	assert_eq(int(cfg.hidden_vision), 2)
 
 
@@ -130,7 +133,8 @@ func test_weapon_in_hand_cancels_camouflage() -> void:
 	assert_eq(Stealth.gear_camouflage(), 9)
 	assert_eq(Stealth.camouflage(), 0, "con el arma en la mano, tu Luz te delata")
 	assert_false(Stealth.is_hidden())
-	assert_false(Stealth.can_sneak_into(_target), "no se cuela armado")
+	assert_eq(Stealth.border_outcome([], Vector2i.ZERO, Stealth.camouflage(), AdventureRules.is_armed(), false).kind,
+		Stealth.CROSS_MENU, "con la lanza en la mano no te cuelas aunque nadie te vea")
 	_unarm()
 	assert_true(Stealth.is_hidden())
 
@@ -139,11 +143,8 @@ func test_weapon_in_hand_cancels_camouflage() -> void:
 
 func test_sneaking_in_unseen_neither_pays_nor_forces_the_bosque() -> void:
 	_unarm()
-	_wear([CORTEZA])
-	assert_false(Stealth.can_sneak_into(_target), "visión 4: no basta")
-	_wear([SEMILLAS])
-	assert_true(Stealth.can_sneak_into(_target), "visión 1: te cuelas")
-	assert_false(Stealth.can_sneak_into(-1))
+	_wear([CORTEZA, SEMILLAS])
+	assert_false(Stealth.can_sneak_into(_target), "ponytail: el mundo viejo ya no se cuela (M17b)")
 	watch_signals(EventBus)
 	assert_eq(AdventureRules.sneak_into(_target), [] as Array[StringName], "nada se rompe")
 	assert_signal_emitted_with_parameters(EventBus, "bosque_sneaked", [_target])
@@ -163,13 +164,18 @@ func test_sneaking_in_unseen_neither_pays_nor_forces_the_bosque() -> void:
 func test_the_bosque_remembers_and_the_angry_one_needs_a_great_disguise() -> void:
 	_unarm()
 	_wear([CORTEZA, SEMILLAS])
+	var camo: int = Stealth.camouflage()
+	assert_eq(AdventureRules.raw_vision(_target, 10), 10)
+	assert_false(Stealth.detects(3, AdventureRules.raw_vision(_target, 10), camo), "visión 10 − 9: a 3 no te ve")
 	GameState.bosque_hostility[str(_target)] = 1
-	assert_false(Stealth.can_sneak_into(_target), "hostilidad 1: sus Botarramas ven 2 más (visión 3)")
+	assert_eq(AdventureRules.raw_vision(_target, 10), 12, "hostilidad 1: sus Únicos ven 2 más")
+	assert_true(Stealth.detects(3, AdventureRules.raw_vision(_target, 10), camo))
 	GameState.bosque_hostility.erase(str(_target))
 	GameState.bosque_state_overrides[str(_target)] = BosqueStates.ENOJADO
-	assert_false(Stealth.can_sneak_into(_target), "enojado: +4 de visión")
+	assert_true(Stealth.detects(5, AdventureRules.raw_vision(_target, 10), camo), "enojado: +4 de visión")
 	_wear([CENIZA])
-	assert_true(Stealth.can_sneak_into(_target), "camuflaje muy muy bueno (14): visión 0")
+	assert_false(Stealth.detects(3, AdventureRules.raw_vision(_target, 10), Stealth.camouflage()),
+		"camuflaje muy muy bueno (14): solo te ve a su lado")
 
 
 func test_mask_that_breaks_after_its_uses() -> void:
@@ -185,36 +191,6 @@ func test_mask_that_breaks_after_its_uses() -> void:
 	assert_signal_emitted_with_parameters(EventBus, "item_broken", [CENIZA])
 	assert_eq(InventoryLogic.equipped_in(GameState.equipped, &"mask"), &"", "sale del equipo")
 	assert_false(GameState.item_uses.has(String(CENIZA)))
-
-
-func test_exploration_sneaks_through_a_closed_border_without_the_menu() -> void:
-	var expl: Node = _exploration()
-	_accept_mission()
-	var border: Array = _border_with_target()
-	expl._enter_chunk(border[0], expl._get_chunk(border[0]).hub)
-	_unarm()
-	_wear([CORTEZA, SEMILLAS])
-	watch_signals(EventBus)
-	expl._on_edge_reached(border[1])
-	assert_eq(GameState.chunk_coord, border[0] + border[1], "cruza")
-	assert_signal_not_emitted(EventBus, "bosque_border_reached", "sin menú del borde")
-	assert_true(AdventureRules.is_sneaked(_target))
-	assert_false(AdventureRules.is_paid(_target, _home))
-	assert_true(_notice_contains(Texts.get_text("sneak_entered")), "avisa: te cuelas")
-	expl._process(BosqueHunt.interval(0) + 1.0)
-	assert_eq(expl._field.hunters().size(), 0, "colado y sin ser visto: el Bosque no caza")
-
-
-func test_exploration_without_disguise_still_opens_the_border_menu() -> void:
-	var expl: Node = _exploration()
-	_accept_mission()
-	var border: Array = _border_with_target()
-	expl._enter_chunk(border[0], expl._get_chunk(border[0]).hub)
-	_unarm()
-	watch_signals(EventBus)
-	expl._on_edge_reached(border[1])
-	assert_eq(GameState.chunk_coord, border[0], "no cruza")
-	assert_signal_emitted_with_parameters(EventBus, "bosque_border_reached", [_target])
 
 
 # --- Te han visto ----------------------------------------------------------------------------------------
@@ -358,16 +334,17 @@ func test_exploration_warns_when_crossing_armed_and_border_menu_opens_even_if_pa
 	assert_false(crossing._panel.visible, "desarmado y pagado: paso en paz")
 
 
-func test_equipping_inside_a_bosque_warns_in_the_inventory() -> void:
+func test_equipping_inside_a_bosque_sheathes_and_drawing_closes_it() -> void:
 	AdventureRules.unequip_slot(&"main_hand")
 	var index: int = -1
 	for i: int in GameState.bag.size():
 		if InventoryLogic.id_at(GameState.bag, i) == LANZA:
 			index = i
 	var text: String = Screen.activate(index, _target, _home)
-	assert_string_contains(text, Texts.get_text("bosque_feels_weapon"))
-	AdventureRules.unequip_slot(&"main_hand")
-	assert_false(Screen.activate(index, _home, _home).contains(Texts.get_text("bosque_feels_weapon")), "en el natal, no")
+	assert_false(text.contains(Texts.get_text("bosque_feels_weapon")), "recién equipada va enfundada: no cierra")
+	assert_false(AdventureRules.is_armed_against(_target, _home))
+	assert_eq(AdventureRules.toggle_weapon(), &"drawn")
+	assert_true(AdventureRules.is_armed_against(_target, _home), "en la mano, sí")
 
 
 func test_weapon_atk_bonus_and_unarmed_notice() -> void:
@@ -518,4 +495,5 @@ func _arm_spear() -> void:
 	for i in GameState.bag.size():
 		if InventoryLogic.id_at(GameState.bag, i) == &"lanza_de_adoc":
 			AdventureRules.equip_from_bag(i)
+			GameState.weapon_drawn = true
 			return

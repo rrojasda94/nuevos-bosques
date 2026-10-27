@@ -348,6 +348,7 @@ func test_no_toll_on_the_route_nor_in_the_calling_bosque() -> void:
 	assert_true(AdventureRules.is_welcome(on_route, _home))
 	assert_true(AdventureRules.is_passable(caller, _home))
 	GameState.equipped.main_hand = "lanza_de_adoc"
+	GameState.weapon_drawn = true
 	assert_false(AdventureRules.is_welcome(on_route, _home), "salvo que vayas armado")
 	GameState.equipped.main_hand = ""
 	FarQuests.fail(q)

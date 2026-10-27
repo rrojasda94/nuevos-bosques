@@ -105,7 +105,7 @@ func test_s1_paso_quedo_lowers_unico_vision_by_2() -> void:
 	_grant(&"paso_quedo")
 	assert_eq(AdventureRules.vision_radius(_target, 10), before - 2)
 	assert_eq(AdventureRules.vision_radius(_target, 2), 1, "sin camuflaje, 1 como mínimo")
-	assert_false(Stealth.can_sneak_into(_target), "no permite colarse sin máscara")
+	assert_eq(AdventureRules.raw_vision(_target, 10), before - 2, "también la del vigía al colarse")
 
 
 func test_s2_golpe_fuerte_once_every_3_turns() -> void:
