@@ -38,6 +38,8 @@ var cooldown: float = 0.0
 ## Segundos que le quedan antes de poder empezar el encuentro, aunque ya persiga (sigilo: acaba de
 ## ver al Adoc camuflado de cerca y le deja un instante para escapar).
 var engage_delay: float = 0.0
+## Mundo 2.0: sprint (P6): x = segundos de sprint que quedan, y = descanso antes del siguiente.
+var sprint: Vector2 = Vector2.ZERO
 ## Papel en el mundo (MonsterField.ROLE_*): guardián de frontera, ronda, perseguidor...
 var role: StringName = &"guardian"
 ## Cuántos van juntos (grupo de reparep: un solo monstruo en el mundo, el combate es contra todos).
@@ -115,10 +117,14 @@ func set_asleep(value: bool) -> void:
 
 ## Velocidad (px/s) en su estado: speed_px persiguiendo o volviendo, idle_speed_px en reposo. Si los
 ## datos no la tienen, la de su tiempo de paso (16 / step_time).
+## Esprintando, sprint_px (MonsterSteering.speed_px).
 func speed() -> float:
-	if state == MonsterSteering.State.IDLE:
-		return float(cfg.get("idle_speed_px", WorldCoords.TILE / maxf(0.01, float(cfg.get("idle_step_time", 0.5)))))
-	return float(cfg.get("speed_px", WorldCoords.TILE / maxf(0.01, float(cfg.get("step_time", 0.25)))))
+	return MonsterSteering.speed_px(cfg, state, is_sprinting())
+
+
+## Mundo 2.0: está esprintando (P6, MonsterSteering.sprint_tick).
+func is_sprinting() -> bool:
+	return sprint.x > 0.0
 
 
 ## Un tick. Si no ha llegado a su punto, anda hacia él con su GridMover; si ha llegado,
@@ -129,6 +135,8 @@ func think_world(delta: float, player_pos: Vector2, player: Vector2i, can_detect
 		is_blocked: Callable) -> void:
 	cooldown = maxf(0.0, cooldown - delta)
 	engage_delay = maxf(0.0, engage_delay - delta)
+	var chasing: bool = state == MonsterSteering.State.CHASE and can_detect and cooldown <= 0.0
+	sprint = MonsterSteering.sprint_tick(sprint, delta, chasing, MonsterSteering.chebyshev(mover.cell, player), cfg)
 	if not _arrived():
 		_glide(delta, is_blocked)
 		return
@@ -211,9 +219,11 @@ func _look_at(player: Vector2i) -> void:
 	_sprite.flip_h = player.x > cell.x
 
 
-## Vuelve a su puesto y olvida al jugador durante `seconds` (retroceder, huir).
+## Vuelve a su puesto y olvida al jugador durante `seconds` (retroceder, huir: MonsterSteering.
+## calm_seconds). Corta el sprint en curso sin descanso: al acabar la calma puede volver a esprintar.
 func calm(seconds: float) -> void:
 	cooldown = seconds
+	sprint.x = 0.0
 	if state == MonsterSteering.State.CHASE:
 		state = MonsterSteering.State.RETURN
 
