@@ -94,11 +94,11 @@ Todo Único que se mueva por el mundo tiene tres parámetros (en datos, por tipo
 | `engage_distance` | Distancia a la que empieza el encuentro (menú del borde o combate) | 1 | 2 |
 
 - Las máscaras y los artefactos que camuflan la Luz (0.3.0) actuarán sobre la visión (`sigilo-y-robo.md`).
-- **Ajuste de playtest (0.5, bloque P; `ajustes-playtest-0.5.md`, §1b y §3)**:
+- **Ajuste de playtest (0.5, bloque P; ADR 0017; `ajustes-playtest-0.5.md`, §1b y §3)**:
   - **Sprint**: un Único que persigue y está cerca corre un momento más rápido que el jugador cuando corre (Ofomni: a 4 casillas, 240 px/s durante 1,5 s, cada 4 s; Aledra: a 3, 250 px/s, 1 s, cada 5 s; reparep: a 3, 220 px/s, 1 s, cada 4 s). Claves `sprint_trigger`, `sprint_px`, `sprint_seconds` y `sprint_cooldown`. El **Botarramas no esprinta** (renquea). El talismán de pluma deja escapar de cualquier sprint.
   - **Detección a corta distancia**: a 2 casillas o menos (`stealth.close_detect`) cualquier Único te ve, lleves lo que lleves.
   - **Calma tras huir de un combate**: `flee_cooldown` = 1,5 s (Retroceder sigue con `engage_cooldown` = 3 s).
-  - **Perfiles de combate** (#195): Botarramas guardián; Ofomni látigo, con alcance 2; Aledra emboscadora.
+  - **Perfiles de combate** (dueño, #195: "Sí, encaja"): Botarramas guardián; Ofomni látigo, con alcance 2; Aledra emboscadora.
 - Los valores del Ofomni que no figuran aquí son los del PR 6; deben copiarse a esta tabla cuando estén fijados.
 
 ## Regla general: apaciguable o no
@@ -186,7 +186,7 @@ Que los guardianes del paso entre Bosques se vean en el mundo y salgan al encuen
   - En la 0.2.0 no hay máscaras, así que **el borde de un Bosque cerrado sigue cerrado**.
   - Si el jugador llega a la frontera sin que lo haya alcanzado un Botarramas, al tocarla se abre el mismo menú del borde (como en v1).
   - Colarse llegará con las máscaras y los artefactos de camuflaje de la 0.3.0 (`sigilo-y-robo.md`).
-  - **Propuesta tras el playtest (0.5, #192)**: se podrá colarse también sin máscara si ningún vigía te ve, con la visión de los vigías doblada (`ajustes-playtest-0.5.md`, §3).
+  - **Desde la 0.5** (dueño, #192; ADR 0017): se puede colarse también sin máscara si ningún vigía te ve, con la visión de los vigías doblada (`ajustes-playtest-0.5.md`, §3).
 - **Stats**: los del Único de v1 según d (PV 18 + 4·d, ATQ 4 + d, DEF 1 + ⌊d/2⌋ con tope 4). XP y Luz de victoria: igual que un Único (`progresion-adoc.md`).
 - **Fatal**: `fatal_at: []` (provisional).
 - **Regeneración**: recupera todos sus PV si el jugador huye o retrocede (v1). Por tiempo: #120.
