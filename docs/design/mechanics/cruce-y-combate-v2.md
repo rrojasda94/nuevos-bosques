@@ -26,8 +26,8 @@ Palabras del dueño: "una vez vencido al botarrama los demas botarramas deberian
 
 ### Encuentro
 - Los **Botarramas** (`monstruos.md`) ven al jugador en su `vision_radius`, renquean hacia él y, a `engage_distance`, abren el **menú del borde**.
-- Sin máscara no se puede colarse: tocar la frontera de un Bosque cerrado abre el mismo menú.
-  - **Propuesta tras el playtest (0.5, #192; `ajustes-playtest-0.5.md`, §3)**: tocar la frontera cerrada solo abre el menú si **un Botarramas te ve** en ese momento (a 2 casillas o menos siempre; si no, según su visión menos tu camuflaje, y el doble sin máscara) o si hablas con **E**. Si nadie te ve, te cuelas.
+- ~~Sin máscara no se puede colarse: tocar la frontera de un Bosque cerrado abre el mismo menú.~~
+  - **Desde la 0.5** (dueño, #192; ADR 0017; `ajustes-playtest-0.5.md`, §3): tocar la frontera cerrada solo abre el menú si **un Botarramas te ve** en ese momento (a 2 casillas o menos siempre; si no, según su visión menos tu camuflaje, y el doble sin máscara) o si hablas con **E**. Si nadie te ve, te cuelas.
 
 ### Menú del borde
 1. **"Ofrecer N Luz"**: paga con Luz suelta.

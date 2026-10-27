@@ -253,7 +253,9 @@ func test_migration_from_v10_and_v9_ofrenda_list() -> void:
 		file.store_string(JSON.stringify(old))
 		file.close()
 		GameState.new_game(7)
-		assert_eq(SaveManager.load_game(SAVE_SLOT), OK)
+		# Mundo 2.0 (v20): las partidas viejas ya no se cargan; la migración de from_dict sigue.
+		assert_eq(SaveManager.load_game(SAVE_SLOT), SaveManager.ERR_SAVE_OLD_WORLD)
+		GameState.from_dict(SaveManager.migrate(JSON.parse_string(JSON.stringify(old))))
 		assert_eq(AdventureRules.bag_ofrendas(), [Ofrendas.make_item(&"cuenco_ritual"), Ofrendas.make_item(&"cuenta_de_barro"),
 			Ofrendas.make_item(&"cuenta_de_barro")], "v%d: las ofrendas pasan a la bolsa" % version)
 		assert_eq(InventoryLogic.free_slots(GameState.bag), 9, "sin la máscara ni el talismán de partida nueva")

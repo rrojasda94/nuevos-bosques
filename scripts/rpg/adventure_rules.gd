@@ -134,8 +134,14 @@ static func is_armed_against(bosque_id: int, home: int = -1) -> bool:
 	return bosque_id != (home if home >= 0 else current_home())
 
 
-## Bosque natal de la partida actual (seed y región de GameState).
+## Bosque natal de la partida actual (seed y región de GameState). En el Mundo 2.0, el del chunk
+## de la villa natal del RegionPlan registrado en MapLogic. -1 sin partida (región vacía).
 static func current_home() -> int:
+	var plan: RegionPlan = MapLogic.region_plan()
+	if plan != null:
+		return plan.bosque_at(plan.home_chunk)
+	if GameState.region_id == &"":
+		return -1
 	return home_bosque(MapLogic.current_bosques(), ChunkGenerator.load_region(GameState.region_id))
 
 

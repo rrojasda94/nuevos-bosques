@@ -268,7 +268,9 @@ func test_v5_save_migrates_with_defaults() -> void:
 	file.close()
 	GameState.villa_damaged = true
 	GameState.xp = 99
-	assert_eq(SaveManager.load_game(SAVE_SLOT), OK)
+	# Mundo 2.0 (v20): las partidas viejas ya no se cargan; la migración de from_dict sigue.
+	assert_eq(SaveManager.load_game(SAVE_SLOT), SaveManager.ERR_SAVE_OLD_WORLD)
+	GameState.from_dict(SaveManager.migrate(JSON.parse_string(JSON.stringify(v5))))
 	assert_eq(AdventureRules.bag_ofrendas(), [], "el diccionario de v5 pasa a una bolsa sin ofrendas")
 	assert_eq(GameState.quests, {}, "sin misión: la exploración la vuelve a ofrecer")
 	assert_false(GameState.villa_damaged)

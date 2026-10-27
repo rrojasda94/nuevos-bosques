@@ -24,7 +24,7 @@ Palabras del dueño:
 - **Alivia**: con máscaras y talismanes se puede pasar sin pagar ni pelear.
 
 ## Reglas (lo dicho por el dueño)
-1. **Objetos de sigilo**: **máscaras** de distintas formas y **algunos talismanes** permiten colarse ("sneak") en los Bosques. Precisión (2026-10-24): "sneak puede darse usando una mascara solamente o algun otro artefacto que camufle la Luz del jugador". **Sin uno de esos objetos no se puede colarse**: el borde sigue cerrado aunque se esquive a los Botarramas.
+1. **Objetos de sigilo**: **máscaras** de distintas formas y **algunos talismanes** permiten colarse ("sneak") en los Bosques. Precisión (2026-10-24): "sneak puede darse usando una mascara solamente o algun otro artefacto que camufle la Luz del jugador". ~~**Sin uno de esos objetos no se puede colarse**: el borde sigue cerrado aunque se esquive a los Botarramas.~~ **Sustituido** (dueño, #192; ADR 0017): sin máscara también se puede colarse si nadie te ve, pero los vigías te ven al doble de distancia (sección "Ajustes de playtest").
 2. **Armas equipadas**: si el jugador las lleva, el Bosque **no le deja pasar** y tiene que **vencer a los enemigos constantemente**. Precisión (2026-10-24): "Las armas deberían poder estar o equipadas o desequipadas de la mano principal". **Desequipada, no cierra el paso.**
 3. **Percepción de los Únicos**: tienen radio de visión, velocidad y distancia de encuentro (`monstruos.md`, regla general). Las máscaras y los artefactos de camuflaje actúan sobre esa percepción.
 4. **Robo**: dentro de un Bosque, **robar un objeto** estando **sin protección** o **a la vista de otro Único** **despierta a los Ofomni**.
@@ -59,19 +59,20 @@ Palabras del dueño:
 - **Bosque enojado**: con camuflaje alto (un Botarramas base se queda con visión ≤ `hidden_vision` = 2) o con velocidad, sus cazadores tardan `stealth_hunt_factor` = 2 veces más.
 - **HUD**: icono de máscara (verde oculto, rojo visto) y de lanza (armado).
 
-## Ajustes de playtest (0.5, bloque P; propuesta pendiente de #192 y #193)
+## Ajustes de playtest (0.5, bloque P; confirmados en #192 y #193, ADR 0017)
 > Detalle y números en `ajustes-playtest-0.5.md` (§3 y §4). Dueño, tras jugar: "debería poderse entrar como sneaking pero los botarramas u otros unicos si te ven te pillan. Si estas muy bien equipado no deberían notarte a menos que pases por su lado."
 
 - **Colarse sin umbral**:
   - se cruza la frontera cerrada **sin menú** si, al tocarla, ningún Botarramas ni Único del Bosque destino te ve;
   - **te ve** si estás a `close_detect` = 2 casillas o menos (pasar a su lado, siempre) o dentro de su visión menos tu camuflaje;
   - se retira `sneak_max_vision`.
-- **Sin máscara también se puede**, pero la visión de los vigías se **dobla** (`unmasked_vision_factor` = 2: un Botarramas sin hostilidad te ve a 20). Sustituye a la regla 1 ("Sin uno de esos objetos no se puede colarse"), si el dueño lo confirma (#192).
+- **Sin máscara también se puede**, pero la visión de los vigías se **dobla** (`unmasked_vision_factor` = 2: un Botarramas sin hostilidad te ve a 20). **Sustituye a la regla 1** ("Sin uno de esos objetos no se puede colarse"; dueño, #192).
 - **Menú del borde**: solo si te ve un Botarramas, o si hablas tú con E. Si te ve otro Único, te persigue (su encuentro).
 - **Arma enfundada o en la mano** (tecla Q, `toggle_weapon`):
   - **enfundada** = "desequipada de la mano principal" (regla 2 del dueño): no cierra Bosques y el camuflaje funciona con −2 (lanza);
   - **en la mano**: como el "armado" de hoy.
-  - Al empezar un combate se desenfunda sola, salvo en una emboscada del enemigo (#193).
+  - Al empezar un combate se desenfunda sola, salvo en una emboscada del enemigo.
+  - **Sicabis**: no se entra con el arma equipada, aunque esté enfundada (dueño, #193: "sicabi prohíbe aun enfundada").
 - **Correr delata**: con Shift, el camuflaje no cuenta.
 - **Equipo inicial**: lanza enfundada y máscara de corteza equipadas.
 - **Trueque**: las demás piezas se compran al Sarua con ofrendas (`ajustes-playtest-0.5.md`, §5).
@@ -122,7 +123,7 @@ Palabras del dueño:
 
 ## Preguntas abiertas
 - **#130** (en parte: el fruto extra del mismo Momento es robo): qué más cuenta como robar (¿frutos, objetos de refugios, ofrendas dejadas por otros?) y qué es "estar sin protección".
-- **#131** (en parte): el arma se equipa o se desequipa de la mano principal, y desequipada no cierra el paso. Falta saber cuánto cuesta equipar o desequipar y su efecto en combate.
-- **#192** y **#193** (nuevas, tras el playtest): colarse sin máscara si nadie te ve, y arma enfundada o en la mano (`ajustes-playtest-0.5.md`).
+- ~~**#131**~~ Cerrada por la #193: el arma va enfundada o en la mano (tecla Q, gratis fuera de combate). En combate se desenfunda sola, salvo en una emboscada del enemigo.
+- ~~**#192** y **#193**~~ Resueltas (dueño; ADR 0017): colarse sin máscara si nadie te ve, y arma enfundada o en la mano (`ajustes-playtest-0.5.md`).
 - **#132**: duración y efecto de las máscaras y los artefactos que camuflan la Luz. ¿Se gastan? ¿Cada forma de máscara sirve para ciertos Bosques? ¿De dónde salen (villas, sarua)?
 - ~~Inventario y equipo (#113).~~ Confirmado: 12 casillas y 3 ranuras.

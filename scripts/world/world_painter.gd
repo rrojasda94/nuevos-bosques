@@ -303,9 +303,10 @@ func setup_sprite(sp: Sprite2D, obj: Dictionary, chunk_coord: Vector2i, sign_dir
 			region = Rect2i((v % 4) * 32, shape * 32, 32, 32)
 			flip = (v / 4) % 2 == 1
 		WorldChunk.ObjectKind.FRUIT_TREE:
-			# ponytail: el frutal vaciado (cols 6–7) sale de GameState en M14.
+			# Vaciado (FruitRules; la clave es la esquina noroeste): columnas 6–7.
 			tex = &"arboles"
-			region = Rect2i((4 + v % 2) * 32, shape * 32, 32, 32)
+			var col: int = 4 if FruitRules.has_fruit(chunk_coord, obj.cell) else 6
+			region = Rect2i((col + v % 2) * 32, shape * 32, 32, 32)
 			flip = (v / 2) % 2 == 1
 		WorldChunk.ObjectKind.REFUGE_TREE:
 			tex = &"arboles"

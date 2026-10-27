@@ -71,7 +71,6 @@ const COLOR_DISABLED := Color(1, 1, 1, 0.35)
 ## Reparto en Bosques de la partida (para saber en qué Bosque está el Adoc), recalculado si
 ## cambian la seed o la región.
 var _map: BosqueMap
-var _map_key: String = ""
 ## Casilla marcada (0 .. BAG_CELLS + EQUIP_CELLS - 1).
 var _cursor: int = 0
 ## Aviso de la última acción (se borra al mover el cursor).
@@ -323,7 +322,7 @@ func open() -> void:
 	if visible or get_tree().paused:
 		return
 	_bosque_id = _current_bosque()
-	_home = AdventureRules.home_bosque(_map, ChunkGenerator.load_region(GameState.region_id)) if _map != null else -1
+	_home = AdventureRules.current_home() if _map != null else -1
 	_relation = state_relation_line(_bosque_id)
 	var toll: String = toll_line(_bosque_id)
 	if toll != "":
@@ -407,10 +406,8 @@ func _unhandled_input(event: InputEvent) -> void:
 func _current_bosque() -> int:
 	if GameState.chunk_coord.x < 0:
 		return -1
-	var key: String = "%d:%s" % [GameState.seed_value, GameState.region_id]
-	if key != _map_key:
-		_map = BosqueMap.for_region(GameState.seed_value, ChunkGenerator.load_region(GameState.region_id))
-		_map_key = key
+	# Mundo 2.0: el reparto del RegionPlan; en el viejo, el de seed + región (MapLogic).
+	_map = MapLogic.current_bosques()
 	return _map.bosque_at(GameState.chunk_coord)
 
 

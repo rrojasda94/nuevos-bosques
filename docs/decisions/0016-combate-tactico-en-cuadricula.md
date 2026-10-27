@@ -34,7 +34,7 @@ Y al preguntarle:
 ## Respuestas del dueño (formulario)
 | # | Respuesta | Decisión |
 |---|---|---|
-| #184 | "Cualquier borde, seguro" | Se huye desde **cualquier casilla del borde** del tablero, siempre con éxito. |
+| #184 | "Cualquier borde, seguro" | Se huye desde **cualquier casilla del borde** del tablero, siempre con éxito. **Sustituida por ADR 0017** (huida con suerte, #191). |
 | #185 | "Más chico, 3 por bando" | Tablero de **8 × 6** y **hasta 3 por bando**, sin refuerzos. Reparep en grupos de 2–3. Latigazo múltiple en área de 3 × 1. |
 | #186 | "Textos cortos y números" | Números de daño flotando y una línea corta con el nombre de la acción. Se acaba la narración mensaje a mensaje. |
 | #187 | "Sí, todos" | **Todos** los combates van en tablero, también el 1 contra 1. |

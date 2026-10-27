@@ -123,7 +123,7 @@ func test_bridge_keeps_hp_of_allies_that_never_entered() -> void:
 func test_last_party_round_trips_in_the_save() -> void:
 	GameState.last_party = ["adoc:0", "botarramas:0"] as Array[String]
 	var data: Dictionary = GameState.to_dict()
-	assert_eq(int(data.save_version), 19)
+	assert_gte(int(data.save_version), 19, "last_party desde la v19")
 	GameState.last_party = []
 	GameState.from_dict(data)
 	assert_eq(GameState.last_party, ["adoc:0", "botarramas:0"] as Array[String])

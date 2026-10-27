@@ -57,12 +57,28 @@ const HERE_RADIUS_PX: float = WorldCoords.TILE
 static var _map: BosqueMap
 static var _map_key: String = ""
 static var _plan: RegionPlan = null
+## Pies del jugador en píxeles del mundo (los fija la exploración del Mundo 2.0 cada tick de
+## física). NAN = sin jugador: se usa el centro de GameState.chunk_coord + player_cell.
+static var _player_pos: Vector2 = Vector2(NAN, NAN)
 
 
 ## Registra el RegionPlan de la partida (o null para volver al mundo viejo). Lo hará la
 ## exploración del Mundo 2.0 (M17) al crear o cargar la partida.
 static func set_region_plan(plan: RegionPlan) -> void:
 	_plan = plan
+
+
+## Pies del jugador en píxeles del mundo (brújula). La exploración los fija; NAN los olvida.
+static func set_player_pos(pos: Vector2) -> void:
+	_player_pos = pos
+
+
+## Pies del jugador: los fijados con set_player_pos o, si no hay, el centro de la casilla de
+## GameState (chunk_coord + player_cell).
+static func player_pos() -> Vector2:
+	if not is_nan(_player_pos.x):
+		return _player_pos
+	return WorldCoords.cell_to_world_pos(GameState.chunk_coord, GameState.player_cell)
 
 
 ## Plan de la partida actual, o null si el juego aún usa el mundo viejo.
