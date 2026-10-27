@@ -65,6 +65,7 @@ static func fighters_from_logic(logic: BattleLogic, chosen: Variant = null) -> A
 		f.special_every = int(e.get("special_every", 0))
 		f.special_factor = float(e.get("special_factor", 1.0))
 		f.special_area = bool(e.get("special_area", false))
+		f.attack_range = e.get("attack_range", [1, 1])
 		f.joint = logic.joint_attack
 		out.append(f)
 	return out

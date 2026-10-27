@@ -13,6 +13,8 @@ const TACTICAL: Dictionary = {
 		"height_bonus": 1, "support_range": 2 },
 	"attack": { "roll_min": 0, "roll_max": 0, "min_damage": 1 },
 	"defend_factor": 0.5,
+	# Huida (P1): sin enemigos cercanos sale siempre (max 100), para que estos tests no dependan de la tirada.
+	"flee": { "max": 100 },
 	"finish_below": 0.3,
 	"roles": {
 		"attacker": { "atk_bonus": 1, "finish_bonus": 3, "finish_uses": 1 },

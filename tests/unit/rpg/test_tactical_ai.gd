@@ -352,7 +352,7 @@ func _simulate(rng_seed: int, big: bool) -> Array:
 		var c := Vector2i(rng.randi_range(3, board.width - 4), rng.randi_range(0, board.height - 1))
 		board.set_cell(c, rng.randi_range(0, 1), false, false, false, false, &"tree" if rng.randf() < 0.5 else &"")
 	var roles: Array = ["attacker", "defender", "support", ""]
-	var profiles: Array = ["aggressive", "swarm", "tactical", "berserk"]
+	var profiles: Array = ["aggressive", "swarm", "tactical", "berserk", "guardian", "whip", "ambusher"]
 	var fighters: Array = [{ "id": &"adoc", "side": P, "agi": rng.randi_range(5, 8), "max_hp": 30,
 		"atk": 7, "def": 3, "leader": true }]
 	for k: int in per_side - 1:
@@ -366,8 +366,9 @@ func _simulate(rng_seed: int, big: bool) -> Array:
 		fighters.append({ "id": StringName("enemy_%d" % k), "side": E, "agi": rng.randi_range(3, 8),
 			"max_hp": rng.randi_range(12, 30), "atk": rng.randi_range(4, 8), "def": rng.randi_range(1, 3),
 			"ai": p, "role": roles[rng.randi_range(0, roles.size() - 1)] if p == "tactical" else "",
-			"special_every": 3 if p == "berserk" else 0, "special_factor": 3.0, "special_area": p == "berserk",
-			"joint": p == "swarm" })
+			"special_every": 3 if p == "berserk" or p == "whip" else 0, "special_factor": 3.0,
+			"special_area": p == "berserk" or p == "whip",
+			"joint": p == "swarm", "attack_range": [1, 2] if p == "whip" or p == "berserk" else [1, 1] })
 	var b := TacticalBattle.new(cfg, board, fighters, rng_seed)
 	b.set_group_order(rng.randi_range(0, 2))
 	b.apply_opening(rng.randi_range(0, 2) as TacticalBattle.Opening)

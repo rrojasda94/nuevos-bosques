@@ -511,6 +511,8 @@ static func make_monster(monster_id: StringName, d: int) -> Dictionary:
 	unico.ai = str(cfg.get("ai", ""))
 	unico.area_attack = bool(cfg.get("area_attack", false))
 	unico.special_area = bool(cfg.get("special_area", false))
+	# Alcance del ataque normal en el combate táctico (P2: el Ofomni golpea a 2).
+	unico.attack_range = cfg.get("attack_range", [1, 1])
 	return unico
 
 
