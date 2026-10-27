@@ -18,18 +18,27 @@ extends RefCounted
 ## - táctico: ataca primero al apoyo si llega, si no al de menos PV, desde la espalda o el flanco si
 ##   puede y con la casilla menos expuesta; usa sus roles (Vendar, Cubrir) con un compañero herido.
 ## - berserk: carga contra el más cercano. Nunca huye.
+## - Área anunciada (T6): quien tiene un área anunciada la golpea en su turno sin moverse (KIND_AREA).
+##   Quien va a anunciarla al terminar el turno (TacticalBattle.will_announce) elige la orientación
+##   cuya área pilla a más enemigos (empate, hacia el más cercano) y, el berserk, entre las casillas
+##   desde las que golpea a su objetivo, la que deja más enemigos dentro.
+## - Enjambre y ataque conjunto (T6): rodean; el ataque conjunto lo resuelve TacticalBattle.attack
+##   cuando hay compañeros vecinos del mismo objetivo.
 ## - Huida con poca vida: el último enjambre de un grupo por debajo de swarm_flee_below y el táctico
 ##   por debajo de tactical_retreat_below van al borde más lejos del enemigo y salen del tablero
 ##   (TacticalBattle.leave: remove_unit y check_end); si no llegan al borde, se defienden.
 ## Aliados (bando del jugador), por rol y orden al grupo (battle.group_order):
 ## - Libre: 1) alguien por debajo de help_below: el apoyo lo Venda (alcance support_range) y el
-##   defensor se pone a su lado y lo Cubre; 2) por debajo de retreat_below (no defensor): se aleja del
+##   defensor se pone a su lado y lo Cubre; 2) si está en un área anunciada (T6), sale de ella (y
+##   golpea desde fuera si llega); si no puede salir, se defiende; luego, por debajo de
+##   retreat_below (no defensor y con algún compañero en pie; el último pelea): se aleja del
 ##   enemigo y se defiende; 3) atacante: Remate si llega a alguien por debajo de finish_below; 4) apoyo:
 ##   Animar a un aliado a su alcance que vaya a golpear; 5) atacar al de menos PV (empate, el de más
 ##   ATQ); 6) acercarse (el apoyo se queda a alcance de sus compañeros y lejos del enemigo).
 ## - Atacar: todos van a por player_target (el último al que atacó el Adoc) o, si no está, el de menos
 ##   PV; el atacante remata si puede. Si no llegan a él pero sí a otro, le golpean de paso.
-## - Defender: se agrupan junto al Adoc; Vendar, Cubrir y Defender; solo atacan para rematar.
+## - Defender: se agrupan junto al Adoc (fuera de las áreas anunciadas); Vendar, Cubrir y Defender;
+##   solo atacan para rematar.
 ## Umbrales en balance.json (tactics.ai, que llega como battle.ai_cfg); alcances y reglas, en
 ## TacticalBattle y TacticalRules. run_turn() juega un turno entero sin animación (tests, IA contra IA).
 
@@ -59,7 +68,9 @@ static func plan(b: TacticalBattle, index: int) -> Dictionary:
 		else:
 			_plan_ally(b, index, out)
 	_reach_cache = {}
-	out.facing = facing_for(b, index, out.move_to)
+	var attacks: int = 1 if [TacticalBattle.KIND_ATTACK, TacticalBattle.KIND_FINISH,
+		TacticalBattle.KIND_AREA].has(StringName(out.action)) else 0
+	out.facing = facing_for(b, index, out.move_to, attacks)
 	return out
 
 
@@ -82,6 +93,8 @@ static func apply_action(b: TacticalBattle, p: Dictionary) -> Dictionary:
 			return b.cheer(t)
 		TacticalBattle.KIND_LEAVE:
 			return b.leave(StringName(b.units[int(p.actor)].ai) == BattleLogic.AI_TACTICAL)
+		TacticalBattle.KIND_AREA:
+			return b.area_strike()
 	return {}
 
 
@@ -115,8 +128,9 @@ static func end_facing(b: TacticalBattle, index: int) -> TacticalBoard.Facing:
 
 ## Orientación desde `cell`: hacia la amenaza más cercana (empate, la de menos PV y luego el índice).
 ## El perfil táctico elige entre las 4 la que deja menos amenazas detrás (espalda 2, flanco 1, solo
-## las que le llegan el turno siguiente) y, si empatan, la de la más cercana.
-static func facing_for(b: TacticalBattle, index: int, cell: Vector2i) -> TacticalBoard.Facing:
+## las que le llegan el turno siguiente) y, si empatan, la de la más cercana. Quien va a anunciar su
+## área al terminar (`extra_attacks`: ataques que aún hará este turno) mira hacia donde pilla a más.
+static func facing_for(b: TacticalBattle, index: int, cell: Vector2i, extra_attacks: int = 0) -> TacticalBoard.Facing:
 	var u: Dictionary = b.units[index]
 	var foes: Array[int] = _foes(b, int(u.side))
 	var current: TacticalBoard.Facing = int(u.facing) as TacticalBoard.Facing
@@ -124,6 +138,8 @@ static func facing_for(b: TacticalBattle, index: int, cell: Vector2i) -> Tactica
 		return current
 	var near: int = _nearest(b, cell, foes)
 	var toward: TacticalBoard.Facing = TacticalBoard.facing_toward(cell, b.units[near].cell, current)
+	if b.will_announce(index, extra_attacks):
+		return int(best_area(b, index, cell, toward).facing) as TacticalBoard.Facing
 	if StringName(u.ai) != BattleLogic.AI_TACTICAL or int(u.side) != TacticalBattle.SIDE_ENEMY:
 		return toward
 	var best: int = int(toward)
@@ -138,9 +154,24 @@ static func facing_for(b: TacticalBattle, index: int, cell: Vector2i) -> Tactica
 
 # --- Enemigos -----------------------------------------------------------------------------------
 
+## La orientación cuya área (TacticalBattle.area_cells) desde `cell` pilla a más enemigos de `index`
+## (empate: `prefer`, luego el orden N, E, S, O): { facing, hits }.
+static func best_area(b: TacticalBattle, index: int, cell: Vector2i, prefer: int) -> Dictionary:
+	var best: Dictionary = {}
+	for f: int in 4:
+		var hits: int = b.foes_in(index, b.area_cells(cell, f)).size()
+		var key: Array = [-hits, 0 if f == prefer else 1, f]
+		if best.is_empty() or _less(key, best.key):
+			best = { "facing": f, "hits": hits, "key": key }
+	return { "facing": best.facing, "hits": best.hits }
+
+
 static func _plan_enemy(b: TacticalBattle, i: int, out: Dictionary) -> void:
 	var u: Dictionary = b.units[i]
 	var profile: StringName = StringName(u.ai)
+	if i == b.active and _can_act(b, i) and not (u.announce as Array).is_empty():
+		out.action = TacticalBattle.KIND_AREA
+		return
 	if _should_flee(b, i):
 		_plan_leave(b, i, out)
 		return
@@ -208,9 +239,11 @@ static func _plan_berserk(b: TacticalBattle, i: int, out: Dictionary) -> void:
 	var here: Vector2i = b.units[i].cell
 	var opts: Array[Dictionary] = _attack_options(b, i)
 	if not opts.is_empty():
+		var announce: bool = b.will_announce(i, 1)
 		_take(b, i, out, _best(opts, func(o: Dictionary) -> Array:
+			var area: int = int(best_area(b, i, o.cell, -1).hits) if announce else 0
 			return [TacticalRules.distance(here, b.units[o.target].cell), int(b.units[o.target].hp),
-				-float(o.expected), int(o.cost)]))
+				-area, -float(o.expected), int(o.cost)]))
 		return
 	_approach(b, i, out, _nearest(b, here, _foes(b, int(b.units[i].side))))
 
@@ -277,7 +310,12 @@ static func _plan_free(b: TacticalBattle, i: int, out: Dictionary) -> void:
 	var foes: Array[int] = _foes(b, int(u.side))
 	if _plan_help(b, i, out, _cfg(b, "help_below", 0.3)):
 		return
-	if u.role != TacticalBattle.ROLE_DEFENDER and _ratio(b, i) < _cfg(b, "retreat_below", 0.2):
+	if _plan_escape(b, i, out):
+		return
+	# Retirarse atrás solo tiene sentido con compañeros delante: el último en pie pelea (si no, una
+	# persecución sin fin con un enemigo más lento).
+	if u.role != TacticalBattle.ROLE_DEFENDER and _ratio(b, i) < _cfg(b, "retreat_below", 0.2) \
+			and _has_friend(b, i):
 		_plan_retreat(b, i, out)
 		return
 	if _plan_finish(b, i, out):
@@ -286,9 +324,10 @@ static func _plan_free(b: TacticalBattle, i: int, out: Dictionary) -> void:
 		return
 	var opts: Array[Dictionary] = _attack_options(b, i)
 	if not opts.is_empty():
+		var danger: Dictionary = b.danger_cells(int(u.side))
 		_take(b, i, out, _best(opts, func(o: Dictionary) -> Array:
 			var t: Dictionary = b.units[o.target]
-			return [int(t.hp), -int(t.atk), -float(o.expected), int(o.cost)]))
+			return [1 if danger.has(o.cell) else 0, int(t.hp), -int(t.atk), -float(o.expected), int(o.cost)]))
 		return
 	if u.role == TacticalBattle.ROLE_SUPPORT:
 		_plan_stay_near(b, i, out)
@@ -326,18 +365,54 @@ static func _plan_hold(b: TacticalBattle, i: int, out: Dictionary) -> void:
 		return
 	var leader: int = _leader(b, int(u.side))
 	var reach: Dictionary = _reach(b, i)
+	var danger: Dictionary = b.danger_cells(int(u.side))
 	if leader != TacticalBattle.NONE and leader != i:
 		var foes: Array[int] = _foes(b, int(u.side))
 		var lc: Vector2i = b.units[leader].cell
 		var best_key: Array = []
 		for c: Vector2i in _sorted(reach):
-			var key: Array = [TacticalRules.distance(c, lc), -_min_foe_dist(b, c, foes), int(reach[c])]
+			var key: Array = [1 if danger.has(c) else 0, TacticalRules.distance(c, lc),
+				-_min_foe_dist(b, c, foes), int(reach[c])]
 			if best_key.is_empty() or _less(key, best_key):
 				best_key = key
 				out.move_to = c
 	if _can_act(b, i):
 		out.action = TacticalBattle.KIND_DEFEND
 		out.target = i
+
+
+## Sale de un área anunciada (T6, paso 2 de Libre): si está dentro, a una casilla alcanzable fuera
+## de todas, golpeando desde ella si llega a alguien (al de menos PV); si no llega a nadie, la más
+## cercana (empate, la más lejos del enemigo). Si no puede salir, se defiende. Devuelve si lo planeó.
+static func _plan_escape(b: TacticalBattle, i: int, out: Dictionary) -> bool:
+	var u: Dictionary = b.units[i]
+	var danger: Dictionary = b.danger_cells(int(u.side))
+	if danger.is_empty() or not danger.has(u.cell):
+		return false
+	var reach: Dictionary = _reach(b, i)
+	var safe: Array[Vector2i] = []
+	for c: Vector2i in _sorted(reach):
+		if not danger.has(c):
+			safe.append(c)
+	if safe.is_empty():
+		if _can_act(b, i):
+			out.action = TacticalBattle.KIND_DEFEND
+			out.target = i
+		return true
+	var opts: Array[Dictionary] = _attack_options(b, i, [], safe)
+	if not opts.is_empty():
+		_take(b, i, out, _best(opts, func(o: Dictionary) -> Array:
+			var t: Dictionary = b.units[o.target]
+			return [int(t.hp), -int(t.atk), -float(o.expected), int(o.cost)]))
+		return true
+	var foes: Array[int] = _foes(b, int(u.side))
+	var best_key: Array = []
+	for c: Vector2i in safe:
+		var key: Array = [int(reach[c]), -mini(_min_foe_dist(b, c, foes), 3)]
+		if best_key.is_empty() or _less(key, best_key):
+			best_key = key
+			out.move_to = c
+	return true
 
 
 ## Ayuda a un compañero por debajo de `below` (o a cualquiera herido con `any_hurt`): el apoyo lo
@@ -659,6 +734,14 @@ static func _min_friend_dist(b: TacticalBattle, i: int, cell: Vector2i) -> int:
 			d = dk if not found else mini(d, dk)
 			found = true
 	return d
+
+
+## Le queda algún compañero en el tablero.
+static func _has_friend(b: TacticalBattle, i: int) -> bool:
+	for k: int in b.units.size():
+		if k != i and b.units[k].alive and int(b.units[k].side) == int(b.units[i].side):
+			return true
+	return false
 
 
 static func _touches_foe(b: TacticalBattle, k: int, foes: Array[int]) -> bool:

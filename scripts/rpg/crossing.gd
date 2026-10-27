@@ -25,6 +25,11 @@ extends CanvasLayer
 ## `world_player_cell`; si no, el chunk de exploración antiguo, regenerándolo con su seed
 ## (ChunkGenerator.generate, ~30 ms, una vez por combate); sin chunk, el bioma. El bioma
 ## (desempate) es "bosque" mientras no haya otros biomas.
+## Apertura (T6): EventBus.battle_opening_set (lo emite la exploración al alcanzarle un Único o al
+## enfrentarse a uno con E) dice si empieza con sorpresa o con emboscada; se gasta en el siguiente
+## combate de misión, directo o en grupo (el del borde, tras el menú, y el de ayuda a otro adoc
+## siempre son normales). Solo cuenta en el combate
+## táctico: la escena por menú no tiene apertura.
 ## Solo escucha EventBus y lee GameState: no conoce la escena de exploración.
 
 const BATTLE_SCENE: PackedScene = preload("res://scenes/rpg/battle.tscn")
@@ -76,6 +81,8 @@ var walkable_sampler: Callable
 ## Callable() -> Vector2i con la world_cell del Adoc. Con los dos, el recorte sale de WorldQuery.rect.
 var world_get_chunk: Callable
 var world_player_cell: Callable
+## Apertura del próximo combate (TacticalBattle.Opening; EventBus.battle_opening_set).
+var _next_opening: int = TacticalBattle.Opening.NORMAL
 
 @onready var _panel: Control = $Panel
 @onready var _title: Label = $Panel/Title
@@ -92,6 +99,18 @@ func _ready() -> void:
 	EventBus.quest_battle_requested.connect(_on_quest_battle_requested)
 	EventBus.unico_battle_requested.connect(_on_unico_battle_requested)
 	EventBus.group_battle_requested.connect(_on_group_battle_requested)
+	EventBus.battle_opening_set.connect(_on_battle_opening_set)
+
+
+func _on_battle_opening_set(opening: int) -> void:
+	_next_opening = opening
+
+
+## La apertura guardada para este combate (y vuelve a normal).
+func take_opening() -> int:
+	var out: int = _next_opening
+	_next_opening = TacticalBattle.Opening.NORMAL
+	return out
 
 
 func _on_bosque_border_reached(bosque_id: int) -> void:
@@ -106,6 +125,7 @@ func _on_bosque_border_reached(bosque_id: int) -> void:
 		return
 	_home = home
 	_bosque_id = bosque_id
+	_next_opening = TacticalBattle.Opening.NORMAL
 	_distance = maxi(1, _map.distance(home, bosque_id))
 	_cost = AdventureRules.toll_for(bosque_id, _distance)
 	_open_main_menu()
@@ -276,7 +296,7 @@ func _on_quest_battle_requested(quest_id: StringName) -> void:
 	_chase = false
 	get_tree().paused = true
 	var logic: BattleLogic = AdventureRules.start_quest_battle(quest_id, int(q.ofomni_d))
-	_open_battle(logic, _map.styles[maxi(0, int(q.ofomni_bosque))], UnicoArt.Kind.EYES)
+	_open_battle(logic, _map.styles[maxi(0, int(q.ofomni_bosque))], UnicoArt.Kind.EYES, take_opening())
 
 
 ## Combate directo contra un Único `monster_id` del Bosque `bosque_id`: a la d del Bosque (como
@@ -307,18 +327,22 @@ func _on_group_battle_requested(bosque_id: int, monster_id: StringName, count: i
 		if not e.is_empty() and str(e.id) == encounter_id:
 			allies.append(AdocEncounters.ally_of(e))
 			_ally_kinds.append(e.get("clothes", {}))
+	var opening: int = take_opening() if encounter_id == "" else TacticalBattle.Opening.NORMAL
+	_next_opening = TacticalBattle.Opening.NORMAL
 	var logic: BattleLogic = AdventureRules.start_battle(bosque_id, _distance, monster_id, count, allies)
-	_open_battle(logic, _map.styles[bosque_id], UnicoArt.kind_for(monster_id))
+	_open_battle(logic, _map.styles[bosque_id], UnicoArt.kind_for(monster_id), opening)
 
 
-func _open_battle(logic: BattleLogic, style: Dictionary, kind: UnicoArt.Kind) -> void:
+func _open_battle(logic: BattleLogic, style: Dictionary, kind: UnicoArt.Kind,
+		opening: int = TacticalBattle.Opening.NORMAL) -> void:
 	var balance_data: Dictionary = AdventureRules.balance()
 	_battle = battle_scene(balance_data).instantiate()
 	add_child(_battle)
 	_battle.finished.connect(_on_battle_finished)
 	if TacticalBridge.is_enabled(balance_data):
 		_battle.begin(logic, style, kind, _ally_kinds,
-			TacticalBridge.arena_config(logic.balance, encounter_ratio(), ARENA_BIOME))
+			TacticalBridge.arena_config(logic.balance, encounter_ratio(), ARENA_BIOME), null,
+			opening == TacticalBattle.Opening.AMBUSH, opening == TacticalBattle.Opening.SURPRISE)
 	else:
 		_battle.begin(logic, style, kind, _ally_kinds)
 	_ally_kinds = []

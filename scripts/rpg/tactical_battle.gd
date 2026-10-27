@@ -6,7 +6,8 @@ extends RefCounted
 ## data/combat/balance.json (bloque tactical; config_from_balance le añade attack, defend_factor,
 ## tactics.roles y tactics.ai.finish_below, que se comparten con el combate por menú).
 ## - Combatientes: [{ id, side, agi, cell?, facing?, max_hp?, hp?, atk?, def?, role?, leader?,
-##   accepts_payment?, strong_every?, strong_factor?, reserve? }] (side: SIDE_PLAYER o SIDE_ENEMY).
+##   accepts_payment?, strong_every?, strong_factor?, special_every?, special_factor?, special_area?,
+##   joint?, reserve? }] (side: SIDE_PLAYER o SIDE_ENEMY).
 ##   Hasta board.max_per_side por bando (el cupo, TacticalArena) en el tablero, en el orden de la
 ##   lista; los demás (y los que traen `reserve`) esperan en su borde (`waiting`, sin casilla ni
 ##   turno). Sin `cell`, se colocan en las columnas de su lado (el jugador en `player_side`, los
@@ -50,6 +51,24 @@ extends RefCounted
 ##   cuándo). Queda `fled` y no cuenta como caído; check_end puede dar la victoria.
 ## - Orden al grupo (T5): group_order (BattleLogic.GroupOrder; Libre por defecto) y player_target (el
 ##   último enemigo al que atacó el `leader`), que lee TacticalAI. Cambiarla no gasta acción.
+## - Especiales (T6):
+##   - Ataque de área anunciado (Latigazo múltiple del Ofomni; `special_area`): cuenta sus ataques
+##     (`attacks`); al terminar el turno en el que su siguiente ataque sería el especial (cada
+##     `special_every`), anuncia el área (`announce`: las casillas de board.latigazo delante de él,
+##     según su orientación final; 3 x 1 en los tableros pequeño y medio, 3 x 2 en el grande). En su
+##     siguiente turno, area_strike() golpea con una sola tirada a todos los enemigos que sigan
+##     dentro: daño = BattleLogic.attack_damage(ATQ, DEF, tirada) × special_factor (×defend_factor si
+##     se defiende), sin evasión ni Cubrir; salir del área lo esquiva. danger_cells() da las casillas
+##     anunciadas contra un bando (IA y escena). Sin `special_area`, el especial es un golpe normal
+##     × special_factor.
+##   - Ataque conjunto (`joint`, los reparep): si el atacante tiene compañeros `joint` vecinos del
+##     mismo objetivo (hasta actions.joint_max en total, uno por lado), atacan juntos en su turno:
+##     una tirada de precisión con la mejor posición de todos (la evasión más baja), daño =
+##     BattleLogic.joint_damage (suma de ATQ, DEF restada una vez) + el bono de esa posición, y
+##     ×defend_factor si se defiende. Los compañeros gastan su siguiente turno: CT −cost_single.
+##   - Apertura (apply_opening): SURPRISE (emboscada tuya: no te detectaron), tu bando en el tablero
+##     empieza con CT threshold y los enemigos con menos (juegan después), de espaldas a ti; AMBUSH
+##     (emboscada del enemigo), al revés. NORMAL: como siempre.
 ## - RNG propio sembrado con la seed del combate: las tiradas son deterministas.
 
 const SIDE_PLAYER: int = 0
@@ -63,6 +82,8 @@ const ACTION_SALT: int = 7919
 
 ## Fin del combate (mismo orden que BattleLogic.Result).
 enum Result { ONGOING, VICTORY, DEFEAT, FLED, APPEASED }
+## Cómo empieza el combate (T6): normal, sorpresa (emboscada tuya) o emboscada del enemigo.
+enum Opening { NORMAL, SURPRISE, AMBUSH }
 
 ## Tipos de acción (campo `kind` del resultado).
 const KIND_ATTACK: StringName = &"attack"
@@ -76,6 +97,8 @@ const KIND_OFFER_LUZ: StringName = &"offer_luz"
 const KIND_OFRENDA: StringName = &"ofrenda"
 const KIND_FLEE: StringName = &"flee"
 const KIND_LEAVE: StringName = &"leave"
+## Golpe del área anunciada (T6).
+const KIND_AREA: StringName = &"area"
 ## Claves de texto corto (data/text/sistema.json, las escribe narrative-writer en T4).
 const TEXT_MISS: StringName = &"tactical_miss"
 const TEXT_ATTACK: StringName = &"tactical_attack"
@@ -93,6 +116,11 @@ const TEXT_OFRENDA: StringName = &"tactical_ofrenda"
 const TEXT_FLEE: StringName = &"tactical_flee"
 const TEXT_ENEMY_FLEE: StringName = &"tactical_enemy_flee"
 const TEXT_RETREAT: StringName = &"tactical_retreat"
+const TEXT_AREA: StringName = &"tactical_area"
+const TEXT_AREA_WARNING: StringName = &"tactical_area_warning"
+const TEXT_JOINT: StringName = &"tactical_joint"
+const TEXT_SURPRISE: StringName = &"tactical_surprise"
+const TEXT_AMBUSH: StringName = &"tactical_ambush"
 ## Roles (ids de balance.json, tactics.roles; los mismos que BattleLogic).
 const ROLE_ATTACKER: StringName = &"attacker"
 const ROLE_DEFENDER: StringName = &"defender"
@@ -126,8 +154,9 @@ var covers: Dictionary = {}
 ## Lado por donde llegó el jugador (sus columnas de colocación).
 var player_side: TacticalBoard.Side = TacticalBoard.Side.LEFT
 ## Combatientes: [{ id, side, agi, mov, jump, drop, cell, facing, ct, tie, alive, hp, max_hp, atk,
-## def, role, ai, fled, leader, accepts_payment, strong_every, strong_factor, strong_cooldown, defending,
-## cheer, heals_left, cheers_left, finishes_left, cover_ready, turns }]. `turns`: turnos propios
+## def, role, ai, fled, leader, accepts_payment, strong_every, strong_factor, strong_cooldown,
+## special_every, special_factor, special_area, attacks, announce, joint, defending, cheer, heals_left,
+## cheers_left, finishes_left, cover_ready, turns }]. `turns`: turnos propios
 ## empezados (Cubrir vuelve a estar listo cuando turns ≥ cover_ready).
 var units: Array[Dictionary] = []
 ## Índice del combatiente en su turno (NONE fuera de un turno).
@@ -140,6 +169,10 @@ var turn_count: int = 0
 var pending_entries: Array[int] = [0, 0]
 ## Quién entró como refuerzo al empezar el último turno (índices; para la UI).
 var last_entries: Array[int] = []
+## Apertura del combate (apply_opening).
+var opening: Opening = Opening.NORMAL
+## Quién anunció un área al terminar el último turno (NONE si nadie; para la UI).
+var last_announce: int = NONE
 
 
 func _init(tactical: Dictionary, battle_board: TacticalBoard, fighters: Array, rng_seed: int,
@@ -183,6 +216,12 @@ func _init(tactical: Dictionary, battle_board: TacticalBoard, fighters: Array, r
 			"strong_every": int(data.get("strong_every", 0)),
 			"strong_factor": float(data.get("strong_factor", 1.0)),
 			"strong_cooldown": 0,
+			"special_every": int(data.get("special_every", 0)),
+			"special_factor": float(data.get("special_factor", 1.0)),
+			"special_area": bool(data.get("special_area", false)),
+			"attacks": 0,
+			"announce": [],
+			"joint": bool(data.get("joint", false)),
 			"defending": false,
 			"cheer": 0,
 			"heals_left": _role_num(role, "heal_uses", 0) if role == ROLE_SUPPORT else 0,
@@ -354,6 +393,7 @@ func remove_unit(index: int) -> void:
 	if units[index].alive:
 		pending_entries[int(units[index].side)] += 1
 	units[index].alive = false
+	units[index].announce = []
 	covers.erase(index)
 	_drop_covers_by(index)
 	if active == index:
@@ -365,6 +405,7 @@ func remove_unit(index: int) -> void:
 func begin_turn() -> int:
 	assert(active == NONE, "Termina el turno antes de empezar otro")
 	last_entries = []
+	last_announce = NONE
 	if is_over():
 		return NONE
 	last_entries = deploy_reinforcements()
@@ -437,6 +478,9 @@ func end_turn(facing: TacticalBoard.Facing) -> int:
 	var cost: int = turn_cost(active_moved, active_acted)
 	units[active].facing = facing
 	units[active].ct = int(units[active].ct) - cost
+	if will_announce(active):
+		units[active].announce = area_cells(units[active].cell, facing)
+		last_announce = active
 	active = NONE
 	turn_count += 1
 	return cost
@@ -547,10 +591,29 @@ func attack(target: int, finish: bool = false) -> Dictionary:
 		return {}
 	var a: Dictionary = units[active]
 	var t: Dictionary = units[target]
+	var joint: Array[int] = joint_group(active, target)
 	var preview: Dictionary = attack_preview(active, target)
+	for k: int in joint:
+		var p: Dictionary = attack_preview(k, target)
+		if int(p.hit_chance) > int(preview.hit_chance) or (int(p.hit_chance) == int(preview.hit_chance) 				and int(p.bonus) > int(preview.bonus)):
+			preview = p
 	active_acted = true
 	a.facing = TacticalBoard.facing_toward(a.cell, t.cell, a.facing)
+	var special: bool = false
+	if int(a.special_every) > 0:
+		a.attacks = int(a.attacks) + 1
+		special = not a.special_area and BattleLogic.is_special_attack(int(a.attacks), int(a.special_every))
 	var out: Dictionary = _result(KIND_FINISH if finish else KIND_ATTACK, target)
+	out.joint = []
+	if joint.size() > 1:
+		out.joint = joint
+	out.special = false
+	if joint.size() > 1:
+		# Los compañeros atacan en el turno del primero y gastan su siguiente turno.
+		for k: int in joint:
+			if k != active:
+				units[k].ct = int(units[k].ct) - int(ct_cfg.get("cost_single", 80))
+				units[k].facing = TacticalBoard.facing_toward(units[k].cell, t.cell, units[k].facing)
 	if a.leader:
 		player_target = target
 	out.receiver = target
@@ -572,7 +635,15 @@ func attack(target: int, finish: bool = false) -> Dictionary:
 	var roll: int = rng.randi_range(int(attack_cfg.get("roll_min", -1)), int(attack_cfg.get("roll_max", 2)))
 	var min_damage: int = int(attack_cfg.get("min_damage", 1))
 	var dmg: int = BattleLogic.attack_damage(int(a.atk) + int(a.cheer), int(r.def), roll, min_damage)
+	if joint.size() > 1:
+		var atks: Array = []
+		for k: int in joint:
+			atks.append(int(units[k].atk) + (int(units[k].cheer) if k == active else 0))
+		dmg = BattleLogic.joint_damage(atks, int(r.def), roll, min_damage)
 	a.cheer = 0
+	if special:
+		dmg = BattleLogic.strong_damage(dmg, float(a.special_factor))
+		out.special = true
 	if int(a.strong_every) > 0 and int(a.strong_cooldown) <= 0:
 		dmg = BattleLogic.strong_damage(dmg, float(a.strong_factor))
 		a.strong_cooldown = int(a.strong_every)
@@ -595,6 +666,8 @@ func attack(target: int, finish: bool = false) -> Dictionary:
 		check_end()
 	if finish:
 		out.text_key = TEXT_FINISH
+	elif joint.size() > 1:
+		out.text_key = TEXT_JOINT
 	elif out.strong:
 		out.text_key = TEXT_STRONG
 	elif preview.relation == TacticalRules.Relation.BACK:
@@ -775,6 +848,155 @@ func leave(retreat: bool = false) -> Dictionary:
 	out.text_key = TEXT_RETREAT if retreat else TEXT_ENEMY_FLEE
 	out.result = result
 	return out
+
+
+# --- Especiales (T6) ----------------------------------------------------------------------------
+
+## Quiénes atacan juntos a `target` si ataca `attacker`: él primero y sus compañeros `joint` en pie
+## que también le llegan cuerpo a cuerpo (hasta actions.joint_max en total, por índice). Solo él si no
+## es `joint` o no tiene compañeros al lado.
+func joint_group(attacker: int, target: int) -> Array[int]:
+	var out: Array[int] = [attacker]
+	if not bool(units[attacker].joint):
+		return out
+	var cap: int = int(actions_cfg.get("joint_max", 4))
+	for k: int in units.size():
+		if out.size() >= cap:
+			break
+		var v: Dictionary = units[k]
+		if k != attacker and v.alive and bool(v.joint) and int(v.side) == int(units[attacker].side) 				and can_attack(k, target):
+			out.append(k)
+	return out
+
+
+## Tamaño del área anunciada en este tablero: Vector2i(ancho, fondo) (board.latigazo; 3 x 1 por
+## defecto, TacticalArena lo fija por tamaño de tablero).
+func area_size() -> Vector2i:
+	var a: Variant = board_cfg.get("latigazo", [3, 1])
+	if a is Vector2i:
+		return a
+	var arr: Array = a
+	return Vector2i(maxi(1, int(arr[0])), maxi(1, int(arr[1])))
+
+
+## Casillas del área delante de `cell` mirando hacia `facing`: area_size().y filas de fondo y
+## area_size().x de ancho, centradas en la línea de su mirada. Solo las que caen dentro del tablero.
+func area_cells(cell: Vector2i, facing: int) -> Array[Vector2i]:
+	var out: Array[Vector2i] = []
+	var size: Vector2i = area_size()
+	var dir: Vector2i = TacticalBoard.NEIGHBOR_DIRS[facing]
+	var side := Vector2i(-dir.y, dir.x)
+	var from: int = -((size.x - 1) / 2)
+	for depth: int in range(1, size.y + 1):
+		for w: int in range(from, from + size.x):
+			var c: Vector2i = cell + dir * depth + side * w
+			if board.in_bounds(c):
+				out.append(c)
+	return out
+
+
+## Anunciará su área al terminar el turno: tiene especial en área, no hay otro anuncio pendiente y su
+## siguiente ataque (contando `extra` ataques más de este turno) es el especial.
+func will_announce(index: int, extra: int = 0) -> bool:
+	var u: Dictionary = units[index]
+	var every: int = int(u.special_every)
+	return bool(u.special_area) and every > 0 and u.alive and (u.announce as Array).is_empty() 		and BattleLogic.is_special_attack(int(u.attacks) + extra + 1, every)
+
+
+## Casillas anunciadas contra el bando `side` (por enemigos suyos): { Vector2i: índice de quien las
+## anunció }.
+func danger_cells(side: int) -> Dictionary:
+	var out: Dictionary = {}
+	for i in units.size():
+		var u: Dictionary = units[i]
+		if u.alive and int(u.side) != side:
+			for c: Variant in u.announce:
+				out[c] = i
+	return out
+
+
+## Enemigos de `index` en las casillas `cells`.
+func foes_in(index: int, cells: Array) -> Array[int]:
+	var out: Array[int] = []
+	for c: Variant in cells:
+		var at: int = unit_at(c as Vector2i)
+		if at != NONE and int(units[at].side) != int(units[index].side):
+			out.append(at)
+	return out
+
+
+## El combatiente en su turno tiene un área anunciada y puede golpearla.
+func can_area_strike() -> bool:
+	return can_act() and not (units[active].announce as Array).is_empty()
+
+
+## Golpe del área anunciada: una tirada para todos los enemigos que sigan dentro. Cuenta como su
+## ataque especial. Resultado con hits: [{ receiver, damage, defended, down }] y damage (el total).
+func area_strike() -> Dictionary:
+	if not can_area_strike():
+		return {}
+	var a: Dictionary = units[active]
+	var cells: Array = a.announce
+	a.announce = []
+	a.attacks = int(a.attacks) + 1
+	active_acted = true
+	var out: Dictionary = _result(KIND_AREA, NONE)
+	out.cells = cells
+	out.text_key = TEXT_AREA
+	var min_damage: int = int(attack_cfg.get("min_damage", 1))
+	var roll: int = rng.randi_range(int(attack_cfg.get("roll_min", -1)), int(attack_cfg.get("roll_max", 2)))
+	var hits: Array[Dictionary] = []
+	var total: int = 0
+	for t: int in foes_in(active, cells):
+		var r: Dictionary = units[t]
+		var dmg: int = BattleLogic.strong_damage(BattleLogic.attack_damage(int(a.atk), int(r.def), roll, min_damage),
+			float(a.special_factor))
+		var defended: bool = bool(r.defending)
+		if defended:
+			dmg = BattleLogic.defended_damage(dmg, defend_factor)
+		dmg = maxi(min_damage, dmg)
+		r.hp = maxi(0, int(r.hp) - dmg)
+		var down: bool = int(r.hp) == 0
+		hits.append({ "receiver": t, "damage": dmg, "defended": defended, "down": down })
+		total += dmg
+		if down:
+			remove_unit(t)
+	check_end()
+	out.hits = hits
+	out.damage = total
+	out.missed = hits.is_empty()
+	out.result = result
+	return out
+
+
+## Apertura del combate (sorpresa o emboscada): el bando que sorprende, en el tablero, empieza con CT
+## threshold (juega antes que nadie) y el otro con menos de threshold, mirando hacia el lado contrario
+## (de espaldas al que sorprende). Llamar antes del primer turno.
+func apply_opening(kind: Opening) -> void:
+	opening = kind
+	if kind == Opening.NORMAL:
+		return
+	var first: int = SIDE_PLAYER if kind == Opening.SURPRISE else SIDE_ENEMY
+	var threshold: int = int(ct_cfg.get("threshold", 100))
+	var away: TacticalBoard.Facing = _facing_from(board_side_of(first))
+	for u: Dictionary in units:
+		if not u.alive:
+			continue
+		if int(u.side) == first:
+			u.ct = threshold
+		else:
+			u.ct = mini(int(u.ct), threshold - 1)
+			u.facing = away
+
+
+## Clave del texto de la apertura (sorpresa o emboscada; &"" si normal).
+func opening_text_key() -> StringName:
+	match opening:
+		Opening.SURPRISE:
+			return TEXT_SURPRISE
+		Opening.AMBUSH:
+			return TEXT_AMBUSH
+	return &""
 
 
 ## Cambia la orden al grupo (BattleLogic.GroupOrder). No gasta acción.

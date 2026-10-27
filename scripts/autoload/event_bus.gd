@@ -74,6 +74,11 @@ signal unico_battle_requested(bosque_id: int, monster_id: StringName, offends: b
 signal group_battle_requested(bosque_id: int, monster_id: StringName, count: int, offends: bool, encounter_id: String)
 ## Fin de ese combate. outcome: &"victory", &"appeased", &"defeat", &"fled" o &"game_over".
 signal unico_battle_resolved(bosque_id: int, outcome: StringName)
+## Cómo empieza el próximo combate pedido (combate táctico, T6; TacticalBattle.Opening: normal,
+## sorpresa o emboscada). La exploración lo emite al alcanzarle un Único (MonsterField.engaged) o al
+## enfrentarse a uno con E, antes de pedir el combate; Crossing lo guarda y lo gasta en el siguiente
+## combate pedido (o lo olvida al abrir el menú del borde).
+signal battle_opening_set(opening: int)
 ## La relación con un Bosque ha cambiado (bosques-y-relacion.md). relation: el valor nuevo
 ## (-100 .. 100).
 signal bosque_relation_changed(bosque_id: int, relation: int)
