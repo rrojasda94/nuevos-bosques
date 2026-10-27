@@ -4,6 +4,7 @@ extends RefCounted
 ## empieza el encuentro y cuál es su siguiente casilla (hacia el jugador, de vuelta al puesto o el
 ## renqueo de reposo). Lee los parámetros genéricos de cada monstruo (balance.json, monsters.<id>):
 ## vision_radius, engage_distance, leash, max_outside e idle_wander. Sin constantes por tipo.
+## También el sprint de los Únicos, su velocidad y la calma tras huir o retroceder (P6, al final).
 ## Distancias en casillas de Chebyshev. Las casillas son de "área": relativas al chunk actual, así
 ## que un monstruo puede estar en el chunk vecino (coordenadas negativas o >= 64).
 
@@ -111,3 +112,49 @@ static func decide(state: State, cell: Vector2i, post: Vector2i, player: Vector2
 		return { "state": state, "step": cell, "next_phase": true }
 	var s: Vector2i = path_step(cell, func(c: Vector2i) -> bool: return c == target, allowed)
 	return { "state": state, "step": s if s != NO_PATH else cell, "next_phase": s == NO_PATH }
+
+
+# --- Sprint y calma (ajustes-playtest-0.5.md §1b, ADR 0017) -----------------------------------------
+# Datos por monstruo (balance.json, monsters.<id>): sprint_trigger (casillas, Chebyshev), sprint_px
+# (px/s), sprint_seconds y sprint_cooldown (s). Sin sprint_px o sin sprint_seconds no esprinta (el
+# Botarramas renquea). flee_cooldown: calma tras una huida con éxito; retreat_cooldown: tras
+# Retroceder u otra salida pacífica. Ambos caen en engage_cooldown si faltan.
+
+## El monstruo tiene sprint en sus datos.
+static func can_sprint(cfg: Dictionary) -> bool:
+	return float(cfg.get("sprint_px", 0.0)) > 0.0 and float(cfg.get("sprint_seconds", 0.0)) > 0.0
+
+
+## Un tick del sprint. `sprint` = Vector2(segundos de sprint que quedan, segundos de descanso que
+## quedan); devuelve el nuevo. `chasing`: persigue y puede ver al jugador; `distance`: casillas
+## (Chebyshev) hasta él. Arranca si persigue a sprint_trigger o menos y no descansa; al acabar (o si
+## deja de perseguir) descansa sprint_cooldown.
+static func sprint_tick(sprint: Vector2, delta: float, chasing: bool, distance: int, cfg: Dictionary) -> Vector2:
+	var left: float = sprint.x
+	var rest: float = sprint.y
+	if left > 0.0:
+		left = left - delta if chasing else 0.0
+		if left <= 0.0:
+			return Vector2(0.0, float(cfg.get("sprint_cooldown", 0.0)))
+		return Vector2(left, rest)
+	rest = maxf(0.0, rest - delta)
+	if rest <= 0.0 and chasing and can_sprint(cfg) and distance <= int(cfg.get("sprint_trigger", 0)):
+		return Vector2(float(cfg.sprint_seconds), 0.0)
+	return Vector2(0.0, rest)
+
+
+## Velocidad (px/s) en `state`: idle_speed_px en reposo; speed_px persiguiendo o volviendo; sprint_px
+## si esprinta persiguiendo. Sin datos de px, la de su tiempo de paso (16 / step_time).
+static func speed_px(cfg: Dictionary, state: State, sprinting: bool = false) -> float:
+	if state == State.IDLE:
+		return float(cfg.get("idle_speed_px", WorldCoords.TILE / maxf(0.01, float(cfg.get("idle_step_time", 0.5)))))
+	if sprinting and state == State.CHASE and can_sprint(cfg):
+		return float(cfg.sprint_px)
+	return float(cfg.get("speed_px", WorldCoords.TILE / maxf(0.01, float(cfg.get("step_time", 0.25)))))
+
+
+## Segundos de calma tras un encuentro: flee_cooldown si el jugador huyó con éxito; si no
+## (Retroceder, rechazar el combate, pagar), retreat_cooldown.
+static func calm_seconds(cfg: Dictionary, fled: bool) -> float:
+	var fallback: float = float(cfg.get("engage_cooldown", 3.0))
+	return float(cfg.get("flee_cooldown" if fled else "retreat_cooldown", fallback))
