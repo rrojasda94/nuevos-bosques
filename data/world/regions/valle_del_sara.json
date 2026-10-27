@@ -73,9 +73,41 @@
     }
   },
   "refuges": {
-    "$comment": "Reparto de refugios (navegacion.md, tiempo-y-riutash.md, bosques-y-relacion.md; ADR 0006). per_bosque: mínimo de refugios por Bosque (el primero en su chunk de Nujio, a <= 3 casillas del Nujio si no hay villa). min_spacing: distancia mínima en chunks (Manhattan) entre refugios del reparto general; 2 = nunca en chunks vecinos, sale ~1 de cada 2-3 chunks, con camino o sin él. max_distance: ningún chunk queda a más de estos chunks de un refugio. Valores provisionales de game-designer.",
+    "$comment": "Reparto de refugios (navegacion.md, tiempo-y-riutash.md, bosques-y-relacion.md; ADR 0006). per_bosque: mínimo de refugios por Bosque (el primero en su chunk de Nujio, a <= 3 casillas del Nujio si no hay villa). min_spacing: distancia mínima en chunks (Manhattan) entre refugios del reparto general; 2 = nunca en chunks vecinos, sale ~1 de cada 2-3 chunks, con camino o sin él. max_distance: ningún chunk queda a más de estos chunks de un refugio. walk_limit: casillas a pie máximas desde cualquier casilla que se pisa hasta un refugio o la plaza de una villa (mundo-2.md §3); el ChunkBuilder lo garantiza poniendo refugios extra. door_reach: casillas máximas (a pie, dentro del chunk) entre cada puerta de un chunk del reparto y su refugio; parámetro técnico de esa garantía (world-gen-dev, generation.md). Valores provisionales de game-designer.",
     "per_bosque": 1,
     "min_spacing": 2,
-    "max_distance": 2
-  }
+    "max_distance": 2,
+    "walk_limit": 300,
+    "door_reach": 105
+  },
+  "springs": {
+    "$comment": "Fuentes de los afluentes (mundo-2.md §4, 'Fuentes de los afluentes'): objeto SPRING en cada lugar manantial de lugares.csv. size: huella en casillas (la central es agua y bloquea; las 8 de alrededor, rocas que se pisan). clearing: casillas de claro alrededor de la huella, sin árboles ni nada que bloquee. label_radius y label_seconds: rótulo con el nombre al acercarse (lo usa ui/rpg, no el generador). Estructura de world-gen-dev, valores de game-designer (provisionales).",
+    "size": 3,
+    "clearing": 4,
+    "label_radius": 4,
+    "label_seconds": 3
+  },
+  "sicabis": {
+    "$comment": "Entradas de sicabis (lugares-e-interiores.md, 'Cómo se encuentran en el mundo'). Reparto (RegionPlan): como mucho per_subregion_max por subregión, con probabilidad subregion_chance, a >= min_villa_distance_chunks (Chebyshev) de toda villa o aldea, a >= min_sicabi_distance_chunks de otra sicabi y nunca en un Bosque muerto (allow_dead_bosque). Sitio (ChunkBuilder): entrada 2×2 a >= min_road_distance casillas de un camino de 3 y >= min_path_distance de un sendero, con un paso libre de access_width casillas hasta los senderos; en bosque tupido (forest_ratio de las casillas a <= forest_radius con árbol) o en la base de una cara de risco cuya meseta tiene nivel >= cliff_min_level. Valores de game-designer (provisionales).",
+    "per_subregion_max": 1,
+    "subregion_chance": 0.6,
+    "min_villa_distance_chunks": 2,
+    "min_sicabi_distance_chunks": 4,
+    "min_road_distance": 10,
+    "min_path_distance": 6,
+    "access_width": 2,
+    "forest_ratio": 0.7,
+    "forest_radius": 6,
+    "cliff_min_level": 2,
+    "allow_dead_bosque": false
+  },
+  "subregions": [
+    {"$comment": "Subregiones del Valle del Sara en rectángulos de chunks [x, y, ancho, alto] (el primero que contiene un chunk manda). PROVISIONAL, lectura de world-gen-dev a confirmar por el dueño (#101): los límites siguen los afluentes de docs/design/world/sur-lenfi.md (7mo Lean–Tossie, 5to Tossie–Ostie, 3ro Ostie–Cassie, 6to Causie–Alss, 4to Alss–Vastie, 2do Vastie–Cassie) y el Sara separa el oeste (columnas 0–5) del este (6–11). Solo la usa el reparto de sicabis.", "id": "lean", "name": "Lean", "rects": [[0, 0, 6, 2]]},
+    {"id": "tossie", "name": "Tossie", "rects": [[0, 2, 6, 2], [3, 4, 3, 1]]},
+    {"id": "ostie", "name": "Ostie", "rects": [[0, 4, 3, 3], [3, 5, 3, 3]]},
+    {"id": "causie", "name": "Causie", "rects": [[6, 0, 6, 2], [6, 2, 3, 2]]},
+    {"id": "alss", "name": "Alss", "rects": [[9, 2, 3, 2], [6, 4, 6, 1], [6, 5, 3, 1]]},
+    {"id": "vastie", "name": "Vastie", "rects": [[9, 5, 3, 3], [6, 6, 3, 2], [6, 8, 6, 1]]},
+    {"id": "cassie", "name": "Cassie", "rects": [[0, 7, 3, 9], [3, 8, 3, 8], [6, 9, 6, 7]]}
+  ]
 }

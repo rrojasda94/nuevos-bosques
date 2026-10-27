@@ -33,7 +33,7 @@ const LAYERS: Array[String] = ["height", "water", "roads", "bosques"]
 enum Height { NONE, LEVEL_0, LEVEL_1, LEVEL_2, LEVEL_3, PEAK }
 enum Water { NONE, RIVER_NAVIGABLE, RIVER_NARROW, LAKE, SEA, FORD }
 enum Road { NONE, ROAD, BRIDGE }
-const PLACE_TYPES: Array[String] = ["villa", "villa_natal", "hito", "tarca", "bosque", "lugar", "manantial"]
+const PLACE_TYPES: Array[String] = ["villa", "villa_natal", "hito", "tarca", "bosque", "lugar", "manantial", "sicabi"]
 const CSV_COLUMNS: Array[String] = ["id", "nombre", "tipo", "x", "y", "color", "estilo", "notas"]
 const CSV_REQUIRED: Array[String] = ["id", "nombre", "tipo", "x", "y"]
 

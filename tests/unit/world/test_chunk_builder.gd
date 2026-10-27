@@ -4,7 +4,8 @@ extends GutTest
 ## sin árboles sueltos, puertas iguales vistas desde los dos chunks, puntos de interés distintos y
 ## lejos del centro, determinismo. El invariante de niveles sigue en test_relief.gd.
 ##
-## M8: refugios (cueva o árbol hueco, a ≤ 6 de un sendero, ≤ 300 casillas a pie), frutales 2×2,
+## M8: refugios (cueva o árbol hueco, a ≤ 6 de un sendero; los 300 pasos, en
+## test_places_and_refuges.gd), frutales 2×2,
 ## variantes de árbol sin repetición, letreros, villa, decoración, hierba y ríos sin huecos.
 ##
 ## Muestra: la región entera con 2 seeds (384 chunks).
@@ -317,126 +318,76 @@ static func _near_trail(c: WorldChunk, cell: Vector2i, reach: int) -> bool:
 	return false
 
 
+## "" si el refugio cumple las reglas del reparto (mundo-2.md §3); si no, el motivo.
+static func _refuge_problem(c: WorldChunk, r: Dictionary) -> String:
+	if r.size != Vector2i(2, 2):
+		return "refugio de %s" % r.size
+	var near: bool = false
+	for cell: Vector2i in _shelter_cells(r):
+		if not c.is_walkable(cell):
+			return "no se entra en %s" % r.cell
+		near = near or _near_trail(c, cell, ChunkBuilder.REFUGE_TRAIL_REACH)
+		if c.nujio_rect.size != Vector2i.ZERO:
+			var gap: int = maxi(maxi(c.nujio_rect.position.x - cell.x, cell.x - c.nujio_rect.end.x + 1),
+					maxi(c.nujio_rect.position.y - cell.y, cell.y - c.nujio_rect.end.y + 1))
+			if gap > ChunkBuilder.REFUGE_NUJIO_REACH:
+				return "refugio %s a %d del Nujio" % [r.cell, gap]
+	if not near:
+		return "refugio %s lejos de un sendero" % r.cell
+	if r.kind == K.CAVE:
+		# Boca abierta en la base de una cara; la fila de arriba sigue siendo cara.
+		var top: Vector2i = r.cell
+		if c.get_cliff(top) != WorldChunk.Cliff.FACE or c.get_cliff(top + Vector2i.DOWN) != WorldChunk.Cliff.NONE:
+			return "cueva %s sin techo o sin boca" % r.cell
+	return ""
+
+
 func test_refuges_follow_the_plan_and_sit_by_a_trail() -> void:
 	var caves: int = 0
 	var trees: int = 0
+	var extras: int = 0
+	var planned: int = 0
 	var failures: Array[String] = []
 	for seed_value: int in _worlds:
 		var plan: RegionPlan = _worlds[seed_value].plan
+		planned += plan.refuge_chunks().size()
 		for coord: Vector2i in _worlds[seed_value].chunks:
 			var c: WorldChunk = _worlds[seed_value].chunks[coord]
 			var refuges: Array[Dictionary] = _refuges_of(c)
+			# Los refugios extra de la garantía de 300 pasos son árboles huecos que van después
+			# del del reparto (test_places_and_refuges.gd); aquí solo se mira el del reparto.
 			if not plan.has_refuge(coord):
-				if not refuges.is_empty():
-					failures.append("seed %d %s: refugio sin reparto" % [seed_value, coord])
+				for extra: Dictionary in refuges:
+					if extra.kind != K.REFUGE_TREE:
+						failures.append("seed %d %s: refugio extra que no es árbol hueco" % [seed_value, coord])
+				extras += refuges.size()
 				continue
-			if refuges.size() != 1:
-				failures.append("seed %d %s: %d refugios" % [seed_value, coord, refuges.size()])
+			if refuges.is_empty():
+				failures.append("seed %d %s: sin refugio" % [seed_value, coord])
 				continue
-			var r: Dictionary = refuges[0]
-			assert_eq(r.size, Vector2i(2, 2))
+			extras += refuges.size() - 1
+			# El del reparto es uno que cumple todas las reglas (los extra pueden no cumplirlas).
+			var why: Array[String] = []
+			var r: Dictionary = {}
+			for cand: Dictionary in refuges:
+				var problem: String = _refuge_problem(c, cand)
+				if problem.is_empty():
+					r = cand
+					break
+				why.append(problem)
+			if r.is_empty():
+				failures.append("seed %d %s: %s" % [seed_value, coord, why])
+				continue
 			caves += int(r.kind == K.CAVE)
 			trees += int(r.kind == K.REFUGE_TREE)
-			var near: bool = false
-			for cell: Vector2i in _shelter_cells(r):
-				assert_true(c.is_walkable(cell), "se entra en el refugio de %s" % coord)
-				near = near or _near_trail(c, cell, ChunkBuilder.REFUGE_TRAIL_REACH)
-				if c.nujio_rect.size != Vector2i.ZERO:
-					var gap: int = maxi(maxi(c.nujio_rect.position.x - cell.x, cell.x - c.nujio_rect.end.x + 1),
-							maxi(c.nujio_rect.position.y - cell.y, cell.y - c.nujio_rect.end.y + 1))
-					if gap > ChunkBuilder.REFUGE_NUJIO_REACH:
-						failures.append("seed %d %s: refugio a %d del Nujio" % [seed_value, coord, gap])
-			if not near:
-				failures.append("seed %d %s: refugio %s lejos de un sendero" % [seed_value, coord, r.cell])
-			if r.kind == K.CAVE:
-				# Boca abierta en la base de una cara; la fila de arriba sigue siendo cara.
-				var top: Vector2i = r.cell
-				assert_eq(c.get_cliff(top), WorldChunk.Cliff.FACE, "techo de la cueva en %s" % coord)
-				assert_eq(c.get_cliff(top + Vector2i.DOWN), WorldChunk.Cliff.NONE, "boca de la cueva en %s" % coord)
-	gut.p("refugios: %d cuevas y %d árboles huecos" % [caves, trees])
+	gut.p("refugios: %d cuevas y %d árboles huecos del reparto; %d extra (reparto: %d)" % [caves, trees, extras, planned])
+	assert_lt(extras, planned / 4, "los refugios extra son pocos frente al reparto")
 	assert_gt(caves, 0, "sale alguna cueva")
 	assert_gt(trees, 0, "sale algún árbol hueco")
 	assert_eq(failures.size(), 0, "refugios: %s" % [failures.slice(0, 8)])
 
 
-## mundo-2.md §3: desde cualquier casilla que se pisa (alcanzable desde el hub de su chunk), el
-## refugio más cercano (o la plaza de una villa) está a ≤ 300 casillas a pie, cruzando chunks.
-func test_every_cell_is_at_most_300_steps_from_a_refuge() -> void:
-	const LIMIT: int = 300
-	for seed_value: int in _worlds:
-		var plan: RegionPlan = _worlds[seed_value].plan
-		var chunks: Dictionary = _worlds[seed_value].chunks
-		var w: int = plan.size_chunks.x * SIZE
-		var h: int = plan.size_chunks.y * SIZE
-		var blocked := PackedByteArray()
-		blocked.resize(w * h)
-		var target := PackedByteArray()
-		target.resize(w * h)
-		var dist := PackedInt32Array()
-		dist.resize(w * h)
-		dist.fill(-1)
-		var queue := PackedInt32Array()
-		queue.resize(w * h)
-		var tail: int = 0
-		for coord: Vector2i in chunks:
-			var c: WorldChunk = chunks[coord]
-			var reach: PackedByteArray = c.reachable_from_hub()
-			var o: int = coord.y * SIZE * w + coord.x * SIZE
-			for y: int in SIZE:
-				for x: int in SIZE:
-					var i: int = y * SIZE + x
-					var g: int = o + y * w + x
-					blocked[g] = c.blocked[i]
-					target[g] = reach[i]
-					if c.has_villa and c.ground[i] == WorldChunk.Ground.PLAZA and c.blocked[i] == 0:
-						dist[g] = 0
-						queue[tail] = g
-						tail += 1
-			for r: Dictionary in _refuges_of(c):
-				for cell: Vector2i in _shelter_cells(r):
-					var g: int = o + cell.y * w + cell.x
-					if dist[g] < 0:
-						dist[g] = 0
-						queue[tail] = g
-						tail += 1
-		var head: int = 0
-		while head < tail:
-			var g: int = queue[head]
-			head += 1
-			var x: int = g % w
-			var d: int = dist[g] + 1
-			if x > 0 and dist[g - 1] < 0 and blocked[g - 1] == 0:
-				dist[g - 1] = d
-				queue[tail] = g - 1
-				tail += 1
-			if x < w - 1 and dist[g + 1] < 0 and blocked[g + 1] == 0:
-				dist[g + 1] = d
-				queue[tail] = g + 1
-				tail += 1
-			if g >= w and dist[g - w] < 0 and blocked[g - w] == 0:
-				dist[g - w] = d
-				queue[tail] = g - w
-				tail += 1
-			if g < w * h - w and dist[g + w] < 0 and blocked[g + w] == 0:
-				dist[g + w] = d
-				queue[tail] = g + w
-				tail += 1
-		var worst: int = 0
-		var over: int = 0
-		var cut_off: int = 0
-		var cells: int = 0
-		for g: int in w * h:
-			if target[g] == 0:
-				continue
-			cells += 1
-			if dist[g] < 0:
-				cut_off += 1
-			elif dist[g] > LIMIT:
-				over += 1
-			worst = maxi(worst, dist[g])
-		gut.p("seed %d: %d casillas; peor distancia a un refugio %d; > %d: %d; sin camino: %d" % [seed_value, cells, worst, LIMIT, over, cut_off])
-		assert_eq(cut_off, 0, "seed %d: casillas sin camino a ningún refugio" % seed_value)
-		assert_eq(over, 0, "seed %d: casillas a más de %d pasos de un refugio" % [seed_value, LIMIT])
+## La garantía de ≤ 300 pasos a un refugio se prueba con 5 seeds en test_places_and_refuges.gd.
 
 
 # --- M8: frutales ------------------------------------------------------------------------------
