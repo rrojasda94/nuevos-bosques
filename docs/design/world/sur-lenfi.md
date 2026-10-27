@@ -9,7 +9,7 @@
 - **Cada color del mapa es un grupo de áreas** (respuesta del dueño a la #95), no un área suelta.
 - Para ese nivel se propone el nombre **"subregión"**, que el dueño usa en su respuesta a la #98 ("el resto de las subregiones como ness y alciss"). Nombre a confirmar (#100).
 - Así, Lean, Tossie, Ostie, etc. son subregiones del Valle del Sara, cada una con varias áreas. Esto es coherente con que una región tenga "de decenas a un centenar de áreas".
-- Las áreas de cada subregión todavía no están dibujadas (#101).
+- Las áreas de cada subregión todavía no están dibujadas (#101). Los **límites de las 7 subregiones del Valle del Sara** sí: el dueño aprobó los rectángulos de chunks del bloque `subregions` de `data/world/regions/valle_del_sara.json` (2026-10-27: "estan bien esas regiones. me agrada"; ver [Valle del Sara: subregiones](#valle-del-sara-subregiones)).
 
 ## Convenciones de la imagen
 - **Norte arriba, sur abajo** (confirmado, ADR 0008).
@@ -55,6 +55,20 @@
 | **Ostie** | Centro, oeste | Tossie (N), Alss (NE, posible), Vastie (E), Cassie (S y O); posible contacto con Dorias en el NO | El Sara en su límite con Vastie; el 3ro del Sara en su límite con Cassie (autoría). |
 | **Vastie** | Centro, este | Ostie (O), Alss (N), Nosie (E), Cassie (S) | Muy montañosa. Afluentes 4to del Sara (límite con Alss) y 2do del Sara (límite con Cassie) (autoría). |
 | **Cassie** | Sur; llega a la costa. Tiene además una franja estrecha al oeste, entre Dorias y Ostie | Ostie (N), Vastie (N/NE), Dorias (O), Nosie (E), Cabuta (SE, en la costa); al sur, la costa | **El río Sara la cruza** de norte a sur hasta la desembocadura (marca azul). Algunas montañas. |
+
+**Límites en chunks (confirmados por el dueño, 2026-10-27, #101)**: bloque `subregions` de `data/world/regions/valle_del_sara.json`, rectángulos `[x, y, ancho, alto]` en chunks de la región de 12×16 (manda el primero que contiene el chunk). Siguen los afluentes (7mo Lean–Tossie, 5to Tossie–Ostie, 3ro Ostie–Cassie, 6to Causie–Alss, 4to Alss–Vastie, 2do Vastie–Cassie) y el Sara separa el oeste (columnas 0–5) del este (6–11).
+
+| Subregión | Rectángulos |
+|---|---|
+| Lean | [0, 0, 6, 2] |
+| Tossie | [0, 2, 6, 2], [3, 4, 3, 1] |
+| Ostie | [0, 4, 3, 3], [3, 5, 3, 3] |
+| Causie | [6, 0, 6, 2], [6, 2, 3, 2] |
+| Alss | [9, 2, 3, 2], [6, 4, 6, 1], [6, 5, 3, 1] |
+| Vastie | [9, 5, 3, 3], [6, 6, 3, 2], [6, 8, 6, 1] |
+| Cassie | [0, 7, 3, 9], [3, 8, 3, 8], [6, 9, 6, 7] |
+
+Hoy solo los usa el reparto de sicabis (`docs/design/world/generation.md`, "Subregiones"). Siguen abiertos cuántas áreas tiene cada subregión y por dónde se dividen (#101).
 
 **Norte y sur del Valle del Sara** (para "más agreste al norte; sur más plano con claros ribereños", ADR 0007):
 - Norte: Lean, Causie, Tossie, Alss.
@@ -166,6 +180,11 @@ Lo que se lee *(lectura)*:
   - Ubicación según la captura del dueño (2026-10-26): en el **extremo norte de la cordillera occidental**, pegada al **borde norte** (Larr).
   - **Está en la subregión Lean** (dueño, #182: "Azhin está en Lean").
   - **En la autoría** (`tools/world/paint_relieve_autor.py`): fila `villa_azhin` de `lugares.csv` en (16, 4), chunk (0, 0), al pie de Larr, con un camino hasta el camino de Lean.
+- **Umun Mal** (dueño, 2026-10-27): "estan bien esas regiones. me agrada. Lo unico que quiero agregar en el 6;14 es la ciudad de umun mal, es una ciudad de piedra blanca, muy bonita y grande tiene la particularidad de ocupar todo un chunk. NAda más eso".
+  - **Ciudad** de **piedra blanca**, **muy bonita y grande**. Su particularidad: **ocupa todo un chunk**.
+  - Está en el chunk **(6, 14)**, justo al sur de **Olss** (la villa natal, chunk (6, 13)), en **Cassie**.
+  - **En la autoría**: fila `ciudad_umun_mal` de `lugares.csv`, tipo nuevo `ciudad`, en (130, 290). Para el juego es una villa más (Nujio, servicios, plaza que es refugio, letreros) y el generador traza la ciudad en el chunk entero: calles de 3, plaza grande con el Nujio y casas de piedra blanca por todas partes (`docs/design/world/generation.md`, "Ciudad").
+  - *(Pendiente de arte)*: casas de piedra blanca (hoy se dibujan con la piedra de las villas) y, si se quiere, muralla y edificios grandes (`pixel-artist`).
 - **Tarca de Trastas** (glosario §7: en Dorias): en la **misma cordillera occidental**, del **lado de Dorias** (zona salmón de la captura), hacia la **parte central** de la franja (dueño).
   - **Pendiente**: queda fuera del Valle del Sara; no está en la autoría. Se pondrá cuando exista la región de Dorias.
 - **Cordillera occidental** (dueño: "la cordillera no tan agreste es la que esta rodeada en rojo, son colinas y montañas bastante transitables"):
@@ -187,7 +206,7 @@ Lo que se lee *(lectura)*:
 
 ## Pendiente para pasar a `data/world/`
 - Nombre del nivel "subregión" (#100).
-- Cuántas áreas tiene cada subregión y cómo se dividen (#101).
+- Cuántas áreas tiene cada subregión y cómo se dividen (#101). Los límites de las subregiones del Valle del Sara ya están confirmados (2026-10-27).
 - Nivel de Safis, Dorias, Nosie, Naca, Balasu y Cabuta (#102).
 - Ríos grandes (navegables) y estrechos (#74). Pasos (#88). Afluentes del Sara: estrechos en la montaña y navegables fuera de ella (dueño, 2026-10-25).
 - Significado de la marca azul (#96).

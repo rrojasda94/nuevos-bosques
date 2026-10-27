@@ -36,12 +36,12 @@ const SHADOW_COLOR: Color = Color("#000000")
 const PLACE_COLORS: Dictionary = {
 	"villa_natal": Color("#ffd23c"), "villa": Color("#ffffff"), "hito": Color("#ff8a3c"),
 	"tarca": Color("#c070ff"), "bosque": Color("#60ff70"), "lugar": Color("#50e0ff"),
-	"manantial": Color("#a0d8ff"),
+	"manantial": Color("#a0d8ff"), "ciudad": Color("#f4efdc"),
 }
 const PLACE_NAMES: Dictionary = {
 	"villa_natal": "villa natal", "villa": "villa", "hito": "hito",
 	"tarca": "tarca", "bosque": "Nujio de Bosque clave", "lugar": "lugar",
-	"manantial": "manantial (nacimiento de río)",
+	"manantial": "manantial (nacimiento de río)", "ciudad": "ciudad (marco: ocupa el chunk entero)",
 }
 
 ## Fuente de 3×5 (mayúsculas sin tildes, cifras y algo de puntuación). Filas de arriba abajo.
@@ -376,7 +376,16 @@ static func _draw_place(img: Image, p: Dictionary) -> void:
 	var t: int = RegionAuthoring.MACRO_TILES
 	var center: Vector2i = (p.cell as Vector2i) * t + Vector2i(t / 2, t / 2)
 	var color: Color = PLACE_COLORS.get(p.type, Color.WHITE)
-	var half: int = 5 if p.type == "villa_natal" else 4
+	var half: int = 5 if p.type == "villa_natal" or p.type == "ciudad" else 4
+	if p.type == "ciudad":
+		# La ciudad ocupa su chunk entero: marco de 2 px por dentro del chunk.
+		var origin: Vector2i = RegionAuthoring.chunk_of(p.cell) * CHUNK_TILES
+		for k: int in 2:
+			var r := Rect2i(origin + Vector2i(k, k), Vector2i(CHUNK_TILES - 2 * k, CHUNK_TILES - 2 * k))
+			img.fill_rect(Rect2i(r.position, Vector2i(r.size.x, 1)), color)
+			img.fill_rect(Rect2i(Vector2i(r.position.x, r.end.y - 1), Vector2i(r.size.x, 1)), color)
+			img.fill_rect(Rect2i(r.position, Vector2i(1, r.size.y)), color)
+			img.fill_rect(Rect2i(Vector2i(r.end.x - 1, r.position.y), Vector2i(1, r.size.y)), color)
 	img.fill_rect(Rect2i(center - Vector2i(half + 1, half + 1), Vector2i(half * 2 + 3, half * 2 + 3)), SHADOW_COLOR)
 	img.fill_rect(Rect2i(center - Vector2i(half, half), Vector2i(half * 2 + 1, half * 2 + 1)), color)
 	if p.type == "bosque":

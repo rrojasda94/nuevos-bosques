@@ -10,6 +10,11 @@ extends RefCounted
 ##   el río procedural de la ADR 0006. Los arroyos de montaña siguen en el chunk.
 ## - Bosques (BosqueMap.build_planned): Bosques clave de bosques.png y lugares.csv, el resto
 ##   procedural; villas del CSV (la natal sustituye a start_chunk), áreas y aldeas (opción C).
+## - Ciudades (tipo `ciudad` del CSV, Umun Mal): una villa más (Bosque propio con Nujio, servicios,
+##   plaza que es refugio, letreros, distancias de aldeas y sicabis) que ocupa su chunk entero. Su
+##   chunk se aplana aquí, en la altura gruesa, a un solo nivel (el de su celda), así que los chunks
+##   vecinos leen lo mismo en su margen. El agua se queda: un río no se corta (el ChunkBuilder lo
+##   cruza con puentes). El trazado de calles y casas es del ChunkBuilder.
 ## - Caminos: los pintados (con puente donde el meandro los deja sobre el agua) más la red de
 ##   BosqueMap donde no hay camino pintado que una los Nujios.
 ## - Puertas entre chunks: con camino, siempre; si no, DOOR_PERCENT %; y un árbol de expansión de
@@ -22,7 +27,7 @@ extends RefCounted
 ## Inmutable tras build(): las consultas solo leen y devuelven copias, así que los ChunkBuilder
 ## (M6+) pueden leerlo a la vez desde varios hilos. No construye chunks ni toca la escena.
 
-const GENERATOR_VERSION: int = 3
+const GENERATOR_VERSION: int = 4
 ## Umbrales de elevación de los niveles 1, 2 y 3 (los del spike).
 const HEIGHT_THRESHOLDS: Array[float] = [-0.1, 0.32, 0.62]
 const LEVEL_MAX: int = 3
@@ -128,6 +133,7 @@ static func build(seed_v: int, id: StringName, region: Dictionary, authoring: Re
 	var terrain_region: Dictionary = region.duplicate()
 	terrain_region["size_chunks"] = [plan.size_chunks.x, plan.size_chunks.y]
 	plan._build_height(authoring, terrain_region)
+	plan._flatten_cities()
 	plan._build_water(authoring, terrain_region)
 	plan._build_roads(authoring)
 	plan._build_bosques(region, authoring)
@@ -214,8 +220,9 @@ func bosque_at(chunk: Vector2i) -> int:
 	return bosques.bosque_at(chunk)
 
 
-## Villas con nombre (lugares.csv) y aldeas: { id, name, kind ("villa_natal", "villa", "aldea"),
-## chunk, macro, bosque_id, houses (solo aldeas: 2-4; 0 = lo decide el ChunkBuilder) }.
+## Villas con nombre (lugares.csv), ciudades y aldeas: { id, name, kind ("villa_natal", "villa",
+## "ciudad", "aldea"), chunk, macro, bosque_id, houses (solo aldeas: 2-4; 0 = lo decide el
+## ChunkBuilder) }.
 func villas() -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
 	for v: Dictionary in _villas:
@@ -231,9 +238,14 @@ func aldeas() -> Array[Dictionary]:
 	return out
 
 
-## Villa o aldea del chunk ({} si no hay).
+## Villa, ciudad o aldea del chunk ({} si no hay).
 func villa_in_chunk(chunk: Vector2i) -> Dictionary:
 	return (_villas[_villa_at[chunk]] as Dictionary).duplicate() if _villa_at.has(chunk) else {}
+
+
+## El chunk es una ciudad (tipo `ciudad` de lugares.csv): la ocupa entera.
+func is_city(chunk: Vector2i) -> bool:
+	return _villa_at.has(chunk) and String((_villas[_villa_at[chunk]] as Dictionary).kind) == "ciudad"
 
 
 ## Lugares de lugares.csv que caen en el chunk (copias, en el orden del CSV).
@@ -378,6 +390,20 @@ func _build_height(authoring: RegionAuthoring, terrain_region: Dictionary) -> vo
 					level += 1
 			_height[i] = level
 	_remove_lone_levels(procedural)
+
+
+## Ciudades: todo su chunk a un solo nivel, el de la celda gruesa de la ciudad (sin cumbres). Antes
+## del agua (el meandro mira las cumbres) y de los Bosques. Lo leen igual el chunk y sus vecinos.
+func _flatten_cities() -> void:
+	var n: int = WorldCoords.MACROS_PER_CHUNK
+	for p: Dictionary in _places:
+		if String(p.type) != "ciudad" or not in_macro(p.cell):
+			continue
+		var level: int = mini(_height[p.cell.y * size_macro.x + p.cell.x], LEVEL_MAX)
+		var origin: Vector2i = WorldCoords.floor_div_v(p.cell, n) * n
+		for y: int in range(origin.y, mini(origin.y + n, size_macro.y)):
+			for x: int in range(origin.x, mini(origin.x + n, size_macro.x)):
+				_height[y * size_macro.x + x] = level
 
 
 ## Sin celdas sueltas: una celda procedural sin vecino ortogonal de su nivel toma el nivel más común
@@ -645,10 +671,10 @@ func _build_bosques(region: Dictionary, authoring: RegionAuthoring) -> void:
 	})
 
 
-## Villas con nombre del CSV: la natal primero y luego las demás en el orden del CSV.
+## Villas con nombre del CSV: la natal primero, luego las demás y las ciudades, en el orden del CSV.
 func _named_villas() -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
-	for kind: String in ["villa_natal", "villa"]:
+	for kind: String in ["villa_natal", "villa", "ciudad"]:
 		for p: Dictionary in _places:
 			if p.type == kind and in_macro(p.cell):
 				out.append(p)

@@ -344,13 +344,14 @@ static func _draw_bosque_borders(img: Image, map: BosqueMap, chunks: Vector2i) -
 				img.fill_rect(Rect2i(origin, Vector2i(PX_PER_CHUNK, 1)), BORDER_COLOR)
 
 
-## Villas (natal, con nombre y aldeas) y lugares con nombre de la región, en orden de prioridad de
-## rótulo: { kind ("villa_natal", "villa", "aldea", "tarca", "hito", "lugar", "manantial"), name,
+## Villas (natal, ciudades, con nombre y aldeas) y lugares con nombre de la región, en orden de
+## prioridad de rótulo: { kind ("villa_natal", "ciudad", "villa", "aldea", "tarca", "hito", "lugar",
+## "manantial"), name,
 ## chunk, macro, px (píxel del mapa), label (bool: lleva rótulo) }.
 static func region_places(plan: RegionPlan) -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
 	var villas: Array[Dictionary] = plan.villas()
-	for kind: String in ["villa_natal", "villa", "aldea"]:
+	for kind: String in ["villa_natal", "ciudad", "villa", "aldea"]:
 		for v: Dictionary in villas:
 			if v.kind == kind:
 				out.append(_place(kind, String(v.name), v.macro))

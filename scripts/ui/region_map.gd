@@ -44,7 +44,7 @@ const STATE_COLORS: Dictionary = {
 const STATE_MARK: int = 3
 ## Color del rótulo por tipo de lugar (vista de la región).
 const LABEL_COLORS: Dictionary = {
-	"villa_natal": HOME_COLOR, "villa": VILLA_COLOR, "aldea": ALDEA_COLOR, "lugar": WATER_LABEL_COLOR,
+	"villa_natal": HOME_COLOR, "villa": VILLA_COLOR, "ciudad": VILLA_COLOR, "aldea": ALDEA_COLOR, "lugar": WATER_LABEL_COLOR,
 	"tarca": PLACE_COLOR, "hito": PLACE_COLOR,
 }
 
@@ -267,7 +267,7 @@ func _draw_places(explored: Array[Vector2i]) -> void:
 		match String(p.kind):
 			"villa_natal":
 				PixelIcons.draw_centered(_canvas, PixelIcons.HOUSE, at, HOME_COLOR)
-			"villa":
+			"villa", "ciudad":
 				PixelIcons.draw_centered(_canvas, PixelIcons.HOUSE, at, VILLA_COLOR)
 			"aldea":
 				PixelIcons.draw_centered(_canvas, PixelIcons.ALDEA, at, ALDEA_COLOR)

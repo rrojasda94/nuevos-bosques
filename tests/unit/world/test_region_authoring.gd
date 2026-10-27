@@ -309,6 +309,54 @@ func test_villa_across_a_river_needs_a_ford_or_bridge() -> void:
 	assert_true(_build({ "water": bridged, "roads": roads }, rows).is_valid(), "por el puente")
 
 
+# --- Ciudades (tipo `ciudad`, Umun Mal) --------------------------------------------------------
+
+func test_city_on_land_in_its_own_chunk_is_valid() -> void:
+	var a := _build({ "height": _img(40, 20) }, [HOME_ROW, "ciudad_a,Ciudad,ciudad,30,10,,,"])
+	assert_true(a.is_valid(), "%s" % [a.errors])
+	assert_eq(a.places_of_type("ciudad").size(), 1)
+
+
+func test_city_in_water_is_an_error() -> void:
+	var water := _img(40, 20)
+	_put(water, Vector2i(30, 10), "water", "lake")
+	var a := _build({ "water": water }, [HOME_ROW, "ciudad_a,Ciudad,ciudad,30,10,,,"])
+	assert_true(_has_error(a, "'ciudad_a' está en el agua (un lago)"), "%s" % [a.errors])
+
+
+func test_city_sharing_its_chunk_with_a_villa_is_an_error() -> void:
+	var rows: Array = [HOME_ROW, "ciudad_a,Ciudad,ciudad,30,10,,,", "v2,Vecina,villa,35,15,,,"]
+	var a := _build({ "height": _img(40, 20) }, rows)
+	assert_true(_has_error(a, "la ciudad 'ciudad_a' ocupa el chunk (1, 0) entero y ahí está también 'v2'"), "%s" % [a.errors])
+	var with_home := _build({ "height": _img(40, 20) }, [HOME_ROW, "ciudad_a,Ciudad,ciudad,5,5,,,"])
+	assert_true(_has_error(with_home, "y ahí está también 'villa_natal'"), "%s" % [with_home.errors])
+	var apart := _build({ "height": _img(40, 20) }, [HOME_ROW, "ciudad_a,Ciudad,ciudad,30,10,,,", "v2,Vecina,villa,15,15,,,"])
+	assert_true(apart.is_valid(), "en chunks distintos: %s" % [apart.errors])
+
+
+func test_city_closed_by_peaks_is_an_error() -> void:
+	var height := _img(40, 20)
+	for y: int in range(10, 15):
+		for x: int in range(25, 30):
+			if x == 25 or x == 29 or y == 10 or y == 14:
+				_put(height, Vector2i(x, y), "height", "peak")
+	var a := _build({ "height": height }, [HOME_ROW, "c2,Encerrada,ciudad,27,12,,,"])
+	assert_true(_has_error(a, "'c2' en (27, 12) [chunk 1, 0] no tiene acceso a pie"), "%s" % [a.errors])
+
+
+## Umun Mal (dueño, 2026-10-27): ciudad en el chunk (6, 14), justo al sur de Olss.
+func test_valle_del_sara_has_umun_mal_south_of_olss() -> void:
+	var a := RegionAuthoring.load_region(&"valle_del_sara")
+	assert_true(a.is_valid(), "%s" % [a.errors])
+	var cities: Array[Dictionary] = a.places_of_type("ciudad")
+	assert_eq(cities.size(), 1, "una ciudad")
+	if cities.is_empty():
+		return
+	assert_eq(cities[0].name, "Umun Mal")
+	assert_eq(RegionAuthoring.chunk_of(cities[0].cell), Vector2i(6, 14))
+	assert_eq(RegionAuthoring.chunk_of(cities[0].cell), a.home_chunk() + Vector2i.DOWN, "justo al sur de la villa natal")
+
+
 # --- Archivos ----------------------------------------------------------------------------------
 
 func test_load_dir_reads_pngs_and_csv() -> void:

@@ -182,7 +182,7 @@ func test_csv_villas_are_in_the_plan() -> void:
 		var by_id: Dictionary = {}
 		for v: Dictionary in plan.villas():
 			by_id[v.id] = v
-		for kind: String in ["villa_natal", "villa"]:
+		for kind: String in ["villa_natal", "villa", "ciudad"]:
 			for p: Dictionary in _authoring.places_of_type(kind):
 				assert_true(by_id.has(p.id), "seed %d: está %s" % [s, p.id])
 				var v: Dictionary = by_id.get(p.id, {})
@@ -196,7 +196,7 @@ func test_csv_villas_are_in_the_plan() -> void:
 		for v: Dictionary in plan.villas():
 			if v.kind != "aldea":
 				bosques_with_villa[v.bosque_id] = true
-		assert_eq(bosques_with_villa.size(), _authoring.places_of_type("villa").size() + 1,
+		assert_eq(bosques_with_villa.size(), _authoring.places_of_type("villa").size() + _authoring.places_of_type("ciudad").size() + 1,
 				"seed %d: cada villa con nombre en su propio Bosque" % s)
 
 

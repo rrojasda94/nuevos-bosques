@@ -5,6 +5,10 @@ extends RefCounted
 ## senderos y formas grandes (M6 y M7); decoración variada, letreros, refugio, frutales y trazado
 ## de la villa (M8). Después: fuentes de los afluentes (SPRING), entradas de sicabi (SICABI_GATE) y
 ## refugios extra hasta cumplir la garantía de ≤ walk_limit casillas a pie (generation.md).
+## Ciudad (tipo `ciudad` de lugares.csv, Umun Mal): el trazado ocupa el chunk entero (_shape_city):
+## calles de 3 en retícula irregular sobre los carriles gruesos, plaza grande con el Nujio, manzanas
+## de casas de piedra blanca con callejones, huertos y árboles jóvenes de adorno; sin bosque, rocas
+## ni puntos de interés al azar (generation.md, "Ciudad").
 ##
 ## Relieve (ADR 0014 §3, spec de arte docs/art/specs/mundo-2.md §3):
 ## - `level[]` = nivel de la celda gruesa (0..3; la cumbre cuenta como 3 y además bloquea entera).
@@ -37,7 +41,8 @@ extends RefCounted
 ##   decoración lo decide el dibujo (hash de la casilla), no va en los datos.
 ## - `objects[].variant`, por tipo: ver OBJECT_VARIANTS en generation.md (árbol: variante | volteo
 ##   << 2; frutal: variante 0-1 | volteo << 1; joven, tocón y tronco: variante 0-1 | volteo << 1;
-##   seco, grande, hueco y Nujio: volteo; casa: material * 2 + variante; roca 2×2: 0..2; roca 1×1: 0..1).
+##   seco, grande, hueco y Nujio: volteo; casa: material (HouseMaterial) * 2 + variante; roca 2×2:
+##   0..2; roca 1×1: 0..1).
 ##
 ## Apto para hilos: solo lee el RegionPlan (inmutable), crea su propio FastNoiseLite,
 ## RandomNumberGenerator, AStarGrid2D y arreglos de trabajo, no usa randi() ni GameState y no toca
@@ -61,11 +66,14 @@ enum DecorPiece {
 const DECOR_PIECE_BASE: int = 3
 ## Ancla del chunk.
 enum Anchor { NONE, VILLA, NUJIO }
+## Material de las casas (`objects[].variant` = material * 2 + variante). Se amplía al final.
+## PIEDRA_BLANCA: las de una ciudad (Umun Mal); hasta que tenga arte, se dibuja con la piedra.
+enum HouseMaterial { BARRO, PIEDRA, PIEDRA_BLANCA }
 
 ## Versión de la salida del ChunkBuilder: súbela con cualquier cambio que altere los bytes de un
 ## chunk. WorldCache la combina con RegionPlan.GENERATOR_VERSION y WorldChunk.FORMAT_VERSION
 ## (combined_generator_version), así que invalida la caché. Cabe en 16 bits.
-const VERSION: int = 4
+const VERSION: int = 5
 
 const SIZE: int = WorldCoords.CHUNK
 const LAST: int = SIZE - 1
@@ -244,6 +252,28 @@ const SALT_SMALL: int = 156
 const SALT_VILLA: int = 157
 const SALT_SICABI: int = 159
 const SALT_REFUGE_EXTRA: int = 160
+const SALT_CITY: int = 161
+
+## Ciudad (generation.md, "Ciudad"). Celdas gruesas del Nujio a la calle que rodea la plaza.
+const CITY_RING: int = 3
+## Celda gruesa de la calle de ronda exterior (a cada lado: CITY_OUTER y MACROS - 1 - CITY_OUTER).
+## Fuera de ella queda una franja de hierba de 4-5 casillas hasta el borde del chunk.
+const CITY_OUTER: int = 1
+## Celdas gruesas entre dos calles paralelas, al rellenar la retícula: [mín, máx]. Un hueco mayor
+## que el máximo se parte siempre; uno que se puede partir en dos de al menos el mínimo, a veces
+## (CITY_SPLIT_PERCENT): así las manzanas no salen todas iguales.
+const CITY_GAP: Array[int] = [3, 6]
+const CITY_SPLIT_PERCENT: int = 50
+## Una calle hacia una puerta solo se añade si queda a esta distancia (celdas gruesas) o más de
+## las otras; si no, el camino de la puerta se une a la más cercana.
+const CITY_DOOR_GAP: int = 2
+## Peso del A* de la red en la ciudad: calles (baratas), plaza y manzanas (caras).
+const CITY_LANE_WEIGHT: float = 0.3
+const CITY_BLOCK_WEIGHT: float = 12.0
+## 1 de cada CITY_GARDEN_ODDS huecos de casa es un jardín con un árbol joven de adorno.
+const CITY_GARDEN_ODDS: int = 9
+## % de huecos de huerto del patio de cada manzana que llevan huerto (el resto, árbol de adorno).
+const CITY_HUERTO_PERCENT: int = 70
 
 ## Fuentes de los afluentes (mundo-2.md §4): huella de `size` casillas (la central es agua y
 ## bloquea), claro de `clearing` casillas alrededor. Bloque "springs" de la región.
@@ -470,6 +500,15 @@ class _Build:
 	var anchor: int = Anchor.NONE
 	var anchor_macro := Vector2i(-1, -1)
 	var villa: Dictionary = {}
+	# Ciudad: el chunk entero (plan.is_city). Celdas gruesas de calle y plaza (para el A*), huecos
+	# de casa, huertos y jardines del trazado, y los parterres de la plaza (refugio y adorno).
+	var city: bool = false
+	var city_lane := PackedByteArray()
+	var city_plaza := Rect2i()
+	var city_houses: Array[Rect2i] = []
+	var city_huertos: Array[Rect2i] = []
+	var city_trees: Array[Vector2i] = []
+	var city_beds: Array[Vector2i] = []
 	# { kind, a (celda gruesa sup. izq.), size (celdas gruesas), center (casilla), node (casilla), csv }
 	var points: Array[Dictionary] = []
 	# { tile, macro, road, door ({} si no es puerta), side }
@@ -649,6 +688,7 @@ class _Build:
 			return
 		anchor = Anchor.NUJIO if villa.is_empty() else Anchor.VILLA
 		anchor_macro = m
+		city = anchor == Anchor.VILLA and plan.is_city(coord)
 		chunk.has_villa = anchor == Anchor.VILLA
 		chunk.nujio_rect = Rect2i(m * MACRO, Vector2i(NUJIO_SIZE, NUJIO_SIZE))
 		var level: int = m_level[_mk(m.x, m.y)]
@@ -704,6 +744,8 @@ class _Build:
 		var total: int = int(params.near_anchor)
 		if anchor == Anchor.NONE:
 			total = _weighted_count(params.count_weights)
+		elif city:
+			total = 0 # la ciudad ocupa el chunk: sin puntos de interés al azar
 		var used: Dictionary = {}
 		for p: Dictionary in plan.places_in_chunk(coord):
 			if not CSV_POINTS.has(String(p.type)):
@@ -992,6 +1034,9 @@ class _Build:
 	func _shape_anchor() -> void:
 		if anchor == Anchor.NONE:
 			return
+		if city:
+			_shape_city()
+			return
 		var rect: Rect2i = chunk.nujio_rect
 		var reach: int = VILLA_RADIUS * MACRO + MACRO / 2 if anchor == Anchor.VILLA else NUJIO_CLEARING
 		var zone: Rect2i = rect.grow(reach).intersection(Rect2i(0, 0, SIZE, SIZE))
@@ -1182,6 +1227,305 @@ class _Build:
 		for y: int in range(r.position.y, r.end.y):
 			for x: int in range(r.position.x, r.end.x):
 				layer[y * SIZE + x] = 1
+
+	# --- Ciudad (tipo `ciudad`: el chunk entero) -------------------------------------------------
+
+	## Trazado de la ciudad (generation.md, "Ciudad"): calles de 3 sobre los carriles de las celdas
+	## gruesas (ronda exterior, calle alrededor de la plaza, una calle hacia cada puerta y otras
+	## para que ninguna manzana pase de CITY_GAP[1] celdas), plaza grande con el Nujio en medio y 4
+	## parterres, y en cada manzana tiras de casas 4×3 que dan al sur, a una calle o a un callejón
+	## de 1, con huertos y árboles de adorno. Aquí solo el suelo, los senderos (los pavimenta
+	## _apply_paths) y los huecos; los objetos los pone _place_city cuando la red ya está trazada.
+	func _shape_city() -> void:
+		var crng := RandomNumberGenerator.new()
+		crng.seed = ChunkGenerator.hash_ints([plan.plan_seed, coord.x, coord.y, SALT_CITY])
+		var a: Vector2i = anchor_macro
+		var lo: int = CITY_OUTER
+		var hi: int = MACROS - 1 - CITY_OUTER
+		var ring_lo: Vector2i = a - Vector2i(CITY_RING, CITY_RING)
+		var ring_hi: Vector2i = a + Vector2i(CITY_RING, CITY_RING)
+		city_plaza = Rect2i(ring_lo * MACRO + Vector2i(MACRO, MACRO), (ring_hi - ring_lo) * MACRO - Vector2i(ROAD_W, ROAD_W))
+		city_lane.resize(MACROS * MACROS)
+		no_tree.fill(1)
+		# Suelo: dentro de la ronda, solar (claro); fuera, la franja de hierba; plaza en medio.
+		var inner := Rect2i(Vector2i(lo, lo) * MACRO + Vector2i.ONE, Vector2i(hi - lo, hi - lo) * MACRO + Vector2i(ROAD_W, ROAD_W))
+		var ground: PackedByteArray = chunk.ground
+		var cliffs: PackedByteArray = chunk.cliff
+		for i: int in WorldChunk.CELLS:
+			if (NATURAL_GROUND >> ground[i]) & 1 == 0:
+				continue
+			var c := Vector2i(i % SIZE, i / SIZE)
+			if city_plaza.has_point(c) and cliffs[i] == WorldChunk.Cliff.NONE:
+				ground[i] = WorldChunk.Ground.PLAZA
+			elif inner.has_point(c):
+				ground[i] = WorldChunk.Ground.CLEARING
+			else:
+				ground[i] = WorldChunk.Ground.GRASS
+		chunk.ground = ground
+		# Calles: por eje (0 = verticales, en columnas; 1 = horizontales, en filas).
+		for axis: int in 2:
+			var full: Dictionary = {lo: true, hi: true, ring_lo[axis]: true, ring_hi[axis]: true}
+			for side: Vector2i in WorldChunk.SIDES:
+				if not plan.has_door(coord, side) or (axis == 0) != (side.x == 0):
+					continue
+				var door: Dictionary = plan.door(coord, side)
+				var along: Vector2i = Vector2i.DOWN if side.x != 0 else Vector2i.RIGHT
+				var mid: Vector2i = (door.cell as Vector2i) + along * (int(door.width) / 2)
+				var at: int = clampi(WorldCoords.floor_div(mid[axis], MACRO), lo, hi)
+				var near: bool = false
+				for f: int in full:
+					near = near or absi(f - at) < CITY_DOOR_GAP
+				if near:
+					continue
+				if at > ring_lo[axis] and at < ring_hi[axis]:
+					# Frente a la plaza: del lado de la puerta hasta la calle de la plaza.
+					var other: int = 1 - axis
+					if side.x < 0 or side.y < 0:
+						_city_lane(axis, at, lo, ring_lo[other])
+					else:
+						_city_lane(axis, at, ring_hi[other], hi)
+				else:
+					full[at] = true
+			var sorted: Array[int] = []
+			for f: int in full:
+				sorted.append(f)
+			sorted.sort()
+			var lanes: Array[int] = []
+			for k: int in sorted.size():
+				var p: int = sorted[k]
+				lanes.append(p)
+				if k + 1 == sorted.size() or (p == ring_lo[axis] and sorted[k + 1] == ring_hi[axis]):
+					continue
+				var q: int = sorted[k + 1]
+				while q - p >= 2 * CITY_GAP[0] and (q - p > CITY_GAP[1] or crng.randi() % 100 < CITY_SPLIT_PERCENT):
+					p += crng.randi_range(CITY_GAP[0], mini(CITY_GAP[1], q - p - CITY_GAP[0]))
+					lanes.append(p)
+			for at: int in lanes:
+				_city_lane(axis, at, lo, hi)
+		# Plaza: el Nujio (reservado) y su hub, como en la villa; 4 parterres de claro a 4-6 del
+		# Nujio y a 4 de la calle de la plaza (uno será el refugio).
+		var rect: Rect2i = chunk.nujio_rect
+		_mark(solid, rect)
+		var node: Vector2i = ChunkBuilder.lane_cell(anchor_macro + Vector2i.DOWN)
+		nodes.append({"tile": node, "macro": anchor_macro + Vector2i.DOWN, "road": false, "door": {}})
+		_mark(keep, Rect2i(node - Vector2i.ONE, Vector2i(3, 3)))
+		var beds: Array[Vector2i] = [
+			Vector2i(rect.position.x - 5, rect.position.y + 1), Vector2i(rect.end.x + 4, rect.position.y + 1),
+			Vector2i(rect.position.x + 1, rect.position.y - 5), Vector2i(rect.position.x + 1, rect.end.y + 4),
+		]
+		var start: int = crng.randi() % beds.size()
+		for k: int in beds.size():
+			var bed: Vector2i = beds[(start + k) % beds.size()]
+			var area: Rect2i = Rect2i(bed, Vector2i(2, 2)).grow(1)
+			if not city_plaza.encloses(area):
+				continue
+			city_beds.append(bed)
+			for y: int in range(area.position.y, area.end.y):
+				for x: int in range(area.position.x, area.end.x):
+					if chunk.ground[y * SIZE + x] == WorldChunk.Ground.PLAZA:
+						chunk.ground[y * SIZE + x] = WorldChunk.Ground.CLEARING
+		_city_blocks(inner)
+
+	## Calle de 3 sobre el carril de la columna (axis 0) o fila (axis 1) `at`, de la celda gruesa
+	## `from` a la `to`. No pisa agua honda, cascadas ni cumbres (esos cruces los resuelve la red).
+	func _city_lane(axis: int, at: int, from: int, to: int) -> void:
+		for t: int in range(from, to + 1):
+			var m := Vector2i(at, t) if axis == 0 else Vector2i(t, at)
+			city_lane[m.y * MACROS + m.x] = 1
+		var r: Rect2i
+		if axis == 0:
+			r = Rect2i(at * MACRO + 1, from * MACRO + 1, ROAD_W, (to - from) * MACRO + ROAD_W)
+		else:
+			r = Rect2i(from * MACRO + 1, at * MACRO + 1, (to - from) * MACRO + ROAD_W, ROAD_W)
+		r = r.intersection(Rect2i(0, 0, SIZE, SIZE))
+		for y: int in range(r.position.y, r.end.y):
+			for x: int in range(r.position.x, r.end.x):
+				var i: int = y * SIZE + x
+				var cliff: int = chunk.cliff[i]
+				if (WorldChunk.GROUND_BLOCKING >> chunk.ground[i]) & 1 == 1 or cliff == WorldChunk.Cliff.WATERFALL \
+						or (cliff == WorldChunk.Cliff.EDGE and _aux(i) == EDGE_PEAK):
+					continue
+				path[i] = maxi(path[i], ROAD_W)
+
+	## Manzanas: los trozos de solar (dentro de la ronda, sin calle, plaza, agua ni risco) entre
+	## calles. Un trozo rectangular se reparte en tiras (_city_block); uno irregular (agua, riscos),
+	## casa a casa donde el frente da a una calle (_city_loose).
+	func _city_blocks(inner: Rect2i) -> void:
+		var free := PackedByteArray()
+		free.resize(WorldChunk.CELLS)
+		for y: int in range(inner.position.y, inner.end.y):
+			for x: int in range(inner.position.x, inner.end.x):
+				var i: int = y * SIZE + x
+				if path[i] == 0 and solid[i] == 0 and keep[i] == 0 and chunk.cliff[i] == WorldChunk.Cliff.NONE \
+						and chunk.ground[i] == WorldChunk.Ground.CLEARING and not city_plaza.has_point(Vector2i(x, y)):
+					free[i] = 1
+		var seen := PackedByteArray()
+		seen.resize(WorldChunk.CELLS)
+		for y: int in range(inner.position.y, inner.end.y):
+			for x: int in range(inner.position.x, inner.end.x):
+				var s: int = y * SIZE + x
+				if free[s] == 0 or seen[s] == 1:
+					continue
+				var cells := PackedInt32Array([s])
+				seen[s] = 1
+				var lo := Vector2i(x, y)
+				var hi := Vector2i(x, y)
+				var head: int = 0
+				while head < cells.size():
+					var i: int = cells[head]
+					head += 1
+					var cx: int = i % SIZE
+					var c := Vector2i(cx, i / SIZE)
+					lo = Vector2i(mini(lo.x, c.x), mini(lo.y, c.y))
+					hi = Vector2i(maxi(hi.x, c.x), maxi(hi.y, c.y))
+					for n: int in [i - SIZE, i + SIZE, i - 1 if cx > 0 else -1, i + 1 if cx < LAST else -1]:
+						if n >= 0 and n < WorldChunk.CELLS and free[n] == 1 and seen[n] == 0:
+							seen[n] = 1
+							cells.append(n)
+				var box := Rect2i(lo, hi - lo + Vector2i.ONE)
+				if cells.size() == box.get_area():
+					_city_block(box)
+				else:
+					_city_loose(free, box)
+
+	## Manzana rectangular: de abajo arriba, tiras de casa (3 filas) + frente (1 fila): el de la
+	## última es la calle de debajo de la manzana y los demás, callejones de 1 que van de calle a
+	## calle. Lo que sobra arriba (2 filas entre calles de la retícula) es patio de huertos y árboles.
+	## En cada tira, casas con 1 casilla entre ellas, huerto al lado si sobra sitio y, de vez en
+	## cuando, un jardín con un árbol de adorno en lugar de una casa.
+	func _city_block(r: Rect2i) -> void:
+		var w: int = r.size.x
+		var strips: int = (r.size.y + 1) / (HOUSE_SIZE.y + 1)
+		if strips <= 0 or w < HOUSE_SIZE.x:
+			return
+		var patio: int = r.size.y + 1 - (HOUSE_SIZE.y + 1) * strips
+		var salt: int = seed_mix ^ SALT_CITY
+		var wx: int = coord.x * SIZE
+		var wy: int = coord.y * SIZE
+		if patio >= HUERTO_SIZE.y:
+			var x: int = r.position.x + 1
+			while x + HUERTO_SIZE.x <= r.end.x - 1:
+				if ChunkBuilder._ihash(wx + x, wy + r.position.y, salt) % 100 < CITY_HUERTO_PERCENT:
+					city_huertos.append(Rect2i(Vector2i(x, r.position.y), HUERTO_SIZE))
+				else:
+					city_trees.append(Vector2i(x + 1, r.position.y))
+				x += HUERTO_SIZE.x + 1
+		var step: int = HOUSE_SIZE.x + 1
+		var per_strip: int = (w + 1) / step
+		var spare: int = w + 1 - step * per_strip
+		for j: int in strips:
+			var y: int = r.position.y + patio + (HOUSE_SIZE.y + 1) * j
+			if j < strips - 1:
+				_paint_rect(Rect2i(r.position.x, y + HOUSE_SIZE.y, w, 1), PATH_W)
+			var h: int = ChunkBuilder._ihash(wx + r.position.x, wy + y, salt)
+			var x0: int = r.position.x
+			if spare >= HUERTO_SIZE.x + 1:
+				var left: bool = (h >> 3) & 1 == 1
+				city_huertos.append(Rect2i(Vector2i(x0 if left else x0 + step * per_strip, y + 1), HUERTO_SIZE))
+				if left:
+					x0 += HUERTO_SIZE.x + 1
+			else:
+				x0 += (h >> 4) % (spare + 1)
+			for t: int in per_strip:
+				var house := Rect2i(Vector2i(x0 + step * t, y), HOUSE_SIZE)
+				if ChunkBuilder._ihash(wx + house.position.x, wy + y, salt ^ 1) % CITY_GARDEN_ODDS == 0:
+					city_trees.append(house.position + Vector2i(1, 1))
+				else:
+					city_houses.append(house)
+
+	## Trozo irregular: casas donde caben enteras en el trozo, con el frente (las 2 casillas del vano)
+	## sobre una calle y sin pegarse a otra.
+	func _city_loose(free: PackedByteArray, box: Rect2i) -> void:
+		var taken: Array[Rect2i] = []
+		for y: int in range(box.position.y, box.end.y - HOUSE_SIZE.y + 1):
+			for x: int in range(box.position.x, box.end.x - HOUSE_SIZE.x + 1):
+				var house := Rect2i(Vector2i(x, y), HOUSE_SIZE)
+				var front: int = house.end.y
+				if front > LAST or path[front * SIZE + x + 1] == 0 or path[front * SIZE + x + 2] == 0:
+					continue
+				var ok: bool = true
+				for k: int in HOUSE_SIZE.x * HOUSE_SIZE.y:
+					ok = ok and free[(y + k / HOUSE_SIZE.x) * SIZE + x + k % HOUSE_SIZE.x] == 1
+				for other: Rect2i in taken:
+					ok = ok and not other.grow(1).intersects(house)
+				if ok:
+					taken.append(house)
+					city_houses.append(house)
+
+	## Objetos de la ciudad, con la red ya trazada: casas de piedra blanca cuyo frente da a una calle
+	## o a la plaza alcanzable desde el hub, huertos, árboles jóvenes de adorno y, si el reparto da
+	## refugio al chunk, un árbol hueco en un parterre de la plaza (a ≤ 6 del Nujio y de una calle).
+	func _place_city() -> void:
+		var reach := PackedByteArray()
+		reach.resize(WorldChunk.CELLS)
+		var start: int = WorldCoords.cell_index(chunk.hub)
+		var q := PackedInt32Array()
+		if _walk(start):
+			q.append(start)
+			reach[start] = 1
+		var head: int = 0
+		while head < q.size():
+			var i: int = q[head]
+			head += 1
+			var x: int = i % SIZE
+			for n: int in [i - SIZE, i + SIZE, i - 1 if x > 0 else -1, i + 1 if x < LAST else -1]:
+				if n < 0 or n >= WorldChunk.CELLS or reach[n] == 1 or not _walk(n) \
+						or chunk.occupant[n] != WorldChunk.NO_OBJECT:
+					continue
+				if path[n] > 0 or chunk.ground[n] == WorldChunk.Ground.PLAZA:
+					reach[n] = 1
+					q.append(n)
+		var base: int = HouseMaterial.PIEDRA_BLANCA * 2
+		for r: Rect2i in city_houses:
+			if r.end.y > LAST or not _rect_free(r, NATURAL_GROUND) or not _no_objects(r.grow(1)):
+				continue
+			var front: bool = false
+			for x: int in range(r.position.x, r.end.x):
+				front = front or reach[r.end.y * SIZE + x] == 1
+			if front:
+				chunk.add_object(WorldChunk.ObjectKind.HOUSE, r.position, HOUSE_SIZE,
+						base + ChunkGenerator.hash_ints([plan.plan_seed, coord.x, coord.y, r.position.x, r.position.y, SALT_HOUSE]) % 2)
+		for r: Rect2i in city_huertos:
+			if _huerto_ok(r):
+				for y: int in range(r.position.y, r.end.y):
+					for x: int in range(r.position.x, r.end.x):
+						chunk.decor[y * SIZE + x] = DECOR_PIECE_BASE + DecorPiece.HUERTO
+		var refuge: bool = plan.has_refuge(coord)
+		for bed: Vector2i in city_beds:
+			var r := Rect2i(bed, Vector2i(2, 2))
+			if refuge and _rect_free(r, NATURAL_GROUND) and _city_by_street(r):
+				chunk.add_object(WorldChunk.ObjectKind.REFUGE_TREE, bed, r.size, _flip_at(bed))
+				refuge = false
+			else:
+				city_trees.append(bed)
+		for c: Vector2i in city_trees:
+			if _city_tree_ok(c):
+				chunk.add_object(WorldChunk.ObjectKind.TREE_YOUNG, c, Vector2i.ONE,
+						ChunkBuilder._ihash(coord.x * SIZE + c.x, coord.y * SIZE + c.y, seed_mix ^ SALT_CITY) & 3)
+
+	## Alguna casilla a ≤ REFUGE_TRAIL_REACH del rectángulo es calle, camino o sendero (no plaza).
+	func _city_by_street(r: Rect2i) -> bool:
+		var zone: Rect2i = r.grow(REFUGE_TRAIL_REACH).intersection(Rect2i(0, 0, SIZE, SIZE))
+		for y: int in range(zone.position.y, zone.end.y):
+			for x: int in range(zone.position.x, zone.end.x):
+				if (TRAIL_GROUND >> chunk.ground[y * SIZE + x]) & 1 == 1:
+					return true
+		return false
+
+	## Árbol de adorno 1×1: casilla libre de claro u hierba sin huerto, con las 8 vecinas abiertas
+	## (así no corta ningún paso).
+	func _city_tree_ok(c: Vector2i) -> bool:
+		if c.x < 1 or c.y < 1 or c.x > LAST - 1 or c.y > LAST - 1:
+			return false
+		var i: int = c.y * SIZE + c.x
+		if not _free(c.x, c.y, NATURAL_GROUND) or chunk.decor[i] >= DECOR_PIECE_BASE:
+			return false
+		for dy: int in range(-1, 2):
+			for dx: int in range(-1, 2):
+				var n: int = i + dy * SIZE + dx
+				if n != i and (chunk.occupant[n] != WorldChunk.NO_OBJECT or not _walk(n)):
+					return false
+		return true
 
 	# --- Puertas ----------------------------------------------------------------------------------
 
@@ -1374,8 +1718,17 @@ class _Build:
 					g_weight[k] = WEIGHT_WATER
 				elif plan.road_at(origin + Vector2i(mx, my)) != RegionAuthoring.Road.NONE:
 					g_weight[k] = WEIGHT_ROAD
+		if city:
+			for k: int in n:
+				if g_solid[k] == 1 or m_water[_mk(k % MACROS, k / MACROS)] != RegionAuthoring.Water.NONE:
+					continue
+				var m := Vector2i(k % MACROS, k / MACROS)
+				if city_lane[k] == 1:
+					g_weight[k] = CITY_LANE_WEIGHT
+				elif not city_plaza.intersects(Rect2i(m * MACRO, Vector2i(MACRO, MACRO))):
+					g_weight[k] = CITY_BLOCK_WEIGHT
 		if anchor != Anchor.NONE:
-			if anchor == Anchor.VILLA:
+			if anchor == Anchor.VILLA and not city:
 				_weigh(Rect2i(anchor_macro - Vector2i(VILLA_RADIUS, VILLA_RADIUS), Vector2i.ONE * (2 * VILLA_RADIUS + 1)), WEIGHT_VILLA)
 			g_solid[anchor_macro.y * MACROS + anchor_macro.x] = 1
 		for p: Dictionary in points:
@@ -1745,7 +2098,9 @@ class _Build:
 		if anchor != Anchor.NONE:
 			chunk.add_object(WorldChunk.ObjectKind.NUJIO, chunk.nujio_rect.position, chunk.nujio_rect.size,
 					_flip_at(chunk.nujio_rect.position))
-			if anchor == Anchor.VILLA:
+			if city:
+				_place_city()
+			elif anchor == Anchor.VILLA:
 				_place_houses()
 				_place_streets()
 				_place_huertos()
@@ -1766,6 +2121,8 @@ class _Build:
 						chunk.add_object(WorldChunk.ObjectKind.SPRING, f.position, f.size,
 								_flip_at(f.position) | (int(p.exit) << 1))
 		_place_signs()
+		if city:
+			return # sin rocas sueltas ni bosque dentro de la ciudad
 		_place_rocks()
 		_place_forest()
 
@@ -2390,6 +2747,8 @@ class _Build:
 	func _place_refuge() -> void:
 		if not plan.has_refuge(coord):
 			return
+		if city and not chunk.objects_of(WorldChunk.ObjectKind.REFUGE_TREE).is_empty():
+			return # el de la ciudad ya está en un parterre de su plaza (_place_city)
 		var refuge_rng := RandomNumberGenerator.new()
 		refuge_rng.seed = ChunkGenerator.hash_ints([plan.plan_seed, coord.x, coord.y, SALT_REFUGE])
 		_compute_near_trail()
