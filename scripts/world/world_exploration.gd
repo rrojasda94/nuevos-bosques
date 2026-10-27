@@ -21,7 +21,8 @@ extends Node2D
 ## - Riutash, luz de luna, destello, HUD, brújula (MapLogic.player_pos) y mapa M
 ##   (MapLogic.set_region_plan).
 ## - Guardado rápido: F5 guarda en el slot 1 y F9 lo carga (partidas del mundo viejo: aviso).
-## Pendiente para M17b o después (ver el PR): incendios de Bosque (BosqueFires), encuentros con
+## Pendiente para M17b o después (ver el PR): interior de las sicabis (E en la boca: texto
+## provisional), incendios de Bosque (BosqueFires), encuentros con
 ## otros adoc (AdocEncounters) y el recoloreado por Bosque del arte del mundo.
 
 ## Slot del guardado rápido.
@@ -392,6 +393,19 @@ func _interact() -> void:
 			_interact_nujio(target.chunk)
 		Interaction.Kind.REST:
 			_ask_sleep(target.cell, Texts.get_text("rest_prompt"))
+		Interaction.Kind.NONE:
+			if _is_at_sicabi():
+				_dialogue.show_lines([Texts.get_text("sicabi_mouth")])
+
+
+## Delante de (o en) la boca de una sicabi. ponytail: texto provisional hasta la escena interior.
+func _is_at_sicabi() -> bool:
+	var probe: Vector2i = WorldCoords.world_pos_to_world_cell(Interaction.probe_point(player.mover.world_pos, player.mover.facing))
+	for c: Vector2i in [probe, player.mover.cell]:
+		var ch: WorldChunk = world.streamer.chunk(WorldCoords.world_cell_to_chunk(c))
+		if ch != null and int(ch.object_at(WorldCoords.world_cell_to_cell(c)).get("kind", -1)) == WorldChunk.ObjectKind.SICABI_GATE:
+			return true
+	return false
 
 
 ## Monstruo delante del Adoc: en la casilla del sondeo o en la de delante de los pies.

@@ -406,5 +406,6 @@
   "save_failed": "No se ha podido guardar la partida.",
   "load_done": "Partida cargada.",
   "load_none": "No hay ninguna partida guardada.",
-  "load_failed": "No se ha podido cargar la partida."
+  "load_failed": "No se ha podido cargar la partida.",
+  "sicabi_mouth": "La boca de una sicabi. Aún no se puede entrar."
 }
