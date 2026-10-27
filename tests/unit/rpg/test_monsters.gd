@@ -268,14 +268,30 @@ func _chunk(c: Vector2i) -> WorldChunk:
 	return _chunks[c]
 
 
-## Campo del Mundo 2.0 con el plan de la seed 42, chunks del builder falso (solo los de `loaded`;
-## todos si está vacío) y el jugador con los pies en `player_cell`.
-func _world_field(player_cell: Vector2i, loaded: Array = []) -> MonsterField:
+var _open_chunks: Dictionary = {}
+
+
+## Chunk de hierba sin nada que bloquee: todo se alcanza desde el hub. Para los tests que no deben
+## depender de dónde pone árboles el builder falso.
+func _open_chunk(c: Vector2i) -> WorldChunk:
+	if not _open_chunks.has(c):
+		var wc := WorldChunk.new()
+		wc.coord = c
+		wc.rebuild_blocked()
+		_open_chunks[c] = wc
+	return _open_chunks[c]
+
+
+## Campo del Mundo 2.0 con el plan de la seed 42, chunks del builder falso (o abiertos con `open`;
+## solo los de `loaded`, todos si está vacío) y el jugador con los pies en `player_cell`.
+func _world_field(player_cell: Vector2i, loaded: Array = [], open: bool = false) -> MonsterField:
 	var plan: RegionPlan = _region_plan()
 	var field: MonsterField = add_child_autofree(MonsterField.new())
 	field.set_physics_process(false)
 	var get_chunk: Callable = func(c: Vector2i) -> WorldChunk:
-		return _chunk(c) if loaded.is_empty() or loaded.has(c) else null
+		if not loaded.is_empty() and not loaded.has(c):
+			return null
+		return _open_chunk(c) if open else _chunk(c)
 	field.populate_world(plan, plan.bosque_at(plan.home_chunk), get_chunk)
 	field.terrain_blocked = func(c: Vector2i) -> bool:
 		var wc: WorldChunk = get_chunk.call(WorldCoords.world_cell_to_chunk(c))
@@ -513,7 +529,7 @@ func test_crossing_off_door_summons_the_nearest_botarramas() -> void:
 	var along: int = 70 if (door.y if post.side.x != 0 else door.x) < 40 else 10
 	var bump_local: Vector2i = WorldChunk.border_cell(post.side, along)
 	var bump: Vector2i = WorldCoords.to_world_cell(post.chunk, bump_local)
-	var field: MonsterField = _world_field(bump + post.side)
+	var field: MonsterField = _world_field(bump + post.side, [], true)
 	field.update_active(post.chunk)
 	assert_not_null(field._find(String(post.id)))
 	var nearest: OverworldMonster = null
