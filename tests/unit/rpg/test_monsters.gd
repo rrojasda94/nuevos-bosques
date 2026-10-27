@@ -538,6 +538,8 @@ func test_crossing_off_door_summons_the_nearest_botarramas() -> void:
 			nearest = g
 	var m: OverworldMonster = field.summon_nearest(guard, bump)
 	assert_eq(m, nearest, "acude el Botarramas más cercano de ese Bosque")
+	if m == null:
+		return
 	assert_eq(m.state, S.CHASE)
 	assert_eq(plan.bosque_at(WorldCoords.world_cell_to_chunk(m.post)), guard, "se aposta en su Bosque")
 	assert_true(MonsterSteering.chebyshev(m.post, bump) <= BotarramasPosts.SEARCH_RADIUS, "junto al choque")
