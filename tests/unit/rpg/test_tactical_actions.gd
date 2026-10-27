@@ -14,6 +14,8 @@ const TACTICAL: Dictionary = {
 		"height_bonus": 1, "support_range": 2 },
 	"attack": { "roll_min": 0, "roll_max": 0, "min_damage": 1 },
 	"defend_factor": 0.5,
+	# Huida (P1): sin enemigos cercanos sale siempre (max 100), para que estos tests no dependan de la tirada.
+	"flee": { "max": 100 },
 	"finish_below": 0.3,
 	"roles": {
 		"attacker": { "atk_bonus": 1, "finish_bonus": 3, "finish_uses": 1 },
@@ -321,7 +323,7 @@ func test_flee_only_from_edge() -> void:
 	b.move_active(Vector2i(0, 3))
 	var r: Dictionary = b.flee()
 	assert_eq(r.kind, TacticalBattle.KIND_FLEE)
-	assert_eq(b.result, TacticalBattle.Result.FLED, "siempre sale bien y huye todo el bando")
+	assert_eq(b.result, TacticalBattle.Result.FLED, "sin nadie cerca sale bien (max) y huye todo el bando")
 
 
 func test_flee_from_any_edge_cell() -> void:

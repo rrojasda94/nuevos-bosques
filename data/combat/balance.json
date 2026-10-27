@@ -18,7 +18,7 @@
     "agi_every": 2
   },
   "tactics": {
-    "$comment": "IA de combate (ia-de-combate.md, 0.5 PR 4b). initiative: cada ronda orden = AGI + tirada de roll_min a roll_max (empate: el bando del jugador); en el 1 contra 1 no hay tirada y el Adoc va primero salvo que el rival le saque solo_lead de AGI o más (o con Esperar). Apresurar: hasten_damage al daño y +hasten_agi de AGI la ronda siguiente. Esperar: el último, daño x wait_factor. formation: hasta front_max delante; los golpes cuerpo a cuerpo van delante con front_chance si las dos filas tienen a alguien; desde detrás el ataque hace x back_factor; los ataques en área (ataque conjunto con area_attack, especial con special_area) hacen x area_factor a cada uno de la fila delantera. roles: order (reparto por seed al reclutar); attacker: +atk_bonus ATQ y Remate (+finish_bonus de daño contra quien está por debajo de ai.finish_below de PV, finish_uses por combate); defender: +def_bonus DEF y Cubrir (los golpes al protegido se los lleva él hasta su siguiente turno; cada cover_every rondas); support: Vendar (heal_pct % de los PV máx., heal_uses por combate) y Animar (+cheer_atk ATQ en el siguiente ataque, durante 1 ronda; cheer_uses por combate). ai: help_below (curar o cubrir a quien baje de ahí), retreat_below (un aliado no defensor pasa atrás o se defiende), swarm_flee_below (el último reparep de un grupo huye sin dar su XP), tactical_retreat_below (un garelino se retira). garelino: AGI y perfil de los garelinos (PR 3 y 5). Provisionales: game-designer.",
+    "$comment": "IA de combate (ia-de-combate.md, 0.5 PR 4b). initiative: cada ronda orden = AGI + tirada de roll_min a roll_max (empate: el bando del jugador); en el 1 contra 1 no hay tirada y el Adoc va primero salvo que el rival le saque solo_lead de AGI o más (o con Esperar). Apresurar: hasten_damage al daño y +hasten_agi de AGI la ronda siguiente. Esperar: el último, daño x wait_factor. formation: hasta front_max delante; los golpes cuerpo a cuerpo van delante con front_chance si las dos filas tienen a alguien; desde detrás el ataque hace x back_factor; los ataques en área (ataque conjunto con area_attack, especial con special_area) hacen x area_factor a cada uno de la fila delantera. roles: order (reparto por seed al reclutar); attacker: +atk_bonus ATQ y Remate (+finish_bonus de daño contra quien está por debajo de ai.finish_below de PV, finish_uses por combate); defender: +def_bonus DEF y Cubrir (los golpes al protegido se los lleva él hasta su siguiente turno; cada cover_every rondas); support: Vendar (heal_pct % de los PV máx., heal_uses por combate) y Animar (+cheer_atk ATQ en el siguiente ataque, durante 1 ronda; cheer_uses por combate). ai: help_below (curar o cubrir a quien baje de ahí), retreat_below (un aliado no defensor pasa atrás o se defiende), swarm_flee_below (el último reparep de un grupo huye sin dar su XP), tactical_retreat_below (un garelino se retira). Combate táctico tras el playtest (ajustes-playtest-0.5.md §6, P2): defend_below (si no llega a atacar, le pueden alcanzar y le queda menos de esa fracción de PV, Defiende), guard_radius / guard_defend_every / guard_advance_after (guardián: no se aleja más de guard_radius casillas de su sitio, Defiende como mucho 1 de cada guard_defend_every turnos y avanza como un agresivo tras guard_advance_after turnos suyos), cut_flee_edge / cut_flee_above (cortan la huida si el Adoc está a cut_flee_edge casillas o menos del borde y su probabilidad de huir pasa de cut_flee_above %), height_weight (puntos por nivel de altura de la casilla; el látigo y la emboscadora, el doble), top2_weight / top2_margin (azar: la mejor opción con top2_weight y la segunda con el resto, solo si puntúa al menos top2_margin de la mejor; el berserk no tira), wait_max (la IA no Espera ni se aparta para esperar si ya lleva tantos turnos seguidos sin actuar; evita bucles). garelino: AGI y perfil de los garelinos (PR 3 y 5). Provisionales: game-designer.",
     "initiative": { "roll_min": 0, "roll_max": 2, "solo_lead": 3, "hasten_damage": -2, "hasten_agi": 4, "wait_factor": 1.25 },
     "formation": { "front_max": 3, "front_chance": 0.75, "back_factor": 0.75, "area_factor": 1.0 },
     "roles": {
@@ -27,11 +27,11 @@
       "defender": { "def_bonus": 1, "cover_every": 2 },
       "support": { "heal_pct": 20, "heal_uses": 2, "cheer_atk": 2, "cheer_uses": 1 }
     },
-    "ai": { "help_below": 0.3, "finish_below": 0.3, "retreat_below": 0.2, "swarm_flee_below": 0.3, "tactical_retreat_below": 0.25 },
+    "ai": { "help_below": 0.3, "finish_below": 0.3, "retreat_below": 0.2, "swarm_flee_below": 0.3, "tactical_retreat_below": 0.25, "defend_below": 0.5, "guard_radius": 2, "guard_defend_every": 2, "guard_advance_after": 3, "cut_flee_edge": 1, "cut_flee_above": 30, "height_weight": 1, "top2_weight": 0.75, "top2_margin": 0.8, "wait_max": 2 },
     "garelino": { "agi": 5, "ai": "tactical" }
   },
   "tactical": {
-    "$comment": "Combate táctico en cuadrícula (combate-tactico.md, ADR 0016; T1 a T4). enabled (T4): con true, los combates abren la escena táctica en vez de la de menú (false por defecto mientras se prueba). board: tablero de width x height casillas (el tamaño puede variar por combate: la escena lo lee del tablero y se desplaza si no cabe); cada bando se coloca en deploy_columns columnas de su lado (hasta max_per_side combatientes); ford_cost: coste de Mov de pisar un vado (1 = como el suelo). movement: Mov = mov_base + floor((AGI - mov_agi_ref) / mov_agi_div), entre mov_min y mov_max; Salto (niveles que se suben entre casillas vecinas) = jump_base + floor(AGI / jump_agi_div); se baja hasta Salto + drop_extra niveles; escaleras y rampas no gastan Salto. ct: cada tick CT += AGI; juega quien llega a threshold; CT inicial = AGI x start_per_agi; tras el turno, CT -= cost_move_and_act (movió y actuó), cost_single (solo una de las dos) o cost_wait (ninguna). Empate de CT: primero el bando del jugador; dentro de un bando, un orden fijo sorteado con la seed del combate. actions (T3): evasión de frente = evasion_base + evasion_per_agi x AGI (%), de flanco x flank_factor (redondeo hacia abajo), de espalda x back_factor; luego -height_evasion por nivel que el atacante esté por encima y +height_evasion por nivel por debajo (nunca negativa); precisión = 100 - evasión, entre hit_min y hit_max; daño = el de attack (como el combate por menú) + flank_bonus de flanco, back_bonus de espalda y height_bonus por nivel a favor; Vendar y Animar a support_range casillas o menos. Cuerpo a cuerpo: casilla vecina ortogonal con desnivel <= Salto. Defender (defend_factor), la tirada de daño (attack) y los roles (tactics.roles) se comparten con el combate por menú. arena (T1b): tamaño del tablero, cupo por bando y refuerzos (ver su $comment); el board de arriba es el de por defecto cuando no se elige tamaño. IA (T5, TacticalAI): usa los umbrales de tactics.ai (help_below, retreat_below, finish_below, swarm_flee_below, tactical_retreat_below) y el perfil de cada monstruo (monsters.*.ai). Especiales (T6): board.latigazo es el área [ancho, fondo] del ataque en área anunciado (Latigazo múltiple; arena.sizes.*.latigazo la fija por tamaño de tablero): el monstruo con special_area la anuncia al terminar el turno anterior a su especial (cada special_every ataques) y en su siguiente turno golpea con special_factor a los que sigan dentro; actions.joint_max: cuántos atacan juntos como mucho en el ataque conjunto (monsters.*.joint_attack; suma de ATQ, DEF restada una vez; los compañeros gastan su siguiente turno, CT - cost_single). Sorpresa y emboscada: el bando que sorprende empieza con CT threshold y el otro por debajo, de espaldas. Provisionales: game-designer.",
+    "$comment": "Combate táctico en cuadrícula (combate-tactico.md, ADR 0016; T1 a T4). enabled (T4): con true, los combates abren la escena táctica en vez de la de menú (false por defecto mientras se prueba). board: tablero de width x height casillas (el tamaño puede variar por combate: la escena lo lee del tablero y se desplaza si no cabe); cada bando se coloca en deploy_columns columnas de su lado (hasta max_per_side combatientes); ford_cost: coste de Mov de pisar un vado (1 = como el suelo). movement: Mov = mov_base + floor((AGI - mov_agi_ref) / mov_agi_div), entre mov_min y mov_max; Salto (niveles que se suben entre casillas vecinas) = jump_base + floor(AGI / jump_agi_div); se baja hasta Salto + drop_extra niveles; escaleras y rampas no gastan Salto. ct: cada tick CT += AGI; juega quien llega a threshold; CT inicial = AGI x start_per_agi; tras el turno, CT -= cost_move_and_act (movió y actuó), cost_single (solo una de las dos) o cost_wait (ninguna). Empate de CT: primero el bando del jugador; dentro de un bando, un orden fijo sorteado con la seed del combate. actions (T3): evasión de frente = evasion_base + evasion_per_agi x AGI (%), de flanco x flank_factor (redondeo hacia abajo), de espalda x back_factor; luego -height_evasion por nivel que el atacante esté por encima y +height_evasion por nivel por debajo (nunca negativa); precisión = 100 - evasión, entre hit_min y hit_max; daño = el de attack (como el combate por menú) + flank_bonus de flanco, back_bonus de espalda y height_bonus por nivel a favor; Vendar y Animar a support_range casillas o menos. Cuerpo a cuerpo: casilla vecina ortogonal con desnivel <= Salto. Defender (defend_factor), la tirada de daño (attack) y los roles (tactics.roles) se comparten con el combate por menú. arena (T1b): tamaño del tablero, cupo por bando y refuerzos (ver su $comment); el board de arriba es el de por defecto cuando no se elige tamaño. IA (T5, TacticalAI): usa los umbrales de tactics.ai (help_below, retreat_below, finish_below, swarm_flee_below, tactical_retreat_below) y el perfil de cada monstruo (monsters.*.ai). Especiales (T6): board.latigazo es el área [ancho, fondo] del ataque en área anunciado (Latigazo múltiple; arena.sizes.*.latigazo la fija por tamaño de tablero): el monstruo con special_area la anuncia al terminar el turno anterior a su especial (cada special_every ataques) y en su siguiente turno golpea con special_factor a los que sigan dentro; actions.joint_max: cuántos atacan juntos como mucho en el ataque conjunto (monsters.*.joint_attack; suma de ATQ, DEF restada una vez; los compañeros gastan su siguiente turno, CT - cost_single). Sorpresa y emboscada: el bando que sorprende empieza con CT threshold y el otro por debajo, de espaldas. flee (P1, ajustes-playtest-0.5.md §1a): huir desde el borde es una tirada; P = base + agi_factor x (AGI propia - AGI más alta de los enemigos cercanos) - adjacent_penalty por enemigo adyacente - near_penalty por enemigo cercano (le alcanzaría en su siguiente turno) + retry_bonus por intento fallido (+ fear_bonus con Miedo), entre min y max; sin enemigos cercanos, max. Fallar termina el turno. Alcance por monstruo (monsters.*.attack_range, [mín, máx], en línea): el Ofomni golpea a 2. Provisionales: game-designer.",
     "enabled": false,
     "board": { "width": 8, "height": 6, "deploy_columns": 2, "max_per_side": 3, "ford_cost": 1, "latigazo": [3, 1] },
     "movement": { "mov_base": 3, "mov_agi_ref": 5, "mov_agi_div": 2, "mov_min": 2, "mov_max": 6, "jump_base": 1, "jump_agi_div": 7, "drop_extra": 1 },
@@ -60,6 +60,7 @@
         "max_checks": 64
       }
     },
+    "flee": { "base": 70, "agi_factor": 5, "adjacent_penalty": 35, "near_penalty": 10, "retry_bonus": 10, "min": 5, "max": 95, "fear_bonus": 20 },
     "actions": { "evasion_base": 5, "evasion_per_agi": 2, "flank_factor": 0.5, "back_factor": 0.0, "height_evasion": 10, "hit_min": 5, "hit_max": 100, "flank_bonus": 1, "back_bonus": 2, "height_bonus": 1, "support_range": 2, "joint_max": 4 }
   },
   "stat_points": {
@@ -144,7 +145,7 @@
     "min_damage": 1
   },
   "defend_factor": 0.5,
-  "flee_chance": 0.75,
+  "flee_chance": 0.6,
   "toll": {
     "base": 3,
     "per_d": 1
@@ -318,7 +319,7 @@
       "special_every": 0,
       "special_factor": 1.0,
       "agi": 3,
-      "ai": "aggressive"
+      "ai": "guardian"
     },
     "ofomni_descarriado": {
       "$comment": "Ofomni descarriado de la misión: un Único que perdió el control. No acepta Luz ni ofrendas (appeasable false): hay que vencerlo. d fija. Latigazo múltiple: cada 3 ataques, x3 de daño. hp_factor multiplica los PV de su bloque de stats (0.85 desde la 0.5, con los puntos de stat: ganable desde nivel 3 con cualquier build de combate; d = 4 -> 29 PV, d = 5 -> 32 PV; moralidad-y-progresion.md, Comprobación; en la 0.3 era 0.7).",
@@ -343,6 +344,7 @@
       "special_factor": 3.0,
       "agi": 6,
       "ai": "berserk",
+      "attack_range": [1, 2],
       "special_area": true,
       "texts": {
         "attack": "ofomni_descarriado_whip_hit",
@@ -375,7 +377,8 @@
       "special_every": 3,
       "special_factor": 3.0,
       "agi": 6,
-      "ai": "aggressive",
+      "ai": "whip",
+      "attack_range": [1, 2],
       "special_area": true,
       "texts": {
         "attack": "ofomni_whip_hit",
@@ -442,7 +445,7 @@
       "special_every": 4,
       "special_factor": 2.0,
       "agi": 5,
-      "ai": "aggressive",
+      "ai": "ambusher",
       "texts": {
         "attack": "aledra_bite",
         "warning": "aledra_coils_warning",

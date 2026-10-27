@@ -68,6 +68,11 @@ const AI_AGGRESSIVE: StringName = &"aggressive"
 const AI_SWARM: StringName = &"swarm"
 const AI_TACTICAL: StringName = &"tactical"
 const AI_BERSERK: StringName = &"berserk"
+## Perfiles del combate táctico (P2, ajustes-playtest-0.5.md §6a). En el combate por menú van como
+## el agresivo (al de menos PV de la fila delantera).
+const AI_GUARDIAN: StringName = &"guardian"
+const AI_WHIP: StringName = &"whip"
+const AI_AMBUSHER: StringName = &"ambusher"
 ## Huecos del orden de turnos: { side, index, score }.
 const SLOT_ADOC: StringName = &"adoc"
 const SLOT_ALLY: StringName = &"ally"
@@ -239,6 +244,7 @@ func add_enemy(unico: Dictionary) -> void:
 		"role": role,
 		"area_attack": bool(unico.get("area_attack", false)),
 		"special_area": bool(unico.get("special_area", false)),
+		"attack_range": unico.get("attack_range", [1, 1]),
 		"gone": false,
 	}
 	_give_role_uses(en)
@@ -1115,7 +1121,7 @@ func _pick_player_target(ai: StringName) -> Dictionary:
 		row = back
 	var t: int = row[0]
 	match ai:
-		AI_AGGRESSIVE, AI_BERSERK:
+		AI_AGGRESSIVE, AI_BERSERK, AI_GUARDIAN, AI_WHIP, AI_AMBUSHER:
 			t = _min_by(row, func(r: int) -> int: return _player_hp(r))
 		AI_SWARM:
 			t = _min_by(row, func(r: int) -> int: return _target_def(r))

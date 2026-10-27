@@ -78,6 +78,12 @@ Todos los cambios que nota el jugador. Formato [Keep a Changelog](https://keepac
   - Todavía no están en el mundo nuevo: los incendios de los Bosques que necesitan ayuda, los encuentros con otros adoc y los colores propios de cada Bosque (todo el mundo se pinta con los de tu Bosque natal).
 - Guardado rápido: F5 guarda la partida y F9 la carga.
 - El guardado pasa a la versión 20 (Mundo 2.0): guarda el chunk y la casilla de los pies (0–79), hacia dónde miras y qué mundo es. **Las partidas de antes del Mundo 2.0 no se pueden continuar**: al cargarlas, el juego avisa "Esta partida es de una versión anterior del mundo y no se puede continuar. Empieza una partida nueva." Al guardar se borra la caché de los mundos que ya no usa ninguna partida.
+- Huir cuesta más (valores provisionales). En el combate táctico, huir desde el borde ya no es seguro: es una tirada y el menú enseña la probabilidad antes de confirmar ("Huir (45%)"). Baja con cada enemigo pegado a ti (−35) o que te alcanzaría en su siguiente turno (−10), y según lo rápido que sea el más ágil de ellos; sube 10 por cada intento fallido. Va del 5% (rodeado) al 95% (nadie cerca). Si fallas ("No logras escapar"), pierdes el turno. Alejarse primero y huir después funciona. En el combate por menú, huir sale el 60% de las veces (antes el 75%).
+- Enemigos más listos en el combate táctico (valores provisionales):
+  - el **Botarramas** guarda su sitio: no se aleja más de 2 casillas, Defiende si no te alcanza y, si no te acercas, avanza a por ti al cuarto turno. Nunca te corta la huida;
+  - el **Ofomni** golpea con sus látigos a 2 casillas en línea y prefiere hacerlo desde lejos (el Ofomni descarriado también llega a 2);
+  - **Aledra** busca tu espalda o tu flanco y, si solo te llega de frente, espera fuera de tu alcance;
+  - todos, menos el Ofomni descarriado, Defienden cuando les queda poca vida y no pueden atacar, prefieren las casillas altas y varían un poco sus jugadas (siempre igual con la misma partida). Aledra, el Ofomni, los reparep y los garelinos se te pegan si intentas huir por el borde.
 
 ## [0.3.0] - 2026-10-25
 "El Bosque recuerda": los Bosques tienen memoria, relación y estado; frutos, inventario y equipo; sigilo; Únicos que rondan, cazan y persiguen; combate en grupo con aliados; dormir y Pensamiento; reloj del riutash y arte de terreno.

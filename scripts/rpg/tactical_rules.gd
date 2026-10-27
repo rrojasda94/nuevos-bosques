@@ -11,6 +11,8 @@ extends RefCounted
 ## - Precisión = 100 − evasión, entre hit_min y hit_max.
 ## - Bono de daño: flank_bonus de flanco, back_bonus de espalda y height_bonus por nivel a favor.
 ## - Cuerpo a cuerpo: casilla vecina ortogonal y desnivel (en valor absoluto) ≤ Salto del atacante.
+## - Alcance por combatiente (P2): can_strike con [mín, máx] y en línea (látigo del Ofomni; lanza en P4).
+## - Huida (P1): flee_chance, fórmula de ajustes-playtest-0.5.md §1a (tactical.flee).
 
 ## Por dónde llega el golpe respecto a la orientación del defensor.
 enum Relation { FRONT, FLANK, BACK }
@@ -67,3 +69,63 @@ static func can_melee(board: TacticalBoard, from: Vector2i, to: Vector2i, jump: 
 ## Distancia en casillas (Manhattan), para el alcance del apoyo (Vendar, Animar).
 static func distance(a: Vector2i, b: Vector2i) -> int:
 	return absi(a.x - b.x) + absi(a.y - b.y)
+
+
+## Alcance de ataque por combatiente (ajustes-playtest-0.5.md §4b y §6a; P2 lo usa para el látigo
+## del Ofomni y P4 para las armas). Se llega de `from` a `to` si la distancia (Manhattan) está entre
+## `range_min` y `range_max` y el desnivel (en valor absoluto) es ≤ `jump`. Con `line` (lanza,
+## látigo), solo en línea ortogonal, y las casillas de en medio deben ser transitables y no estar en
+## `blockers` (los enemigos del atacante: si hay uno en medio, el golpe es para ese y se le apunta a
+## él). Sin `line` (honda, P4), por encima de todo. Con alcance [1, 1] es igual que can_melee.
+static func can_strike(board: TacticalBoard, from: Vector2i, to: Vector2i, jump: int, range_min: int = 1,
+		range_max: int = 1, line: bool = true, blockers: Dictionary = {}) -> bool:
+	if not board.in_bounds(from) or not board.in_bounds(to) or from == to:
+		return false
+	var d: Vector2i = to - from
+	var dist: int = absi(d.x) + absi(d.y)
+	if dist < maxi(1, range_min) or dist > maxi(1, range_max):
+		return false
+	if absi(board.level_at(from) - board.level_at(to)) > jump:
+		return false
+	if not line:
+		return true
+	if d.x != 0 and d.y != 0:
+		return false
+	var step := Vector2i(signi(d.x), signi(d.y))
+	for k: int in range(1, dist):
+		var c: Vector2i = from + step * k
+		if not board.is_walkable(c) or blockers.has(c):
+			return false
+	return true
+
+
+## Casillas desde las que se golpea a quien está en `to` con ese alcance (sin mirar quién las ocupa
+## ni los bloqueos de en medio; la IA las usa como metas para acercarse).
+static func strike_cells(board: TacticalBoard, to: Vector2i, jump: int, range_min: int = 1, range_max: int = 1,
+		line: bool = true) -> Array[Vector2i]:
+	var out: Array[Vector2i] = []
+	var r: int = maxi(1, range_max)
+	for dy: int in range(-r, r + 1):
+		for dx: int in range(-r, r + 1):
+			var c: Vector2i = to + Vector2i(dx, dy)
+			if board.is_walkable(c) and can_strike(board, c, to, jump, range_min, range_max, line):
+				out.append(c)
+	return out
+
+
+## Probabilidad de huir (%) del combate táctico (ajustes-playtest-0.5.md §1a; `cfg` = tactical.flee):
+## base + agi_factor × (AGI propia − AGI_max de los cercanos) − adjacent_penalty × adyacentes −
+## near_penalty × cercanos no adyacentes + retry_bonus × intentos fallidos (+ fear_bonus con Miedo),
+## entre min y max. Sin enemigos cercanos ni adyacentes, max.
+static func flee_chance(agi: int, adjacent: int, near: int, max_agi: int, fails: int, afraid: bool,
+		cfg: Dictionary) -> int:
+	var lo: int = int(cfg.get("min", 5))
+	var hi: int = int(cfg.get("max", 95))
+	if adjacent + near <= 0:
+		return hi
+	var p: int = int(cfg.get("base", 70)) + int(cfg.get("agi_factor", 5)) * (agi - max_agi) \
+		- int(cfg.get("adjacent_penalty", 35)) * adjacent - int(cfg.get("near_penalty", 10)) * near \
+		+ int(cfg.get("retry_bonus", 10)) * fails
+	if afraid:
+		p += int(cfg.get("fear_bonus", 20))
+	return clampi(p, lo, hi)

@@ -12,7 +12,8 @@ extends RefCounted
 ##   (TacticalAI); el flujo pasa a IDLE y la escena lo ejecuta.
 ## - MOVE: casillas alcanzables resaltadas y un cursor libre; confirmar mueve (una vez por turno).
 ## - ACT: submenú con Atacar, Defender, Vendar / Animar / Cubrir (según el rol), Ofrecer Luz,
-##   Ofrenda y Huir (solo en una casilla del borde).
+##   Ofrenda y Huir (solo en una casilla del borde; "Huir (45%)" con TacticalBattle.flee_chance; si
+##   falla, el turno termina: devuelve { kind: KIND_END, failed: true } y pasa a IDLE).
 ## - TARGET: objetivos resaltados; las flechas saltan al objetivo más cercano en esa dirección.
 ## - OFRENDA: lista de ofrendas que alcanzan el peaje.
 ## - FACING: las flechas eligen la orientación; confirmar termina el turno (Esperar si no actuó).
@@ -235,7 +236,8 @@ func act_entries() -> Array[Dictionary]:
 	out.append({ "id": ACT_OFRENDA, "text": Texts.get_text("tactical_act_ofrenda"),
 		"enabled": not battle.payable_ofrendas().is_empty() })
 	if battle.can_flee_now():
-		out.append({ "id": ACT_FLEE, "text": Texts.get_text("tactical_act_flee"), "enabled": true })
+		out.append({ "id": ACT_FLEE, "text": Texts.get_text("tactical_act_flee_chance") % battle.flee_chance(),
+			"enabled": true })
 	out.append({ "id": ACT_BACK, "text": Texts.get_text("tactical_back"), "enabled": true })
 	return out
 
@@ -275,7 +277,16 @@ func choose_act(id: StringName) -> Dictionary:
 		ACT_OFFER_LUZ:
 			return _after(battle.offer_luz())
 		ACT_FLEE:
-			return _after(battle.flee())
+			var actor: int = battle.active
+			var fled: Dictionary = battle.flee()
+			if fled.get("failed", false):
+				# P1: fallar la huida termina el turno (TacticalBattle ya lo cobró).
+				fled.kind = KIND_END
+				fled.actor = actor
+				state = State.IDLE
+				highlight = []
+				return fled
+			return _after(fled)
 		ACT_OFRENDA:
 			if not battle.payable_ofrendas().is_empty():
 				state = State.OFRENDA

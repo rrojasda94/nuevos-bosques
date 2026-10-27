@@ -1,8 +1,10 @@
 class_name TacticalAI
 extends RefCounted
 ## IA del combate táctico en la cuadrícula (ia-de-combate.md, "Traducción a la cuadrícula";
-## combate-tactico.md; ADR 0016; PR T5). Clase pura sin estado: dado un TacticalBattle y un
-## combatiente, plan() devuelve un plan determinista (sin RNG; los empates, por casilla y por índice):
+## combate-tactico.md; ADR 0016; PR T5; perfiles y reglas nuevas tras el playtest en P2,
+## ajustes-playtest-0.5.md §6). Clase pura sin estado: dado un TacticalBattle y un combatiente,
+## plan() devuelve un plan determinista con la seed del combate (el único azar es el top-2 de los
+## enemigos, con battle.ai_rng; los empates, por casilla y por índice):
 ## { actor, move_to, action, target, facing }.
 ## - move_to: casilla a la que moverse (la suya si no se mueve); siempre dentro de reachable_for.
 ## - action: un KIND_* de TacticalBattle (attack, finish, defend, cover, bandage, cheer, leave) o
@@ -17,7 +19,31 @@ extends RefCounted
 ##   DEF) y ocupa otra casilla vecina suya: así rodean (el ataque conjunto en sí es T6).
 ## - táctico: ataca primero al apoyo si llega, si no al de menos PV, desde la espalda o el flanco si
 ##   puede y con la casilla menos expuesta; usa sus roles (Vendar, Cubrir) con un compañero herido.
-## - berserk: carga contra el más cercano. Nunca huye.
+## - berserk: carga contra el más cercano. Nunca huye ni Defiende, y no tira (sin azar).
+## - guardián (P2, Botarramas): no se aleja más de guard_radius casillas de su casilla inicial
+##   (`home`); ataca si llega desde ahí; si no, se pone lo más cerca del Adoc que le deja su sitio y
+##   Defiende 1 de cada guard_defend_every turnos. Pasados guard_advance_after turnos suyos, avanza
+##   como un agresivo. No corta la huida.
+## - látigo (P2, Ofomni): alcance [1, 2] en línea (monsters.ofomni.attack_range). Al de menos PV y,
+##   a igualdad, desde 2 casillas antes que adyacente; la altura le puntúa doble.
+## - emboscadora (P2, Aledra): busca la espalda o el flanco; si solo llega de frente, Espera fuera
+##   del alcance de sus enemigos (o se aparta a una casilla fuera de él) para golpear por detrás en
+##   el siguiente turno. La altura le puntúa doble.
+## - Reglas comunes (P2; todos los enemigos salvo el berserk):
+##   - Cortar la huida (emboscadora, enjambre, táctico y látigo): si el Adoc está a cut_flee_edge
+##     casillas o menos del borde y su flee_chance pasa de cut_flee_above, le ataca desde una casilla
+##     adyacente si puede; si no puede atacar a nadie, se pone en la casilla alcanzable más cercana a
+##     la casilla de borde más próxima al Adoc (si no llega a 1 de ella, se acerca como siempre).
+##   - Defender: si no ataca este turno, algún enemigo le alcanza en su siguiente turno y le queda
+##     menos de defend_below de PV, se mueve y Defiende.
+##   - Esperar (táctico y emboscadora): si acercarse sin atacar le deja al alcance de 2 o más
+##     enemigos, Espera (CT −60). Si ya lleva wait_max turnos seguidos sin actuar (`waits`), no
+##     Espera, para que no haya bucles.
+##   - Altura: +height_weight por nivel de la casilla (doble para el látigo y la emboscadora) en la
+##     puntuación de las casillas de ataque y, al acercarse, a igualdad de camino.
+##   - Azar top-2: entre las opciones de ataque de la misma prioridad (la clave del perfil), la de
+##     más puntuación (daño esperado + altura) con top2_weight y la segunda con el resto, solo si
+##     puntúa al menos top2_margin de la mejor. Nunca una opción de otra prioridad.
 ## - Área anunciada (T6): quien tiene un área anunciada la golpea en su turno sin moverse (KIND_AREA).
 ##   Quien va a anunciarla al terminar el turno (TacticalBattle.will_announce) elige la orientación
 ##   cuya área pilla a más enemigos (empate, hacia el más cercano) y, el berserk, entre las casillas
@@ -48,6 +74,11 @@ const ATTACK: int = BattleLogic.GroupOrder.ATTACK
 const DEFEND: int = BattleLogic.GroupOrder.DEFEND
 ## Distancia "infinita" para los campos de distancia.
 const FAR: int = 1 << 20
+## Perfiles que cortan la huida del Adoc (P2).
+const CUTTERS: Array[StringName] = [BattleLogic.AI_AMBUSHER, BattleLogic.AI_SWARM, BattleLogic.AI_TACTICAL,
+	BattleLogic.AI_WHIP]
+## Perfiles a los que la altura les puntúa doble (P2).
+const HIGH_LOVERS: Array[StringName] = [BattleLogic.AI_WHIP, BattleLogic.AI_AMBUSHER]
 
 ## Casillas alcanzables del que planea, calculadas una vez por plan() (se vacía al terminar).
 static var _reach_cache: Dictionary = {}
@@ -177,15 +208,28 @@ static func _plan_enemy(b: TacticalBattle, i: int, out: Dictionary) -> void:
 		return
 	if profile == BattleLogic.AI_TACTICAL and _plan_help(b, i, out, _cfg(b, "help_below", 0.3)):
 		return
-	match profile:
-		BattleLogic.AI_SWARM:
-			_plan_swarm(b, i, out)
-		BattleLogic.AI_TACTICAL:
-			_plan_tactical(b, i, out)
-		BattleLogic.AI_BERSERK:
-			_plan_berserk(b, i, out)
-		_:
-			_plan_aggressive(b, i, out)
+	if not (CUTTERS.has(profile) and _plan_cut_flee(b, i, out)):
+		match profile:
+			BattleLogic.AI_SWARM:
+				_plan_swarm(b, i, out)
+			BattleLogic.AI_TACTICAL:
+				_plan_tactical(b, i, out)
+			BattleLogic.AI_BERSERK:
+				_plan_berserk(b, i, out)
+			BattleLogic.AI_GUARDIAN:
+				_plan_guardian(b, i, out)
+			BattleLogic.AI_WHIP:
+				_plan_whip(b, i, out)
+			BattleLogic.AI_AMBUSHER:
+				_plan_ambusher(b, i, out)
+			_:
+				_plan_aggressive(b, i, out)
+	# Defender (P2): sin ataque este turno, al alcance de alguien y con poca vida.
+	if profile != BattleLogic.AI_BERSERK and StringName(out.action) == KIND_NONE and _can_act(b, i) \
+			and _ratio(b, i) < _cfg(b, "defend_below", 0.5) \
+			and _exposure(b, out.move_to, _foes(b, int(u.side)), TacticalBattle.NONE) > 0:
+		out.action = TacticalBattle.KIND_DEFEND
+		out.target = i
 
 
 ## Huye o se retira: el último enjambre de un grupo con poca vida, o un táctico con poca vida.
@@ -228,8 +272,8 @@ static func _plan_leave(b: TacticalBattle, i: int, out: Dictionary) -> void:
 static func _plan_aggressive(b: TacticalBattle, i: int, out: Dictionary) -> void:
 	var opts: Array[Dictionary] = _attack_options(b, i)
 	if not opts.is_empty():
-		_take(b, i, out, _best(opts, func(o: Dictionary) -> Array:
-			return [int(b.units[o.target].hp), -float(o.expected), int(o.cost)]))
+		_take(b, i, out, _pick(b, i, opts, func(o: Dictionary) -> Array:
+			return [int(b.units[o.target].hp)]))
 		return
 	_approach(b, i, out, _nearest(b, b.units[i].cell, _foes(b, int(b.units[i].side))))
 
@@ -252,9 +296,9 @@ static func _plan_berserk(b: TacticalBattle, i: int, out: Dictionary) -> void:
 static func _plan_swarm(b: TacticalBattle, i: int, out: Dictionary) -> void:
 	var opts: Array[Dictionary] = _attack_options(b, i)
 	if not opts.is_empty():
-		_take(b, i, out, _best(opts, func(o: Dictionary) -> Array:
+		_take(b, i, out, _pick(b, i, opts, func(o: Dictionary) -> Array:
 			return [-_swarm_around(b, i, int(o.target)), int(b.units[o.target].def),
-				int(b.units[o.target].hp), int(o.cost)]))
+				int(b.units[o.target].hp)]))
 		return
 	var here: Vector2i = b.units[i].cell
 	var foes: Array[int] = _foes(b, int(b.units[i].side))
@@ -274,10 +318,10 @@ static func _plan_tactical(b: TacticalBattle, i: int, out: Dictionary) -> void:
 	var foes: Array[int] = _foes(b, int(b.units[i].side))
 	var opts: Array[Dictionary] = _attack_options(b, i)
 	if not opts.is_empty():
-		_take(b, i, out, _best(opts, func(o: Dictionary) -> Array:
+		_take(b, i, out, _pick(b, i, opts, func(o: Dictionary) -> Array:
 			var t: Dictionary = b.units[o.target]
 			return [0 if t.role == TacticalBattle.ROLE_SUPPORT else 1, int(t.hp), _rel_rank(int(o.relation)),
-				_exposure(b, o.cell, foes, int(o.target)), int(o.cost)]))
+				_exposure(b, o.cell, foes, int(o.target))]))
 		return
 	var target: int = foes[0]
 	var target_key: Array = []
@@ -289,7 +333,143 @@ static func _plan_tactical(b: TacticalBattle, i: int, out: Dictionary) -> void:
 		if target_key.is_empty() or _less(key, target_key):
 			target_key = key
 			target = f
-	_approach(b, i, out, target, true)
+	_approach_or_wait(b, i, out, target, true)
+
+
+## Guardián (P2, Botarramas): no se aleja de su sitio, Defiende a ratos y avanza si nadie se acerca.
+static func _plan_guardian(b: TacticalBattle, i: int, out: Dictionary) -> void:
+	var u: Dictionary = b.units[i]
+	if int(u.turns) > int(_cfg(b, "guard_advance_after", 3)):
+		_plan_aggressive(b, i, out)
+		return
+	var home: Vector2i = u.get("home", u.cell)
+	var radius: int = int(_cfg(b, "guard_radius", 2))
+	var reach: Dictionary = _reach(b, i)
+	var zone: Array[Vector2i] = []
+	for c: Vector2i in _sorted(reach):
+		if TacticalRules.distance(c, home) <= radius:
+			zone.append(c)
+	if zone.is_empty():
+		zone.append(u.cell)
+	var opts: Array[Dictionary] = _attack_options(b, i, [], zone)
+	if not opts.is_empty():
+		_take(b, i, out, _pick(b, i, opts, func(o: Dictionary) -> Array:
+			return [int(b.units[o.target].hp)]))
+		return
+	var foes: Array[int] = _foes(b, int(u.side))
+	var focus: int = _leader(b, int(b.units[foes[0]].side))
+	if focus == TacticalBattle.NONE:
+		focus = _nearest(b, u.cell, foes)
+	var fc: Vector2i = b.units[focus].cell
+	var best_key: Array = []
+	for c: Vector2i in zone:
+		var key: Array = [TacticalRules.distance(c, fc), -_height_pts(b, i, c), TacticalRules.distance(c, home),
+			int(reach.get(c, 0))]
+		if best_key.is_empty() or _less(key, best_key):
+			best_key = key
+			out.move_to = c
+	var every: int = maxi(1, int(_cfg(b, "guard_defend_every", 2)))
+	if _can_act(b, i) and (int(u.turns) - 1) % every == 0:
+		out.action = TacticalBattle.KIND_DEFEND
+		out.target = i
+
+
+## Látigo (P2, Ofomni): al de menos PV, mejor desde 2 casillas que adyacente.
+static func _plan_whip(b: TacticalBattle, i: int, out: Dictionary) -> void:
+	var opts: Array[Dictionary] = _attack_options(b, i)
+	if not opts.is_empty():
+		_take(b, i, out, _pick(b, i, opts, func(o: Dictionary) -> Array:
+			var tc: Vector2i = b.units[o.target].cell
+			return [int(b.units[o.target].hp), 1 if TacticalBoard.are_adjacent(o.cell, tc) else 0]))
+		return
+	_approach(b, i, out, _nearest(b, b.units[i].cell, _foes(b, int(b.units[i].side))))
+
+
+## Emboscadora (P2, Aledra): por la espalda o el flanco; si solo llega de frente, Espera fuera de
+## alcance (si lleva wait_max turnos seguidos sin actuar, ataca de frente).
+static func _plan_ambusher(b: TacticalBattle, i: int, out: Dictionary) -> void:
+	var u: Dictionary = b.units[i]
+	var foes: Array[int] = _foes(b, int(u.side))
+	var opts: Array[Dictionary] = _attack_options(b, i)
+	if opts.is_empty():
+		_approach_or_wait(b, i, out, _nearest(b, u.cell, foes), true)
+		return
+	var sneaky: Array[Dictionary] = []
+	for o: Dictionary in opts:
+		if int(o.relation) != TacticalRules.Relation.FRONT:
+			sneaky.append(o)
+	if not sneaky.is_empty():
+		_take(b, i, out, _pick(b, i, sneaky, func(o: Dictionary) -> Array:
+			return [_rel_rank(int(o.relation)), int(b.units[o.target].hp)]))
+		return
+	if int(u.waits) < int(_cfg(b, "wait_max", 2)):
+		var reach: Dictionary = _reach(b, i)
+		var best_key: Array = []
+		var best: Vector2i = u.cell
+		for c: Vector2i in _sorted(reach):
+			var key: Array = [_exposure(b, c, foes, TacticalBattle.NONE), 0 if c == u.cell else 1,
+				_min_foe_dist(b, c, foes), int(reach[c])]
+			if best_key.is_empty() or _less(key, best_key):
+				best_key = key
+				best = c
+		if int(best_key[0]) == 0:
+			out.move_to = best
+			return
+	_take(b, i, out, _pick(b, i, opts, func(o: Dictionary) -> Array:
+		return [int(b.units[o.target].hp)]))
+
+
+## Cortar la huida (P2): el Adoc está junto al borde y su huida pasa de cut_flee_above. Devuelve si lo
+## planeó (atacarle desde una casilla adyacente, o interponerse si no puede atacar a nadie).
+static func _plan_cut_flee(b: TacticalBattle, i: int, out: Dictionary) -> bool:
+	if not _can_act(b, i):
+		return false
+	var u: Dictionary = b.units[i]
+	var foes: Array[int] = _foes(b, int(u.side))
+	var adoc: int = _leader(b, int(b.units[foes[0]].side))
+	if adoc == TacticalBattle.NONE:
+		return false
+	var ac: Vector2i = b.units[adoc].cell
+	if _edge_dist(b, ac) > int(_cfg(b, "cut_flee_edge", 1)) or b.flee_chance(adoc) <= int(_cfg(b, "cut_flee_above", 30)):
+		return false
+	var adjacent: Array[Dictionary] = []
+	for o: Dictionary in _attack_options(b, i, [adoc]):
+		if TacticalBoard.are_adjacent(o.cell, ac):
+			adjacent.append(o)
+	if not adjacent.is_empty():
+		_take(b, i, out, _pick(b, i, adjacent, func(_o: Dictionary) -> Array: return [0]))
+		return true
+	if not _attack_options(b, i).is_empty():
+		return false
+	var edge: Vector2i = ac
+	var edge_key: Array = []
+	for c: Vector2i in b.board.edge_cells():
+		var key: Array = [TacticalRules.distance(c, ac), c.y, c.x]
+		if edge_key.is_empty() or _less(key, edge_key):
+			edge_key = key
+			edge = c
+	var reach: Dictionary = _reach(b, i)
+	var best_key: Array = []
+	var best: Vector2i = u.cell
+	for c: Vector2i in _sorted(reach):
+		var key: Array = [TacticalRules.distance(c, edge), TacticalRules.distance(c, ac), int(reach[c])]
+		if best_key.is_empty() or _less(key, best_key):
+			best_key = key
+			best = c
+	if int(best_key[0]) > 1:
+		return false
+	out.move_to = best
+	return true
+
+
+## Se acerca y, si eso le deja al alcance de 2 o más enemigos, Espera en su sitio (P2; táctico y
+## emboscadora), salvo que ya lleve wait_max turnos seguidos sin actuar.
+static func _approach_or_wait(b: TacticalBattle, i: int, out: Dictionary, target: int, careful: bool) -> void:
+	var u: Dictionary = b.units[i]
+	_approach(b, i, out, target, careful)
+	if out.move_to != u.cell and int(u.waits) < int(_cfg(b, "wait_max", 2)) \
+			and _exposure(b, out.move_to, _foes(b, int(u.side)), TacticalBattle.NONE) >= 2:
+		out.move_to = u.cell
 
 
 # --- Aliados ------------------------------------------------------------------------------------
@@ -584,7 +764,7 @@ static func _attack_options(b: TacticalBattle, i: int, targets: Array = [], cell
 			var tu: Dictionary = b.units[ti]
 			if not tu.alive or int(tu.side) == int(u.side):
 				continue
-			if not TacticalRules.can_melee(b.board, c, tu.cell, int(u.jump)):
+			if not b.can_hit_from(i, c, ti):
 				continue
 			var rel: TacticalRules.Relation = TacticalRules.relation(tu.cell, int(tu.facing), c)
 			var height: int = b.board.level_at(c) - b.board.level_at(tu.cell)
@@ -608,7 +788,8 @@ static func _take(b: TacticalBattle, i: int, out: Dictionary, o: Dictionary) -> 
 
 ## Se acerca a `target`: la casilla alcanzable con menos camino a pie hasta una casilla desde la que
 ## golpearle (sin cruzar enemigos). Si no hay camino, por distancia en línea. `careful`: entre las de
-## igual camino, la menos expuesta (táctico).
+## igual camino, la menos expuesta (táctico). Los enemigos (salvo el berserk) prefieren después la
+## casilla más alta (P2).
 static func _approach(b: TacticalBattle, i: int, out: Dictionary, target: int, careful: bool = false) -> void:
 	if target == TacticalBattle.NONE:
 		return
@@ -620,7 +801,7 @@ static func _approach(b: TacticalBattle, i: int, out: Dictionary, target: int, c
 	var best_key: Array = []
 	for c: Vector2i in _sorted(reach):
 		var key: Array = [int(field.get(c, FAR)), _exposure(b, c, foes, TacticalBattle.NONE) if careful else 0,
-			TacticalRules.distance(c, tc), int(reach[c])]
+			-_height_pts(b, i, c), TacticalRules.distance(c, tc), int(reach[c])]
 		if best_key.is_empty() or _less(key, best_key):
 			best_key = key
 			out.move_to = c
@@ -640,8 +821,9 @@ static func _distance_field(b: TacticalBattle, i: int, target_cell: Vector2i) ->
 			if int(v.side) != int(u.side):
 				blocked[v.cell] = true
 	var goals: Array[Vector2i] = []
-	for c: Vector2i in b.board.neighbors(target_cell):
-		if not taken.has(c) and TacticalRules.can_melee(b.board, c, target_cell, int(u.jump)):
+	for c: Vector2i in TacticalRules.strike_cells(b.board, target_cell, int(u.jump), int(u.range_min),
+			int(u.range_max), bool(u.range_line)):
+		if not taken.has(c):
 			goals.append(c)
 	return b.board.walk_cost_to(goals, int(u.jump), int(u.drop), blocked)
 
@@ -766,7 +948,7 @@ static func _swarm_around(b: TacticalBattle, i: int, target: int) -> int:
 static func _exposure(b: TacticalBattle, cell: Vector2i, foes: Array[int], except: int) -> int:
 	var n: int = 0
 	for f: int in foes:
-		if f != except and TacticalRules.distance(cell, b.units[f].cell) <= int(b.units[f].mov) + 1:
+		if f != except and TacticalRules.distance(cell, b.units[f].cell) <= b.threat_range(f):
 			n += 1
 	return n
 
@@ -777,7 +959,7 @@ static func _exposure_facing(b: TacticalBattle, cell: Vector2i, facing: int, foe
 	var s: int = 0
 	for f: int in foes:
 		var fc: Vector2i = b.units[f].cell
-		if TacticalRules.distance(cell, fc) > int(b.units[f].mov) + 1:
+		if TacticalRules.distance(cell, fc) > b.threat_range(f):
 			continue
 		match TacticalRules.relation(cell, facing, fc):
 			TacticalRules.Relation.BACK:
@@ -795,6 +977,60 @@ static func _rel_rank(rel: int) -> int:
 		TacticalRules.Relation.FLANK:
 			return 1
 	return 2
+
+
+## Elige una opción de ataque de un enemigo (P2). Prioridad: las de menor `tier` (la clave del perfil;
+## nunca se sale de ella). Dentro, puntuación = daño esperado + altura (_height_pts); empate, menos
+## camino y luego el orden de las casillas. Azar top-2 (no para el berserk ni los aliados): la mejor
+## con top2_weight y la segunda con el resto, si la segunda puntúa al menos top2_margin de la mejor.
+static func _pick(b: TacticalBattle, i: int, opts: Array[Dictionary], tier: Callable) -> Dictionary:
+	var cands: Array[Dictionary] = []
+	var best_tier: Array = []
+	for o: Dictionary in opts:
+		var t: Array = tier.call(o)
+		if cands.is_empty() or _less(t, best_tier):
+			best_tier = t
+			cands.clear()
+			cands.append(o)
+		elif not _less(best_tier, t):
+			cands.append(o)
+	var ranked: Array = []
+	for k: int in cands.size():
+		var o: Dictionary = cands[k]
+		ranked.append([-(float(o.expected) + _height_pts(b, i, o.cell)), int(o.cost), k])
+	ranked.sort_custom(func(x: Array, y: Array) -> bool: return _less(x, y))
+	var first: Dictionary = cands[int(ranked[0][2])]
+	if ranked.size() < 2 or not _rolls(b, i):
+		return first
+	var top: float = -float(ranked[0][0])
+	var second_score: float = -float(ranked[1][0])
+	if second_score < top * _cfg(b, "top2_margin", 0.8):
+		return first
+	if b.ai_rng.randf() < _cfg(b, "top2_weight", 0.75):
+		return first
+	return cands[int(ranked[1][2])]
+
+
+## Tira el azar top-2: enemigos, salvo el berserk.
+static func _rolls(b: TacticalBattle, i: int) -> bool:
+	var u: Dictionary = b.units[i]
+	return int(u.side) == TacticalBattle.SIDE_ENEMY and StringName(u.ai) != BattleLogic.AI_BERSERK
+
+
+## Puntos por la altura de `cell` (P2): height_weight por nivel; doble para el látigo y la
+## emboscadora. Solo los enemigos, salvo el berserk (0 en el tablero llano).
+static func _height_pts(b: TacticalBattle, i: int, cell: Vector2i) -> float:
+	if not _rolls(b, i):
+		return 0.0
+	var w: float = _cfg(b, "height_weight", 1.0)
+	if HIGH_LOVERS.has(StringName(b.units[i].ai)):
+		w *= 2.0
+	return w * b.board.level_at(cell)
+
+
+## Casillas hasta el borde del tablero.
+static func _edge_dist(b: TacticalBattle, cell: Vector2i) -> int:
+	return mini(mini(cell.x, cell.y), mini(b.board.width - 1 - cell.x, b.board.height - 1 - cell.y))
 
 
 static func _best(opts: Array[Dictionary], key: Callable) -> Dictionary:

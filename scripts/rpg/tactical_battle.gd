@@ -7,7 +7,10 @@ extends RefCounted
 ## tactics.roles y tactics.ai.finish_below, que se comparten con el combate por menú).
 ## - Combatientes: [{ id, side, agi, cell?, facing?, max_hp?, hp?, atk?, def?, role?, leader?,
 ##   accepts_payment?, strong_every?, strong_factor?, special_every?, special_factor?, special_area?,
-##   joint?, reserve? }] (side: SIDE_PLAYER o SIDE_ENEMY).
+##   joint?, reserve?, attack_range?, attack_line?, afraid? }] (side: SIDE_PLAYER o SIDE_ENEMY).
+##   attack_range: [mín, máx] de su ataque normal (por defecto [1, 1]; el Ofomni [1, 2]); attack_line
+##   (por defecto true): solo en línea, sin enemigos en medio (TacticalRules.can_strike). afraid:
+##   estado Miedo (suma fear_bonus a su huida). `home`: su casilla inicial (el guardián no se aleja).
 ##   Hasta board.max_per_side por bando (el cupo, TacticalArena) en el tablero, en el orden de la
 ##   lista; los demás (y los que traen `reserve`) esperan en su borde (`waiting`, sin casilla ni
 ##   turno). Sin `cell`, se colocan en las columnas de su lado (el jugador en `player_side`, los
@@ -43,9 +46,11 @@ extends RefCounted
 ##   (ni en el tablero ni esperando);
 ##   derrota cuando no queda nadie del jugador o cae un combatiente `leader` (el adoc).
 ## - Ofrecer Luz u ofrenda (set_payment da el peaje, la Luz suelta y las ofrendas): paga y termina
-##   el combate (APPEASED); no vale si algún enemigo en pie no acepta pagos. Huir: desde cualquier
-##   casilla del borde, siempre, con todo el bando (FLED; el enemigo recupera PV porque el siguiente combate lo crea entero, como
-##   hoy).
+##   el combate (APPEASED); no vale si algún enemigo en pie no acepta pagos. Huir (P1,
+##   ajustes-playtest-0.5.md §1a): desde una casilla del borde, con una tirada de flee_chance (bloque
+##   tactical.flee; el porcentaje se ve en el menú). Si sale bien, huye todo el bando (FLED; el
+##   enemigo recupera PV porque el siguiente combate lo crea entero). Si falla, el turno termina (CT
+##   como si hubiera actuado) y el siguiente intento suma retry_bonus.
 ## - Retirada por el borde (T5): leave() saca del tablero al combatiente en su turno si está en una
 ##   casilla del borde (el último reparep que huye, el garelino que se retira; TacticalAI decide
 ##   cuándo). Queda `fled` y no cuenta como caído; check_end puede dar la victoria.
@@ -69,7 +74,9 @@ extends RefCounted
 ##   - Apertura (apply_opening): SURPRISE (emboscada tuya: no te detectaron), tu bando en el tablero
 ##     empieza con CT threshold y los enemigos con menos (juegan después), de espaldas a ti; AMBUSH
 ##     (emboscada del enemigo), al revés. NORMAL: como siempre.
-## - RNG propio sembrado con la seed del combate: las tiradas son deterministas.
+## - RNG propio sembrado con la seed del combate: las tiradas son deterministas. La IA (azar top-2,
+##   P2) tira con ai_rng, sembrado también con la seed del combate (otra sal): así no mueve las
+##   tiradas de los golpes.
 
 const SIDE_PLAYER: int = 0
 const SIDE_ENEMY: int = 1
@@ -79,6 +86,8 @@ const NONE: int = -1
 const TIE_SALT: int = 4271
 ## Sal del RNG de las acciones (precisión y daño).
 const ACTION_SALT: int = 7919
+## Sal del RNG de la IA (azar top-2, P2).
+const AI_SALT: int = 6007
 
 ## Fin del combate (mismo orden que BattleLogic.Result).
 enum Result { ONGOING, VICTORY, DEFEAT, FLED, APPEASED }
@@ -114,6 +123,7 @@ const TEXT_CHEER: StringName = &"tactical_cheer"
 const TEXT_OFFER_LUZ: StringName = &"tactical_offer_luz"
 const TEXT_OFRENDA: StringName = &"tactical_ofrenda"
 const TEXT_FLEE: StringName = &"tactical_flee"
+const TEXT_FLEE_FAIL: StringName = &"tactical_flee_fail"
 const TEXT_ENEMY_FLEE: StringName = &"tactical_enemy_flee"
 const TEXT_RETREAT: StringName = &"tactical_retreat"
 const TEXT_AREA: StringName = &"tactical_area"
@@ -138,6 +148,11 @@ var defend_factor: float = 0.5
 var finish_below: float = 0.3
 ## Umbrales de la IA (tactics.ai: help_below, retreat_below, swarm_flee_below...; TacticalAI).
 var ai_cfg: Dictionary = {}
+## Huida (P1, tactical.flee) e intentos fallidos en este combate.
+var flee_cfg: Dictionary = {}
+var flee_fails: int = 0
+## RNG de la IA (azar top-2; TacticalAI).
+var ai_rng := RandomNumberGenerator.new()
 ## Orden al grupo del jugador (BattleLogic.GroupOrder) y último enemigo al que atacó el `leader`.
 var group_order: int = BattleLogic.GroupOrder.FREE
 var player_target: int = NONE
@@ -187,7 +202,9 @@ func _init(tactical: Dictionary, battle_board: TacticalBoard, fighters: Array, r
 	defend_factor = float(tactical.get("defend_factor", 0.5))
 	finish_below = float(tactical.get("finish_below", 0.3))
 	ai_cfg = tactical.get("ai", {})
+	flee_cfg = tactical.get("flee", {})
 	rng.seed = rng_seed + ACTION_SALT
+	ai_rng.seed = rng_seed + AI_SALT
 	player_side = arrival_side
 	var tie_rng := RandomNumberGenerator.new()
 	tie_rng.seed = rng_seed + TIE_SALT
@@ -203,6 +220,9 @@ func _init(tactical: Dictionary, battle_board: TacticalBoard, fighters: Array, r
 		var jump: int = jump_height(agi, movement_cfg)
 		var role: StringName = StringName(str(data.get("role", "")))
 		var max_hp: int = maxi(1, int(data.get("max_hp", data.get("hp", 1))))
+		var reach: Array = data.get("attack_range", [1, 1])
+		var range_min: int = maxi(1, int(reach[0])) if reach.size() > 0 else 1
+		var range_max: int = maxi(range_min, int(reach[1])) if reach.size() > 1 else range_min
 		units.append({
 			"hp": clampi(int(data.get("hp", max_hp)), 1, max_hp),
 			"max_hp": max_hp,
@@ -222,6 +242,11 @@ func _init(tactical: Dictionary, battle_board: TacticalBoard, fighters: Array, r
 			"attacks": 0,
 			"announce": [],
 			"joint": bool(data.get("joint", false)),
+			"range_min": range_min,
+			"range_max": range_max,
+			"range_line": bool(data.get("attack_line", true)),
+			"afraid": bool(data.get("afraid", false)),
+			"waits": 0,
 			"defending": false,
 			"cheer": 0,
 			"heals_left": _role_num(role, "heal_uses", 0) if role == ROLE_SUPPORT else 0,
@@ -243,6 +268,8 @@ func _init(tactical: Dictionary, battle_board: TacticalBoard, fighters: Array, r
 			"waiting": waiting,
 		})
 	_place_units()
+	for u: Dictionary in units:
+		u.home = u.cell
 
 
 ## El bloque tactical de balance.json con lo que comparte con el combate por menú: attack (tirada y
@@ -369,6 +396,7 @@ func deploy_reinforcements() -> Array[int]:
 			u.waiting = false
 			u.ct = int(ct_cfg.get("reinforce_ct", 50))
 			u.facing = _facing_from(board_side)
+			u.home = u.cell
 			pending_entries[side] -= 1
 			out.append(i)
 		if queue.is_empty():
@@ -477,6 +505,8 @@ func end_turn(facing: TacticalBoard.Facing) -> int:
 		return 0
 	var cost: int = turn_cost(active_moved, active_acted)
 	units[active].facing = facing
+	# Turnos seguidos sin actuar (la IA no Espera ni se aparta si ya lleva tactics.ai.wait_max).
+	units[active].waits = 0 if active_acted else int(units[active].waits) + 1
 	units[active].ct = int(units[active].ct) - cost
 	if will_announce(active):
 		units[active].announce = area_cells(units[active].cell, facing)
@@ -503,9 +533,41 @@ func preview_order(count: int, active_cost: int = -1) -> Array[int]:
 	return out
 
 
-## Puede huir (T3): está en una casilla del borde (#184, "Cualquier borde, seguro").
+## Puede intentar huir (T3): está en una casilla del borde. Que salga bien es otra cosa (P1,
+## flee_chance).
 func can_flee(index: int) -> bool:
 	return units[index].alive and board.is_edge(units[index].cell)
+
+
+## Probabilidad (%) de que `index` huya desde donde está (P1, ajustes-playtest-0.5.md §1a;
+## TacticalRules.flee_chance). Adyacente: enemigo en pie a 1 casilla ortogonal. Cercano: enemigo en
+## pie que le alcanzaría en su siguiente turno (threat_range: Mov + su alcance; con alcance 1 es el
+## Mov + 1 de la ficha). La AGI que cuenta es la más alta de esos enemigos.
+func flee_chance(index: int = active) -> int:
+	if not _valid(index):
+		return 0
+	var u: Dictionary = units[index]
+	var adjacent: int = 0
+	var near: int = 0
+	var max_agi: int = 0
+	for k: int in units.size():
+		var v: Dictionary = units[k]
+		if not v.alive or int(v.side) == int(u.side):
+			continue
+		var d: int = TacticalRules.distance(u.cell, v.cell)
+		if d == 1:
+			adjacent += 1
+		elif d <= threat_range(k):
+			near += 1
+		else:
+			continue
+		max_agi = maxi(max_agi, int(v.agi))
+	return TacticalRules.flee_chance(int(u.agi), adjacent, near, max_agi, flee_fails, bool(u.afraid), flee_cfg)
+
+
+## Casillas (Manhattan) a las que `index` llega a golpear en su siguiente turno: Mov + alcance máximo.
+func threat_range(index: int) -> int:
+	return int(units[index].mov) + int(units[index].range_max)
 
 
 ## Índice del combatiente en una casilla (NONE si está libre).
@@ -535,15 +597,30 @@ func can_act() -> bool:
 	return not is_over() and active != NONE and not active_acted
 
 
-## `attacker` llega cuerpo a cuerpo a `target` (enemigo en pie, vecino y desnivel ≤ su Salto).
+## `attacker` llega a `target` (enemigo en pie, a su alcance y desnivel ≤ su Salto; por defecto,
+## cuerpo a cuerpo: vecino).
 func can_attack(attacker: int, target: int) -> bool:
+	if not _valid(attacker) or not _valid(target) or not units[attacker].alive:
+		return false
+	return can_hit_from(attacker, units[attacker].cell, target)
+
+
+## `attacker` golpearía a `target` desde la casilla `from`: su alcance, el desnivel y, en línea, sin
+## enemigos ni casillas intransitables en medio. La IA lo usa con casillas a las que aún no fue.
+func can_hit_from(attacker: int, from: Vector2i, target: int) -> bool:
 	if not _valid(attacker) or not _valid(target):
 		return false
 	var a: Dictionary = units[attacker]
 	var t: Dictionary = units[target]
-	if not a.alive or not t.alive or a.side == t.side:
+	if not t.alive or a.side == t.side:
 		return false
-	return TacticalRules.can_melee(board, a.cell, t.cell, int(a.jump))
+	var rmax: int = int(a.range_max)
+	var blockers: Dictionary = {}
+	if rmax > 1:
+		blockers = _enemy_cells(int(a.side))
+		blockers.erase(t.cell)
+	return TacticalRules.can_strike(board, from, t.cell, int(a.jump), int(a.range_min), rmax,
+		bool(a.range_line), blockers)
 
 
 ## Enemigos a los que llega `attacker` desde su casilla.
@@ -811,18 +888,30 @@ func offer_ofrenda(index: int) -> Dictionary:
 	return out
 
 
-## Huir: el combatiente del jugador en su turno está en una casilla del borde. Siempre sale bien y
-## huye todo el bando (FLED).
+## Huir: el combatiente del jugador en su turno está en una casilla del borde (P1).
 func can_flee_now() -> bool:
 	return _player_acting() and can_flee(active)
 
 
+## Intenta huir con una tirada de flee_chance(). Si sale bien, huye todo el bando (FLED). Si falla
+## ("No logras escapar"), cuenta como actuar y el turno termina ya, mirando hacia donde miraba (CT
+## −100 si se movió, −80 si no); el siguiente intento suma retry_bonus. Resultado con chance,
+## failed y ct_cost.
 func flee() -> Dictionary:
 	if not can_flee_now():
 		return {}
+	var chance: int = flee_chance(active)
 	active_acted = true
-	result = Result.FLED
 	var out: Dictionary = _result(KIND_FLEE, NONE)
+	out.chance = chance
+	out.failed = rng.randi_range(0, 99) >= chance
+	out.ct_cost = 0
+	if out.failed:
+		flee_fails += 1
+		out.text_key = TEXT_FLEE_FAIL
+		out.ct_cost = end_turn(int(units[active].facing) as TacticalBoard.Facing)
+		return out
+	result = Result.FLED
 	out.text_key = TEXT_FLEE
 	out.result = result
 	return out
