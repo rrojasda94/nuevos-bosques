@@ -160,15 +160,18 @@ func test_ofomni_chunk_is_in_its_bosque_closest_to_home() -> void:
 
 
 func test_exploration_offers_quest_and_runner_fails_it_at_the_villa() -> void:
-	var exploration: Node2D = load("res://scenes/world/exploration.tscn").instantiate()
-	add_child_autofree(exploration)
-	exploration.start()
+	WorldClock.set_process(false)
+	var exploration: WorldExploration = load("res://scenes/world/world_exploration.tscn").instantiate()
+	add_child_autoqfree(exploration)
+	await exploration.start()
+	var map: BosqueMap = exploration.bosques
+	var home: int = exploration.home_bosque
 	var runner: QuestRunner = exploration.get_node("QuestRunner")
 	var q: Dictionary = GameState.quests[Q]
 	assert_eq(QuestLogic.state_of(q), QuestLogic.OFFERED, "ofrecida al empezar")
 	assert_eq(GameState.objective_label, "Sfida", "la brújula apunta al sfida")
-	assert_eq(GameState.objective_chunk, _map.nujio_chunk[_home])
-	QuestLogic.accept(q, _map, 42, _home)
+	assert_eq(GameState.objective_chunk, map.nujio_chunk[home])
+	QuestLogic.accept(q, map, 42, home)
 	QuestLogic.commit(Q, q, QuestLogic.OFFERED)
 	GameState.luz = 9
 	runner._process(EVERY * 10)
@@ -176,10 +179,11 @@ func test_exploration_offers_quest_and_runner_fails_it_at_the_villa() -> void:
 	assert_true(GameState.villa_damaged)
 	assert_eq(GameState.luz, 4)
 	assert_eq(GameState.objective_label, "Ofomni descarriado")
-	assert_eq(runner.ofomni_chunk(), _map.nujio_chunk[_home], "espera en la villa")
-	var field: MonsterField = exploration.get_node("Monsters")
+	assert_eq(runner.ofomni_chunk(), map.nujio_chunk[home], "espera en la villa")
+	var field: MonsterField = exploration.get("_field")
 	assert_not_null(field.ofomni(), "el jugador está en la villa: lo ve")
-	assert_true(MonsterSteering.chebyshev(field.ofomni().cell, exploration.get_node("Player").cell) >= MonsterField.OFOMNI_MIN_GAP)
+	assert_true(MonsterSteering.chebyshev(field.ofomni().cell, exploration.player.mover.cell) >= MonsterField.OFOMNI_MIN_GAP)
+	WorldClock.set_process(true)
 
 
 func test_quest_battle_uses_its_own_attempts_and_completes_on_victory() -> void:

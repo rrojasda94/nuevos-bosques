@@ -165,21 +165,6 @@ func test_balance_arena_block_matches_the_sheet() -> void:
 	assert_eq(int(_tactical().ct.reinforce_ct), 50)
 
 
-# --- Recorte desde el chunk (Crossing) ----------------------------------------------------------
-
-func test_crossing_reads_the_ratio_from_a_chunk() -> void:
-	var chunk := ChunkData.new()
-	chunk.tiles.resize(ChunkData.SIZE * ChunkData.SIZE)
-	chunk.tiles.fill(ChunkData.Tile.GRASS)
-	var crossing: GDScript = load("res://scripts/rpg/crossing.gd")
-	assert_almost_eq(crossing.chunk_ratio(chunk, Vector2i(32, 32)), 1.0, 0.001)
-	for y: int in ChunkData.SIZE:
-		for x: int in range(0, 32):
-			chunk.set_tile(Vector2i(x, y), ChunkData.Tile.TREE)
-	assert_almost_eq(crossing.chunk_ratio(chunk, Vector2i(32, 32)), 0.5, 0.001)
-	assert_almost_eq(crossing.chunk_ratio(chunk, Vector2i(5, 32)), 0.0, 0.001, "bosque cerrado")
-
-
 # --- Recorte del Mundo 2.0 (WorldQuery.Area) ----------------------------------------------------
 
 func test_area_ratio_counts_loaded_and_unblocked_cells() -> void:

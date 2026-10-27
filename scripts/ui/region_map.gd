@@ -1,15 +1,13 @@
 extends CanvasLayer
 ## Mapa de la región (tecla M, navegacion.md). Pausa el árbol (y con él WorldClock) y muestra la
-## rejilla de chunks: los explorados con el color de hoja de su Bosque y el resto en niebla. Encima,
-## los caminos principales vistos, la villa natal, las villas y refugios vistos, los Botarramas
-## vistos (en su última posición; grises si su Bosque está abierto), el objetivo (si lo hay) y el
-## jugador, que parpadea. Los Bosques explorados que no están sanos llevan una marca del color de
-## su estado en la esquina de cada chunk (MapLogic.visible_states), con su fila en la leyenda. Se cierra con M o Esc. Este nodo sigue activo en pausa
-## (process_mode ALWAYS). Solo lee GameState; qué se ve lo decide MapLogic.
-## Mundo 2.0 (ADR 0014 §7, M16): si hay RegionPlan (MapLogic.region_plan), en vez de los cuadros de
-## color dibuja la vista de la región (altura, agua, caminos y límites de Bosque; la imagen se
-## genera una vez por plan) con niebla translúcida sobre lo no explorado, y encima las villas,
-## aldeas y lugares con su nombre (fuente de 3×5). Los marcadores por chunk no cambian.
+## vista de la región del RegionPlan de la exploración (MapLogic.region_plan; ADR 0014 §7, M16):
+## altura, agua, caminos y límites de Bosque (la imagen se genera una vez por plan), con niebla
+## translúcida sobre los chunks no explorados. Encima, las villas, aldeas y lugares vistos con su
+## nombre (fuente de 3×5), los refugios vistos, los Botarramas vistos (en su última posición; grises
+## si su Bosque está abierto), el objetivo (si lo hay) y el jugador, que parpadea. Los Bosques
+## explorados que no están sanos llevan una marca del color de su estado en la esquina de cada chunk
+## (MapLogic.visible_states), con su fila en la leyenda. Se cierra con M o Esc. Este nodo sigue
+## activo en pausa (process_mode ALWAYS). Solo lee GameState; qué se ve lo decide MapLogic.
 
 ## Lado de cada celda (un chunk) en píxeles. La región de 12×16 chunks ocupa 120×160.
 const CELL: int = MapLogic.PX_PER_CHUNK
@@ -138,18 +136,16 @@ func _build_legend() -> void:
 		{ "icon": PixelIcons.HOUSE, "color": VILLA_COLOR, "text": Texts.get_text("map_legend_villa") },
 	]
 	var seen_kinds: Dictionary = {}
-	if _plan != null:
-		for p: Dictionary in MapLogic.visible_places(_places, GameState.explored_chunks):
-			seen_kinds[p.kind] = true
+	for p: Dictionary in MapLogic.visible_places(_places, GameState.explored_chunks):
+		seen_kinds[p.kind] = true
 	if seen_kinds.has("aldea"):
 		_legend.append({ "icon": PixelIcons.ALDEA, "color": ALDEA_COLOR, "text": Texts.get_text("map_legend_aldea") })
 	_legend.append({ "icon": PixelIcons.REFUGE, "color": REFUGE_COLOR, "text": Texts.get_text("map_legend_refuge") })
 	_legend.append({ "icon": [] as Array[String], "color": ROAD_COLOR, "text": Texts.get_text("map_legend_road") })
-	if _plan != null:
-		_legend.append({ "icon": [] as Array[String], "color": MapLogic.WATER_COLORS[RegionAuthoring.Water.RIVER_NAVIGABLE],
-				"text": Texts.get_text("map_legend_water") })
-		_legend.append({ "icon": [] as Array[String], "color": MapLogic.BORDER_COLOR, "border": true,
-				"text": Texts.get_text("map_legend_border") })
+	_legend.append({ "icon": [] as Array[String], "color": MapLogic.WATER_COLORS[RegionAuthoring.Water.RIVER_NAVIGABLE],
+			"text": Texts.get_text("map_legend_water") })
+	_legend.append({ "icon": [] as Array[String], "color": MapLogic.BORDER_COLOR, "border": true,
+			"text": Texts.get_text("map_legend_border") })
 	if seen_kinds.has("lugar") or seen_kinds.has("tarca") or seen_kinds.has("hito") or seen_kinds.has("manantial"):
 		_legend.append({ "icon": PixelIcons.PLACE, "color": PLACE_COLOR, "text": Texts.get_text("map_legend_place") })
 	_legend.append({ "icon": PixelIcons.PLAYER, "color": PLAYER_COLOR, "text": Texts.get_text("map_legend_player") })
@@ -195,57 +191,26 @@ func _cell_center(coord: Vector2i) -> Vector2:
 
 
 func _on_canvas_draw() -> void:
-	if _bosques == null:
+	if _bosques == null or _plan == null:
 		return
 	var explored: Array[Vector2i] = GameState.explored_chunks
 	var states: Dictionary = MapLogic.visible_states(_bosques, explored)
-	if _plan != null:
-		_draw_region_view(explored)
-	else:
-		_draw_chunk_view(explored, states)
+	_draw_region_view(explored)
 	for c: Vector2i in states:
 		var r: Rect2 = _cell_rect(c)
 		_canvas.draw_rect(Rect2(r.position + Vector2(r.size.x - STATE_MARK, 0), Vector2(STATE_MARK, STATE_MARK)), STATE_COLORS.get(states[c], FOG_COLOR))
 	for c: Vector2i in MapLogic.visible_refuges(_bosques, explored):
 		PixelIcons.draw(_canvas, PixelIcons.REFUGE, _cell_rect(c).position + Vector2(CELL - 6, CELL - 5), REFUGE_COLOR)
-	if _plan != null:
-		_draw_places(explored)
-	else:
-		for c: Vector2i in MapLogic.visible_villas(_bosques, explored):
-			PixelIcons.draw_centered(_canvas, PixelIcons.HOUSE, _cell_center(c), VILLA_COLOR)
+	_draw_places(explored)
 	for m: Dictionary in MapLogic.visible_monsters(_bosques, GameState.seen_monsters, AdventureRules.paid_bosques()):
 		PixelIcons.draw(_canvas, PixelIcons.MONSTER, _cell_rect(m.chunk).position,
 				MONSTER_PASSIVE_COLOR if m.passive else MONSTER_COLOR)
-	var home: Vector2i = MapLogic.home_villa(_bosques)
-	if home.x >= 0 and _plan == null:
-		PixelIcons.draw_centered(_canvas, PixelIcons.HOUSE, _cell_center(home), HOME_COLOR)
 	_draw_far_quests()
 	if GameState.has_objective():
 		PixelIcons.draw_centered(_canvas, PixelIcons.OBJECTIVE, _cell_center(GameState.objective_chunk), OBJECTIVE_COLOR)
 	if _blink_on and GameState.chunk_coord.x >= 0:
 		PixelIcons.draw_centered(_canvas, PixelIcons.PLAYER, _cell_center(GameState.chunk_coord), PLAYER_COLOR)
 	_draw_legend_icons()
-
-
-# ponytail: borrar en M17 (la vista de cuadros de color del mundo viejo).
-## Rejilla de cuadros: niebla o color de hoja del Bosque (con el tinte de su estado) y caminos de
-## celda en celda.
-func _draw_chunk_view(explored: Array[Vector2i], states: Dictionary) -> void:
-	for y: int in _bosques.grid_size.y:
-		for x: int in _bosques.grid_size.x:
-			var c := Vector2i(x, y)
-			var leaf: int = MapLogic.cell_leaf(_bosques, explored, c)
-			var color: Color = FOG_COLOR if leaf < 0 else (PlaceholderTileset.LEAVES[leaf] as Array)[0]
-			if states.has(c):
-				color = PlaceholderTileset.state_color(color, states[c])
-			_canvas.draw_rect(_cell_rect(c), color)
-	# Caminos: del centro de cada celda vista hacia cada lado por el que sale.
-	var roads: Dictionary = MapLogic.visible_roads(_bosques, explored)
-	for c: Vector2i in roads:
-		var center: Vector2 = _cell_center(c) - Vector2.ONE
-		for side: Vector2i in roads[c]:
-			var block := Rect2(center, Vector2(2, 2))
-			_canvas.draw_rect(block.merge(Rect2(center + Vector2(side * (CELL / 2)), Vector2(2, 2))), ROAD_COLOR)
 
 
 ## Vista de la región (imagen del plan) con niebla translúcida en los chunks sin explorar.

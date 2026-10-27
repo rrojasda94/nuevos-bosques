@@ -5,7 +5,7 @@ extends GutTest
 ## Únicos de varios tipos que no persiguen en un Bosque pagado (BosquePatrols); Aledra solo sale
 ## de noche, es fatal de noche y avisa antes del combate.
 
-const EXPLORATION: String = "res://scenes/world/exploration.tscn"
+const EXPLORATION: String = "res://scenes/world/world_exploration.tscn"
 
 var _region: Dictionary
 var _map: BosqueMap
@@ -33,11 +33,23 @@ func after_each() -> void:
 	WorldClock.set_process(true)
 
 
-func _exploration() -> Node:
-	var expl: Node = load(EXPLORATION).instantiate()
-	add_child_autofree(expl)
-	expl.start()
+## Exploración del Mundo 2.0 con la partida actual (seed 42). Corrutina.
+func _exploration() -> WorldExploration:
+	var expl: WorldExploration = load(EXPLORATION).instantiate()
+	add_child_autoqfree(expl)
+	await expl.start()
 	return expl
+
+
+## Bosque vecino del natal en el mundo de `expl`.
+func _world_target(expl: WorldExploration) -> int:
+	return expl.bosques.neighbours_of(expl.home_bosque)[0]
+
+
+## Casilla global del hub del primer chunk del Bosque `bosque_id`.
+func _hub_of(expl: WorldExploration, bosque_id: int) -> Vector2i:
+	var coord: Vector2i = expl.bosques.chunks_of(bosque_id)[0]
+	return WorldCoords.to_world_cell(coord, expl.world.pregen.get_chunk(coord).hub)
 
 
 # --- Cazadores ------------------------------------------------------------------------------------
@@ -82,10 +94,10 @@ func test_hunters_stop_when_paying_or_leaving() -> void:
 
 
 func test_exploration_sends_hunters_with_a_notice_and_removes_them_on_payment() -> void:
-	var expl: Node = _exploration()
-	AdventureRules.guardian_defeated(_target)
-	var coord: Vector2i = _map.chunks_of(_target)[0]
-	expl._enter_chunk(coord, expl._get_chunk(coord).hub)
+	var expl: WorldExploration = await _exploration()
+	var target: int = _world_target(expl)
+	AdventureRules.guardian_defeated(target)
+	expl._place(_hub_of(expl, target))
 	expl._fade.color.a = 0.0
 	watch_signals(EventBus)
 	expl._process(BosqueHunt.interval(1) + 0.1)
@@ -93,9 +105,9 @@ func test_exploration_sends_hunters_with_a_notice_and_removes_them_on_payment() 
 	assert_signal_emitted_with_parameters(EventBus, "notice_requested", [Texts.get_text("bosque_hunt_started")])
 	var hunter: OverworldMonster = expl._field.hunters()[0]
 	assert_eq(hunter.state, MonsterSteering.State.CHASE)
-	var off: Vector2i = (hunter.cell - GameState.player_cell).abs()
+	var off: Vector2i = (hunter.cell - expl.player.mover.cell).abs()
 	assert_true(off.x > 10 or off.y > 6, "aparece fuera de la vista")
-	AdventureRules.pay_toll(_target, 0)
+	AdventureRules.pay_toll(target, 0)
 	expl._process(0.1)
 	assert_eq(expl._field.hunters().size(), 0, "al pagar se van")
 
@@ -116,9 +128,10 @@ func test_defeating_a_passive_unico_on_purpose_forces_the_paid_bosque() -> void:
 
 
 func test_confronting_a_passive_unico_asks_first_and_warns() -> void:
-	var expl: Node = _exploration()
-	AdventureRules.pay_toll(_target, 0)
-	var m: OverworldMonster = expl._field.spawn_hunter(&"botarramas", _target, Vector2i(5, 5), _map.styles[_target])
+	var expl: WorldExploration = await _exploration()
+	var target: int = _world_target(expl)
+	AdventureRules.pay_toll(target, 0)
+	var m: OverworldMonster = expl._field.spawn_hunter(&"botarramas", target, _hub_of(expl, target), expl.bosques.styles[target])
 	m.role = MonsterField.ROLE_PATROL
 	assert_false(expl._field.can_detect(m), "pasivo")
 	watch_signals(EventBus)
@@ -126,16 +139,17 @@ func test_confronting_a_passive_unico_asks_first_and_warns() -> void:
 	assert_true(expl._dialogue.is_open(), "pregunta antes")
 	assert_signal_not_emitted(EventBus, "unico_battle_requested")
 	expl._dialogue.choice.emit(0)
-	assert_signal_emitted_with_parameters(EventBus, "unico_battle_requested", [_target, &"botarramas", true])
+	assert_signal_emitted_with_parameters(EventBus, "unico_battle_requested", [target, &"botarramas", true])
 
 
 func test_confronting_an_active_guardian_opens_the_border_menu() -> void:
-	var expl: Node = _exploration()
-	var m: OverworldMonster = expl._field.spawn_hunter(&"botarramas", _target, Vector2i(5, 5), _map.styles[_target])
+	var expl: WorldExploration = await _exploration()
+	var target: int = _world_target(expl)
+	var m: OverworldMonster = expl._field.spawn_hunter(&"botarramas", target, _hub_of(expl, target), expl.bosques.styles[target])
 	m.role = MonsterField.ROLE_GUARDIAN
 	watch_signals(EventBus)
 	expl._confront(m)
-	assert_signal_emitted_with_parameters(EventBus, "bosque_border_reached", [_target])
+	assert_signal_emitted_with_parameters(EventBus, "bosque_border_reached", [target])
 
 
 # --- Únicos que rondan ------------------------------------------------------------------------------
@@ -192,9 +206,10 @@ func test_aledra_only_at_night_and_fatal_at_night() -> void:
 
 
 func test_aledra_at_night_warns_before_the_battle_and_lets_you_flee() -> void:
-	var expl: Node = _exploration()
+	var expl: WorldExploration = await _exploration()
+	var target: int = _world_target(expl)
 	GameState.clock_momento = TimeConfig.RIUMNA
-	var m: OverworldMonster = expl._field.spawn_hunter(&"aledra", _target, Vector2i(5, 5), _map.styles[_target])
+	var m: OverworldMonster = expl._field.spawn_hunter(&"aledra", target, _hub_of(expl, target), expl.bosques.styles[target])
 	watch_signals(EventBus)
 	expl._on_monster_engaged(m)
 	assert_true(expl._dialogue.is_open(), "avisa: Aledra de noche puede matarte")

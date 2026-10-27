@@ -24,8 +24,8 @@ static func config() -> Dictionary:
 
 
 ## Se puede dormir en la casilla: refugio, plaza de villa o junto al Nujio de una villa.
-static func can_sleep_at(chunk: ChunkData, cell: Vector2i) -> bool:
-	return AdventureRules.is_riutash_shelter(chunk, cell)
+static func can_sleep_at(chunk: WorldChunk, cell: Vector2i) -> bool:
+	return AdventureRules.is_riutash_shelter_world(chunk, cell)
 
 
 ## Es de noche: el sueño lleva a Pensamiento y no cuesta Luz.

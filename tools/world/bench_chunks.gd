@@ -4,21 +4,20 @@ extends SceneTree
 ##
 ## Uso (desde la raíz del proyecto, con el proyecto ya importado):
 ##   godot --headless --path . -s tools/world/bench_chunks.gd
-##   godot --headless --path . -s tools/world/bench_chunks.gd -- --builder=legacy --count=50 --seed=42 --region=valle_del_sara
+##   godot --headless --path . -s tools/world/bench_chunks.gd -- --count=50 --seed=42 --region=valle_del_sara
 ##
 ## Opciones (todas opcionales, detrás de `--`):
-##   --builder=legacy  ChunkGenerator.generate (64×64, el actual). Por defecto.
-##   --builder=world   ChunkBuilder.build(plan, coord) -> WorldChunk (M6+). El RegionPlan de la
-##                     seed se construye una vez fuera de la medición, como en la partida.
+##   --builder=world   ChunkBuilder.build(plan, coord) -> WorldChunk, el único desde M17b (el
+##                     generador viejo, `legacy`, se borró). El RegionPlan de la seed se construye
+##                     una vez fuera de la medición, como en la partida.
 ##   --count=N         chunks medidos (50). Se recorre la región fila a fila desde (0, 0).
 ##   --seed=S          seed de la partida (42).
 ##   --region=ID       región de data/world/regions/ (valle_del_sara).
-##   --profile         solo con --builder=world: además, ms medios por chunk de cada fase de
+##   --profile         además, ms medios por chunk de cada fase de
 ##                     ChunkBuilder.build (ChunkBuilder.profiling), de la más cara a la más barata.
-## Para cambiar de generador sin tocar la línea de comandos, edita DEFAULT_BUILDER.
 ## En la CI corre como aviso: nunca hace fallar el flujo, porque las máquinas varían.
 
-const DEFAULT_BUILDER: String = "legacy"
+const DEFAULT_BUILDER: String = "world"
 const DEFAULT_COUNT: int = 50
 const DEFAULT_SEED: int = 42
 const DEFAULT_REGION: String = "valle_del_sara"
@@ -40,9 +39,6 @@ func _initialize() -> void:
 	var build: Callable
 	var size_chunks: Vector2i = ChunkGenerator.region_size(region)
 	match builder_name:
-		"legacy":
-			var bosques: BosqueMap = BosqueMap.for_region(seed_value, region)
-			build = func(coord: Vector2i) -> void: ChunkGenerator.generate(seed_value, coord, region, bosques)
 		"world":
 			var plan: RegionPlan = RegionPlan.for_region(seed_value, StringName(region_id))
 			size_chunks = plan.size_chunks
@@ -54,7 +50,7 @@ func _initialize() -> void:
 	var coords: Array[Vector2i] = _coords(size_chunks, count)
 
 	build.call(coords[0]) # Calentamiento, no cuenta.
-	if profile and builder_name == "world":
+	if profile:
 		ChunkBuilder.profile_us.clear()
 		ChunkBuilder.profiling = true
 	var times: PackedFloat64Array = PackedFloat64Array()

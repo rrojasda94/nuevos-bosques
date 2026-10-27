@@ -316,7 +316,7 @@ static func _ring(img: Image, dist: int, color: Color, dotted: bool) -> void:
 		for x: int in w:
 			if solid.get_pixel(x, y).a > 0.0 or (dotted and (x + y) % 2 == 1):
 				continue
-			for d: Vector2i in ChunkData.SIDES:
+			for d: Vector2i in WorldChunk.SIDES:
 				var q := Vector2i(x, y) + d * dist
 				if q.x >= 0 and q.y >= 0 and q.x < w and q.y < h and solid.get_pixelv(q).a > 0.0:
 					img.set_pixel(x, y, color)

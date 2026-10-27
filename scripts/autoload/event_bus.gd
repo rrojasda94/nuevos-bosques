@@ -24,7 +24,7 @@ signal chunk_entered(chunk_coord: Vector2i, bosque_id: int, bosque_size: int)
 ## un Bosque cerrado, en una puerta o fuera de ella.
 signal bosque_border_reached(bosque_id: int)
 ## El jugador lee un letrero de piedra. direction = "norte", "sureste"... hacia la villa.
-## kind = ChunkData.SignKind: villa del Bosque actual o villa natal (camino principal).
+## kind = WorldChunk.SignKind: villa del Bosque actual o villa natal (camino principal).
 signal signpost_read(direction: String, kind: int)
 
 # --- Ciudad ---

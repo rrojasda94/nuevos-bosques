@@ -29,35 +29,6 @@ const AROUND: Array[Vector2i] = [
 ]
 
 
-# ponytail: borrar en M17
-static func target_cell(cell: Vector2i, facing: Vector2i) -> Vector2i:
-	return cell + facing
-
-
-## Objetivo de la interacción: { "kind": Kind, "cell": Vector2i, "npc_id": StringName }.
-## `npcs`: casilla -> id de NPC del chunk actual.
-# ponytail: borrar en M17 (lo sustituye find_world)
-static func find(chunk: ChunkData, cell: Vector2i, facing: Vector2i, npcs: Dictionary) -> Dictionary:
-	var ahead: Vector2i = target_cell(cell, facing)
-	if npcs.has(ahead):
-		return { "kind": Kind.NPC, "cell": ahead, "npc_id": npcs[ahead] }
-	for c: Vector2i in [ahead, cell]:
-		if not ChunkData.in_bounds(c):
-			continue
-		match chunk.get_tile(c):
-			ChunkData.Tile.SIGN:
-				return { "kind": Kind.SIGN, "cell": c, "npc_id": &"" }
-			ChunkData.Tile.REFUGE:
-				return { "kind": Kind.REFUGE, "cell": c, "npc_id": &"" }
-			ChunkData.Tile.FRUIT_TREE:
-				return { "kind": Kind.FRUIT_TREE, "cell": c, "npc_id": &"" }
-			ChunkData.Tile.NUJIO:
-				return { "kind": Kind.NUJIO, "cell": c, "npc_id": &"" }
-	if AdventureRules.is_villa_rest(chunk, cell):
-		return { "kind": Kind.REST, "cell": cell, "npc_id": &"" }
-	return { "kind": Kind.NONE, "cell": ahead, "npc_id": &"" }
-
-
 # --- Mundo 2.0 ----------------------------------------------------------------------------------
 
 ## Píxeles por delante de los pies del punto de sondeo (data/world/movement.json, probe_px).

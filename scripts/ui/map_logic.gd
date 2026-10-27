@@ -4,9 +4,9 @@ extends RefCounted
 ## se han explorado y se ven, qué se dibuja encima y hacia dónde apunta la brújula. Sin nodos:
 ## la usan RegionMap, Compass y la exploración (para marcar chunks) y se prueba con GUT.
 ## No dibuja ni guarda: solo lee y modifica los arrays que recibe.
-## Mundo 2.0 (ADR 0014 §7, M16): con un RegionPlan registrado (set_region_plan), el mapa dibuja una
-## vista de la región (region_image) y la brújula apunta a un `world_pos` exacto (compass_world).
-## Sin plan (mundo viejo, hasta M17), todo sigue como antes: cuadros de color y brújula por chunks.
+## Mundo 2.0 (ADR 0014 §7, M16): con el RegionPlan registrado por la exploración (set_region_plan),
+## el mapa dibuja una vista de la región (region_image) y la brújula apunta a un `world_pos` exacto
+## (compass_world).
 
 ## Índice de brújula cuando el jugador ya está en el objetivo ("Aquí").
 const HERE: int = -1
@@ -191,29 +191,6 @@ static func home_villa(bosques: BosqueMap) -> Vector2i:
 	if bosques.home_bosque < 0:
 		return Vector2i(-1, -1)
 	return bosques.nujio_chunk[bosques.home_bosque]
-
-
-# ponytail: borrar en M17 (la sustituye compass_world).
-## Dirección de la brújula: { "index": 0..7 (ChunkGenerator.direction_index) o HERE, "label" }.
-## Apunta al objetivo si lo hay (`objective_chunk` >= 0) y, si no, a la villa natal. Se calcula de
-## chunk a chunk; dentro del chunk del objetivo apunta a su casilla si se conoce, y dice "Aquí"
-## si el jugador está encima o la casilla es desconocida.
-static func compass(bosques: BosqueMap, chunk: Vector2i, cell: Vector2i, objective_chunk: Vector2i,
-		objective_cell: Vector2i, objective_label: String) -> Dictionary:
-	var target: Vector2i = objective_chunk
-	var target_cell: Vector2i = objective_cell
-	var label: String = objective_label
-	if target.x < 0 or target.y < 0:
-		target = home_villa(bosques)
-		target_cell = Vector2i(-1, -1)
-		label = Texts.get_text("compass_villa")
-	if target.x < 0:
-		return { "index": HERE, "label": Texts.get_text("compass_here") }
-	if target != chunk:
-		return { "index": ChunkGenerator.direction_index(target - chunk), "label": label }
-	if target_cell.x < 0 or target_cell.y < 0 or target_cell == cell:
-		return { "index": HERE, "label": Texts.get_text("compass_here") }
-	return { "index": ChunkGenerator.direction_index(target_cell - cell), "label": label }
 
 
 # --- Vista de la región (Mundo 2.0) -------------------------------------------------------------

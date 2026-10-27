@@ -40,7 +40,7 @@ Se actualiza en cada PR del Mundo 2.0.
 | M15 monstruos | En curso |
 | M16 mapa M y brújula | Hecho (PR #84) |
 | Fuentes visibles y sicabis en el mundo | Pendiente, tras M9 (ficha en PR #83) |
-| M17 cambio al Mundo 2.0 | Pendiente. Decidido: se empieza de cero |
+| M17 cambio al Mundo 2.0 | M17a hecho (PR #94: el juego usa `WorldExploration`). M17b: se borra el mundo viejo (`ChunkGenerator.generate`, `ChunkData`, `PlayerWalker`, `exploration.tscn`) |
 | M18 arte final | Pendiente. Decidido: riscos con esquinas interiores y diagonales (+1 PR de arte) |
 | M19 playtest y 0.4.0 | Pendiente |
 

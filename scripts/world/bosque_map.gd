@@ -472,7 +472,7 @@ func _assign_aldeas(seed_value: int, chance: float, params: Dictionary) -> void:
 
 func _free_neighbours(c: Vector2i) -> Array[Vector2i]:
 	var out: Array[Vector2i] = []
-	for d: Vector2i in ChunkData.SIDES:
+	for d: Vector2i in WorldChunk.SIDES:
 		if _in_grid(c + d) and bosque_at(c + d) == -1:
 			out.append(c + d)
 	return out
@@ -482,7 +482,7 @@ func _free_neighbours(c: Vector2i) -> Array[Vector2i]:
 func _neighbour_ids(bosque_id: int) -> Array[int]:
 	var out: Array[int] = []
 	for c: Vector2i in _groups[bosque_id]:
-		for d: Vector2i in ChunkData.SIDES:
+		for d: Vector2i in WorldChunk.SIDES:
 			var other: int = bosque_at(c + d)
 			if other != -1 and other != bosque_id and not out.has(other):
 				out.append(other)
@@ -537,7 +537,7 @@ func _steal_one(bosque_id: int) -> bool:
 
 
 func _touches(c: Vector2i, bosque_id: int) -> bool:
-	for d: Vector2i in ChunkData.SIDES:
+	for d: Vector2i in WorldChunk.SIDES:
 		if bosque_at(c + d) == bosque_id:
 			return true
 	return false
@@ -551,7 +551,7 @@ static func _is_contiguous(cells: Array) -> bool:
 	while head < seen.size():
 		var c: Vector2i = seen[head]
 		head += 1
-		for d: Vector2i in ChunkData.SIDES:
+		for d: Vector2i in WorldChunk.SIDES:
 			if cells.has(c + d) and not seen.has(c + d):
 				seen.append(c + d)
 	return seen.size() == cells.size()
@@ -893,7 +893,7 @@ func _build_road_distance() -> void:
 	while head < queue.size():
 		var c: Vector2i = queue[head]
 		head += 1
-		for d: Vector2i in ChunkData.SIDES:
+		for d: Vector2i in WorldChunk.SIDES:
 			if not (_road_sides.get(c, []) as Array).has(d) or _road_distance.has(c + d):
 				continue
 			_road_distance[c + d] = _road_distance[c] + 1
@@ -931,7 +931,7 @@ func _chunk_route(seed_value: int, a: int, b: int) -> Array[Vector2i]:
 		head += 1
 		if c == to:
 			break
-		var dirs: Array[Vector2i] = ChunkData.SIDES.duplicate()
+		var dirs: Array[Vector2i] = WorldChunk.SIDES.duplicate()
 		var h: int = ChunkGenerator.hash_ints([seed_value, c.x, c.y, SALT_ROAD_ORDER])
 		for i: int in range(dirs.size() - 1, 0, -1):
 			var j: int = (h >> (i * 3)) % (i + 1)

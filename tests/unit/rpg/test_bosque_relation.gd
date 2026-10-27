@@ -12,9 +12,14 @@ var _region: Dictionary
 var _map: BosqueMap
 var _home: int
 var _target: int
+## Mundo 2.0 de la seed 42 (chunks reales del Nujio) y un Bosque vecino del natal en él.
+var _plan: RegionPlan
+var _world_target: int
 
 
 func before_all() -> void:
+	_plan = RegionPlan.for_region(42, &"valle_del_sara")
+	_world_target = _plan.bosques.neighbours_of(_plan.bosque_at(_plan.home_chunk))[0]
 	_region = ChunkGenerator.load_region(&"valle_del_sara")
 	_map = BosqueMap.for_region(42, _region)
 	_home = AdventureRules.home_bosque(_map, _region)
@@ -187,12 +192,14 @@ func test_nujio_menu_lists_one_option_per_ofrenda_type() -> void:
 
 
 func test_e_in_front_of_the_nujio_targets_it() -> void:
-	var nujio: ChunkData = ChunkGenerator.generate(42, _map.nujio_chunk[_target], _region, _map)
+	var coord: Vector2i = _plan.bosques.nujio_chunk[_world_target]
+	var nujio: WorldChunk = ChunkBuilder.build(_plan, coord)
 	var rect: Rect2i = nujio.nujio_rect
-	var below := Vector2i(rect.position.x, rect.end.y)
-	var found: Dictionary = Interaction.find(nujio, below, Vector2i.UP, {})
+	var below: Vector2i = WorldCoords.to_world_cell(coord, Vector2i(rect.position.x, rect.end.y))
+	var get_chunk: Callable = func(c: Vector2i) -> WorldChunk: return nujio if c == coord else null
+	var found: Dictionary = Interaction.find_world(get_chunk, WorldCoords.world_cell_to_world_pos(below), Vector2i.UP)
 	assert_eq(found.kind, Interaction.Kind.NUJIO)
-	assert_eq(found.cell, below + Vector2i.UP)
+	assert_eq(found.cell, WorldCoords.to_world_cell(coord, rect.position), "la esquina noroeste del Nujio")
 
 
 func test_paying_with_an_ofrenda_also_adds_its_value() -> void:
@@ -205,45 +212,45 @@ func test_paying_with_an_ofrenda_also_adds_its_value() -> void:
 # --- Riutash junto al Nujio ---------------------------------------------------------------------
 
 func test_riutash_sheltered_near_the_nujio_adds_relation() -> void:
-	var nujio: ChunkData = ChunkGenerator.generate(42, _map.nujio_chunk[_target], _region, _map)
+	var target: int = _world_target
+	var nujio: WorldChunk = ChunkBuilder.build(_plan, _plan.bosques.nujio_chunk[target])
 	var rect: Rect2i = nujio.nujio_rect
 	var radius: int = int(AdventureRules.balance().bosque_relation.nujio_rest_radius)
 	assert_eq(radius, 6)
 	var inside := Vector2i(rect.position.x - radius, rect.position.y)
 	var outside := Vector2i(rect.position.x - radius - 1, rect.position.y)
-	if not ChunkData.in_bounds(outside):
+	if not WorldChunk.in_bounds(outside):
 		inside = Vector2i(rect.end.x - 1 + radius, rect.position.y)
 		outside = inside + Vector2i.RIGHT
-	assert_eq(AdventureRules.distance_to_nujio(nujio, inside), radius)
-	assert_eq(AdventureRules.distance_to_nujio(nujio, outside), radius + 1)
-	assert_true(AdventureRules.riutash_near_nujio(nujio, inside, _target, true))
-	assert_eq(AdventureRules.relation(_target), 5, "+5")
-	assert_false(AdventureRules.riutash_near_nujio(nujio, outside, _target, true), "a 7 casillas no")
-	assert_false(AdventureRules.riutash_near_nujio(nujio, inside, _target, false), "expuesto no")
-	assert_eq(AdventureRules.relation(_target), 5)
-	var plain: ChunkData = ChunkGenerator.generate(42, _map.nujio_chunk[_target] + Vector2i(1, 0), _region, _map)
-	if plain.nujio_rect.size.x == 0:
-		assert_false(AdventureRules.riutash_near_nujio(plain, inside, _target, true), "chunk sin Nujio")
+	assert_eq(AdventureRules.distance_to_nujio_world(nujio, inside), radius)
+	assert_eq(AdventureRules.distance_to_nujio_world(nujio, outside), radius + 1)
+	assert_true(AdventureRules.riutash_near_nujio_world(nujio, inside, target, true))
+	assert_eq(AdventureRules.relation(target), 5, "+5")
+	assert_false(AdventureRules.riutash_near_nujio_world(nujio, outside, target, true), "a 7 casillas no")
+	assert_false(AdventureRules.riutash_near_nujio_world(nujio, inside, target, false), "expuesto no")
+	assert_eq(AdventureRules.relation(target), 5)
+	var plain := WorldChunk.new()
+	assert_false(AdventureRules.riutash_near_nujio_world(plain, inside, target, true), "chunk sin Nujio")
 
 
 func test_villa_plaza_counts_as_near_its_nujio() -> void:
-	var villa: ChunkData = ChunkGenerator.generate(42, _map.nujio_chunk[_home], _region, _map)
+	var home: int = _plan.bosque_at(_plan.home_chunk)
+	var villa: WorldChunk = ChunkBuilder.build(_plan, _plan.bosques.nujio_chunk[home])
 	assert_true(villa.has_villa)
 	var radius: int = int(AdventureRules.balance().bosque_relation.nujio_rest_radius)
 	var far_plaza := Vector2i(-1, -1)
 	var any_plaza := Vector2i(-1, -1)
-	for y in ChunkData.SIZE:
-		for x in ChunkData.SIZE:
-			var c := Vector2i(x, y)
-			if villa.get_tile(c) == ChunkData.Tile.PLAZA:
-				any_plaza = c
-				if AdventureRules.distance_to_nujio(villa, c) > radius:
-					far_plaza = c
+	for i: int in WorldChunk.CELLS:
+		var c: Vector2i = WorldCoords.index_to_cell(i)
+		if villa.get_ground(c) == WorldChunk.Ground.PLAZA:
+			any_plaza = c
+			if AdventureRules.distance_to_nujio_world(villa, c) > radius:
+				far_plaza = c
 	assert_ne(any_plaza, Vector2i(-1, -1))
 	var plaza: Vector2i = far_plaza if far_plaza.x >= 0 else any_plaza
-	assert_true(AdventureRules.is_near_nujio(villa, plaza), "la plaza de la villa cuenta")
-	assert_true(AdventureRules.riutash_near_nujio(villa, plaza, _home, true))
-	assert_eq(AdventureRules.relation(_home), 5)
+	assert_true(AdventureRules.is_near_nujio_world(villa, plaza), "la plaza de la villa cuenta")
+	assert_true(AdventureRules.riutash_near_nujio_world(villa, plaza, home, true))
+	assert_eq(AdventureRules.relation(home), 5)
 
 
 # --- Misiones, defensa, topes y marca de enojo ---------------------------------------------------

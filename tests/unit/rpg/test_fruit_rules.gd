@@ -10,7 +10,7 @@ const UNPAID: int = 2
 const COORD := Vector2i(6, 13)
 const OTHER := Vector2i(7, 13)
 
-const EXPLORATION_SCENE: PackedScene = preload("res://scenes/world/exploration.tscn")
+const EXPLORATION_SCENE: PackedScene = preload("res://scenes/world/world_exploration.tscn")
 
 
 func before_each() -> void:
@@ -116,9 +116,9 @@ func test_regrow_resets_trees_and_counters() -> void:
 
 
 func test_riutash_in_exploration_regrows_fruit() -> void:
-	var exploration: Node2D = EXPLORATION_SCENE.instantiate()
-	add_child_autofree(exploration)
-	exploration.start()
+	var exploration: WorldExploration = EXPLORATION_SCENE.instantiate()
+	add_child_autoqfree(exploration)
+	await exploration.start()
 	FruitRules.take(COORD, Vector2i(5, 5), HOME, HOME)
 	WorldClock.advance(WorldClock.time_to_riutash() + 0.1)
 	assert_true(FruitRules.has_fruit(COORD, Vector2i(5, 5)), "rebrota tras el riutash")

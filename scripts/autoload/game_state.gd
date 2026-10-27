@@ -63,7 +63,7 @@ var clock_elapsed: float = 0.0
 ## Región del mapa mundial donde ocurre la partida (ADR 0003).
 var region_id: StringName = &""
 ## Reservado para cambios persistentes sobre chunks (ADR 0006). Los tiles NO se guardan:
-## se regeneran con ChunkGenerator a partir de seed + coordenadas.
+## se regeneran con RegionPlan + ChunkBuilder (y la WorldCache) a partir de seed + coordenadas.
 var chunk: Dictionary = {}
 ## Chunk donde está el jugador, en coordenadas de la región ((0, 0) = esquina noroeste).
 ## (-1, -1) = el chunk inicial de la región (start_chunk en su JSON).
