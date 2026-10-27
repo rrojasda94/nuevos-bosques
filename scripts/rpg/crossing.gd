@@ -57,7 +57,6 @@ var _bosque_id: int = -1
 var _cost: int = 0
 var _distance: int = 0
 var _map: BosqueMap
-var _map_key: String = ""
 var _battle: Node
 ## Misión del combate en curso (&"" = combate de borde).
 var _quest_id: StringName = &""
@@ -116,9 +115,8 @@ func take_opening() -> int:
 func _on_bosque_border_reached(bosque_id: int) -> void:
 	if bosque_id < 0 or _panel.visible or _battle != null:
 		return
-	var region: Dictionary = ChunkGenerator.load_region(GameState.region_id)
-	_ensure_map(region)
-	var home: int = AdventureRules.home_bosque(_map, region)
+	_ensure_map()
+	var home: int = AdventureRules.current_home()
 	# Un Bosque forzado se cruza, pero sus Botarramas siguen exigiendo el pago al alcanzarte. Con el
 	# arma en la mano, tampoco uno pagado deja pasar en paz.
 	if AdventureRules.is_welcome(bosque_id, home):
@@ -240,12 +238,10 @@ func _open_submenu() -> void:
 	_options.set_options(texts, enabled)
 
 
-## El reparto en Bosques se deriva de seed + región; se recalcula solo si cambian.
-func _ensure_map(region: Dictionary) -> void:
-	var key: String = "%d:%s" % [GameState.seed_value, GameState.region_id]
-	if key != _map_key:
-		_map = BosqueMap.for_region(GameState.seed_value, region)
-		_map_key = key
+## El reparto en Bosques de la partida: el del RegionPlan del Mundo 2.0 o, en el mundo viejo, el
+## de seed + región (MapLogic.current_bosques, en caché mientras no cambien).
+func _ensure_map() -> void:
+	_map = MapLogic.current_bosques()
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -291,7 +287,7 @@ func _on_quest_battle_requested(quest_id: StringName) -> void:
 	if _panel.visible or _battle != null or not GameState.quests.has(quest_id):
 		return
 	var q: Dictionary = GameState.quests[quest_id]
-	_ensure_map(ChunkGenerator.load_region(GameState.region_id))
+	_ensure_map()
 	_quest_id = quest_id
 	_chase = false
 	get_tree().paused = true
@@ -311,9 +307,8 @@ func _on_unico_battle_requested(bosque_id: int, monster_id: StringName, offends:
 func _on_group_battle_requested(bosque_id: int, monster_id: StringName, count: int, offends: bool, encounter_id: String) -> void:
 	if bosque_id < 0 or _panel.visible or _battle != null:
 		return
-	var region: Dictionary = ChunkGenerator.load_region(GameState.region_id)
-	_ensure_map(region)
-	_home = AdventureRules.home_bosque(_map, region)
+	_ensure_map()
+	_home = AdventureRules.current_home()
 	_bosque_id = bosque_id
 	_distance = maxi(1, _map.distance(_home, bosque_id))
 	_quest_id = &""
@@ -359,7 +354,7 @@ func encounter_ratio() -> float:
 	if GameState.chunk_coord.x < 0 or GameState.chunk_coord.y < 0:
 		return -1.0
 	var region: Dictionary = ChunkGenerator.load_region(GameState.region_id)
-	_ensure_map(region)
+	_ensure_map()
 	var chunk: ChunkData = ChunkGenerator.generate(GameState.seed_value, GameState.chunk_coord, region, _map)
 	return chunk_ratio(chunk, GameState.player_cell)
 

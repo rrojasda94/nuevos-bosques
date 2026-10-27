@@ -67,6 +67,13 @@ Todos los cambios que nota el jugador. Formato [Keep a Changelog](https://keepac
 - El Ofomni descarriado tiene más PV (×0,85 en vez de ×0,7: 29 con d = 4) para que siga siendo un reto con los puntos de stat. En nivel 3 lo vence cualquier reparto de combate (todo ATQ, todo DEF, equilibrado o, más justo, todo Vigor); en nivel 2 o con todo a Luz sigue perdiendo casi siempre.
 - El guardado pasa a la versión 18 (Senda, bando, puntos sin gastar, puntos gastados por stat y skills). Las partidas anteriores conservan su nivel, recalculan los stats con el crecimiento automático nuevo y reciben todos los puntos de stat y de skill de su nivel para repartirlos.
 - El guardado pasa a la versión 19: recuerda la última party que elegiste para el combate táctico. Las partidas anteriores cargan sin ninguna elegida.
+- **Mundo 2.0**: la partida nueva se juega en el mundo nuevo. Al empezar, la pantalla "Creando el mundo…" prepara los alrededores de tu villa (unos segundos); después el mundo es continuo, sin fundidos entre chunks, con relieve, movimiento libre en 8 direcciones y chunks de 80 × 80 casillas. Apareces junto al Nujio de tu villa natal.
+  - Con E, a lo que tienes delante: el sfida, los letreros (también se leen al pasar a su lado), los refugios (árbol hueco o cueva: dormir o registrar), los frutales de 2 × 2 (se ven vacíos al tomar el fruto y rebrotan en el riutash), el Nujio y la plaza de la villa. Delante de un Único, te enfrentas a él.
+  - El límite de un Bosque cerrado no deja pasar: al chocar con él se abre el menú del borde y acude el Botarramas más cercano, en una puerta o entre los árboles. Con camuflaje suficiente te cuelas.
+  - Monstruos, combates, derrota y reaparición, riutash, luz de luna, mapa M y brújula funcionan como en la 0.3.
+  - Todavía no están en el mundo nuevo: los incendios de los Bosques que necesitan ayuda, los encuentros con otros adoc y los colores propios de cada Bosque (todo el mundo se pinta con los de tu Bosque natal).
+- Guardado rápido: F5 guarda la partida y F9 la carga.
+- El guardado pasa a la versión 20 (Mundo 2.0): guarda el chunk y la casilla de los pies (0–79), hacia dónde miras y qué mundo es. **Las partidas de antes del Mundo 2.0 no se pueden continuar**: al cargarlas, el juego avisa "Esta partida es de una versión anterior del mundo y no se puede continuar. Empieza una partida nueva." Al guardar se borra la caché de los mundos que ya no usa ninguna partida.
 
 ## [0.3.0] - 2026-10-25
 "El Bosque recuerda": los Bosques tienen memoria, relación y estado; frutos, inventario y equipo; sigilo; Únicos que rondan, cazan y persiguen; combate en grupo con aliados; dormir y Pensamiento; reloj del riutash y arte de terreno.

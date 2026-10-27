@@ -427,7 +427,9 @@ func test_migration_from_v16_has_no_far_quests() -> void:
 	var file := FileAccess.open(SaveManager.slot_path(SAVE_SLOT), FileAccess.WRITE)
 	file.store_string(JSON.stringify(v16))
 	file.close()
-	assert_eq(SaveManager.load_game(SAVE_SLOT), OK)
+	# Mundo 2.0 (v20): las partidas viejas ya no se cargan; la migración de from_dict sigue.
+	assert_eq(SaveManager.load_game(SAVE_SLOT), SaveManager.ERR_SAVE_OLD_WORLD)
+	GameState.from_dict(SaveManager.migrate(JSON.parse_string(JSON.stringify(v16))))
 	assert_eq(GameState.far_quests, [] as Array[Dictionary])
 	assert_eq(GameState.last_vision_day, 0)
 	assert_eq(FarQuests.sanitize({ "type": "nada", "bosque": 3 }), {}, "tipos desconocidos se descartan")

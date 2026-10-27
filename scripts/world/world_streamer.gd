@@ -74,6 +74,7 @@ var _painted: Dictionary = {}  # Vector2i sector -> resultado de paint_sector
 var _paint_results: Array[Array] = []  # [sector, resultado, µs], protegido por _mutex
 var _pool: Array[Sprite2D] = []
 var _nujios: Dictionary = {}  # Sprite2D -> true
+var _fruit: Dictionary = {}  # Sprite2D -> [objeto, chunk]: frutales montados (refresh_fruit)
 var _player_chunk: Vector2i = Vector2i(-1048576, -1048576)
 var _initial: bool = false
 
@@ -277,6 +278,36 @@ func animate(time_sec: float) -> void:
 			sp.region_rect = r
 
 
+## Vuelve a dibujar los frutales montados (con fruto o vaciados, FruitRules): al tomar un fruto o
+## al rebrotar en el riutash.
+func refresh_fruit() -> void:
+	for sp: Sprite2D in _fruit:
+		var info: Array = _fruit[sp]
+		painter.setup_sprite(sp, info[0], info[1])
+
+
+## Suelta el mundo: espera a los hilos, vacía las capas y libera los sprites. El streamer no se
+## puede usar después.
+func dispose() -> void:
+	stop()
+	if pregen.chunk_ready.is_connected(_on_chunk_ready):
+		pregen.chunk_ready.disconnect(_on_chunk_ready)
+	ground.clear()
+	overlay.clear()
+	for s: Vector2i in _mounted:
+		for sp: Sprite2D in _mounted[s]:
+			sp.queue_free()
+	for sp: Sprite2D in _pool:
+		sp.queue_free()
+	_mounted.clear()
+	_pool.clear()
+	_nujios.clear()
+	_fruit.clear()
+	_chunks.clear()
+	_sector_objects.clear()
+	_painted.clear()
+
+
 ## Espera a los hilos de lectura. Llamar antes de soltar el streamer.
 func stop() -> void:
 	for c: Vector2i in _loading:
@@ -438,6 +469,8 @@ func _apply(sector: Vector2i, paint: Dictionary) -> void:
 				sprites.append(sp)
 				if obj.kind == WorldChunk.ObjectKind.NUJIO:
 					_nujios[sp] = true
+				elif obj.kind == WorldChunk.ObjectKind.FRUIT_TREE:
+					_fruit[sp] = [obj, cc]
 			else:
 				_pool.append(sp)
 	_mounted[sector] = sprites
@@ -458,6 +491,7 @@ func _unmount(sector: Vector2i) -> void:
 	for sp: Sprite2D in _mounted.get(sector, []):
 		sp.visible = false
 		_nujios.erase(sp)
+		_fruit.erase(sp)
 		_pool.append(sp)
 	_mounted.erase(sector)
 

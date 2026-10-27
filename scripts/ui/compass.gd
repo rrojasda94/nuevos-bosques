@@ -86,10 +86,10 @@ func _update_far() -> void:
 	_far_arrow.queue_redraw()
 
 
-## Pies del jugador en píxeles del mundo. Hasta M17 sale de chunk + casilla del guardado; el
-## cambio al Mundo 2.0 lo leerá de su `world_pos`.
+## Pies del jugador en píxeles del mundo: su `world_pos` (MapLogic.player_pos, que fija la
+## exploración del Mundo 2.0) o, sin ella, chunk + casilla del guardado.
 func _player_world_pos() -> Vector2:
-	return WorldCoords.cell_to_world_pos(GameState.chunk_coord, GameState.player_cell)
+	return MapLogic.player_pos()
 
 
 func _on_far_arrow_draw() -> void:

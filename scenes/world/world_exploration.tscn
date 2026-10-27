@@ -1,0 +1,110 @@
+[gd_scene load_steps=15 format=3]
+
+[ext_resource type="Script" path="res://scripts/world/world_exploration.gd" id="1_expl"]
+[ext_resource type="PackedScene" path="res://scenes/world/world_view.tscn" id="2_world"]
+[ext_resource type="Script" path="res://scripts/ui/debug_hud.gd" id="3_hud"]
+[ext_resource type="PackedScene" path="res://scenes/rpg/crossing.tscn" id="4_cross"]
+[ext_resource type="PackedScene" path="res://scenes/ui/dialogue_box.tscn" id="5_dialogue"]
+[ext_resource type="PackedScene" path="res://scenes/ui/compass.tscn" id="6_compass"]
+[ext_resource type="PackedScene" path="res://scenes/ui/region_map.tscn" id="7_map"]
+[ext_resource type="Script" path="res://scripts/rpg/quest_runner.gd" id="9_quest"]
+[ext_resource type="PackedScene" path="res://scenes/rpg/inventory_screen.tscn" id="10_inventory"]
+[ext_resource type="PackedScene" path="res://scenes/ui/riutash_clock.tscn" id="11_clock"]
+[ext_resource type="Script" path="res://scripts/rpg/stealth_hud.gd" id="12_stealth"]
+[ext_resource type="Script" path="res://scripts/rpg/far_quest_runner.gd" id="13_far"]
+[ext_resource type="PackedScene" path="res://scenes/rpg/sleep_screen.tscn" id="14_sleep"]
+[ext_resource type="Script" path="res://scripts/rpg/senda_hud.gd" id="15_senda"]
+
+[node name="WorldExploration" type="Node2D"]
+script = ExtResource("1_expl")
+
+[node name="World" parent="." instance=ExtResource("2_world")]
+standalone = false
+
+[node name="QuestRunner" type="Node" parent="."]
+script = ExtResource("9_quest")
+
+[node name="FarQuestRunner" type="Node" parent="."]
+script = ExtResource("13_far")
+
+[node name="DebugHud" type="CanvasLayer" parent="."]
+script = ExtResource("3_hud")
+
+[node name="Label" type="Label" parent="DebugHud"]
+offset_left = 2.0
+offset_top = 1.0
+offset_right = 318.0
+offset_bottom = 32.0
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_outline_color = Color(0.0941, 0.0784, 0.1451, 1)
+theme_override_constants/outline_size = 3
+theme_override_constants/line_spacing = -2
+theme_override_font_sizes/font_size = 8
+
+[node name="Notice" type="Label" parent="DebugHud"]
+offset_left = 30.0
+offset_top = 150.0
+offset_right = 290.0
+offset_bottom = 178.0
+theme_override_colors/font_color = Color(0.996, 0.906, 0.38, 1)
+theme_override_colors/font_outline_color = Color(0.0941, 0.0784, 0.1451, 1)
+theme_override_constants/outline_size = 3
+theme_override_constants/line_spacing = -2
+theme_override_font_sizes/font_size = 8
+horizontal_alignment = 1
+vertical_alignment = 2
+
+[node name="StealthHud" type="Control" parent="DebugHud"]
+layout_mode = 3
+anchors_preset = 0
+offset_left = 296.0
+offset_top = 15.0
+offset_right = 318.0
+offset_bottom = 24.0
+mouse_filter = 2
+script = ExtResource("12_stealth")
+
+[node name="SendaHud" type="Control" parent="DebugHud"]
+layout_mode = 3
+anchors_preset = 0
+offset_left = 266.0
+offset_top = 15.0
+offset_right = 294.0
+offset_bottom = 24.0
+mouse_filter = 2
+script = ExtResource("15_senda")
+
+[node name="Transition" type="CanvasLayer" parent="."]
+layer = 10
+
+[node name="Fade" type="ColorRect" parent="Transition"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0.0941, 0.0784, 0.1451, 0)
+
+[node name="Crossing" parent="." instance=ExtResource("4_cross")]
+
+[node name="Dialogue" type="CanvasLayer" parent="."]
+process_mode = 3
+layer = 7
+
+[node name="DialogueBox" parent="Dialogue" instance=ExtResource("5_dialogue")]
+offset_left = 4.0
+offset_top = 128.0
+offset_right = 316.0
+offset_bottom = 176.0
+pause_tree = true
+
+[node name="Compass" parent="." instance=ExtResource("6_compass")]
+
+[node name="RiutashClock" parent="." instance=ExtResource("11_clock")]
+
+[node name="RegionMap" parent="." instance=ExtResource("7_map")]
+
+[node name="InventoryScreen" parent="." instance=ExtResource("10_inventory")]
+
+[node name="SleepScreen" parent="." instance=ExtResource("14_sleep")]
