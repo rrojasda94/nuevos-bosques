@@ -1,7 +1,8 @@
 extends GutTest
 ## IA del combate táctico en la cuadrícula (ia-de-combate.md, "Traducción a la cuadrícula"; PR T5):
 ## perfiles de enemigo (agresivo, enjambre, táctico, berserk), huida a baja vida, roles de los aliados
-## (Vendar, Cubrir, Remate, Animar), órdenes de grupo, determinismo y prueba de humo IA contra IA.
+## (Vendar, Cubrir, Remate, Animar), órdenes de grupo, determinismo y prueba de humo IA contra IA
+## (con los especiales de T6: Latigazo anunciado, ataque conjunto, sorpresa y emboscada).
 ## Bloque tactical fijo de test sin evasión (los golpes aciertan) y tirada de daño 0.
 
 const TACTICAL: Dictionary = {
@@ -266,10 +267,14 @@ func test_support_cheers_an_ally_about_to_hit() -> void:
 
 func test_hurt_ally_retreats_and_defends() -> void:
 	var b := _battle([_unit(&"atk", P, Vector2i(4, 2), { "role": "attacker", "hp": 3 }),
-		_unit(&"e", E, Vector2i(5, 2))])
+		_unit(&"e", E, Vector2i(5, 2)), _unit(&"adoc", P, Vector2i(0, 0), { "leader": true })])
 	var p: Dictionary = _plan(b, 0)
 	assert_eq(p.action, TacticalBattle.KIND_DEFEND)
 	assert_gt(TacticalRules.distance(p.move_to, Vector2i(5, 2)), 3, "se aleja del enemigo")
+	# El último en pie de su bando no se retira (no hay nadie delante): pelea.
+	var alone := _battle([_unit(&"atk", P, Vector2i(4, 2), { "role": "attacker", "hp": 3 }),
+		_unit(&"e", E, Vector2i(5, 2))])
+	assert_eq(_plan(alone, 0).action, TacticalBattle.KIND_ATTACK)
 
 
 # --- Órdenes de grupo ---------------------------------------------------------------------------
@@ -340,7 +345,7 @@ func _simulate(rng_seed: int, big: bool) -> Array:
 	cfg.attack = { "roll_min": -1, "roll_max": 2, "min_damage": 1 }
 	var per_side: int = 6 if big else 3
 	cfg.board = { "width": 14 if big else 8, "height": 10 if big else 6, "deploy_columns": 3 if big else 2,
-		"max_per_side": per_side, "ford_cost": 1 }
+		"max_per_side": per_side, "ford_cost": 1, "latigazo": [3, 2] if big else [3, 1] }
 	var board := TacticalBoard.from_config(cfg.board)
 	# Relieve suave y algún obstáculo en el centro.
 	for n: int in rng.randi_range(0, 6):
@@ -357,11 +362,15 @@ func _simulate(rng_seed: int, big: bool) -> Array:
 	var profile: String = profiles[rng.randi_range(0, profiles.size() - 1)]
 	for k: int in per_side:
 		var p: String = profile if rng.randf() < 0.7 else profiles[rng.randi_range(0, profiles.size() - 1)]
+		# Especiales (T6): el berserk con Latigazo en área anunciado; el enjambre, con ataque conjunto.
 		fighters.append({ "id": StringName("enemy_%d" % k), "side": E, "agi": rng.randi_range(3, 8),
 			"max_hp": rng.randi_range(12, 30), "atk": rng.randi_range(4, 8), "def": rng.randi_range(1, 3),
-			"ai": p, "role": roles[rng.randi_range(0, roles.size() - 1)] if p == "tactical" else "" })
+			"ai": p, "role": roles[rng.randi_range(0, roles.size() - 1)] if p == "tactical" else "",
+			"special_every": 3 if p == "berserk" else 0, "special_factor": 3.0, "special_area": p == "berserk",
+			"joint": p == "swarm" })
 	var b := TacticalBattle.new(cfg, board, fighters, rng_seed)
 	b.set_group_order(rng.randi_range(0, 2))
+	b.apply_opening(rng.randi_range(0, 2) as TacticalBattle.Opening)
 	var log: Array = []
 	for turn: int in 600:
 		if b.is_over():
@@ -411,4 +420,6 @@ func _legal(b: TacticalBattle, p: Dictionary) -> bool:
 			return b.can_cheer(t)
 		TacticalBattle.KIND_LEAVE:
 			return b.can_leave()
+		TacticalBattle.KIND_AREA:
+			return b.can_area_strike()
 	return false

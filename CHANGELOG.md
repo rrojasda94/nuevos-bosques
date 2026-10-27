@@ -57,6 +57,12 @@ Todos los cambios que nota el jugador. Formato [Keep a Changelog](https://keepac
   - Cuántos entran por bando depende del tamaño (de 1 a 6, el mismo número para los dos): lo típico es 2 en un sitio cerrado, 3 o 4 en uno medio y 6 en uno abierto.
   - Si tienes más aliados de los que caben, antes del combate eliges quiénes entran. Tú siempre entras, la elección viene marcada con la última que usaste y se confirma con "Al combate". Si caben todos, no se pregunta.
   - Quien no cabe (de los dos bandos) **espera en el borde** y entra como **refuerzo** cuando cae o se retira uno de los suyos. Arriba, junto a la línea de turnos, se ven apagados tras "Espera". Al entrar, aparece en su borde y se avisa con "Refuerzo".
+- Combate táctico, especiales (sigue apagado por defecto; textos y valores provisionales):
+  - **Latigazo múltiple** del Ofomni: el turno antes de su tercer ataque anuncia el área ("Prepara un Latigazo") y sus casillas se marcan en naranja: la línea de 3 justo delante (3 × 2 en el tablero grande). En su siguiente turno golpea ×3 a todos los que sigan dentro; salir del área lo esquiva y Defender lo reduce a la mitad. El Ofomni elige hacia dónde mirar para pillar a los más posibles, y tus aliados en Auto salen del área (o se defienden si no pueden).
+  - **Ataque conjunto** de los reparep: cuando 2, 3 o 4 están junto al mismo objetivo, golpean juntos con la suma de su ATQ (tu DEF se resta una sola vez); los que se suman pierden su siguiente turno.
+  - **Sorpresa**: si abordas con E a un Único que no te persigue (no te ha detectado: Paso quedo, una máscara o porque no miraba), tu bando juega primero y los enemigos empiezan de espaldas ("¡Sorpresa!").
+  - **Emboscada**: si te alcanza un cazador o Aledra de noche, al revés: ellos juegan primero, tú empiezas de espaldas y entra tu última party sin preguntar ("¡Emboscada!").
+  - Un aliado en Auto que se queda solo en su bando ya no huye con poca vida: pelea.
 
 ### Cambiado
 - La cordillera occidental del Valle del Sara (Urd Gumnavis) ya no tiene cumbres: son colinas y montañas que se cruzan a pie. El 3ro, el 5to y el 7mo del Sara nacen en fuentes de esa cordillera y bajan desde allí al Sara.

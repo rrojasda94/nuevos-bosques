@@ -394,5 +394,11 @@
   "tactical_party_title": "¿Quién entra? %d de %d",
   "tactical_party_adoc": "%s (siempre)",
   "tactical_party_confirm": "Al combate",
-  "tactical_party_hint": "E: marcar\nLos demás esperan en el borde."
+  "tactical_party_hint": "E: marcar\nLos demás esperan en el borde.",
+  "$provisional_tactical_t6": "Textos de los especiales del combate táctico (T6): provisionales, pendientes de revisión de narrative-writer.",
+  "tactical_area_warning": "Prepara un Latigazo",
+  "tactical_area": "Latigazo múltiple",
+  "tactical_joint": "Ataque conjunto",
+  "tactical_surprise": "¡Sorpresa!",
+  "tactical_ambush": "¡Emboscada!"
 }

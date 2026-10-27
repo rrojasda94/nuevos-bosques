@@ -15,7 +15,8 @@ extends RefCounted
 ##   estiman: casillas x max(proporción, min_walkable_ratio), porque el recorte se elige con al
 ##   menos un 70% transitable (T1). Con un tablero con relieve real, quota_for_board las cuenta.
 ## - Colocación: 2 columnas por bando en el pequeño y el medio, 3 en el grande (sizes.*.deploy_columns).
-## - Latigazo múltiple (T6): área por tamaño (sizes.*.latigazo: 3 x 1 o 3 x 2). Solo el dato.
+## - Latigazo múltiple (T6): área por tamaño (sizes.*.latigazo: 3 x 1 o 3 x 2); apply_plan la deja en
+##   board.latigazo y TacticalBattle la usa (area_size).
 
 const SMALL: StringName = &"small"
 const MEDIUM: StringName = &"medium"
@@ -134,7 +135,7 @@ static func quota_for_board(board: TacticalBoard, cfg: Dictionary) -> int:
 	return quota(roundi(board.walkable_ratio() * board.width * board.height), cfg)
 
 
-## Área del Latigazo múltiple del Ofomni en un tamaño: Vector2i(ancho, fondo) (T6 la ejecuta).
+## Área del Latigazo múltiple del Ofomni en un tamaño: Vector2i(ancho, fondo) (TacticalBattle).
 static func latigazo_area(size: StringName, cfg: Dictionary) -> Vector2i:
 	var a: Array = size_cfg(size, cfg).get("latigazo", [3, 1])
 	return Vector2i(int(a[0]), int(a[1]))
@@ -158,8 +159,9 @@ static func plan(tactical: Dictionary, ratio: float, biome: StringName = &"") ->
 	}
 
 
-## Bloque tactical con el tablero del plan (board: width, height, deploy_columns y max_per_side =
-## cupo; el resto, como estaba). Para TacticalBridge.build_battle y la escena.
+## Bloque tactical con el tablero del plan (board: width, height, deploy_columns, max_per_side =
+## cupo y latigazo = [ancho, fondo]; el resto, como estaba). Para TacticalBridge.build_battle y la
+## escena.
 static func apply_plan(tactical: Dictionary, arena_plan: Dictionary) -> Dictionary:
 	var out: Dictionary = tactical.duplicate(true)
 	var board: Dictionary = (out.get("board", {}) as Dictionary).duplicate()
@@ -167,6 +169,8 @@ static func apply_plan(tactical: Dictionary, arena_plan: Dictionary) -> Dictiona
 	board.height = int(arena_plan.height)
 	board.deploy_columns = int(arena_plan.deploy_columns)
 	board.max_per_side = int(arena_plan.quota)
+	var area: Vector2i = arena_plan.get("latigazo", Vector2i(3, 1))
+	board.latigazo = [area.x, area.y]
 	out.board = board
 	out.arena_plan = arena_plan
 	return out

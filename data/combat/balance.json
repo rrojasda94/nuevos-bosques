@@ -31,9 +31,9 @@
     "garelino": { "agi": 5, "ai": "tactical" }
   },
   "tactical": {
-    "$comment": "Combate táctico en cuadrícula (combate-tactico.md, ADR 0016; T1 a T4). enabled (T4): con true, los combates abren la escena táctica en vez de la de menú (false por defecto mientras se prueba). board: tablero de width x height casillas (el tamaño puede variar por combate: la escena lo lee del tablero y se desplaza si no cabe); cada bando se coloca en deploy_columns columnas de su lado (hasta max_per_side combatientes); ford_cost: coste de Mov de pisar un vado (1 = como el suelo). movement: Mov = mov_base + floor((AGI - mov_agi_ref) / mov_agi_div), entre mov_min y mov_max; Salto (niveles que se suben entre casillas vecinas) = jump_base + floor(AGI / jump_agi_div); se baja hasta Salto + drop_extra niveles; escaleras y rampas no gastan Salto. ct: cada tick CT += AGI; juega quien llega a threshold; CT inicial = AGI x start_per_agi; tras el turno, CT -= cost_move_and_act (movió y actuó), cost_single (solo una de las dos) o cost_wait (ninguna). Empate de CT: primero el bando del jugador; dentro de un bando, un orden fijo sorteado con la seed del combate. actions (T3): evasión de frente = evasion_base + evasion_per_agi x AGI (%), de flanco x flank_factor (redondeo hacia abajo), de espalda x back_factor; luego -height_evasion por nivel que el atacante esté por encima y +height_evasion por nivel por debajo (nunca negativa); precisión = 100 - evasión, entre hit_min y hit_max; daño = el de attack (como el combate por menú) + flank_bonus de flanco, back_bonus de espalda y height_bonus por nivel a favor; Vendar y Animar a support_range casillas o menos. Cuerpo a cuerpo: casilla vecina ortogonal con desnivel <= Salto. Defender (defend_factor), la tirada de daño (attack) y los roles (tactics.roles) se comparten con el combate por menú. arena (T1b): tamaño del tablero, cupo por bando y refuerzos (ver su $comment); el board de arriba es el de por defecto cuando no se elige tamaño. IA (T5, TacticalAI): usa los umbrales de tactics.ai (help_below, retreat_below, finish_below, swarm_flee_below, tactical_retreat_below) y el perfil de cada monstruo (monsters.*.ai). Provisionales: game-designer.",
+    "$comment": "Combate táctico en cuadrícula (combate-tactico.md, ADR 0016; T1 a T4). enabled (T4): con true, los combates abren la escena táctica en vez de la de menú (false por defecto mientras se prueba). board: tablero de width x height casillas (el tamaño puede variar por combate: la escena lo lee del tablero y se desplaza si no cabe); cada bando se coloca en deploy_columns columnas de su lado (hasta max_per_side combatientes); ford_cost: coste de Mov de pisar un vado (1 = como el suelo). movement: Mov = mov_base + floor((AGI - mov_agi_ref) / mov_agi_div), entre mov_min y mov_max; Salto (niveles que se suben entre casillas vecinas) = jump_base + floor(AGI / jump_agi_div); se baja hasta Salto + drop_extra niveles; escaleras y rampas no gastan Salto. ct: cada tick CT += AGI; juega quien llega a threshold; CT inicial = AGI x start_per_agi; tras el turno, CT -= cost_move_and_act (movió y actuó), cost_single (solo una de las dos) o cost_wait (ninguna). Empate de CT: primero el bando del jugador; dentro de un bando, un orden fijo sorteado con la seed del combate. actions (T3): evasión de frente = evasion_base + evasion_per_agi x AGI (%), de flanco x flank_factor (redondeo hacia abajo), de espalda x back_factor; luego -height_evasion por nivel que el atacante esté por encima y +height_evasion por nivel por debajo (nunca negativa); precisión = 100 - evasión, entre hit_min y hit_max; daño = el de attack (como el combate por menú) + flank_bonus de flanco, back_bonus de espalda y height_bonus por nivel a favor; Vendar y Animar a support_range casillas o menos. Cuerpo a cuerpo: casilla vecina ortogonal con desnivel <= Salto. Defender (defend_factor), la tirada de daño (attack) y los roles (tactics.roles) se comparten con el combate por menú. arena (T1b): tamaño del tablero, cupo por bando y refuerzos (ver su $comment); el board de arriba es el de por defecto cuando no se elige tamaño. IA (T5, TacticalAI): usa los umbrales de tactics.ai (help_below, retreat_below, finish_below, swarm_flee_below, tactical_retreat_below) y el perfil de cada monstruo (monsters.*.ai). Especiales (T6): board.latigazo es el área [ancho, fondo] del ataque en área anunciado (Latigazo múltiple; arena.sizes.*.latigazo la fija por tamaño de tablero): el monstruo con special_area la anuncia al terminar el turno anterior a su especial (cada special_every ataques) y en su siguiente turno golpea con special_factor a los que sigan dentro; actions.joint_max: cuántos atacan juntos como mucho en el ataque conjunto (monsters.*.joint_attack; suma de ATQ, DEF restada una vez; los compañeros gastan su siguiente turno, CT - cost_single). Sorpresa y emboscada: el bando que sorprende empieza con CT threshold y el otro por debajo, de espaldas. Provisionales: game-designer.",
     "enabled": false,
-    "board": { "width": 8, "height": 6, "deploy_columns": 2, "max_per_side": 3, "ford_cost": 1 },
+    "board": { "width": 8, "height": 6, "deploy_columns": 2, "max_per_side": 3, "ford_cost": 1, "latigazo": [3, 1] },
     "movement": { "mov_base": 3, "mov_agi_ref": 5, "mov_agi_div": 2, "mov_min": 2, "mov_max": 6, "jump_base": 1, "jump_agi_div": 7, "drop_extra": 1 },
     "ct": { "threshold": 100, "start_per_agi": 10, "cost_move_and_act": 100, "cost_single": 80, "cost_wait": 60, "reinforce_ct": 50 },
     "arena": {
@@ -54,7 +54,7 @@
       "biome_size": { "bosque_denso": "small", "tarca": "small", "cueva": "small", "bosque": "medium", "bosque_claro": "medium", "orilla": "medium", "desierto": "large", "pradera": "large", "sabana": "large", "villa": "large" },
       "biome_ratio": { "default": 0.65, "bosque_denso": 0.5, "tarca": 0.5, "cueva": 0.5, "bosque": 0.65, "bosque_claro": 0.7, "orilla": 0.7, "desierto": 0.9, "pradera": 0.9, "sabana": 0.85, "villa": 0.85 }
     },
-    "actions": { "evasion_base": 5, "evasion_per_agi": 2, "flank_factor": 0.5, "back_factor": 0.0, "height_evasion": 10, "hit_min": 5, "hit_max": 100, "flank_bonus": 1, "back_bonus": 2, "height_bonus": 1, "support_range": 2 }
+    "actions": { "evasion_base": 5, "evasion_per_agi": 2, "flank_factor": 0.5, "back_factor": 0.0, "height_evasion": 10, "hit_min": 5, "hit_max": 100, "flank_bonus": 1, "back_bonus": 2, "height_bonus": 1, "support_range": 2, "joint_max": 4 }
   },
   "stat_points": {
     "$comment": "Reparto de los puntos de stat (moralidad-y-progresion.md, ajuste #162): cada compra cuesta cost puntos y da gain al stat. atk y def: ATQ y DEF; vigor: PV máx. (los PV actuales suben lo mismo); luz: límite de Luz suelta (luz_max). Los puntos no gastados se guardan. Provisionales: game-designer.",
@@ -288,16 +288,19 @@
     "reward": { "fama": 1, "luz": 3 }
   },
   "monsters": {
-    "$comment": "Monstruos del mundo (monstruos.md, mision-ofomni.md), una entrada por id. Genéricos: vision_radius (casillas, Chebyshev: a qué distancia te ve), step_time (s por casilla: su velocidad) y engage_distance (casillas, Chebyshev: a qué distancia empieza el encuentro; 1 = adyacente, con diagonal). Reposo: idle_wander (casillas de ida y vuelta) e idle_step_time. leash: casillas máximas desde su puesto, y distancia del jugador a la que deja de perseguir. max_outside: casillas que puede salir de su chunk. engage_cooldown: segundos sin ver al jugador tras retroceder o huir (y al aparecer). retreat_cells: casillas que retrocede el jugador. stats: bloque de fórmulas según d. fatal_at: Momentos en que perder es game over. special_every y special_factor: ataque especial cada N ataques con multiplicador de daño (0 = sin especial). appeasable: acepta Luz u ofrendas para irse (por defecto true). hp_factor: multiplica sus PV (por defecto 1). texts: claves de data/text/sistema.json para narrar sus ataques (attack, warning, special, special_defended; en un grupo, group para el ataque conjunto y plural para nombrar al grupo, y attack lleva el nombre de quien ataca) y para explicar por qué no acepta pagos (offer_luz_blocked, ofrenda_blocked). IA de combate (ia-de-combate.md, bloque tactics): agi (Agilidad, orden de turnos), ai (perfil: aggressive, swarm, tactical o berserk), area_attack (su ataque conjunto golpea a toda la fila delantera) y special_area (su especial, también).",
+    "$comment": "Monstruos del mundo (monstruos.md, mision-ofomni.md), una entrada por id. Genéricos: vision_radius (casillas, Chebyshev: a qué distancia te ve), step_time (s por casilla: su velocidad) y engage_distance (casillas, Chebyshev: a qué distancia empieza el encuentro; 1 = adyacente, con diagonal). Mundo 2.0 (ADR 0014 §2, mundo-2.md §5): speed_px (px/s andando con su GridMover; 16 / step_time), idle_speed_px (px/s en reposo; 16 / idle_step_time) y engage_px (px entre los bordes de las cajas de los pies, Chebyshev, a los que empieza el encuentro; engage_distance × 16 − 6). Reposo: idle_wander (casillas de ida y vuelta) e idle_step_time. leash: casillas máximas desde su puesto, y distancia del jugador a la que deja de perseguir. max_outside: casillas que puede salir de su chunk. engage_cooldown: segundos sin ver al jugador tras retroceder o huir (y al aparecer). retreat_cells: casillas que retrocede el jugador. stats: bloque de fórmulas según d. fatal_at: Momentos en que perder es game over. special_every y special_factor: ataque especial cada N ataques con multiplicador de daño (0 = sin especial). appeasable: acepta Luz u ofrendas para irse (por defecto true). hp_factor: multiplica sus PV (por defecto 1). texts: claves de data/text/sistema.json para narrar sus ataques (attack, warning, special, special_defended; en un grupo, group para el ataque conjunto y plural para nombrar al grupo, y attack lleva el nombre de quien ataca) y para explicar por qué no acepta pagos (offer_luz_blocked, ofrenda_blocked). IA de combate (ia-de-combate.md, bloque tactics): agi (Agilidad, orden de turnos), ai (perfil: aggressive, swarm, tactical o berserk), area_attack (su ataque conjunto golpea a toda la fila delantera) y special_area (su especial, también).",
     "botarramas": {
       "$comment": "Guardianes de borde. post_depth: casillas desde la puerta del tramo hacia dentro de su Bosque.",
       "name_key": "monster_botarramas",
       "stats": "unico",
       "vision_radius": 10,
       "step_time": 0.24,
+      "speed_px": 67,
       "engage_distance": 1,
+      "engage_px": 10,
       "idle_wander": 3,
       "idle_step_time": 0.6,
+      "idle_speed_px": 27,
       "leash": 14,
       "max_outside": 4,
       "engage_cooldown": 3.0,
@@ -318,9 +321,12 @@
       "appeasable": false,
       "vision_radius": 8,
       "step_time": 0.3,
+      "speed_px": 53,
       "engage_distance": 2,
+      "engage_px": 26,
       "idle_wander": 2,
       "idle_step_time": 0.8,
+      "idle_speed_px": 20,
       "leash": 64,
       "max_outside": 0,
       "engage_cooldown": 3.0,
@@ -348,9 +354,12 @@
       "appeasable": true,
       "vision_radius": 10,
       "step_time": 0.2,
+      "speed_px": 80,
       "engage_distance": 2,
+      "engage_px": 26,
       "idle_wander": 2,
       "idle_step_time": 0.8,
+      "idle_speed_px": 20,
       "patrol_wander": 5,
       "leash": 64,
       "max_outside": 0,
@@ -385,10 +394,13 @@
       "xp_per_d": 1,
       "vision_radius": 7,
       "step_time": 0.26,
+      "speed_px": 62,
       "engage_distance": 1,
+      "engage_px": 10,
       "idle_wander": 2,
       "patrol_wander": 5,
       "idle_step_time": 0.5,
+      "idle_speed_px": 32,
       "leash": 64,
       "max_outside": 0,
       "engage_cooldown": 3.0,
@@ -409,10 +421,13 @@
       "appeasable": false,
       "vision_radius": 9,
       "step_time": 0.22,
+      "speed_px": 73,
       "engage_distance": 1,
+      "engage_px": 10,
       "idle_wander": 3,
       "patrol_wander": 6,
       "idle_step_time": 0.7,
+      "idle_speed_px": 23,
       "leash": 64,
       "max_outside": 0,
       "engage_cooldown": 3.0,
@@ -431,5 +446,9 @@
         "ofrenda_blocked": "battle_ofrenda_blocked_aledra"
       }
     }
+  },
+  "world_encounters": {
+    "$comment": "Encuentros del Mundo 2.0 (mundo-2.md §5, casos límite; propuesta de game-designer): un monstruo y el jugador en casillas de distinto nivel (uno arriba del risco, otro al pie) solo se encuentran si hay una escalera o rampa a level_link_cells casillas o menos (Chebyshev) de alguno de los dos.",
+    "level_link_cells": 2
   }
 }

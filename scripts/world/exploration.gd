@@ -119,7 +119,7 @@ func _ready() -> void:
 	_field.player = _player
 	_field.area_walkable = _area_walkable
 	_field.can_engage = func() -> bool: return _fade.color.a <= 0.0
-	_field.engaged.connect(_on_monster_engaged)
+	_field.engaged.connect(_on_field_engaged)
 	_field.is_hidden = _is_hidden
 	_field.spotted.connect(_on_monster_spotted)
 	EventBus.item_equipped.connect(_on_equipment_changed)
@@ -811,6 +811,14 @@ func _on_quest_battle_resolved(_quest_id: StringName, outcome: StringName) -> vo
 			_retreat_from(monster)
 
 
+## Un Único alcanza al Adoc: apertura del combate táctico (T6; emboscada si es un cazador o un Único
+## fatal ahora, TacticalBridge) y el encuentro.
+func _on_field_engaged(monster: OverworldMonster) -> void:
+	EventBus.battle_opening_set.emit(TacticalBridge.opening_for_engaged(monster.role,
+		AdventureRules.is_fatal(monster.cfg.get("fatal_at", []), GameState.clock_momento)))
+	_on_monster_engaged(monster)
+
+
 ## Encuentro con un monstruo: el Ofomni descarriado empieza el combate de misión; un Botarramas de
 ## frontera, el menú del borde del Bosque que guarda; uno de dentro del Bosque (perseguidor,
 ## cazador, ronda), su combate directo (de noche, Aledra avisa antes).
@@ -831,6 +839,9 @@ func _on_monster_engaged(monster: OverworldMonster) -> void:
 ## pasivo (su Bosque tiene el paso abierto) o uno que ronda, primero pregunta y avisa de que ofende
 ## al Bosque si tenía el paso abierto.
 func _confront(monster: OverworldMonster) -> void:
+	# T6: sorpresa si no le persigue (no ha detectado al Adoc); el independiente pide Luz antes.
+	EventBus.battle_opening_set.emit(TacticalBridge.opening_for_confront(
+		monster.state == MonsterSteering.State.CHASE or _field.is_independent(monster)))
 	var active: bool = _field.can_detect(monster)
 	if active and _field.is_independent(monster):
 		_ask_independent(monster)

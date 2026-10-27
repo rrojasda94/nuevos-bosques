@@ -20,6 +20,11 @@ extends CanvasLayer
 ##   guarda al confirmar: TacticalParty.save_choice). Quien no entra espera en su borde: la línea de
 ##   orden lo muestra a la derecha, apagado, tras la marca "Espera"; al entrar como refuerzo aparece
 ##   en su casilla con la línea corta "Refuerzo".
+## - Especiales (T6): las casillas de un área anunciada (Latigazo múltiple) se marcan en naranja
+##   hasta que golpea, con la línea corta del aviso al anunciarla; el golpe enseña el daño sobre cada
+##   uno de los que seguían dentro. El ataque conjunto de los reparep, con su línea corta.
+## - Apertura (T6): con sorpresa o emboscada (begin: `surprise`, `ambush`), la línea corta
+##   "¡Sorpresa!" o "¡Emboscada!" se queda OPENING_TIME antes del primer turno.
 ## Solo toca GameState para guardar la party elegida.
 
 signal finished(logic: BattleLogic)
@@ -40,6 +45,8 @@ const STEP_TIME: float = 0.09
 const FLOAT_TIME: float = 0.8
 const ACTION_LINE_TIME: float = 0.9
 const AI_THINK_TIME: float = 0.3
+## Lo que dura la línea de la apertura (sorpresa o emboscada) antes del primer turno.
+const OPENING_TIME: float = 1.4
 ## Barra de PV de cada unidad.
 const BAR_W: float = 12.0
 const BAR_H: float = 2.0
@@ -63,6 +70,9 @@ const COLOR_ROCK_DARK := Color("5a6988")
 const COLOR_BLOCKED := Color("3a4466")
 const COLOR_MISS := Color("fee761")
 const COLOR_HEAL := Color("63c74d")
+## Casillas de un área anunciada (relleno y borde).
+const COLOR_DANGER := Color(0.97, 0.46, 0.13, 0.5)
+const COLOR_DANGER_EDGE := Color("feae34")
 ## Orientación -> fila de la hoja del Adoc.
 const FACING_DIRS: Array[Vector2i] = [Vector2i.UP, Vector2i.RIGHT, Vector2i.DOWN, Vector2i.LEFT]
 
@@ -86,6 +96,7 @@ var _menu_ids: Array = []
 var party_screen: TacticalPartyScreen
 var _cfg: Dictionary = {}
 var _board_override: TacticalBoard
+var _opening: TacticalBattle.Opening = TacticalBattle.Opening.NORMAL
 
 @onready var _clip: Control = $Root/BoardClip
 @onready var _board: Node2D = $Root/BoardClip/Board
@@ -116,10 +127,13 @@ func _ready() -> void:
 ## Empieza el combate desde el BattleLogic que prepara Crossing (o la demo). `cfg` y `board`
 ## permiten elegir el tamaño y el cupo (TacticalArena, T1b) o probar otros en la demo; por defecto,
 ## los de balance.json y un tablero llano. Antes, la elección de party si hace falta; en una
-## emboscada del enemigo (`ambush`, T6) entra la última party guardada sin preguntar.
+## emboscada del enemigo (`ambush`, T6) entra la última party guardada sin preguntar y los enemigos
+## juegan primero; con `surprise` (emboscada tuya), tu bando juega primero.
 func begin(battle_logic: BattleLogic, style: Dictionary, kind: UnicoArt.Kind, ally_clothes: Array = [],
-		cfg: Dictionary = {}, board: TacticalBoard = null, ambush: bool = false) -> void:
+		cfg: Dictionary = {}, board: TacticalBoard = null, ambush: bool = false, surprise: bool = false) -> void:
 	logic = battle_logic
+	_opening = TacticalBattle.Opening.AMBUSH if ambush else (TacticalBattle.Opening.SURPRISE if surprise
+		else TacticalBattle.Opening.NORMAL)
 	_style = style
 	_kind = kind
 	_ally_clothes = ally_clothes
@@ -144,10 +158,26 @@ func _on_party_confirmed(chosen: Array[int]) -> void:
 
 
 func _start(chosen: Array[int]) -> void:
-	battle = TacticalBridge.build_battle(logic, _cfg, _board_override, chosen)
+	battle = TacticalBridge.build_battle(logic, _cfg, _board_override, chosen, _opening)
 	flow = TacticalTurnFlow.new(battle)
 	_build_units()
 	_tiles.queue_redraw()
+	var key: StringName = battle.opening_text_key()
+	if key != &"":
+		_busy = true
+		_follow = battle.units[0].cell
+		_refresh()
+		_show_action_line(Texts.get_text(String(key)), OPENING_TIME)
+		# Un tween del propio nodo: si la escena se libera antes, no sigue.
+		var t := create_tween()
+		t.tween_interval(OPENING_TIME)
+		t.tween_callback(_after_opening)
+		return
+	_next_turn()
+
+
+func _after_opening() -> void:
+	_busy = false
 	_next_turn()
 
 
@@ -305,6 +335,10 @@ func _run_ai(i: int) -> void:
 		return
 	TacticalAI.finish_turn(battle)
 	_update_unit(i)
+	if battle.last_announce == i:
+		_show_action_line(Texts.get_text(String(TacticalBattle.TEXT_AREA_WARNING)))
+		_refresh()
+		await get_tree().create_timer(ACTION_LINE_TIME).timeout
 	_busy = false
 	_next_turn()
 
@@ -377,6 +411,25 @@ func _show_result(res: Dictionary) -> void:
 			t.tween_property(node, "modulate:a", 0.0, 0.4)
 			await t.finished
 			_place_unit(receiver)
+	elif kind == TacticalBattle.KIND_AREA:
+		_refresh()
+		var hits: Array = res.get("hits", [])
+		if hits.is_empty():
+			Sfx.play(&"menu_move")
+		for h: Dictionary in hits:
+			_float_text(int(h.receiver), str(int(h.damage)), Color.WHITE)
+			_flash(_views[int(h.receiver)].sprite)
+			_update_unit(int(h.receiver))
+		if not hits.is_empty():
+			Sfx.play(&"hit")
+		await get_tree().create_timer(FLOAT_TIME).timeout
+		for h: Dictionary in hits:
+			if h.down:
+				var node: Node2D = _views[int(h.receiver)].node
+				var t := node.create_tween()
+				t.tween_property(node, "modulate:a", 0.0, 0.4)
+				await t.finished
+				_place_unit(int(h.receiver))
 	elif kind == TacticalBattle.KIND_LEAVE:
 		var gone: Node2D = _views[int(res.target)].node
 		var fade := gone.create_tween()
@@ -408,11 +461,11 @@ func _float_text(i: int, text: String, color: Color) -> void:
 	t.tween_callback(label.queue_free)
 
 
-func _show_action_line(text: String) -> void:
+func _show_action_line(text: String, time: float = ACTION_LINE_TIME) -> void:
 	_action_label.text = text
 	_action_box.visible = true
 	var t := _action_box.create_tween()
-	t.tween_interval(ACTION_LINE_TIME)
+	t.tween_interval(time)
 	t.tween_callback(func() -> void: _action_box.visible = false)
 
 
@@ -714,6 +767,7 @@ func _draw_tiles() -> void:
 		mark_color = COLOR_TARGET if flow.pending == TacticalTurnFlow.ACT_ATTACK else COLOR_SUPPORT
 	for c: Vector2i in flow.highlight:
 		marks[c] = true
+	var danger: Dictionary = announced_cells()
 	for y in b.height:
 		for x in b.width:
 			var c := Vector2i(x, y)
@@ -742,9 +796,24 @@ func _draw_tiles() -> void:
 			if y > 0 and b.level_at(c + Vector2i.UP) > level:
 				_tiles.draw_rect(Rect2(top, Vector2(TILE, 2)), base.darkened(0.3))
 			_draw_cell_detail(b, c, top, base)
+			if danger.has(c):
+				_tiles.draw_rect(rect, COLOR_DANGER)
 			if marks.has(c):
 				_tiles.draw_rect(rect.grow(-1), mark_color)
 				_tiles.draw_rect(rect.grow(-1), mark_color.lightened(0.4), false)
+
+
+## Casillas de las áreas anunciadas (de cualquier bando): { Vector2i: quién la anunció }.
+func announced_cells() -> Dictionary:
+	var out: Dictionary = {}
+	if battle == null:
+		return out
+	for i in battle.units.size():
+		var u: Dictionary = battle.units[i]
+		if u.alive:
+			for c: Variant in u.announce:
+				out[c] = i
+	return out
 
 
 func _is_blocked(b: TacticalBoard, c: Vector2i) -> bool:
@@ -785,6 +854,11 @@ func _draw_overlay() -> void:
 		var foot: Vector2 = _foot_of(u.cell)
 		if (_views[i].textures as Array).size() != 4 or i == battle.active:
 			_draw_facing(foot, int(u.facing), i == battle.active)
+	# El borde de las áreas anunciadas, por encima de las unidades (la casilla puede quedar tapada).
+	for c: Variant in announced_cells():
+		var cell: Vector2i = c
+		var r := Rect2(TacticalTurnFlow.cell_to_px(cell, battle.board.level_at(cell)), Vector2(TILE, TILE))
+		_overlay.draw_rect(r.grow(-1), COLOR_DANGER_EDGE, false)
 	if battle.active != TacticalBattle.NONE and not _ended:
 		var head: Vector2 = _foot_of(battle.units[battle.active].cell) - Vector2(0, float(_views[battle.active].height) + 1.0)
 		_overlay.draw_colored_polygon(PackedVector2Array([head + Vector2(-3, -3), head + Vector2(3, -3), head + Vector2(0, 0)]), COLOR_CURSOR)
