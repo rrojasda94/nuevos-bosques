@@ -400,5 +400,12 @@
   "tactical_area": "Latigazo múltiple",
   "tactical_joint": "Ataque conjunto",
   "tactical_surprise": "¡Sorpresa!",
-  "tactical_ambush": "¡Emboscada!"
+  "tactical_ambush": "¡Emboscada!",
+  "save_old_world": "Esta partida es de una versión anterior del mundo y no se puede continuar. Empieza una partida nueva.",
+  "save_done": "Partida guardada.",
+  "save_failed": "No se ha podido guardar la partida.",
+  "load_done": "Partida cargada.",
+  "load_none": "No hay ninguna partida guardada.",
+  "load_failed": "No se ha podido cargar la partida.",
+  "sicabi_mouth": "La boca de una sicabi. Aún no se puede entrar."
 }

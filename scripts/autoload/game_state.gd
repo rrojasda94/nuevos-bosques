@@ -30,8 +30,18 @@ extends Node
 ## 0, fiel, el mismo nivel con los stats automáticos nuevos y todos los puntos de su nivel por
 ## repartir (AdocGrowth.migrate_points). v19: última party elegida para el combate táctico
 ## (last_party, combate-tactico.md, T1b); al migrar, ninguna (la primera vez se preselecciona la
-## party más grande que cabe). Las versiones anteriores se cargan con valores por defecto.
-const SAVE_VERSION: int = 19
+## party más grande que cabe). v20: Mundo 2.0 (ADR 0014 §7 "Guardado"): chunks de 80×80 con
+## player_cell 0–79, generator_version (GENERATOR_VERSION), world_key (clave de la caché del mundo,
+## en hexadecimal) y player_facing. Las partidas anteriores a la v20 NO se cargan: sus
+## coordenadas, Bosques, frutales, refugios y monstruos son del mundo viejo (SaveManager devuelve
+## ERR_SAVE_OLD_WORLD). Las migraciones de v1 a v19 siguen en from_dict por si una futura versión
+## del mundo conserva el formato, pero ya no se usan al cargar.
+const SAVE_VERSION: int = 20
+## Primera versión del guardado con el Mundo 2.0: las anteriores se rechazan.
+const WORLD_2_SAVE_VERSION: int = 20
+## Versión del mundo (ADR 0014 §7): 2 = Mundo 2.0. Si cambia, las partidas guardadas con otra se
+## rechazan como de un mundo anterior.
+const GENERATOR_VERSION: int = 2
 ## Migración a v9: el Ofomni de la misión pasó de "ofomni" a "ofomni_descarriado" (y su etiqueta
 ## de brújula, de "Ofomni" a "Ofomni descarriado").
 const LEGACY_OFOMNI_ID: String = "ofomni"
@@ -56,8 +66,15 @@ var chunk: Dictionary = {}
 ## Chunk donde está el jugador, en coordenadas de la región ((0, 0) = esquina noroeste).
 ## (-1, -1) = el chunk inicial de la región (start_chunk en su JSON).
 var chunk_coord: Vector2i = Vector2i(-1, -1)
-## Casilla del jugador dentro del chunk. (-1, -1) = aparecer en el centro.
+## Casilla de los pies del jugador dentro del chunk (0–79, ADR 0014 §1). (-1, -1) = aparecer en
+## la villa natal.
 var player_cell: Vector2i = Vector2i(-1, -1)
+## Hacia dónde mira el jugador (4 direcciones). Se guarda (ADR 0014 §2).
+var player_facing: Vector2i = Vector2i.DOWN
+## Clave del mundo (WorldCache.key_to_name de la clave de la caché): la fija la exploración al
+## construir el mundo. "" = sin mundo. SaveManager la usa para limpiar las cachés que no usa
+## ningún slot. Va en hexadecimal porque el JSON no guarda enteros de 64 bits.
+var world_key: String = ""
 ## Adoc (ADR 0009): Luz y PV actuales. Valores iniciales en data/combat/balance.json.
 var luz: int = 0
 var hp: int = 0
@@ -174,6 +191,8 @@ func new_game(new_seed: int = 0, new_region: StringName = &"valle_del_sara") -> 
 	chunk = {}
 	chunk_coord = Vector2i(-1, -1)
 	player_cell = Vector2i(-1, -1)
+	player_facing = Vector2i.DOWN
+	world_key = ""
 	xp = 0
 	level = 1
 	senda = 0
@@ -224,6 +243,8 @@ func new_game(new_seed: int = 0, new_region: StringName = &"valle_del_sara") -> 
 func to_dict() -> Dictionary:
 	return {
 		"save_version": SAVE_VERSION,
+		"generator_version": GENERATOR_VERSION,
+		"world_key": world_key,
 		"seed": seed_value,
 		"day": day,
 		"clock_momento": String(clock_momento),
@@ -232,6 +253,7 @@ func to_dict() -> Dictionary:
 		"chunk": chunk,
 		"chunk_coord": [chunk_coord.x, chunk_coord.y],
 		"player_cell": [player_cell.x, player_cell.y],
+		"player_facing": [player_facing.x, player_facing.y],
 		"luz": luz,
 		"hp": hp,
 		"riutash_count": riutash_count,
@@ -293,6 +315,12 @@ func from_dict(data: Dictionary) -> void:
 	chunk = data.get("chunk", {})
 	chunk_coord = _to_vector2i(data.get("chunk_coord", [-1, -1]), Vector2i(-1, -1))
 	player_cell = _to_vector2i(data.get("player_cell", [-1, -1]), Vector2i(-1, -1))
+	if player_cell.x < -1 or player_cell.y < -1 or player_cell.x >= WorldCoords.CHUNK or player_cell.y >= WorldCoords.CHUNK:
+		player_cell = Vector2i(-1, -1)
+	player_facing = _to_vector2i(data.get("player_facing", [0, 1]), Vector2i.DOWN)
+	if not [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN].has(player_facing):
+		player_facing = Vector2i.DOWN
+	world_key = str(data.get("world_key", ""))
 	# Antes que los PV y la Luz: su máximo depende del nivel y de los puntos gastados. Sin nivel (v6
 	# o anterior), el de su XP.
 	xp = maxi(0, int(data.get("xp", 0)))
@@ -543,6 +571,13 @@ static func _latest_paid(until_by_id: Dictionary) -> int:
 			best = id
 			best_until = until
 	return best
+
+
+## Los datos de un guardado son de un mundo anterior al Mundo 2.0 (o de otra versión del mundo) y
+## no se pueden continuar (ADR 0014 §7).
+static func is_old_world(data: Dictionary) -> bool:
+	return int(data.get("save_version", 0)) < WORLD_2_SAVE_VERSION \
+		or int(data.get("generator_version", 0)) != GENERATOR_VERSION
 
 
 static func _to_vector2i(value: Variant, fallback: Vector2i) -> Vector2i:

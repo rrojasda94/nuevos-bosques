@@ -11,8 +11,9 @@ extends Node2D
 ## Crea el RegionPlan, la WorldCache y la WorldPregen (anillo inicial antes de soltar al jugador)
 ## y delega el streaming en WorldStreamer, al que llama una vez por fotograma.
 ##
-## No toca GameState (solo lee la seed si no se da otra). La exploración nueva (M17) la
-## instanciará en lugar de la vieja y le conectará `cell_changed` del jugador a las reglas.
+## No toca GameState (solo lee la seed si no se da otra). En el juego la usa WorldExploration
+## (M17) con `standalone = false`: build_world(), teleport() y las reglas colgadas de
+## `cell_changed` del jugador.
 ## Arranque: godot --path . res://scenes/world/world_view.tscn [-- --seed=N --chunk=x,y --cell=x,y --capture=<png>]
 ## (`--chunk` aparece en el hub de ese chunk en vez de en la villa natal; `--cell`, en esa
 ## casilla global.)
@@ -22,6 +23,8 @@ signal world_ready
 
 const DEFAULT_SEED: int = 42
 const LOADING_SCENE: PackedScene = preload("res://scenes/ui/world_loading.tscn")
+## Capa de la pantalla "Creando el mundo…" en el juego.
+const LOADING_LAYER: int = 11
 const CAPTURE_SCALE: int = 3
 const CAPTURE_WALK_FRAMES: int = 45
 
@@ -41,6 +44,12 @@ var pregen: WorldPregen
 var painter: WorldPainter
 var streamer: WorldStreamer
 var is_ready: bool = false
+## Clave del mundo (WorldCache.key_for) del plan actual, con o sin caché en disco. 0 sin mundo.
+var world_key: int = 0
+## false: la exploración del juego (WorldExploration) la controla: no lee la línea de órdenes, no
+## pone los ganchos de prueba (monstruos, E, letreros, `--borders`) y arranca con build_world() y
+## teleport(). true: escena de prueba de M12 (`godot res://scenes/world/world_view.tscn`).
+@export var standalone: bool = true
 ## Monstruos del Mundo 2.0 (gancho de M15) y límite de Bosque (null sin `--borders`).
 var monsters: MonsterField
 var border: BosqueBorder
@@ -63,14 +72,52 @@ var _notice: String = ""
 
 func _ready() -> void:
 	player.input_enabled = false
-	_setup.call_deferred()
+	_label.visible = standalone
+	if standalone:
+		_setup.call_deferred()
 
 
+## Escena de prueba (standalone): mundo de la línea de órdenes, ganchos de M14 y M15 y captura.
 func _setup() -> void:
 	var seed_v: int = _arg_int("--seed=", world_seed)
 	if seed_v == 0:
 		seed_v = GameState.seed_value if GameState.seed_value != 0 else DEFAULT_SEED
+	await build_world(seed_v)
+	var start_chunk: Vector2i = _arg_vec("--chunk=", plan.home_chunk)
+	start_chunk = WorldCoords.world_cell_to_chunk(_arg_vec("--cell=", WorldCoords.to_world_cell(start_chunk, Vector2i.ZERO)))
+	var start: WorldChunk = pregen.get_chunk(start_chunk)
+	player.is_blocked = streamer.is_blocked
+	teleport(_arg_vec("--cell=", WorldCoords.to_world_cell(start_chunk, start.hub)))
+	_setup_monsters()
+	player.input_enabled = true
+	_last_cell = player.mover.cell
+	player.cell_changed.connect(_on_cell_changed)
+	world_ready.emit()
+	var capture_path: String = _arg_string("--capture=")
+	if not capture_path.is_empty():
+		_capture(capture_path)
+
+
+## Construye el mundo de `seed_v` (RegionPlan, WorldCache, WorldPregen) con la pantalla "Creando
+## el mundo…" hasta que el anillo inicial está listo, y prepara el WorldStreamer. Si ya está el
+## mismo mundo (misma seed y región), no hace nada. No coloca al jugador: después, teleport().
+## Corrutina: `await build_world(seed)`.
+func build_world(seed_v: int) -> void:
+	if streamer != null and plan != null and plan.seed_value == seed_v and plan.region_id == region_id:
+		return
+	is_ready = false
+	_teardown()
+	var screen: CanvasLayer = LOADING_SCENE.instantiate()
+	# Encima del HUD y del fundido de la exploración (capa 10), debajo de la pantalla de dormir.
+	screen.layer = LOADING_LAYER
+	add_child(screen)
+	# Que la pantalla se vea antes de la pasada de región (bloquea el hilo principal un momento).
+	await get_tree().process_frame
+	await get_tree().process_frame
 	plan = RegionPlan.for_region(seed_v, region_id)
+	# Los Bosques de todo el juego (BosqueStates, AdventureRules, MapLogic, cruce) salen de este plan.
+	MapLogic.set_region_plan(plan)
+	world_key = WorldCache.for_plan(plan, builder_version).world_key
 	if use_cache:
 		cache = WorldCache.for_plan(plan, builder_version)
 		var err: Error = cache.prepare(plan)
@@ -79,8 +126,6 @@ func _setup() -> void:
 			cache = null
 	pregen = WorldPregen.new(plan, builder, cache)
 	pregen.start()
-	var screen: Node = LOADING_SCENE.instantiate()
-	add_child(screen)
 	screen.track(pregen)
 	await get_tree().process_frame
 	var home_style: Dictionary = {}
@@ -96,29 +141,35 @@ func _setup() -> void:
 		await screen.finished
 	screen.queue_free()
 	streamer = WorldStreamer.new(plan, pregen, cache, painter, ground, overlay, objects)
-	var start_chunk: Vector2i = _arg_vec("--chunk=", plan.home_chunk)
-	start_chunk = WorldCoords.world_cell_to_chunk(_arg_vec("--cell=", WorldCoords.to_world_cell(start_chunk, Vector2i.ZERO)))
-	var start: WorldChunk = pregen.get_chunk(start_chunk)
-	player.place_at_cell(_arg_vec("--cell=", WorldCoords.to_world_cell(start_chunk, start.hub)))
-	player.is_blocked = streamer.is_blocked
-	_setup_monsters()
 	var size_px: Vector2i = plan.size_chunks * WorldCoords.CHUNK_PX
 	camera.limit_left = 0
 	camera.limit_top = 0
 	camera.limit_right = size_px.x
 	camera.limit_bottom = size_px.y
+
+
+## Pone los pies del jugador en el centro de la casilla global `world_cell` y monta de golpe lo
+## que se ve desde ahí (aparición, carga, reaparición). Sin cell_changed.
+func teleport(world_cell: Vector2i) -> void:
+	player.place_at_cell(world_cell)
 	camera.reset_smoothing()
 	camera.force_update_scroll()
 	streamer.mount_all(player.position, view_rect())
 	_last_pos = player.position
-	player.input_enabled = true
-	_last_cell = player.mover.cell
-	player.cell_changed.connect(_on_cell_changed)
 	is_ready = true
-	world_ready.emit()
-	var capture_path: String = _arg_string("--capture=")
-	if not capture_path.is_empty():
-		_capture(capture_path)
+
+
+## Suelta el mundo actual (otra seed: partida nueva o cargada de otro mundo).
+func _teardown() -> void:
+	if streamer != null:
+		streamer.dispose()
+		streamer = null
+	if pregen != null:
+		pregen.stop()
+		pregen = null
+	cache = null
+	plan = null
+	world_key = 0
 
 
 # ponytail: gancho de M15 para ver los monstruos del Mundo 2.0 hasta que M17 monte la exploración
@@ -154,6 +205,8 @@ func _exit_tree() -> void:
 		streamer.stop()
 	if pregen != null:
 		pregen.stop()
+	if plan != null and MapLogic.region_plan() == plan:
+		MapLogic.set_region_plan(null)
 
 
 ## Rectángulo del mundo que ve la cámara, en píxeles.
@@ -194,7 +247,7 @@ func _on_cell_changed(world_cell: Vector2i) -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if is_ready and event.is_action_pressed(&"interact"):
+	if standalone and is_ready and event.is_action_pressed(&"interact"):
 		get_viewport().set_input_as_handled()
 		_notice = interact_text()
 
