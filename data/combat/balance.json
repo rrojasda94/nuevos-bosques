@@ -240,9 +240,11 @@
     }
   },
   "stealth": {
-    "$comment": "Sigilo (sigilo-y-robo.md, propuestas provisionales de #131 y #132). La máscara y el talismán equipados suman su camouflage (items.json: casillas que se restan al vision_radius de los Únicos), como mucho camouflage_max; un arma en la mano principal lo anula. Colarse: con camuflaje y sin arma, si la visión de los Botarramas del Bosque vecino (con su hostilidad y su estado) queda en sneak_max_vision o menos, se cruza su frontera cerrada sin pagar y el Bosque queda colado (sin cazadores mientras no te vean, sin derecho a fruto). Si un Único te ve igualmente (a su engage_distance), el camuflaje se rompe exposed_seconds de reloj y el Único tarda seen_grace_seconds en echarse encima. Bosque enojado: con camuflaje alto (visión de un Botarramas base <= hidden_vision) o con velocidad, sus cazadores tardan bosque_states.enojado.stealth_hunt_factor veces más. speed_bonus_max: tope de la velocidad extra de los talismanes de viaje (fracción). Provisionales: game-designer.",
+    "$comment": "Sigilo (sigilo-y-robo.md, propuestas provisionales de #131 y #132). La máscara y el talismán equipados suman su camouflage (items.json: casillas que se restan al vision_radius de los Únicos), como mucho camouflage_max; un arma en la mano principal lo anula. Colarse (ajustes-playtest-0.5.md, punto 3; ADR 0017): al tocar la frontera cerrada, si ningún Botarramas ni Único del Bosque destino te ve (Stealth.detects), se cruza sin menú y el Bosque queda colado (sin cazadores mientras no te vean, sin derecho a fruto). Te ven siempre a close_detect casillas o menos (Chebyshev); más lejos, a su visión menos tu camuflaje; sin nada que oculte (camuflaje 0) o corriendo (run_breaks_camouflage), a su visión × unmasked_vision_factor. El arma enfundada resta su sheathed_camo_penalty (items.json) al camuflaje; en la mano, no deja colarse. Si un Único te ve igualmente (a su engage_distance), el camuflaje se rompe exposed_seconds de reloj y el Único tarda seen_grace_seconds en echarse encima. Bosque enojado: con camuflaje alto (visión de un Botarramas base <= hidden_vision) o con velocidad, sus cazadores tardan bosque_states.enojado.stealth_hunt_factor veces más. speed_bonus_max: tope de la velocidad extra de los talismanes de viaje (fracción). Provisionales: game-designer.",
     "camouflage_max": 14,
-    "sneak_max_vision": 1,
+    "close_detect": 2,
+    "unmasked_vision_factor": 2.0,
+    "run_breaks_camouflage": true,
     "hidden_vision": 2,
     "exposed_seconds": 20.0,
     "seen_grace_seconds": 0.8,

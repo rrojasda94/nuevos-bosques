@@ -293,8 +293,10 @@ func _on_quest_battle_requested(quest_id: StringName) -> void:
 	_quest_id = quest_id
 	_chase = false
 	get_tree().paused = true
-	var logic: BattleLogic = AdventureRules.start_quest_battle(quest_id, int(q.ofomni_d))
-	_open_battle(logic, _map.styles[maxi(0, int(q.ofomni_bosque))], UnicoArt.Kind.EYES, take_opening())
+	var opening: int = take_opening()
+	var logic: BattleLogic = AdventureRules.start_quest_battle(quest_id, int(q.ofomni_d),
+		opening == TacticalBattle.Opening.AMBUSH)
+	_open_battle(logic, _map.styles[maxi(0, int(q.ofomni_bosque))], UnicoArt.Kind.EYES, opening)
 
 
 ## Combate directo contra un Único `monster_id` del Bosque `bosque_id`: a la d del Bosque (como
@@ -326,7 +328,9 @@ func _on_group_battle_requested(bosque_id: int, monster_id: StringName, count: i
 			_ally_kinds.append(e.get("clothes", {}))
 	var opening: int = take_opening() if encounter_id == "" else TacticalBattle.Opening.NORMAL
 	_next_opening = TacticalBattle.Opening.NORMAL
-	var logic: BattleLogic = AdventureRules.start_battle(bosque_id, _distance, monster_id, count, allies)
+	# El arma se desenfunda sola salvo en una emboscada del enemigo (AdventureRules.drawn_at_start).
+	var logic: BattleLogic = AdventureRules.start_battle(bosque_id, _distance, monster_id, count, allies,
+		opening == TacticalBattle.Opening.AMBUSH)
 	_open_battle(logic, _map.styles[bosque_id], UnicoArt.kind_for(monster_id), opening)
 
 

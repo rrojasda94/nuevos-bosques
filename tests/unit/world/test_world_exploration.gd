@@ -114,3 +114,23 @@ func test_old_world_save_is_rejected() -> void:
 	assert_eq(_expl.quick_load(), SaveManager.ERR_SAVE_OLD_WORLD)
 	assert_true(_expl.started, "la partida en curso sigue")
 	get_tree().paused = false
+
+
+func test_p3_border_asks_stealth_who_sees_you() -> void:
+	assert_true(_expl._border.decide.is_valid(), "BosqueBorder pregunta a Stealth.border_outcome")
+	var closed: int = -1
+	for b: int in _expl.bosques.styles.size():
+		if closed < 0 and not AdventureRules.is_passable(b, _expl.home_bosque):
+			closed = b
+	assert_gte(closed, 0)
+	var out: Dictionary = _expl._border_outcome(closed, _expl.player.mover.cell)
+	assert_true([Stealth.CROSS_MENU, Stealth.CROSS_SEEN, Stealth.CROSS_SNEAK].has(out.kind))
+	var before_main: String = str(GameState.equipped.main_hand)
+	GameState.equipped.main_hand = "lanza_de_adoc"
+	GameState.weapon_drawn = true
+	assert_eq(_expl._border_outcome(closed, _expl.player.mover.cell).kind, Stealth.CROSS_MENU, "con la lanza en la mano, el menú")
+	GameState.equipped.main_hand = before_main
+	GameState.weapon_drawn = false
+	_expl._on_border_sneaked(closed, [] as Array[StringName])
+	assert_true(_expl._entry_notices.has(Texts.get_text("sneak_entered")), "avisa al entrar")
+	_expl._entry_notices.clear()

@@ -57,10 +57,10 @@ vertical_alignment = 2
 [node name="StealthHud" type="Control" parent="DebugHud"]
 layout_mode = 3
 anchors_preset = 0
-offset_left = 296.0
-offset_top = 15.0
+offset_left = 287.0
+offset_top = 26.0
 offset_right = 318.0
-offset_bottom = 24.0
+offset_bottom = 35.0
 mouse_filter = 2
 script = ExtResource("12_stealth")
 

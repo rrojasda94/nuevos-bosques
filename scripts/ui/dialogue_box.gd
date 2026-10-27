@@ -74,8 +74,9 @@ func show_static(line: Variant) -> void:
 
 
 ## Pregunta con opciones. `line`: el texto de la pregunta; `options`: textos de las opciones;
-## `enabled` (opcional): false = la opción se ve desactivada y no se puede elegir.
-func ask(line: Variant, options: Array, enabled_options: Array = []) -> void:
+## `enabled` (opcional): false = la opción se ve desactivada y no se puede elegir. `cursor`
+## (opcional): la opción marcada al abrir (p. ej. "Dejarlo" en la confirmación de un robo).
+func ask(line: Variant, options: Array, enabled_options: Array = [], cursor: int = 0) -> void:
 	_open()
 	show_static(line)
 	var texts: Array[String] = []
@@ -84,6 +85,8 @@ func ask(line: Variant, options: Array, enabled_options: Array = []) -> void:
 		texts.append(str(options[i]))
 		enabled.append(i >= enabled_options.size() or bool(enabled_options[i]))
 	_menu.set_options(texts, enabled)
+	if cursor > 0:
+		_menu.set_cursor(cursor)
 	# Ancho mínimo CHOICE_WIDTH; más si alguna opción no cabe (p. ej. "Tomarlo igualmente").
 	var width: float = CHOICE_WIDTH
 	for label: Node in _menu.get_children():

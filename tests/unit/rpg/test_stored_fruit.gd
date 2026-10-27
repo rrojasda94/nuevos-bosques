@@ -139,4 +139,5 @@ func _arm_spear() -> void:
 	for i in GameState.bag.size():
 		if InventoryLogic.id_at(GameState.bag, i) == &"lanza_de_adoc":
 			AdventureRules.equip_from_bag(i)
+			GameState.weapon_drawn = true
 			return

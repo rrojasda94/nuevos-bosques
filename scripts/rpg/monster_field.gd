@@ -122,6 +122,7 @@ func _ready() -> void:
 	EventBus.item_equipped.connect(func(_s: StringName, _id: StringName) -> void: refresh_vision())
 	EventBus.item_unequipped.connect(func(_s: StringName, _id: StringName) -> void: refresh_vision())
 	EventBus.item_broken.connect(func(_id: StringName) -> void: refresh_vision())
+	EventBus.weapon_toggled.connect(func(_drawn: bool) -> void: refresh_vision())
 
 
 func clear() -> void:
@@ -650,6 +651,36 @@ func is_watched(bosque_id: int, cell: Vector2i) -> bool:
 		if MonsterSteering.chebyshev(m.cell, cell) <= reach:
 			return true
 	return false
+
+
+## Vigías de la frontera del Bosque `bosque_id` para colarse (Stealth.border_outcome,
+## ajustes-playtest-0.5.md, punto 3): sus Botarramas y sus Únicos despiertos en el mundo cargado
+## (los que rondan, los cazadores y los Ofomni perseguidores) que pueden detectar al Adoc, cada uno
+## como { cell, vision (sin el camuflaje: watcher_vision), guardian, monster }.
+func border_watchers(bosque_id: int) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	if bosque_id < 0:
+		return out
+	for m: OverworldMonster in _monsters:
+		if m.bosque_id != bosque_id or m.asleep or not [ROLE_GUARDIAN, ROLE_PATROL, ROLE_HUNTER, ROLE_CHASER].has(m.role):
+			continue
+		if not can_detect(m):
+			continue
+		out.append({ "cell": m.cell, "vision": watcher_vision(m), "guardian": m.role == ROLE_GUARDIAN, "monster": m })
+	return out
+
+
+## Visión de un vigía sin el camuflaje del Adoc: la de sus datos con la hostilidad y el estado de su
+## Bosque, menos Paso quedo (AdventureRules.raw_vision).
+static func watcher_vision(m: OverworldMonster) -> int:
+	return AdventureRules.raw_vision(m.bosque_id, int(AdventureRules.monster_config(m.monster_id).get("vision_radius", 0)))
+
+
+## Un Único ha visto al Adoc: le persigue y tarda Stealth.seen_grace en echarse encima.
+func alert(m: OverworldMonster) -> void:
+	m.state = MonsterSteering.State.CHASE
+	m.engage_delay = Stealth.seen_grace()
+	refresh_vision()
 
 
 ## Único de un Bosque muerto que este Momento va por su cuenta y pide Luz (y no se le ha pagado).

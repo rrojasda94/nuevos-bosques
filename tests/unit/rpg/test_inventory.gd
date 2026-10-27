@@ -113,7 +113,8 @@ func test_unequip_and_reequip_weapon() -> void:
 	assert_signal_emitted_with_parameters(EventBus, "item_unequipped", [&"main_hand", LANZA])
 	assert_false(AdventureRules.unequip_slot(&"main_hand"), "ranura vacía")
 	assert_true(AdventureRules.equip_from_bag(_index_of(LANZA)))
-	assert_true(AdventureRules.is_armed())
+	assert_false(AdventureRules.is_armed(), "recién equipada va enfundada (ajustes-playtest-0.5.md, 4a)")
+	assert_true(AdventureRules.has_weapon())
 	assert_signal_emitted_with_parameters(EventBus, "item_equipped", [&"main_hand", LANZA])
 
 
@@ -284,4 +285,5 @@ func _arm_spear() -> void:
 	for i in GameState.bag.size():
 		if InventoryLogic.id_at(GameState.bag, i) == &"lanza_de_adoc":
 			AdventureRules.equip_from_bag(i)
+			GameState.weapon_drawn = true
 			return

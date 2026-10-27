@@ -13,7 +13,8 @@ extends Node2D
 ##   Nujio (ofrendas, dormir) y descanso en la villa; delante de un Único, enfrentarse a él.
 ## - Límite de Bosque (BosqueBorder): una casilla de otro Bosque cerrado bloquea; al chocar se abre
 ##   el menú del cruce (Crossing) y acude el Botarramas más cercano (MonsterField.summon_nearest).
-##   Con camuflaje suficiente el límite no bloquea y se entra colado (Stealth).
+##   Si al tocarlo nadie te ve, te cuelas sin menú; si te ve otro Único, te persigue; con E
+##   contra el límite, el menú (Stealth.border_outcome, P3). Q enfunda o saca el arma.
 ## - Monstruos (MonsterField en modo mundo): encuentro -> el mismo flujo que la exploración vieja
 ##   (_on_field_engaged / _on_monster_engaged / _confront, aperturas del combate táctico T6),
 ##   derrota y reaparición junto a un Nujio, persecución tras un robo, cazadores del Bosque,
@@ -123,6 +124,10 @@ func start() -> void:
 	GameState.world_key = WorldCache.key_to_name(world.world_key)
 	_border = BosqueBorder.new(BosqueBorder.plan_bosque_at(plan), _is_closed)
 	_border.contacted.connect(_on_border_contacted)
+	# P3 (colarse): quién te ve al tocar el borde lo decide Stealth.border_outcome.
+	_border.decide = _border_outcome
+	_border.sneaked.connect(_on_border_sneaked)
+	_border.seen.connect(_on_border_seen)
 	player.is_blocked = _border.blocks(_terrain_blocked)
 	_on_equipment_changed(&"", &"")
 	_field.terrain_blocked = world.streamer.is_blocked
@@ -203,18 +208,19 @@ func _terrain_blocked(c: Vector2i) -> bool:
 	return world.streamer.is_blocked(c) or _npc_cells.has(c)
 
 
-## La frontera del Bosque está cerrada para el jugador. Con camuflaje suficiente (y sin un
-## Botarramas detrás) no lo está: se entra colado (_enter_bosque).
+## La frontera del Bosque está cerrada para el jugador. Colarse la abre al tocarla si nadie te ve
+## (_border_outcome): el Bosque queda colado y pasa a ser transitable.
 func _is_closed(bosque_id: int) -> bool:
-	if AdventureRules.is_passable(bosque_id, home_bosque):
-		return false
-	return not (Stealth.can_sneak_into(bosque_id) and not _field.has_chaser())
+	return not AdventureRules.is_passable(bosque_id, home_bosque)
 
 
 func _physics_process(_delta: float) -> void:
 	if not started:
 		return
 	var input: Vector2 = Input.get_vector(&"move_left", &"move_right", &"move_up", &"move_down")
+	# Correr anula el camuflaje (Stealth.running): los Únicos ven de nuevo al cambiar.
+	if Stealth.set_running(input != Vector2.ZERO and Input.is_action_pressed(&"run")):
+		_field.refresh_vision()
 	_border.tick(player.mover.cell, player.input_enabled and input != Vector2.ZERO)
 	MapLogic.set_player_pos(player.mover.world_pos)
 
@@ -223,6 +229,32 @@ func _physics_process(_delta: float) -> void:
 ## EventBus.bosque_border_reached): acude su Botarramas más cercano, que es el del cruce.
 func _on_border_contacted(bosque_id: int, world_cell: Vector2i) -> void:
 	_pending_monster = _field.summon_nearest(bosque_id, world_cell)
+
+
+## P3: qué pasa al tocar el borde cerrado (Stealth.border_outcome con los vigías del Bosque). En
+## `watcher` va el vigía que te ve, si lo hay.
+func _border_outcome(bosque_id: int, _world_cell: Vector2i) -> Dictionary:
+	var watchers: Array[Dictionary] = _field.border_watchers(bosque_id)
+	var out: Dictionary = Stealth.border_outcome(watchers, player.mover.cell, Stealth.camouflage(),
+		AdventureRules.is_armed(), _field.has_chaser())
+	out.watcher = watchers[out.index] if int(out.index) >= 0 else {}
+	return out
+
+
+## P3: te has colado (BosqueBorder ya llamó a AdventureRules.sneak_into). Se avisa al entrar.
+func _on_border_sneaked(_bosque_id: int, broken: Array[StringName]) -> void:
+	_entry_notices.append(Texts.get_text("sneak_entered"))
+	for id: StringName in broken:
+		_entry_notices.append(Texts.get_text("item_broke") % Items.display_name(id))
+
+
+## P3: te ha visto un Único del Bosque que no es Botarramas: te persigue, sin menú del borde.
+func _on_border_seen(bosque_id: int, outcome: Dictionary) -> void:
+	var m: OverworldMonster = outcome.watcher.get("monster") if not outcome.watcher.is_empty() else null
+	AdventureRules.spotted(bosque_id)
+	if m != null:
+		_field.alert(m)
+	EventBus.notice_requested.emit(Texts.get_text("stealth_spotted"))
 
 
 # --- Casillas y chunks ----------------------------------------------------------------------------
@@ -281,11 +313,6 @@ func _enter_chunk(coord: Vector2i) -> void:
 ## Cambio de Bosque: colarse (si se ha entrado con el camuflaje), fin de la persecución y de la
 ## cacería, frutos sacados, estado del Bosque y arma en la mano.
 func _enter_bosque(bosque_id: int) -> void:
-	if bosque_id >= 0 and not AdventureRules.is_passable(bosque_id, home_bosque) and Stealth.can_sneak_into(bosque_id):
-		var broken: Array[StringName] = AdventureRules.sneak_into(bosque_id)
-		_entry_notices.append(Texts.get_text("sneak_entered"))
-		for id: StringName in broken:
-			_entry_notices.append(Texts.get_text("item_broke") % Items.display_name(id))
 	if _chase.bosque_entered(bosque_id):
 		_field.remove_roles([MonsterField.ROLE_CHASER] as Array[StringName])
 		EventBus.notice_requested.emit(Texts.get_text("ofomni_chase_gave_up"))
@@ -304,6 +331,10 @@ func _enter_bosque(bosque_id: int) -> void:
 		_entry_notices.append(notice)
 	if AdventureRules.is_armed_against(bosque_id, home_bosque):
 		_entry_notices.append(Texts.get_text("bosque_feels_weapon"))
+	# P3: en un Bosque forzado o colado, su fruto no es tuyo.
+	var fruit_notice: String = FruitRules.entry_notice(bosque_id, home_bosque)
+	if fruit_notice != "":
+		_entry_notices.append(fruit_notice)
 
 
 ## Primera misión sin aceptar: a confine_distance casillas o menos de otro Bosque.
@@ -352,6 +383,11 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed(&"interact"):
 		get_viewport().set_input_as_handled()
 		_interact()
+	elif event.is_action_pressed(&"toggle_weapon") and started and player.input_enabled:
+		# P3: Q enfunda o saca el arma (AdventureRules.toggle_weapon) con un aviso corto.
+		get_viewport().set_input_as_handled()
+		var result: StringName = AdventureRules.toggle_weapon(plan.bosque_at(chunk_coord))
+		EventBus.notice_requested.emit(Texts.get_text(AdventureRules.weapon_toggle_text(result)))
 	elif event.is_action_pressed(&"quick_save"):
 		get_viewport().set_input_as_handled()
 		quick_save()
@@ -394,7 +430,12 @@ func _interact() -> void:
 		Interaction.Kind.REST:
 			_ask_sleep(target.cell, Texts.get_text("rest_prompt"))
 		Interaction.Kind.NONE:
-			if _is_at_sicabi():
+			# P3: E contra la frontera cerrada abre el menú del borde aunque nadie te vea.
+			var edge: Vector2i = player.mover.cell + player.mover.facing
+			if _border.is_border(edge):
+				_on_border_contacted(_border.bosque_at.call(edge), edge)
+				EventBus.bosque_border_reached.emit(_border.bosque_at.call(edge))
+			elif _is_at_sicabi():
 				_dialogue.show_lines([Texts.get_text("sicabi_mouth")])
 
 
@@ -479,22 +520,16 @@ func _on_nujio_ofrenda_choice(index: int, ids: Array[StringName], bosque_id: int
 
 
 ## Frutal 2×2 (FruitRules, clave en su esquina noroeste): "Comerlo", "Guardarlo" o "Dejarlo"; si
-## sería robo, la pregunta lo avisa.
+## sería robo, la pregunta lo avisa (FruitRules.prompt).
 func _interact_fruit_tree(ch: WorldChunk, local: Vector2i) -> void:
 	if not FruitRules.has_fruit_world(ch, local):
 		_dialogue.show_lines([Texts.get_text("fruit_empty")])
 		return
 	var bosque_id: int = plan.bosque_at(ch.coord)
-	var prompt: String = "fruit_prompt"
-	if FruitRules.is_theft(bosque_id, home_bosque):
-		prompt = "fruit_one_per_momento" if FruitRules.has_permission(bosque_id, home_bosque) else "fruit_no_permission"
-	var actions: Array[StringName] = [&"eat"]
-	if FruitRules.can_store(bosque_id):
-		actions.append(&"store")
-	actions.append(&"leave")
-	var options: Array = actions.map(func(a: StringName) -> String: return Texts.get_text("fruit_" + String(a)))
-	_dialogue.choice.connect(_on_fruit_choice.bind(ch, local, actions), CONNECT_ONE_SHOT)
-	_dialogue.ask(Texts.get_text(prompt), options)
+	# P3: la pregunta (con el motivo del robo, "Robarlo" y el cursor en "Dejarlo") es de FruitRules.
+	var p: Dictionary = FruitRules.prompt(bosque_id, home_bosque, FruitRules.can_store(bosque_id))
+	_dialogue.choice.connect(_on_fruit_choice.bind(ch, local, p.actions), CONNECT_ONE_SHOT)
+	_dialogue.ask(p.text, p.options, [], int(p.cursor))
 
 
 func _on_fruit_choice(index: int, ch: WorldChunk, local: Vector2i, actions: Array[StringName]) -> void:
