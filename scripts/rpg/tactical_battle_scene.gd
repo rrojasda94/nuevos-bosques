@@ -833,7 +833,7 @@ func _draw_cell_detail(b: TacticalBoard, c: Vector2i, top: Vector2, base: Color)
 	match b.object_at(c):
 		&"":
 			pass
-		&"tree":
+		&"tree", &"tree_young", &"tree_big", &"tree_dead", &"fruit_tree":
 			_tiles.draw_rect(Rect2(top + Vector2(7, 9), Vector2(2, 5)), Color("733e39"))
 			_tiles.draw_circle(top + Vector2(8, 7), 5.0, Color("265c42"))
 			_tiles.draw_circle(top + Vector2(7, 6), 3.0, Color("3e8948"))
