@@ -596,7 +596,7 @@ func _on_crossing_resolved(_bosque_id: int, outcome: StringName) -> void:
 		&"game_over":
 			_game_over()
 		_:
-			_retreat_from(monster)
+			_retreat_from(monster, outcome == &"fled")
 
 
 func _on_quest_battle_resolved(_quest_id: StringName, outcome: StringName) -> void:
@@ -611,7 +611,7 @@ func _on_quest_battle_resolved(_quest_id: StringName, outcome: StringName) -> vo
 		&"game_over":
 			_game_over()
 		_:
-			_retreat_from(monster)
+			_retreat_from(monster, outcome == &"fled")
 
 
 ## Un Único alcanza al Adoc: apertura del combate táctico (T6; emboscada si es un cazador o un Único
@@ -706,7 +706,7 @@ func _on_independent_choice(index: int, monster: OverworldMonster, luz: int) -> 
 	if index == 0 and BosqueStates.pay_independent(luz):
 		_pending_monster = null
 		_field.satisfy(monster)
-		monster.calm(float(monster.cfg.get("engage_cooldown", 3.0)))
+		monster.calm(MonsterSteering.calm_seconds(monster.cfg, false))
 		EventBus.notice_requested.emit(Texts.get_text("independent_paid"))
 		return
 	if index == 0:
@@ -735,17 +735,18 @@ func _on_unico_battle_resolved(_bosque_id: int, outcome: StringName) -> void:
 		&"game_over":
 			_game_over()
 		_:
-			_retreat_from(monster)
+			_retreat_from(monster, outcome == &"fled")
 
 
 ## Retroceder o huir: retreat_cells casillas alejándose del monstruo (o del límite que se empujaba)
-## y el monstruo deja de ver al jugador un rato.
-func _retreat_from(monster: OverworldMonster) -> void:
+## y el monstruo deja de ver al jugador un rato: flee_cooldown si `fled` (huida con éxito),
+## retreat_cooldown si no (Retroceder, rechazar el combate). MonsterSteering.calm_seconds.
+func _retreat_from(monster: OverworldMonster, fled: bool = false) -> void:
 	var cfg: Dictionary = monster.cfg if monster != null else AdventureRules.monster_config(MonsterField.BOTARRAMAS)
 	var here: Vector2i = player.mover.cell
 	var dirs: Array[Vector2i] = [-player.mover.facing]
 	if monster != null:
-		monster.calm(float(cfg.engage_cooldown))
+		monster.calm(MonsterSteering.calm_seconds(cfg, fled))
 		var away: Vector2i = here - monster.cell
 		var main := Vector2i(signi(away.x), 0) if absi(away.x) >= absi(away.y) else Vector2i(0, signi(away.y))
 		var other := Vector2i(0, signi(away.y)) if main.x != 0 else Vector2i(signi(away.x), 0)
