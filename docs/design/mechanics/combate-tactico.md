@@ -1,7 +1,7 @@
 # Ficha: Combate táctico en cuadrícula
 
 > Dueño: `game-designer`. ADR 0016. **Versión 0.5** (antes del grupo garelino; `roadmap-0.5.md`). Valores **provisionales**.
-> **Ajustes de playtest (0.5, bloque P; propuesta pendiente de #191)**: `ajustes-playtest-0.5.md`. La huida pasa a ser una tirada (por AGI y por los enemigos cercanos), se añade la acción **Objeto** y las armas tienen alcance propio (la lanza llega a 2). Las filas afectadas de abajo están marcadas con **[P]**.
+> **Ajustes de playtest (0.5, bloque P; confirmados, ADR 0017)**: `ajustes-playtest-0.5.md`. La huida pasa a ser una tirada (por AGI y por los enemigos cercanos), se añade la acción **Objeto** y las armas tienen alcance propio (la lanza llega a 2). Las filas afectadas de abajo están marcadas con **[P]**.
 > Sustituye la presentación por menú "estilo Pokémon" de `cruce-y-combate-v2.md`. Las reglas de cruce, pago, memoria del Bosque, XP, fatales y reaparición siguen igual. La IA del PR #67 se traduce a la cuadrícula (`ia-de-combate.md`).
 
 ## Objetivo
@@ -125,7 +125,7 @@ Palabras del dueño:
 | **Defender** | El daño recibido ×0,5 hasta tu siguiente turno; cuenta como acción |
 | **Esperar** | No actúas; CT −60 |
 | **Ofrecer Luz / Ofrecer ofrenda** | Sin cambios: pagas N y el Único **apaciguable** se va; termina el combate (ADR 0013). Desactivado con los no apaciguables (Ofomni descarriado, Aledra) |
-| **Huir** | Desde **cualquier casilla del borde** del tablero, **siempre** con éxito (dueño, #184: "Cualquier borde, seguro"). Huye todo tu bando. El enemigo recupera PV (como hoy). **[P] Propuesta tras el playtest (#191)**: desde el borde, con probabilidad P = 70 + 5 × (tu AGI − la AGI más alta de los cercanos) − 35 por enemigo adyacente − 10 por enemigo cercano + 10 por intento fallido, entre 5% y 95% (`tactical.flee`). Se ve antes de confirmar. Si falla, pierdes el turno |
+| **Huir** | ~~Desde cualquier casilla del borde, siempre con éxito (#184)~~. **[P] Huida con suerte** (dueño, #191; ADR 0017): desde cualquier casilla del borde, con probabilidad P = 70 + 5 × (tu AGI − la AGI más alta de los cercanos) − 35 por enemigo adyacente − 10 por enemigo cercano + 10 por intento fallido, entre 5% y 95% (`tactical.flee`). Se ve antes de confirmar. Si falla, pierdes el turno. Si sale bien, huye todo tu bando y el enemigo recupera sus PV |
 | **Objeto** **[P]** | Usa un objeto de combate de la bolsa (en la 0.5, el fruto: cura el 25% de los PV máximos tuyos o de un aliado adyacente). Cuenta como acción |
 | **Orden al grupo** | Libre / Atacar a tu objetivo / Defender (PR #67), sin gastar acción |
 
@@ -217,8 +217,8 @@ Palabras del dueño:
 | T8 | Retirar la escena antigua y ajustar el balance tras el playtest | rpg-systems-dev, game-designer | T6 |
 
 ## Preguntas abiertas
-- **#191** (nueva, tras el playtest): ¿se cambia "Cualquier borde, seguro" (#184) por la huida con suerte?
-- ~~#184–#187~~ Resueltas por el dueño:
+- ~~**#191**~~ Resuelta (dueño): la huida con suerte sustituye a "Cualquier borde, seguro" (ADR 0017).
+- ~~#184–#187~~ Resueltas por el dueño (la #184, sustituida por la #191):
   - Huir desde cualquier borde, siempre;
   - tablero de 8 × 6 y 3 por bando;
   - textos cortos y números;

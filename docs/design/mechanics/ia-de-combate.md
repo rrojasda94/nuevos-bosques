@@ -146,13 +146,13 @@ Qué se conserva y qué cambia al pasar al combate táctico (`combate-tactico.md
 | **Perfil berserk** (Ofomni descarriado) | Carga contra el más cercano. Anuncia el Latigazo (3 × 1 delante en los tableros pequeño y medio; 3 × 2 en el grande) |
 | **Tamaño** | **Cupo por bando proporcional al espacio** (1 a 6; `combate-tactico.md`). Party elegida antes del combate (#188). Reparep en grupos de 2–4. Los que no caben entran como refuerzo por su borde cuando cae uno |
 | **Refuerzos (IA)** | El refuerzo entra en el turno siguiente a la caída con CT 50 y su perfil de siempre |
-| **[P] Perfiles nuevos tras el playtest** (`ajustes-playtest-0.5.md`, §6; dueño: "la ia de los enemigos es muy basica") | **Guardián** (Botarramas): no se aleja más de 2 casillas de su sitio, Defiende si no llega y avanza al 3.er turno; no corta la huida. **Látigo** (Ofomni): alcance 2 en línea y prefiere no quedarse adyacente. **Emboscadora** (Aledra): busca la espalda y Espera para conseguirla. El Ofomni descarriado sigue berserk, con alcance 2 |
+| **[P] Perfiles nuevos tras el playtest** (`ajustes-playtest-0.5.md`, §6; dueño: "la ia de los enemigos es muy basica"; confirmados en #195, "Sí, encaja"; ADR 0017) | **Guardián** (Botarramas): no se aleja más de 2 casillas de su sitio, Defiende si no llega y avanza al 3.er turno; no corta la huida. **Látigo** (Ofomni): alcance 2 en línea y prefiere no quedarse adyacente. **Emboscadora** (Aledra): busca la espalda y Espera para conseguirla. El Ofomni descarriado sigue berserk, con alcance 2 |
 | **[P] Reglas comunes** | Defender con menos del 50% de PV si no llega a atacar y le pueden alcanzar; Esperar (táctico, emboscadora) si acercarse le deja expuesto; **cortar la huida** del Adoc que está en el borde; preferir la altura (cuando haya relieve); **azar top-2** ponderado (75/25, solo dentro de la misma prioridad y si la segunda opción puntúa al menos el 80% de la mejor; con la seed del combate). El berserk no tira |
 | **Órdenes al grupo** | Igual (Libre, Atacar a tu objetivo, Defender), más el movimiento: "Defender" hace que los aliados se agrupen junto al jugador |
 | **Aliados que se protegen ante un Latigazo** | **Salen del área marcada**; si no pueden, Defender |
 | **Retirarse atrás con poca vida** | Se alejan del enemigo más cercano |
 
 ## Preguntas abiertas
-- **#195** (nueva): ¿encajan con su lore los perfiles guardián (Botarramas), látigo de alcance 2 (Ofomni) y emboscadora (Aledra)?
+- ~~**#195**: ¿encajan los perfiles guardián, látigo y emboscadora?~~ Resuelta (dueño: "Sí, encaja"; ADR 0017).
 - ~~**#174**: ¿AGI con puntos o derivada del nivel?~~ Resuelta: automática con el nivel (5 + ⌊nivel/2⌋), sin puntos.
 - ¿Los Botarramas y el Ofomni usan filas cuando vienen acompañados? (Por ahora pelean solos.)

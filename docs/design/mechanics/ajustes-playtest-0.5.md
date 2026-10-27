@@ -1,7 +1,7 @@
 # Ficha: Ajustes de playtest de la 0.5 (huida, colarse, fruto, armas, objetos e IA)
 
 > Dueño: `game-designer`. **Versión 0.5**, bloque **P** de `roadmap-0.5.md`. Valores **provisionales**, todos en datos (`data/combat/balance.json`, `data/items/items.json`).
-> Sale del playtest del dueño con el combate táctico activado (`tactical.enabled = true`). Cambia reglas que el dueño había fijado (#184 "Cualquier borde, seguro" y "sin máscara no se puede colarse"). Por eso los puntos 1 y 3 **esperan su confirmación** (#191 y #192). Cuando la dé, se registra en un ADR 0017 ("Ajustes de playtest: huida con suerte y sigilo sin menú").
+> Sale del playtest del dueño con el combate táctico activado (`tactical.enabled = true`). **Confirmada por el dueño** (#191–#195 y #197) y registrada en el **ADR 0017**. Sustituye a #184 ("Cualquier borde, seguro") y a "sin máscara no se puede colarse". Siguen abiertas #190 (permiso del fruto en un Bosque forzado) y #196 (consumibles).
 > Fichas afectadas, con una nota que apunta aquí: `combate-tactico.md`, `ia-de-combate.md`, `sigilo-y-robo.md`, `bosques-y-relacion.md`, `cruce-y-combate-v2.md`, `monstruos.md` y `npcs-y-villas.md`.
 
 ## Palabras del dueño (playtest, textual)
@@ -212,8 +212,10 @@ visión = vision_radius del monstruo + hostilidad y estado del Bosque (como hoy)
 
 ### 4a. Enfundada o en la mano
 - El dueño (2026-10-24): "Las armas deberían poder estar o equipadas o desequipadas de la mano principal". Se interpreta así: **enfundada = desequipada de la mano principal**, sin quitarla de la ranura.
-- **Tecla `Q`** (acción nueva `toggle_weapon`; mando: botón X). La `R` ya es `new_seed`. Lo confirma `engine-architect`.
+- Dueño (#193): "Sí, y sicabi prohíbe aun enfundada".
+- **Tecla `Q`** (acción nueva `toggle_weapon`; mando: botón X). La `R` ya es `new_seed`. La asignación concreta la confirma `engine-architect`.
 - Cambiar es gratis fuera de combate y no se puede mientras empieza un encuentro.
+- **Sicabis** (0.6, `lugares-e-interiores.md`): no se entra con un arma **equipada**, ni en la mano ni enfundada. Hay que dejarla en la bolsa.
 
 | Estado | En el mundo | En combate |
 |---|---|---|
@@ -240,8 +242,8 @@ Requisitos para `ui-ux-dev` en la escena táctica:
 - un icono del arma;
 - en el rango de ataque resaltado, las casillas a 2 de la lanza.
 
-### 4d. Dos armas más (tipos genéricos, **nombres provisionales**, #194)
-| id (provisional) | Nombre (provisional) | `atk_bonus` | Alcance | Efecto propio | `sheathed_camo_penalty` | De dónde sale |
+### 4d. Dos armas más (dueño, #194: "Sí, con esos nombres")
+| id | Nombre | `atk_bonus` | Alcance | Efecto propio | `sheathed_camo_penalty` | De dónde sale |
 |---|---|---|---|---|---|---|
 | `cuchillo` | Cuchillo | +1 | 1 | Espalda: +2 de daño extra (+4 en total). Encaja con la rama Sombra | 0: no estorba al sigilo | Hallazgo en refugios (1 de cada 4 hallazgos, `refuge_loot`) y trueque con un Paruas (punto 5) |
 | `honda` | Honda | +1 | 2–3, sin línea (por encima de obstáculos y combatientes) | No ataca a 1 casilla; precisión −10 | 1 | Recompensa, una vez, al vencer junto a otro adoc (`otros_adoc`), si no la tienes; trueque con un Paruas |
@@ -250,7 +252,7 @@ Requisitos para `ui-ux-dev` en la escena táctica:
 - **Cuchillo**: para el sigilo y la emboscada.
 - **Honda**: para pelear de lejos contra los lentos, con menos daño.
 - La honda solo alcanza a 3, y en el 8 × 6 el espacio para alejarse se acaba enseguida.
-- **Sin lore nuevo**: son utensilios genéricos. El dueño o `narrative-writer` deciden si existen en el mundo y cómo se llaman (#194).
+- Nombres confirmados: **Cuchillo** y **Honda**. Las descripciones son de `narrative-writer`.
 
 ---
 
@@ -264,7 +266,7 @@ Requisitos para `ui-ux-dev` en la escena táctica:
   - aplica la regla de siempre: comerlo lejos de su Bosque baja la relación con él (−5).
 - **Consumibles nuevos**: necesitan lore (¿qué remedio lleva un adoc?). Van como pregunta (#196) con una propuesta mecánica: "remedio del Dumno, cura el 40%, 1 por día". En la 0.5 solo entra el fruto.
 
-### 5b. Trueque mínimo en la villa (adelantado de la 0.6)
+### 5b. Trueque mínimo en la villa (adelantado de la 0.6; dueño, #197: "Sí, adelante")
 - **Sarua** (obligatorio en todas las villas; hace máscaras y talismanes, #154): opción **"Servicio → Trueque"**.
   - Das una **ofrenda** de valor ≥ el precio, o **Luz suelta**, o las dos combinadas (como en el peaje).
   - Recibes un objeto de sigilo.
@@ -293,7 +295,7 @@ Requisitos para `ui-ux-dev` en la escena táctica:
 - **El favor del Sarua** sigue en la 0.6.
 
 ### 5c. Equipo inicial
-| Ranura o bolsa | Hoy | Propuesta |
+| Ranura o bolsa | Antes | Ahora (#197) |
 |---|---|---|
 | Mano principal | vacía | **Lanza de adoc, enfundada** |
 | Máscara | vacía | **Máscara de corteza** |
@@ -310,7 +312,7 @@ Requisitos para `ui-ux-dev` en la escena táctica:
 
 ## 6. IA más lista (táctico)
 
-### 6a. Perfiles (sobre el lore que ya existe en `monstruos.md`)
+### 6a. Perfiles (sobre el lore que ya existe en `monstruos.md`; dueño, #195: "Sí, encaja")
 | Perfil | Quién | Base en `monstruos.md` | Conducta |
 |---|---|---|---|
 | **Guardián** (`guardian`, nuevo) | Botarramas | "restringen el paso"; "renquean" | Se queda a `guard_radius` = 2 casillas o menos de su casilla inicial, entre el Adoc y el borde de su lado. Ataca si llega. Si no llega, **Defiende** (como mucho 1 de cada `guard_defend_every` = 2 turnos). Si el Adoc no se acerca en `guard_advance_after` = 3 turnos suyos, avanza como un agresivo. **No corta la huida**: quiere que te vayas |
@@ -385,4 +387,6 @@ Requisitos para `ui-ux-dev` en la escena táctica:
 Ver el bloque **P** de `roadmap-0.5.md`.
 
 ## Preguntas abiertas
-#190 a #197 (`docs/decisions/0000-preguntas-abiertas.md`).
+- **#190**: permiso del fruto en un Bosque forzado.
+- **#196**: consumibles de combate (hace falta lore).
+- ~~#191–#195 y #197~~: resueltas (ADR 0017).
