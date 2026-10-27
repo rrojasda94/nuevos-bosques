@@ -1,12 +1,11 @@
 class_name MonsterField
 extends Node2D
-## Monstruos del área visible (monstruos.md, mision-ofomni.md): los Botarramas de los tramos de
-## frontera del chunk actual (también los apostados en el chunk vecino, que se ven en la franja),
-## los Únicos que rondan por dentro del Bosque (BosquePatrols) y el Ofomni descarriado de la misión
-## si está en este chunk. Cada fotograma los hace pensar, apunta dónde se han visto
+## Monstruos del mundo (monstruos.md, mision-ofomni.md): los Botarramas de las puertas entre
+## Bosques, los Únicos que rondan por dentro del Bosque (BosquePatrols) y el Ofomni descarriado de la
+## misión. Cada fotograma los hace pensar, apunta dónde se han visto
 ## (GameState.seen_monsters, para el mapa) y avisa con `engaged` cuando uno alcanza al jugador.
-## Se pausa con el árbol (menús, combate, diálogos, mapa). Las casillas son de área (relativas al
-## chunk actual). No abre menús ni combates: eso lo decide la exploración.
+## Se pausa con el árbol (menús, combate, diálogos, mapa). Las casillas son globales (world_cell).
+## No abre menús ni combates: eso lo decide la exploración.
 ## El Bosque recuerda (0.3): los Botarramas de un Bosque forzado siguen activos y ven más lejos
 ## según su hostilidad (AdventureRules.vision_radius); solo pagar los vuelve pasivos.
 ## Cada monstruo tiene un papel (OverworldMonster.role):
@@ -46,7 +45,6 @@ extends Node2D
 ## choca con el límite fuera de una puerta, acude el más cercano (summon_nearest). Los Únicos de la
 ## 0.3 (rondas, perseguidores, cazadores, captores, rivales y el Ofomni descarriado) son los mismos
 ## papeles, con la casilla en world_cell y su chunk como `home_rect`.
-## ponytail: borrar en M17 la ruta vieja (populate, `player` PlayerWalker, casillas de área de 64).
 
 signal engaged(monster: OverworldMonster)
 ## Un monstruo que puede detectar al Adoc le ha visto mientras iba oculto (empieza a perseguirle o se
@@ -88,10 +86,9 @@ var can_engage: Callable = func() -> bool: return true
 ## () -> bool: el Adoc va oculto (camuflado, o colado sin que le hayan visto): ver o alcanzarle
 ## emite `spotted`.
 var is_hidden: Callable = func() -> bool: return false
-# ponytail: borrar en M17; el Mundo 2.0 usa world_player.
-var player: PlayerWalker
 
-## Mundo 2.0: jugador con movimiento libre. Con él, `area_walkable` recibe world_cell.
+
+## Jugador con movimiento libre. `area_walkable` recibe world_cell.
 var world_player: PlayerController
 ## Mundo 2.0: (Vector2i world_cell) -> bool, colisión del terreno para el GridMover de los monstruos.
 var terrain_blocked: Callable = func(_c: Vector2i) -> bool: return true
@@ -99,20 +96,18 @@ var terrain_blocked: Callable = func(_c: Vector2i) -> bool: return true
 var chunk_at: Callable = func(_c: Vector2i) -> WorldChunk: return null
 
 var _monsters: Array[OverworldMonster] = []
-## Mundo 2.0 (populate_world): coordenadas globales, chunks activos y monstruos que duermen.
+## Ya se llamó a populate_world: hay región, chunks activos y monstruos que duermen.
 var _world: bool = false
 var _plan: RegionPlan
 ## Chunk del jugador con el que se calcularon los chunks activos.
 var _active_center: Vector2i = Vector2i(-99999, -99999)
 ## Chunks cuyos monstruos ya se pusieron (Vector2i -> true). No se repueblan.
 var _populated: Dictionary = {}
-var _coord: Vector2i = Vector2i.ZERO
 var _home: int = -1
 var _textures: Dictionary = {}
 ## Contador para las claves de los monstruos que no se guardan.
 var _serial: int = 0
 var _bosques: BosqueMap
-var _chunk: ChunkData
 ## Únicos independientes (Bosque muerto) ya pagados: "clave:riutash" -> true. No se guarda.
 var _satisfied: Dictionary = {}
 
@@ -131,65 +126,15 @@ func clear() -> void:
 	_monsters.clear()
 
 
-## ponytail: borrar en M17 (exploración vieja por chunks de 64); el Mundo 2.0 usa populate_world.
-## Coloca los Botarramas de los tramos del chunk `coord` y los Únicos que rondan por él.
-## `get_chunk`: (Vector2i chunk) -> ChunkData.
-func populate(bosques: BosqueMap, home: int, coord: Vector2i, get_chunk: Callable) -> void:
-	clear()
-	_world = false
-	_coord = coord
-	_home = home
-	_bosques = bosques
-	_chunk = get_chunk.call(coord)
-	var cfg: Dictionary = AdventureRules.monster_config(BOTARRAMAS)
-	for p: Dictionary in BotarramasPosts.posts_near(bosques, GameState.seed_value, home, coord):
-		if GameState.defeated_monsters.has(String(p.id)):
-			continue
-		var chunk: ChunkData = get_chunk.call(p.chunk)
-		var offset: Vector2i = (p.chunk - coord) * ChunkData.SIZE
-		var at: Vector2i = offset + BotarramasPosts.post_cell(chunk, GameState.seed_value, p.side, int(cfg.post_depth))
-		var axis: Vector2i = Vector2i.DOWN if p.side.x != 0 else Vector2i.RIGHT
-		var m: OverworldMonster = _add(BOTARRAMAS, p.id, p.bosque_id, at, Rect2i(offset, Vector2i(ChunkData.SIZE, ChunkData.SIZE)),
-			axis, guardian_config(cfg, int(p.bosque_id)), _texture_for(BOTARRAMAS, bosques.styles[p.bosque_id], false),
-			UnicoArt.frames_for(UnicoArt.Kind.BOTARRAMAS))
-		m.role = ROLE_GUARDIAN
-	sync_patrols()
-
-
-## Pone o quita los Únicos que rondan el chunk actual según el Momento (Aledra solo de noche): al
-## anochecer aparece, al amanecer se va. Los vencidos no vuelven.
+## Pone o quita los Únicos que rondan los chunks poblados según el Momento (Aledra solo de noche):
+## al anochecer aparece, al amanecer se va. Los vencidos no vuelven.
 func sync_patrols() -> void:
-	if _world:
-		_sync_patrols_world()
-		return
-	if _bosques == null or _chunk == null:
-		return
-	var wanted: Dictionary = {}
-	for p: Dictionary in BosquePatrols.patrols_in(_bosques, GameState.seed_value, _coord, GameState.clock_momento):
-		if not GameState.defeated_monsters.has(String(p.id)):
-			wanted[String(p.id)] = p
-	for m: OverworldMonster in _monsters.duplicate():
-		if m.role == ROLE_PATROL and not wanted.has(m.key) and m.state != MonsterSteering.State.CHASE:
-			_monsters.erase(m)
-			_fade_out(m, false)
-	for m: OverworldMonster in _monsters:
-		wanted.erase(m.key)
-	for key: String in wanted:
-		var p: Dictionary = wanted[key]
-		var at: Vector2i = BosquePatrols.post_cell(_chunk, GameState.seed_value, key, func(c: Vector2i) -> bool: return _is_free(c, null))
-		if at.x < 0:
-			continue
-		var id: StringName = p.monster
-		var m: OverworldMonster = _add(id, key, int(p.bosque_id), at, Rect2i(Vector2i.ZERO, Vector2i(ChunkData.SIZE, ChunkData.SIZE)),
-			Vector2i.RIGHT if ChunkGenerator.hash_ints([key.hash()]) % 2 == 0 else Vector2i.DOWN,
-			inner_config(id, ROLE_PATROL), _texture_for(id, _bosques.styles[int(p.bosque_id)], id == OFOMNI, int(p.get("count", 1))), _frames_for(id))
-		m.role = ROLE_PATROL
-		m.count = int(p.get("count", 1))
+	_sync_patrols_world()
 
 
 # --- Mundo 2.0 ------------------------------------------------------------------------------------
 
-## Mundo 2.0: empieza el mundo continuo de la región del `plan`. Los monstruos aparecen por chunks
+## Empieza el mundo continuo de la región del `plan`. Los monstruos aparecen por chunks
 ## activos alrededor de `world_player` (update_active, cada fotograma). `get_chunk`:
 ## (Vector2i chunk) -> WorldChunk o null (p. ej. WorldStreamer.chunk).
 func populate_world(plan: RegionPlan, home: int, get_chunk: Callable) -> void:
@@ -198,23 +143,22 @@ func populate_world(plan: RegionPlan, home: int, get_chunk: Callable) -> void:
 	_plan = plan
 	_bosques = plan.bosques
 	_home = home
-	_chunk = null
 	chunk_at = get_chunk
 	_populated.clear()
 	_active_center = Vector2i(-99999, -99999)
 
 
-## Mundo 2.0: el chunk está en el anillo de chunks activos del jugador.
+## El chunk está en el anillo de chunks activos del jugador.
 func is_active_chunk(chunk: Vector2i) -> bool:
 	return WorldStreamer.chebyshev(chunk, _active_center) <= WorldStreamer.ACTIVE_RADIUS
 
 
-## Mundo 2.0: chunks activos alrededor del chunk `center` (el del jugador y sus 8 vecinos).
+## Chunks activos alrededor del chunk `center` (el del jugador y sus 8 vecinos).
 func active_chunks(center: Vector2i) -> Array[Vector2i]:
 	return WorldStreamer.chunk_ring(center, WorldStreamer.ACTIVE_RADIUS, _plan.size_chunks)
 
 
-## Mundo 2.0: el jugador está en el chunk `center`. Pone los monstruos de los chunks activos que
+## El jugador está en el chunk `center`. Pone los monstruos de los chunks activos que
 ## aún no los tenían (si ya están cargados; si no, en otra llamada), los Únicos que rondan según el
 ## Momento, y duerme o despierta a cada uno según su chunk.
 func update_active(center: Vector2i) -> void:
@@ -242,16 +186,9 @@ func _chunk_rect(chunk: Vector2i) -> Rect2i:
 	return Rect2i(chunk * WorldCoords.CHUNK, Vector2i(WorldCoords.CHUNK, WorldCoords.CHUNK))
 
 
-## Rectángulo propio (max_outside) de un monstruo que aparece en `at`: su chunk (en world_cell) en el
-## Mundo 2.0; el chunk actual en casillas de área en la exploración vieja.
+## Rectángulo propio (max_outside) de un monstruo que aparece en `at`: su chunk (en world_cell).
 func _home_rect(at: Vector2i) -> Rect2i:
-	if _world:
-		return _chunk_rect(WorldCoords.world_cell_to_chunk(at))
-	return Rect2i(Vector2i.ZERO, Vector2i(ChunkData.SIZE, ChunkData.SIZE))
-
-
-func _chunk_size() -> int:
-	return WorldCoords.CHUNK if _world else ChunkData.SIZE
+	return _chunk_rect(WorldCoords.world_cell_to_chunk(at))
 
 
 ## Botarramas de las puertas que están en el chunk `c` (cada tramo con puerta tiene uno, en el lado
@@ -299,7 +236,7 @@ func _sync_patrols_world() -> void:
 		var id: StringName = p.monster
 		var m: OverworldMonster = _add(id, key, int(p.bosque_id), WorldCoords.to_world_cell(c, local), _chunk_rect(c),
 			Vector2i.RIGHT if ChunkGenerator.hash_ints([key.hash()]) % 2 == 0 else Vector2i.DOWN,
-			inner_config(id, ROLE_PATROL, WorldCoords.CHUNK),
+			inner_config(id, ROLE_PATROL),
 			_texture_for(id, _bosques.styles[int(p.bosque_id)], id == OFOMNI, int(p.get("count", 1))), _frames_for(id))
 		m.role = ROLE_PATROL
 		m.count = int(p.get("count", 1))
@@ -372,7 +309,7 @@ func _free_cell_of_bosque(center: Vector2i, bosque_id: int, radius: int, me: Ove
 	return best
 
 
-## Mundo 2.0: pone al Ofomni descarriado cerca de `world_cell` (en su chunk), a OFOMNI_MIN_GAP o más
+## Pone al Ofomni descarriado cerca de `world_cell` (en su chunk), a OFOMNI_MIN_GAP o más
 ## del jugador.
 func spawn_ofomni_world(quest_key: String, world_cell: Vector2i, style: Dictionary) -> void:
 	if ofomni() != null:
@@ -398,14 +335,14 @@ func spawn_ofomni_world(quest_key: String, world_cell: Vector2i, style: Dictiona
 	m.cooldown = float(cfg.engage_cooldown)
 
 
-## Mundo 2.0: casilla libre para un Único que aparece en `world_cell`: alcanzable en su chunk
+## Casilla libre para un Único que aparece en `world_cell`: alcanzable en su chunk
 ## (cargado) y sin nadie.
 func can_place_world(world_cell: Vector2i) -> bool:
 	var wc: WorldChunk = chunk_at.call(WorldCoords.world_cell_to_chunk(world_cell))
 	return wc != null and wc.is_reachable(WorldCoords.world_cell_to_cell(world_cell)) and _is_free(world_cell, null)
 
 
-## Mundo 2.0: hay encuentro con `m` ahora (sin enfriamientos): puede detectar, las cajas de los pies
+## Hay encuentro con `m` ahora (sin enfriamientos): puede detectar, las cajas de los pies
 ## a su engage_px y sin un risco en medio (WorldEncounters).
 func engages_world(m: OverworldMonster) -> bool:
 	var box: Rect2 = world_player.mover.get_rect()
@@ -424,9 +361,8 @@ static func guardian_config(base: Dictionary, bosque_id: int) -> Dictionary:
 
 ## Configuración de un Único que va por dentro del Bosque (ronda, persigue o caza): no sale del
 ## chunk (max_outside 0); la correa cubre el chunk para que no suelte al jugador dentro de él; al
-## rondar usa patrol_wander si sus datos lo tienen. `chunk_size`: casillas por lado del chunk (64 en
-## la exploración vieja, 80 en el Mundo 2.0).
-static func inner_config(monster_id: StringName, role: StringName, chunk_size: int = ChunkData.SIZE) -> Dictionary:
+## rondar usa patrol_wander si sus datos lo tienen. `chunk_size`: casillas por lado del chunk.
+static func inner_config(monster_id: StringName, role: StringName, chunk_size: int = WorldCoords.CHUNK) -> Dictionary:
 	var cfg: Dictionary = AdventureRules.monster_config(monster_id).duplicate()
 	# Su visión, menos el camuflaje del Adoc (Stealth).
 	cfg.vision_radius = Stealth.vision_against(int(cfg.get("vision_radius", 0)), Stealth.camouflage())
@@ -447,21 +383,7 @@ func refresh_vision() -> void:
 			ROLE_GUARDIAN:
 				m.cfg = guardian_config(base, m.bosque_id)
 			ROLE_PATROL, ROLE_CHASER, ROLE_HUNTER:
-				m.cfg = inner_config(m.monster_id, m.role, _chunk_size())
-
-
-## ponytail: borrar en M17 (ChunkData); el Mundo 2.0 usa spawn_ofomni_world.
-## Pone al Ofomni descarriado en el chunk actual cerca de `cell`, a OFOMNI_MIN_GAP o más del jugador.
-func spawn_ofomni(quest_key: String, cell: Vector2i, chunk: ChunkData, style: Dictionary) -> void:
-	if ofomni() != null:
-		return
-	var cfg: Dictionary = AdventureRules.monster_config(OFOMNI_DESCARRIADO)
-	var at: Vector2i = _free_cell_near(cell, chunk)
-	var tex: Texture2D = _texture(UnicoArt.Kind.EYES, style, OFOMNI_PX)
-	var m: OverworldMonster = _add(OFOMNI_DESCARRIADO, quest_key, -1, at, Rect2i(Vector2i.ZERO, Vector2i(ChunkData.SIZE, ChunkData.SIZE)),
-		Vector2i.RIGHT, cfg, tex, UnicoArt.frames_for(UnicoArt.Kind.EYES))
-	m.role = ROLE_QUEST
-	m.cooldown = float(cfg.engage_cooldown)
+				m.cfg = inner_config(m.monster_id, m.role)
 
 
 func remove_ofomni() -> void:
@@ -496,8 +418,8 @@ func _fade_out(m: OverworldMonster, flash: bool) -> void:
 	tween.tween_callback(m.queue_free)
 
 
-## Pone perseguidores (Ofomni, ROLE_CHASER) del Bosque `bosque_id` en `cells` (de área, dentro del
-## chunk actual), ya persiguiendo al jugador. Sin enfriamiento: aparecen fuera de la vista.
+## Pone perseguidores (Ofomni, ROLE_CHASER) del Bosque `bosque_id` en `cells` (world_cell, dentro de
+## su Bosque), ya persiguiendo al jugador. Sin enfriamiento: aparecen fuera de la vista.
 func spawn_chasers(bosque_id: int, cells: Array[Vector2i], style: Dictionary) -> void:
 	for at: Vector2i in cells:
 		_spawn_inner(OFOMNI, ROLE_CHASER, bosque_id, at, style)
@@ -518,7 +440,7 @@ func spawn_captors(bosque_id: int, cells: Array[Vector2i], style: Dictionary) ->
 func spawn_duel(e: Dictionary, at: Vector2i, style: Dictionary) -> OverworldMonster:
 	var id: StringName = e.enemy
 	var m: OverworldMonster = _add(id, "duel:%s" % e.id, int(e.bosque_id), at, _home_rect(at),
-		Vector2i.RIGHT, inner_config(id, ROLE_DUEL, _chunk_size()), _texture_for(id, style, id == OFOMNI, int(e.count)), _frames_for(id))
+		Vector2i.RIGHT, inner_config(id, ROLE_DUEL), _texture_for(id, style, id == OFOMNI, int(e.count)), _frames_for(id))
 	m.cfg.idle_wander = 0
 	m.role = ROLE_DUEL
 	m.count = int(e.count)
@@ -536,7 +458,7 @@ func remove_duel(flash: bool = false) -> void:
 func _spawn_inner(monster_id: StringName, role: StringName, bosque_id: int, at: Vector2i, style: Dictionary) -> OverworldMonster:
 	_serial += 1
 	var m: OverworldMonster = _add(monster_id, "%s_%d" % [role, _serial], bosque_id, at,
-		_home_rect(at), Vector2i.RIGHT, inner_config(monster_id, role, _chunk_size()),
+		_home_rect(at), Vector2i.RIGHT, inner_config(monster_id, role),
 		_texture_for(monster_id, style, monster_id == OFOMNI), _frames_for(monster_id))
 	m.role = role
 	if role != ROLE_CAPTOR:
@@ -568,12 +490,6 @@ func remove_roles(roles: Array[StringName]) -> void:
 		if roles.has(m.role):
 			_monsters.erase(m)
 			_fade_out(m, false)
-
-
-## ponytail: borrar en M17 (ChunkData); el Mundo 2.0 usa can_place_world.
-## Casilla libre para un Único que aparece: alcanzable en el chunk actual y sin nadie.
-func can_place(c: Vector2i, chunk: ChunkData) -> bool:
-	return chunk.is_reachable(c) and _is_free(c, null)
 
 
 func ofomni() -> OverworldMonster:
@@ -700,37 +616,10 @@ static func _satisfied_key(m: OverworldMonster) -> String:
 	return "%s:%d" % [m.key, GameState.riutash_count]
 
 
-## Mundo 2.0: los GridMover van a 60 Hz, como el del jugador (ADR 0014 §2).
+## Los GridMover van a 60 Hz, como el del jugador (ADR 0014 §2).
 func _physics_process(delta: float) -> void:
 	if _world and world_player != null:
 		_process_world(delta)
-
-
-func _process(delta: float) -> void:
-	if _world:
-		return
-	# ponytail: borrar en M17 (exploración vieja por casillas).
-	if player == null:
-		return
-	for m: OverworldMonster in _monsters.duplicate():
-		var was_chasing: bool = m.state == MonsterSteering.State.CHASE
-		m.think(delta, player.cell, can_detect(m), func(c: Vector2i) -> bool: return _is_free(c, m))
-		_note_seen(m)
-		# Le ha visto (el camuflaje no basta) y empieza a perseguirle.
-		if not was_chasing and m.state == MonsterSteering.State.CHASE and can_spot(m) and is_hidden.call():
-			spotted.emit(m)
-	if not can_engage.call():
-		return
-	for m: OverworldMonster in _monsters:
-		if m.cooldown > 0.0 or m.engage_delay > 0.0 or not MonsterSteering.engages(m.cell, player.cell, can_detect(m), m.cfg):
-			continue
-		# Oculto, pero se le ha echado encima: le ve igualmente y tarda un instante en atacar.
-		if can_spot(m) and is_hidden.call():
-			spotted.emit(m)
-			if m.engage_delay > 0.0:
-				continue
-		engaged.emit(m)
-		return
 
 
 ## Puede romper el camuflaje al ver al Adoc: los que guardan, rondan o cazan en su Bosque.
@@ -738,7 +627,7 @@ static func can_spot(m: OverworldMonster) -> bool:
 	return m.role == ROLE_GUARDIAN or m.role == ROLE_PATROL or m.role == ROLE_HUNTER
 
 
-## Mundo 2.0: un fotograma. Duerme o despierta según los chunks activos; solo piensan y encuentran
+## Un fotograma. Duerme o despierta según los chunks activos; solo piensan y encuentran
 ## los despiertos.
 func _process_world(delta: float) -> void:
 	var pc: Vector2i = world_player.mover.cell
@@ -765,11 +654,9 @@ func _process_world(delta: float) -> void:
 		return
 
 
-## Casilla del jugador (world_cell en el Mundo 2.0, de área en la exploración vieja).
+## Casilla global del jugador (NO_CELL sin jugador).
 func _player_cell() -> Vector2i:
-	if world_player != null:
-		return world_player.mover.cell
-	return player.cell if player != null else Vector2i(-99999, -99999)
+	return world_player.mover.cell if world_player != null else NO_CELL
 
 
 func _is_free(c: Vector2i, me: OverworldMonster) -> bool:
@@ -788,35 +675,16 @@ func _note_seen(m: OverworldMonster) -> void:
 	var d: Vector2i = (m.cell - _player_cell()).abs()
 	if d.x > SEEN_RANGE.x or d.y > SEEN_RANGE.y:
 		return
-	var chunk: Vector2i = WorldCoords.world_cell_to_chunk(m.cell) if _world \
-		else _coord + Vector2i(floori(m.cell.x / float(ChunkData.SIZE)), floori(m.cell.y / float(ChunkData.SIZE)))
+	var chunk: Vector2i = WorldCoords.world_cell_to_chunk(m.cell)
 	var entry: Dictionary = { "monster": String(m.monster_id), "bosque_id": m.bosque_id, "chunk": [chunk.x, chunk.y] }
 	if GameState.seen_monsters.get(m.key, {}) != entry:
 		GameState.seen_monsters[m.key] = entry
 
 
-func _free_cell_near(cell: Vector2i, chunk: ChunkData) -> Vector2i:
-	var best: Vector2i = cell
-	var best_score: int = 1 << 30
-	for y: int in ChunkData.SIZE:
-		for x: int in ChunkData.SIZE:
-			var c := Vector2i(x, y)
-			if MonsterSteering.chebyshev(c, player.cell) < OFOMNI_MIN_GAP or not chunk.is_reachable(c) or not _is_free(c, null):
-				continue
-			var score: int = MonsterSteering.chebyshev(c, cell) * 10_000 + y * 100 + x
-			if score < best_score:
-				best_score = score
-				best = c
-	return best
-
-
 func _add(id: StringName, monster_key: String, bosque_id: int, at: Vector2i, rect: Rect2i, axis: Vector2i,
 		cfg: Dictionary, tex: Texture2D, frames: int = 1) -> OverworldMonster:
 	var m := OverworldMonster.new()
-	if _world:
-		m.setup_world(id, monster_key, bosque_id, at, rect, axis, cfg, tex, frames)
-	else:
-		m.setup(id, monster_key, bosque_id, at, rect, axis, cfg, tex, frames)
+	m.setup_world(id, monster_key, bosque_id, at, rect, axis, cfg, tex, frames)
 	add_child(m)
 	_monsters.append(m)
 	return m

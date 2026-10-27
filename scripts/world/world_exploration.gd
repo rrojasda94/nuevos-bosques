@@ -1,7 +1,7 @@
 class_name WorldExploration
 extends Node2D
 ## Exploración del modo Aventura en el Mundo 2.0 (ADR 0014; M17a). Sustituye en el juego a la
-## exploración vieja (exploration.gd, que queda para sus tests hasta M17b):
+## exploración vieja (exploration.gd, borrada en M17b):
 ## - El mundo es una WorldView (`standalone = false`): RegionPlan + WorldCache + WorldPregen con la
 ##   pantalla "Creando el mundo…" al crear o cargar la partida, y luego mundo continuo sin
 ##   fundidos. El jugador es un PlayerController con GridMover y aparece en su villa natal.

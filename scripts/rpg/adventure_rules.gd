@@ -466,40 +466,6 @@ static func reward_bosque_defense(bosque_id: int) -> void:
 	Senda.record(Senda.BOSQUE_SAVED)
 
 
-## Distancia (Chebyshev) de una casilla a la huella del Nujio del chunk (-1 si no hay Nujio).
-# ponytail: borrar en M17 (lo sustituye la versión _world)
-static func distance_to_nujio(chunk: ChunkData, cell: Vector2i) -> int:
-	var rect: Rect2i = chunk.nujio_rect
-	if rect.size.x <= 0:
-		return -1
-	var dx: int = maxi(0, maxi(rect.position.x - cell.x, cell.x - (rect.end.x - 1)))
-	var dy: int = maxi(0, maxi(rect.position.y - cell.y, cell.y - (rect.end.y - 1)))
-	return maxi(dx, dy)
-
-
-## Lugar de descanso junto al Nujio: a nujio_rest_radius casillas o menos de su huella, o la plaza
-## de su villa (en un chunk con Nujio).
-# ponytail: borrar en M17 (lo sustituye la versión _world)
-static func is_near_nujio(chunk: ChunkData, cell: Vector2i) -> bool:
-	if chunk == null or not ChunkData.in_bounds(cell):
-		return false
-	var d: int = distance_to_nujio(chunk, cell)
-	if d < 0:
-		return false
-	return d <= int(_relation_cfg().nujio_rest_radius) or (chunk.has_villa and chunk.get_tile(cell) == ChunkData.Tile.PLAZA)
-
-
-## El riutash pasa con el Adoc en (chunk, cell) del Bosque `bosque_id`: si estaba refugiado junto
-## a su Nujio, relación + per_nujio_rest (una vez por riutash: se llama una vez en cada uno).
-## Devuelve si sumó.
-# ponytail: borrar en M17 (lo sustituye la versión _world)
-static func riutash_near_nujio(chunk: ChunkData, cell: Vector2i, bosque_id: int, sheltered: bool) -> bool:
-	if not sheltered or bosque_id < 0 or not is_near_nujio(chunk, cell):
-		return false
-	change_relation(bosque_id, int(_relation_cfg().per_nujio_rest))
-	return true
-
-
 ## Radio de visión de un Botarramas del Bosque: el de sus datos + hostility_vision × hostilidad,
 ## con un extra de vision_max_bonus como mucho ("mira, observa"), más el del estado (enojado:
 ## detectan más lejos), menos la skill Paso quedo y menos el camuflaje del Adoc (Stealth). Sin
@@ -651,8 +617,8 @@ static func is_sneaking_unseen(bosque_id: int) -> bool:
 
 ## Se cuela en el Bosque cerrado `bosque_id`: queda colado (ni pagado ni forzado) y cada objeto
 ## equipado que se rompe gasta un uso. Avisa con bosque_sneaked (e item_broken por cada objeto
-## que se deshace). Devuelve los ids de los objetos rotos. No comprueba si se puede
-## (Stealth.can_sneak_into).
+## que se deshace). Devuelve los ids de los objetos rotos. No comprueba si se puede (lo decide
+## BosqueBorder con los vigías del límite).
 static func sneak_into(bosque_id: int) -> Array[StringName]:
 	GameState.sneaked_bosques[str(bosque_id)] = false
 	var broken: Array[StringName] = Stealth.spend_uses()
@@ -1059,30 +1025,6 @@ static func respawn_target(map: BosqueMap, fell_at: Vector2i, home: int) -> int:
 	return best
 
 
-## Casilla donde se despierta en el chunk del Nujio: una transitable junto a su huella (también en
-## diagonal) y a la que se llega desde el hub, la más cercana a la casilla al sur de su centro
-## (empates por fila y columna). Sin ninguna, el hub (en un Bosque con villa, la plaza).
-# ponytail: borrar en M17 (lo sustituye la versión _world)
-static func respawn_cell(chunk: ChunkData) -> Vector2i:
-	var rect: Rect2i = chunk.nujio_rect
-	if rect.size.x <= 0:
-		return chunk.hub
-	var south := Vector2i(rect.position.x + rect.size.x / 2, rect.end.y)
-	var ring: Rect2i = rect.grow(1)
-	var best: Vector2i = chunk.hub
-	var best_score: int = 1 << 30
-	for y: int in range(ring.position.y, ring.end.y):
-		for x: int in range(ring.position.x, ring.end.x):
-			var c := Vector2i(x, y)
-			if rect.has_point(c) or not chunk.is_walkable(c) or not chunk.is_reachable(c):
-				continue
-			var score: int = (absi(c.x - south.x) + absi(c.y - south.y)) * ChunkData.SIZE * ChunkData.SIZE 				+ y * ChunkData.SIZE + x
-			if score < best_score:
-				best = c
-				best_score = score
-	return best
-
-
 ## Aviso de dónde se despierta: "Despiertas junto al Nujio de <villa>." si el Bosque tiene villa;
 ## si no, el del Bosque sin villa.
 static func respawn_notice(map: BosqueMap, bosque_id: int) -> String:
@@ -1177,32 +1119,10 @@ static func damage_villa(luz_factor: float) -> void:
 	GameState.villa_damaged = true
 
 
-## La casilla toca (también en diagonal) la huella del Nujio del chunk.
-# ponytail: borrar en M17 (lo sustituye la versión _world)
-static func is_next_to_nujio(chunk: ChunkData, cell: Vector2i) -> bool:
-	return chunk.nujio_rect.size.x > 0 and chunk.nujio_rect.grow(1).has_point(cell) \
-		and not chunk.nujio_rect.has_point(cell)
-
-
-## Se descansa en una villa: en su plaza o junto al Nujio de un Bosque con villa. Un Nujio sin
-## villa no cura.
-# ponytail: borrar en M17 (lo sustituye la versión _world)
-static func is_villa_rest(chunk: ChunkData, cell: Vector2i) -> bool:
-	if not chunk.has_villa or not ChunkData.in_bounds(cell):
-		return false
-	return chunk.get_tile(cell) == ChunkData.Tile.PLAZA or is_next_to_nujio(chunk, cell)
-
-
 ## Descanso en la villa: PV al máximo.
 static func rest() -> void:
 	set_hp(max_hp())
 	EventBus.rested_in_villa.emit()
-
-
-## Refugio frente al riutash: una casilla REFUGE o un lugar de descanso de villa.
-# ponytail: borrar en M17 (lo sustituye la versión _world)
-static func is_riutash_shelter(chunk: ChunkData, cell: Vector2i) -> bool:
-	return chunk != null and ChunkData.in_bounds(cell) and (chunk.is_refuge(cell) or is_villa_rest(chunk, cell))
 
 
 # --- Mundo 2.0 (WorldChunk, ADR 0014 §7): las mismas reglas, con casillas del chunk de 80×80 ------

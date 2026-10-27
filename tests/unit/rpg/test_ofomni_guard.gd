@@ -4,7 +4,7 @@ extends GutTest
 ## pagando el peaje y vencerlos suma hostilidad; con la primera misión ofrecida, intentar salir del
 ## Bosque natal hace que sus Ofomni te devuelvan a la villa, y con la misión activa ya no.
 
-const EXPLORATION: String = "res://scenes/world/exploration.tscn"
+const EXPLORATION: String = "res://scenes/world/world_exploration.tscn"
 const Q: StringName = &"primera_mision"
 
 var _region: Dictionary
@@ -30,27 +30,35 @@ func after_each() -> void:
 	WorldClock.set_process(true)
 
 
-func _exploration() -> Node:
-	var expl: Node = load(EXPLORATION).instantiate()
-	add_child_autofree(expl)
-	expl.start()
+## Exploración del Mundo 2.0 con la partida actual (seed 42). Corrutina.
+func _exploration() -> WorldExploration:
+	var expl: WorldExploration = load(EXPLORATION).instantiate()
+	add_child_autoqfree(expl)
+	await expl.start()
 	return expl
 
 
-## Un chunk del Bosque natal con salida a otro Bosque, y el lado de esa salida.
-func _home_exit() -> Array:
-	for c: Vector2i in _map.chunks_of(_home):
-		var sides: Array[Vector2i] = OfomniGuard.exit_sides(_map, c, _home)
-		if not sides.is_empty():
-			return [c, sides[0]]
+## Casilla global del hub del chunk `coord`.
+func _hub(expl: WorldExploration, coord: Vector2i) -> Vector2i:
+	return WorldCoords.to_world_cell(coord, expl.world.pregen.get_chunk(coord).hub)
+
+
+## Chunk del Bosque natal con otro Bosque al este: [chunk, casilla global del borde este a media
+## altura (la primera del otro Bosque)]. [] si no hay.
+func _home_exit(expl: WorldExploration) -> Array:
+	var plan: RegionPlan = expl.plan
+	for c: Vector2i in expl.bosques.chunks_of(expl.home_bosque):
+		var next: int = plan.bosque_at(c + Vector2i.RIGHT)
+		if next >= 0 and next != expl.home_bosque:
+			return [c, WorldCoords.to_world_cell(c + Vector2i.RIGHT, Vector2i(0, WorldChunk.SIZE / 2))]
 	return []
 
 
 ## Roba en el Bosque natal: un segundo fruto en el mismo Momento.
-func _steal_at_home() -> void:
+func _steal_at_home(home: int) -> void:
 	var coord: Vector2i = GameState.chunk_coord
-	FruitRules.take(coord, Vector2i(1, 1), _home, _home)
-	var r: Dictionary = FruitRules.take(coord, Vector2i(2, 1), _home, _home)
+	FruitRules.take(coord, Vector2i(1, 1), home, home)
+	var r: Dictionary = FruitRules.take(coord, Vector2i(2, 1), home, home)
 	assert_true(bool(r.theft), "el segundo fruto es robo")
 
 
@@ -92,7 +100,7 @@ func test_chase_state_caps_and_gives_up_outside() -> void:
 func test_spawn_cells_out_of_sight_and_apart() -> void:
 	var player := Vector2i(32, 32)
 	var cells: Array[Vector2i] = OfomniGuard.spawn_cells(player, 2, func(_c: Vector2i) -> bool: return true,
-		Rect2i(0, 0, ChunkData.SIZE, ChunkData.SIZE))
+		Rect2i(0, 0, WorldChunk.SIZE, WorldChunk.SIZE))
 	assert_eq(cells.size(), 2)
 	for c: Vector2i in cells:
 		var off: Vector2i = (c - player).abs()
@@ -106,28 +114,28 @@ func test_spawn_cells_out_of_sight_and_apart() -> void:
 func test_theft_spawns_chasers_that_follow_inside_their_bosque_and_not_outside() -> void:
 	# Sin arma: al entrar armado en otro Bosque se avisa además "El Bosque siente tu arma." (test_stealth).
 	GameState.equipped.main_hand = ""
-	var expl: Node = _exploration()
-	assert_eq(_map.bosque_at(GameState.chunk_coord), _home)
-	_steal_at_home()
+	var expl: WorldExploration = await _exploration()
+	var home: int = expl.home_bosque
+	assert_eq(expl.plan.bosque_at(GameState.chunk_coord), home)
+	_steal_at_home(home)
 	var chasers: Array[OverworldMonster] = expl._field.chasers()
 	assert_between(chasers.size(), 1, 2, "despiertan 1 o 2 Ofomni")
 	for m: OverworldMonster in chasers:
 		assert_eq(m.monster_id, MonsterField.OFOMNI, "el Ofomni apaciguable, no el descarriado")
-		assert_eq(m.bosque_id, _home)
+		assert_eq(m.bosque_id, home)
 		assert_eq(m.state, MonsterSteering.State.CHASE, "ya persiguen")
 		assert_true(expl._field.can_detect(m), "aunque el Bosque dé permiso, el robo va aparte")
-		var off: Vector2i = (m.cell - GameState.player_cell).abs()
+		var off: Vector2i = (m.cell - expl.player.mover.cell).abs()
 		assert_true(off.x > 10 or off.y > 6, "aparecen fuera de la vista")
 	var count: int = chasers.size()
 	# Otro chunk del mismo Bosque: le siguen.
-	var other: Vector2i = _map.chunks_of(_home).filter(func(c: Vector2i) -> bool: return c != GameState.chunk_coord)[0]
-	expl._enter_chunk(other, expl._get_chunk(other).hub)
+	var other: Vector2i = expl.bosques.chunks_of(home).filter(func(c: Vector2i) -> bool: return c != GameState.chunk_coord)[0]
+	expl._place(_hub(expl, other))
 	assert_eq(expl._field.chasers().size(), count, "en otro chunk del Bosque siguen viniendo")
 	# Fuera del Bosque: se rinden.
 	watch_signals(EventBus)
-	var exit: Array = _home_exit()
-	var outside: Vector2i = exit[0] + exit[1]
-	expl._enter_chunk(outside, expl._get_chunk(outside).hub)
+	var exit: Array = _home_exit(expl)
+	expl._place(_hub(expl, WorldCoords.world_cell_to_chunk(exit[1])))
 	assert_eq(expl._field.chasers().size(), 0, "fuera de su Bosque no hay perseguidores")
 	assert_false(expl._chase.is_active())
 	assert_signal_emitted_with_parameters(EventBus, "notice_requested", [Texts.get_text("ofomni_chase_gave_up")])
@@ -136,29 +144,29 @@ func test_theft_spawns_chasers_that_follow_inside_their_bosque_and_not_outside()
 func test_chasers_never_step_out_of_their_chunk() -> void:
 	var cfg: Dictionary = MonsterField.inner_config(MonsterField.OFOMNI, MonsterField.ROLE_CHASER)
 	assert_eq(int(cfg.max_outside), 0)
-	var rect := Rect2i(0, 0, ChunkData.SIZE, ChunkData.SIZE)
+	var rect := Rect2i(0, 0, WorldChunk.SIZE, WorldChunk.SIZE)
 	var all: Callable = func(_c: Vector2i) -> bool: return true
-	var cell := Vector2i(62, 30)
+	var cell := Vector2i(78, 30)
 	for i: int in 6:
-		var d: Dictionary = MonsterSteering.decide(MonsterSteering.State.CHASE, cell, Vector2i(40, 30), Vector2i(72, 30),
+		var d: Dictionary = MonsterSteering.decide(MonsterSteering.State.CHASE, cell, Vector2i(40, 30), Vector2i(88, 30),
 			true, cfg, rect, all, 0, Vector2i.RIGHT)
 		cell = d.step
 		assert_true(rect.has_point(cell), "no cruza al chunk vecino")
 
 
 func test_theft_elsewhere_does_not_wake_this_bosque() -> void:
-	var expl: Node = _exploration()
-	EventBus.bosque_robbed.emit(_target)
+	var expl: WorldExploration = await _exploration()
+	EventBus.bosque_robbed.emit(expl.bosques.neighbours_of(expl.home_bosque)[0])
 	assert_eq(expl._field.chasers().size(), 0, "solo los del Bosque en el que estás")
 
 
 func test_loaded_game_has_no_chasers() -> void:
-	var expl: Node = _exploration()
-	_steal_at_home()
+	var expl: WorldExploration = await _exploration()
+	_steal_at_home(expl.home_bosque)
 	assert_gt(expl._field.chasers().size(), 0)
 	var save_before: Dictionary = GameState.to_dict()
 	assert_false(save_before.has("chasers"), "no se guardan")
-	expl.start()
+	await expl.start()
 	assert_eq(expl._field.chasers().size(), 0, "al cargar, desaparecen")
 	assert_false(expl._chase.is_active())
 
@@ -195,89 +203,69 @@ func test_defeating_a_chaser_adds_hostility_without_forcing() -> void:
 
 
 func test_exploration_victory_dissolves_one_chaser_and_appeasing_sends_all_home() -> void:
-	var expl: Node = _exploration()
-	expl._chase.alert(_home, 2)
+	var expl: WorldExploration = await _exploration()
+	var home: int = expl.home_bosque
+	expl._chase.alert(home, 2)
 	expl._spawn_chasers(2)
 	var chasers: Array[OverworldMonster] = expl._field.chasers()
 	assert_eq(chasers.size(), 2)
 	expl._pending_monster = chasers[0]
-	EventBus.unico_battle_resolved.emit(_home, &"victory")
+	EventBus.unico_battle_resolved.emit(home, &"victory")
 	assert_eq(expl._field.chasers().size(), 1, "vencido uno, el otro sigue")
 	assert_eq(expl._chase.count, 1)
 	assert_false(GameState.defeated_monsters.has(chasers[0].key), "no se guarda como vencido")
 	expl._pending_monster = expl._field.chasers()[0]
-	EventBus.unico_battle_resolved.emit(_home, &"appeased")
+	EventBus.unico_battle_resolved.emit(home, &"appeased")
 	assert_eq(expl._field.chasers().size(), 0, "apaciguado, se van todos")
 	assert_false(expl._chase.is_active())
 
 
 func test_engaging_a_chaser_starts_a_direct_battle() -> void:
-	var expl: Node = _exploration()
-	expl._chase.alert(_home, 1)
+	var expl: WorldExploration = await _exploration()
+	var home: int = expl.home_bosque
+	expl._chase.alert(home, 1)
 	expl._spawn_chasers(1)
 	watch_signals(EventBus)
 	expl._on_monster_engaged(expl._field.chasers()[0])
-	assert_signal_emitted_with_parameters(EventBus, "unico_battle_requested", [_home, MonsterField.OFOMNI, false])
+	assert_signal_emitted_with_parameters(EventBus, "unico_battle_requested", [home, MonsterField.OFOMNI, false])
 	assert_signal_not_emitted(EventBus, "bosque_border_reached", "sin menú del borde")
 
 
 # --- Confinamiento de la primera misión ----------------------------------------------------------
 
-func test_offered_mission_crossing_home_border_returns_to_villa() -> void:
-	var expl: Node = _exploration()
+func test_offered_mission_nearing_the_border_returns_to_villa() -> void:
+	var expl: WorldExploration = await _exploration()
+	var home: int = expl.home_bosque
 	assert_true(OfomniGuard.is_confined(), "misión ofrecida, sin aceptar")
-	var exit: Array = _home_exit()
-	expl._enter_chunk(exit[0], expl._get_chunk(exit[0]).hub)
+	var exit: Array = _home_exit(expl)
+	assert_false(exit.is_empty(), "el Bosque natal linda con otro")
+	var border: Vector2i = exit[1]
+	expl._on_cell_changed(border + Vector2i(-4, 0))
+	assert_false(expl._capturing, "a 4 casillas, todavía no")
 	watch_signals(EventBus)
-	expl._on_edge_reached(exit[1])
+	expl._on_cell_changed(border + Vector2i(-3, 0))
 	assert_signal_not_emitted(EventBus, "bosque_border_reached", "no abre el menú del borde")
-	assert_true(expl._capturing)
+	assert_true(expl._capturing, "a 3 casillas, sí")
 	assert_eq(expl._field.with_role(MonsterField.ROLE_CAPTOR).size(), 2, "aparecen los Ofomni del Bosque natal")
 	assert_true(expl._dialogue.is_open(), "lo cuentan")
 	var luz: int = GameState.luz
 	var hp: int = GameState.hp
 	expl._dialogue.finished.emit()
-	var villa: Vector2i = _map.nujio_chunk[_home]
+	var villa: Vector2i = expl.bosques.nujio_chunk[home]
 	assert_eq(GameState.chunk_coord, villa, "de vuelta en la villa natal")
-	assert_eq(GameState.player_cell, expl._get_chunk(villa).hub, "en la plaza")
+	assert_eq(GameState.player_cell, expl.world.pregen.get_chunk(villa).hub, "en la plaza")
 	assert_eq(GameState.luz, luz, "sin perder Luz")
 	assert_eq(GameState.hp, hp, "ni PV")
 	assert_eq(GameState.objective_label, Texts.get_text("compass_sfida"), "la brújula sigue apuntando al sfida")
 
 
-func test_offered_mission_nearing_the_border_also_captures() -> void:
-	var expl: Node = _exploration()
-	var exit: Array = _home_exit()
-	var side: Vector2i = exit[1]
-	expl._enter_chunk(exit[0], expl._get_chunk(exit[0]).hub)
-	var mid: int = ChunkData.SIZE / 2
-	var far: Vector2i = Vector2i(mid, mid)
-	var near: Vector2i = Vector2i(mid, mid)
-	if side.x != 0:
-		near.x = ChunkData.SIZE - 3 if side.x > 0 else 2
-		far.x = ChunkData.SIZE - 4 if side.x > 0 else 3
-	else:
-		near.y = ChunkData.SIZE - 3 if side.y > 0 else 2
-		far.y = ChunkData.SIZE - 4 if side.y > 0 else 3
-	assert_false(OfomniGuard.is_near_exit(_map, exit[0], far, _home), "a 4 pasos, todavía no")
-	assert_true(OfomniGuard.is_near_exit(_map, exit[0], near, _home), "a 3 pasos, sí")
-	expl._on_player_stepped(near)
-	assert_true(expl._capturing)
-
-
 func test_active_mission_lets_you_leave() -> void:
-	var expl: Node = _exploration()
+	var expl: WorldExploration = await _exploration()
+	var home: int = expl.home_bosque
 	var q: Dictionary = GameState.quests[Q]
-	assert_true(QuestLogic.accept(q, _map, 42, _home))
+	assert_true(QuestLogic.accept(q, expl.bosques, 42, home))
 	QuestLogic.commit(Q, q, QuestLogic.OFFERED)
 	assert_false(OfomniGuard.is_confined())
-	var exit: Array = _home_exit()
-	expl._enter_chunk(exit[0], expl._get_chunk(exit[0]).hub)
-	watch_signals(EventBus)
-	expl._on_edge_reached(exit[1])
+	var exit: Array = _home_exit(expl)
+	expl._on_cell_changed(exit[1] + Vector2i(-1, 0))
 	assert_false(expl._capturing, "con la misión activa, nadie te detiene")
-	var next: int = _map.bosque_at(exit[0] + exit[1])
-	if AdventureRules.is_passable(next, _home):
-		assert_ne(GameState.chunk_coord, exit[0], "cruza")
-	else:
-		assert_signal_emitted_with_parameters(EventBus, "bosque_border_reached", [next])

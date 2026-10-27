@@ -103,5 +103,5 @@ func test_battle_texture_fits_the_box() -> void:
 
 
 func test_adoc_back_texture_is_one_frame() -> void:
-	var tex: Texture2D = PlayerWalker.back_texture()
+	var tex: Texture2D = PlayerController.back_texture()
 	assert_eq(Vector2i(tex.get_width(), tex.get_height()), Vector2i(16, 16))

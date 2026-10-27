@@ -21,50 +21,12 @@ static func villa_name(seed_value: int, bosque_id: int) -> String:
 	return str(_names[ChunkGenerator.hash_ints([seed_value, bosque_id, SALT_VILLA_NAME]) % _names.size()])
 
 
-## Segundos de reloj para recorrer `chunks` chunks andando: cada chunk son unas ChunkData.SIZE
-## casillas a PlayerWalker.STEP_TIME segundos por casilla. No cuenta peajes ni combates.
-# ponytail: borrar en M17 (lo sustituye travel_seconds_world)
-static func travel_seconds(chunks: int) -> float:
-	return chunks * ChunkData.SIZE * PlayerWalker.STEP_TIME
-
-
-## Minutos de camino redondeados hacia arriba, mínimo 1 (navegacion.md).
-# ponytail: borrar en M17 (lo sustituye travel_minutes_world)
-static func travel_minutes(chunks: int) -> int:
-	return minutes_of(travel_seconds(chunks))
-
-
 ## Minutos de `seconds` segundos de camino, redondeados hacia arriba, mínimo 1.
 static func minutes_of(seconds: float) -> int:
 	return maxi(1, ceili(seconds / 60.0))
 
 
-## Destino del letrero `cell` del chunk: { "bosque_id", "delta" (dirección a señalar), "chunks" }.
-## Letrero del camino: la villa natal, en la dirección del siguiente tramo y a los chunks de camino
-## que faltan. Letrero de Bosque: la villa de ese Bosque, en línea recta.
-# ponytail: borrar en M17 (lo sustituye destination_world)
-static func destination(map: BosqueMap, chunk: ChunkData, cell: Vector2i, home_bosque: int) -> Dictionary:
-	var to_home: bool = chunk.sign_kind(cell) == ChunkData.SignKind.HOME_VILLA
-	var bosque_id: int = home_bosque if to_home else map.bosque_at(chunk.coord)
-	var straight: Vector2i = map.nujio_chunk[bosque_id] - chunk.coord
-	var chunks: int = absi(straight.x) + absi(straight.y)
-	var delta: Vector2i = straight
-	if to_home:
-		if map.road_distance(chunk.coord) >= 0:
-			chunks = map.road_distance(chunk.coord)
-		if chunk.home_direction != Vector2i.ZERO:
-			delta = chunk.home_direction
-	return { "bosque_id": bosque_id, "delta": delta, "chunks": chunks, "to_home": to_home }
-
-
-## Texto del letrero para un camino de `chunks` chunks. Si el camino dura más que lo que falta
-## para el riutash (`seconds_to_riutash`, < 0 = no se sabe) se añade el aviso.
-# ponytail: borrar en M17 (lo sustituye text_world)
-static func text(villa: String, to_home: bool, delta: Vector2i, chunks: int, seconds_to_riutash: float = -1.0) -> String:
-	return text_for_seconds(villa, to_home, delta, travel_seconds(chunks), seconds_to_riutash)
-
-
-## Texto del letrero para un camino de `seconds` segundos andando (ver text()).
+## Texto del letrero para un camino de `seconds` segundos andando (ver text_world()).
 static func text_for_seconds(villa: String, to_home: bool, delta: Vector2i, seconds: float,
 		seconds_to_riutash: float = -1.0) -> String:
 	var key: String = "signpost_to_home_villa" if to_home else "signpost_to_villa"

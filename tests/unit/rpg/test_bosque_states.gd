@@ -5,11 +5,13 @@ extends GutTest
 ## apagan con E y suben la relación +15; angry_candidate -> enojado; aviso del Iserald; tinte con
 ## la paleta; mapa y pantalla I; guardado v14 con migración desde la v13.
 
-const EXPLORATION: String = "res://scenes/world/exploration.tscn"
+const EXPLORATION: String = "res://scenes/world/world_exploration.tscn"
 const Crossing = preload("res://scripts/rpg/crossing.gd")
 const Screen = preload("res://scripts/rpg/inventory_screen.gd")
 const SAVE_SLOT: int = 92
 const SEEDS: Array[int] = [1, 2, 42, 777, 9001, 123456789]
+## Seeds con las que se construye el Mundo 2.0 entero (RegionPlan, ~1 s cada una).
+const WORLD_SEEDS: Array[int] = [42, 7]
 
 var _region: Dictionary
 var _map: BosqueMap
@@ -41,11 +43,17 @@ func after_all() -> void:
 	DirAccess.remove_absolute(SaveManager.slot_path(SAVE_SLOT))
 
 
-func _exploration() -> Node:
-	var expl: Node = load(EXPLORATION).instantiate()
-	add_child_autofree(expl)
-	expl.start()
+## Exploración del Mundo 2.0 con la partida actual (seed 42). Corrutina.
+func _exploration() -> WorldExploration:
+	var expl: WorldExploration = load(EXPLORATION).instantiate()
+	add_child_autoqfree(expl)
+	await expl.start()
 	return expl
+
+
+## Casilla global del hub del chunk `coord` del mundo de `expl`.
+func _hub(expl: WorldExploration, coord: Vector2i) -> Vector2i:
+	return WorldCoords.to_world_cell(coord, expl.world.pregen.get_chunk(coord).hub)
 
 
 ## Primer Bosque del reparto de la seed 42 con ese estado de generación (-1 si no hay).
@@ -216,10 +224,11 @@ func test_unicos_behaviour_by_state() -> void:
 
 
 func test_independent_unico_asks_for_luz_then_fights_if_refused() -> void:
-	var dead: int = _first_with(BosqueStates.MUERTO)
+	var expl: WorldExploration = await _exploration()
+	var dead: int = _first_with(BosqueStates.MUERTO, expl.bosques)
 	assert_gt(dead, -1, "la seed 42 tiene un Bosque muerto")
-	var expl: Node = _exploration()
-	var m: OverworldMonster = expl._field.spawn_hunter(&"botarramas", dead, Vector2i(5, 5), _map.styles[dead])
+	var at: Vector2i = _hub(expl, expl.bosques.nujio_chunk[dead])
+	var m: OverworldMonster = expl._field.spawn_hunter(&"botarramas", dead, at, expl.bosques.styles[dead])
 	m.role = MonsterField.ROLE_PATROL
 	var r: int = 0
 	while not BosqueStates.is_independent(42, m.key, r, BosqueStates.MUERTO):
@@ -254,19 +263,19 @@ func test_independent_unico_asks_for_luz_then_fights_if_refused() -> void:
 # --- Bosque muerto ------------------------------------------------------------------------------------
 
 func test_dead_bosque_has_no_nujio_no_fruit_and_is_never_a_respawn_point() -> void:
-	for s: int in SEEDS:
-		var map: BosqueMap = BosqueMap.for_region(s, _region)
+	for s: int in WORLD_SEEDS:
+		var plan := RegionPlan.for_region(s, &"valle_del_sara")
+		var map: BosqueMap = plan.bosques
 		var dead: int = _first_with(BosqueStates.MUERTO, map)
 		assert_gt(dead, -1, "seed %d: hay un Bosque muerto" % s)
-		assert_false(ChunkGenerator.bosque_gives_fruit(_region, map, dead))
-		var center: ChunkData = ChunkGenerator.generate(s, map.nujio_chunk[dead], _region, map)
+		assert_false(ChunkGenerator.bosque_gives_fruit(plan.region_params, map, dead))
+		var center: WorldChunk = ChunkBuilder.build(plan, map.nujio_chunk[dead])
 		assert_eq(center.nujio_rect.size, Vector2i.ZERO, "seed %d: sin Nujio" % s)
-		assert_eq(center.tiles.count(ChunkData.Tile.NUJIO), 0)
-		assert_gt(center.tiles.count(ChunkData.Tile.ROCKY), 0, "decadencia: restos donde estaba el Nujio")
+		assert_true(center.objects_of(WorldChunk.ObjectKind.NUJIO).is_empty())
 		assert_true(center.is_walkable(center.hub))
 		for c: Vector2i in map.chunks_of(dead):
-			var chunk: ChunkData = ChunkGenerator.generate(s, c, _region, map)
-			assert_eq(chunk.tiles.count(ChunkData.Tile.FRUIT_TREE), 0, "seed %d chunk %s: sin frutos" % [s, c])
+			var chunk: WorldChunk = ChunkBuilder.build(plan, c)
+			assert_true(chunk.objects_of(WorldChunk.ObjectKind.FRUIT_TREE).is_empty(), "seed %d chunk %s: sin frutos" % [s, c])
 	var dead42: int = _first_with(BosqueStates.MUERTO)
 	GameState.bosque_relation[str(dead42)] = 100
 	assert_false(AdventureRules.is_ally(dead42, _home), "sin Nujio no es aliado")
@@ -276,13 +285,14 @@ func test_dead_bosque_has_no_nujio_no_fruit_and_is_never_a_respawn_point() -> vo
 # --- Incendios ------------------------------------------------------------------------------------------
 
 func test_fires_block_and_never_cut_a_path() -> void:
-	for s: int in SEEDS:
-		var map: BosqueMap = BosqueMap.for_region(s, _region)
+	for s: int in WORLD_SEEDS:
+		var plan := RegionPlan.for_region(s, &"valle_del_sara")
+		var map: BosqueMap = plan.bosques
 		var id: int = _first_with(BosqueStates.NECESITA_AYUDA, map)
 		assert_gt(id, -1)
 		var burning: int = 0
 		for c: Vector2i in map.chunks_of(id):
-			var chunk: ChunkData = ChunkGenerator.generate(s, c, _region, map)
+			var chunk: WorldChunk = ChunkBuilder.build(plan, c)
 			var always: bool = c == map.nujio_chunk[id]
 			var cells: Array[Vector2i] = BosqueFires.fire_cells(chunk, s, BosqueStates.NECESITA_AYUDA, always)
 			assert_eq(cells, BosqueFires.fire_cells(chunk, s, BosqueStates.NECESITA_AYUDA, always), "determinista")
@@ -296,7 +306,7 @@ func test_fires_block_and_never_cut_a_path() -> void:
 			var blocked: Dictionary = {}
 			for f: Vector2i in cells:
 				blocked[f] = true
-				for d: Vector2i in ChunkData.SIDES:
+				for d: Vector2i in WorldChunk.SIDES:
 					touches = touches or (chunk.is_reachable(f + d) and not cells.has(f + d))
 			assert_true(touches, "seed %d chunk %s: se puede apagar desde delante" % [s, c])
 			var lost: int = 0
@@ -306,44 +316,23 @@ func test_fires_block_and_never_cut_a_path() -> void:
 				"seed %d chunk %s: el fuego no corta ningún paso" % [s, c])
 		assert_gt(burning, 0)
 		# Otros estados no arden.
-		var chunk0: ChunkData = ChunkGenerator.generate(s, map.nujio_chunk[map.home_bosque], _region, map)
+		var chunk0: WorldChunk = ChunkBuilder.build(plan, plan.home_chunk)
 		assert_true(BosqueFires.fire_cells(chunk0, s, BosqueStates.SANO, true).is_empty())
 
 
-func test_fire_is_put_out_with_e_and_raises_the_relation() -> void:
+## Apagar con tiempo (la E sobre el fuego): +15 de relación, gasta tiempo y no vuelve. El fuego del
+## Mundo 2.0 todavía no se dibuja en la exploración (pendiente tras M17b): aquí, la regla.
+func test_putting_out_a_fire_by_time_raises_the_relation() -> void:
 	var id: int = _first_with(BosqueStates.NECESITA_AYUDA)
 	var coord: Vector2i = _map.nujio_chunk[id]
-	var expl: Node = _exploration()
-	expl._enter_chunk(coord, expl._get_chunk(coord).hub)
-	expl._fade.color.a = 0.0
-	assert_false(expl._fires.is_empty(), "el chunk arde")
-	assert_eq(expl._fire_layer.get_child_count(), expl._fires.size(), "fuego animado en cada casilla")
-	var fire: Vector2i = Vector2i(-1, -1)
-	var stand: Vector2i = Vector2i(-1, -1)
-	for f: Vector2i in expl._fires:
-		if expl._fires[f] != coord:
-			continue
-		assert_false(expl._player.is_walkable.call(f), "el fuego bloquea")
-		assert_false(expl._area_walkable(f), "también a los Únicos")
-		for d: Vector2i in ChunkData.SIDES:
-			if stand.x < 0 and expl._player.is_walkable.call(f + d) and expl._chunk.is_reachable(f + d):
-				fire = f
-				stand = f + d
-	assert_gt(stand.x, -1, "hay desde dónde apagarlo")
-	expl._player.place_at(stand)
-	expl._player.facing = fire - stand
 	var elapsed: float = GameState.clock_elapsed
 	var relation: int = AdventureRules.relation(id)
 	watch_signals(EventBus)
-	expl._interact()
-	assert_true(expl._dialogue.is_open(), "pregunta si apagarlo")
-	expl._dialogue.choice.emit(0)
+	assert_true(BosqueFires.extinguish(coord, id, false))
 	assert_true(BosqueFires.is_extinguished(coord))
 	assert_eq(AdventureRules.relation(id), relation + 15, "defenderlo: +15")
 	assert_signal_emitted_with_parameters(EventBus, "bosque_fire_extinguished", [id, coord])
 	assert_almost_eq(GameState.clock_elapsed, elapsed + BosqueFires.time_seconds(), 0.01, "gasta tiempo")
-	assert_false(expl._fires.values().has(coord), "ya no arde")
-	assert_true(expl._player.is_walkable.call(fire) or not expl._chunk.is_walkable(fire), "ya no bloquea más que antes")
 	assert_false(BosqueFires.extinguish(coord, id, false), "una vez apagado, no vuelve")
 
 
@@ -387,12 +376,12 @@ func test_very_low_relation_turns_the_bosque_angry() -> void:
 # --- Avisos, tinte, mapa y pantalla I --------------------------------------------------------------------
 
 func test_entering_a_corrupt_bosque_warns_of_its_iserald() -> void:
-	var corrupt: int = _first_with(BosqueStates.CORRUPTO)
-	var expl: Node = _exploration()
+	var expl: WorldExploration = await _exploration()
+	var corrupt: int = _first_with(BosqueStates.CORRUPTO, expl.bosques)
+	assert_gt(corrupt, -1, "la seed 42 tiene un Bosque corrupto")
 	GameState.open_until[str(corrupt)] = AdventureRules.OPEN_PERMANENT
 	watch_signals(EventBus)
-	var coord: Vector2i = _map.chunks_of(corrupt)[0]
-	expl._enter_chunk(coord, expl._get_chunk(coord).hub)
+	expl._place(_hub(expl, expl.bosques.chunks_of(corrupt)[0]))
 	assert_signal_emitted_with_parameters(EventBus, "notice_requested", ["Este Bosque está al borde de soltar a su Iserald."])
 	assert_signal_emitted_with_parameters(EventBus, "bosque_entered", [corrupt, BosqueStates.CORRUPTO])
 	assert_true(BosqueStates.has_iserald_risk(BosqueStates.CORRUPTO))
@@ -409,12 +398,14 @@ func test_state_tint_stays_in_the_palette() -> void:
 				assert_true(PlaceholderTileset.DEAD_COLORS.has(t), "muerto: seco y gris")
 		assert_eq(PlaceholderTileset.state_color(PlaceholderTileset.OUTLINE, state), PlaceholderTileset.OUTLINE)
 	assert_eq(PlaceholderTileset.state_color(Color("3e8948"), BosqueStates.SANO), Color("3e8948"), "el sano no cambia")
-	var healthy: Image = PlaceholderTileset.make_source(style).texture.get_image()
-	var dead: Image = PlaceholderTileset.make_source(style, BosqueStates.MUERTO).texture.get_image()
-	var tree := Rect2i(ChunkData.Tile.TREE * PlaceholderTileset.TILE, 0, PlaceholderTileset.TILE, PlaceholderTileset.TILE)
-	assert_ne(healthy.get_region(tree).get_data(), dead.get_region(tree).get_data(), "los árboles cambian")
-	var water := Rect2i(ChunkData.Tile.RIVER_NARROW * PlaceholderTileset.TILE, 0, PlaceholderTileset.TILE, PlaceholderTileset.TILE)
-	assert_eq(healthy.get_region(water).get_data(), dead.get_region(water).get_data(), "el agua no")
+	# Recolorear un trozo de arte: la hoja cambia, el contorno no.
+	var leaf: Color = (PlaceholderTileset.LEAVES[int(style.leaf)] as Array)[0]
+	var img := Image.create(2, 1, false, Image.FORMAT_RGBA8)
+	img.set_pixel(0, 0, leaf)
+	img.set_pixel(1, 0, PlaceholderTileset.OUTLINE)
+	PlaceholderTileset.tint_rect(img, Rect2i(0, 0, 2, 1), BosqueStates.MUERTO, {})
+	assert_ne(img.get_pixel(0, 0), leaf, "los árboles cambian")
+	assert_eq(img.get_pixel(1, 0), PlaceholderTileset.OUTLINE, "el contorno no")
 	assert_eq(PlaceholderTileset.fire_frames().size(), PlaceholderTileset.FIRE_FRAMES, "fuego animado")
 
 

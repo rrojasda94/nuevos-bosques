@@ -1,24 +1,23 @@
 class_name OverworldMonster
 extends Node2D
-## Monstruo visible en el mundo (monstruos.md): se mueve por casillas con su propio step_time, con la
-## misma colisión que el jugador (la casilla libre se la pregunta MonsterField) y un sprite de
-## UnicoArt. Qué hace en cada paso lo decide MonsterSteering. Con hoja de varios fotogramas (PNG)
-## cambia de fotograma en cada paso y mira hacia donde anda (el arte mira a la izquierda); con el
-## placeholder de un fotograma, el sprite se balancea. No conoce el mapa ni GameState.
-## Mundo 2.0 (ADR 0014 §2 "Monstruos", setup_world/think_world): deja los tweens y se mueve en
-## continuo con su propio GridMover (la misma colisión que el jugador) hacia el centro de la casilla
-## que decide MonsterSteering, a `speed_px` (o `idle_speed_px` en reposo) de sus datos; al llegar
-## pide la siguiente. `cell` es la casilla que ocupa o a la que va (la reserva, como con el tween)
-## y está en `world_cell`; la de sus pies es `mover.cell`. Si persigue y ya está a su
+## Monstruo visible en el mundo (monstruos.md) con un sprite de UnicoArt. Qué casilla pisa después
+## lo decide MonsterSteering (la casilla libre se la pregunta MonsterField). Con hoja de varios
+## fotogramas (PNG) cambia de fotograma al andar y mira hacia donde anda (el arte mira a la
+## izquierda); con el placeholder de un fotograma, el sprite se balancea. No conoce el mapa ni
+## GameState.
+## Movimiento continuo (ADR 0014 §2 "Monstruos", setup_world/think_world): su propio GridMover (la
+## misma colisión que el jugador) le lleva hacia el centro de la casilla que decide MonsterSteering,
+## a `speed_px` (o `idle_speed_px` en reposo) de sus datos; al llegar pide la siguiente. `cell` es
+## la casilla que ocupa o a la que va (la reserva) y está en `world_cell`; la de sus pies es `mover.cell`. Si persigue y ya está a su
 ## engage_distance en casillas, se arrima dentro de su casilla hacia el jugador para que las cajas
 ## lleguen a engage_px (WorldEncounters). Dormido (`asleep`), no piensa ni se ve, y conserva todo.
 
 ## Ángulo del balanceo al andar (radianes) y altura del saltito.
 const SWAY: float = 0.18
 const STEP_BOB: float = 1.5
-## Mundo 2.0: a esta distancia (px) del punto al que va, ha llegado.
+## A esta distancia (px) del punto al que va, ha llegado.
 const ARRIVE_PX: float = 0.01
-## Mundo 2.0: avanzar menos que esto (px) en un tick con un punto por delante = atascado.
+## Avanzar menos que esto (px) en un tick con un punto por delante = atascado.
 const STUCK_PX: float = 0.001
 
 ## Id de datos (balance.json, monsters.<id>): &"botarramas", &"ofomni" u &"ofomni_descarriado".
@@ -30,7 +29,7 @@ var bosque_id: int = -1
 var cfg: Dictionary = {}
 var cell: Vector2i = Vector2i.ZERO
 var post: Vector2i = Vector2i.ZERO
-## Chunk propio en casillas de área (para max_outside).
+## Chunk propio en world_cell (para max_outside).
 var home_rect: Rect2i = Rect2i()
 var lateral: Vector2i = Vector2i.RIGHT
 var state: MonsterSteering.State = MonsterSteering.State.IDLE
@@ -46,23 +45,25 @@ var count: int = 1
 ## Encuentro con otro adoc al que pertenece este rival (MonsterField.ROLE_DUEL), o {}.
 var encounter: Dictionary = {}
 
-## Mundo 2.0: su movimiento continuo (null en la exploración vieja, que usa tweens).
+## Su movimiento continuo (lo crea setup_world).
 var mover: GridMover = null
-## Mundo 2.0: su chunk está fuera de los chunks activos (MonsterField). No piensa ni se ve.
+## Su chunk está fuera de los chunks activos (MonsterField). No piensa ni se ve.
 var asleep: bool = false
-## Mundo 2.0: puesto propio antes de acudir a un cruce fuera de puerta (MonsterField.summon_nearest).
+## Puesto propio antes de acudir a un cruce fuera de puerta (MonsterField.summon_nearest).
 var home_post: Vector2i = Vector2i.ZERO
 
 var _idle_phase: int = 0
 var _wait: float = 0.0
-var _sway_side: float = 1.0
-var _tween: Tween
+
+
 var _sprite: Sprite2D
-## Mundo 2.0: punto (pies, px) al que va ahora: el centro de `cell` o, al arrimarse, uno dentro.
+## Punto (pies, px) al que va ahora: el centro de `cell` o, al arrimarse, uno dentro.
 var _goal: Vector2 = Vector2.ZERO
 
 
-func setup(id: StringName, monster_key: String, owner_bosque: int, at: Vector2i, rect: Rect2i, axis: Vector2i,
+## Prepara el monstruo con `at` (su puesto) y `rect` (su chunk) en world_cell. Aparece con los pies
+## en el centro de `at`.
+func setup_world(id: StringName, monster_key: String, owner_bosque: int, at: Vector2i, rect: Rect2i, axis: Vector2i,
 		config: Dictionary, texture: Texture2D, frames: int = 1) -> void:
 	monster_id = id
 	key = monster_key
@@ -72,26 +73,19 @@ func setup(id: StringName, monster_key: String, owner_bosque: int, at: Vector2i,
 	post = at
 	home_rect = rect
 	lateral = axis
-	position = PlayerWalker.cell_to_position(at)
 	_sprite = Sprite2D.new()
 	_sprite.texture = texture
 	_sprite.hframes = maxi(1, frames)
 	# Los pies en el centro de la casilla: los sprites grandes sobresalen hacia arriba.
-	_sprite.offset = Vector2(0, -(texture.get_height() - PlayerWalker.TILE_SIZE) * 0.5)
+	_sprite.offset = Vector2(0, -(texture.get_height() - WorldCoords.TILE) * 0.5)
 	add_child(_sprite)
-
-
-## Mundo 2.0: como setup, con `at` y `rect` en world_cell. Aparece con los pies en el centro de `at`.
-func setup_world(id: StringName, monster_key: String, owner_bosque: int, at: Vector2i, rect: Rect2i, axis: Vector2i,
-		config: Dictionary, texture: Texture2D, frames: int = 1) -> void:
-	setup(id, monster_key, owner_bosque, at, rect, axis, config, texture, frames)
 	home_post = at
 	# Sin ayuda de esquina: va de centro a centro de casillas transitables.
 	mover = GridMover.new(MovementConfig.hitbox(), 0.0, 0.0)
 	place_at(at)
 
 
-## Mundo 2.0: pone los pies en el centro de `at` (y ahí su casilla), sin andar.
+## Pone los pies en el centro de `at` (y ahí su casilla), sin andar.
 func place_at(at: Vector2i) -> void:
 	cell = at
 	_goal = WorldCoords.world_cell_to_world_pos(at)
@@ -99,23 +93,21 @@ func place_at(at: Vector2i) -> void:
 	_sync()
 
 
-## Mundo 2.0: caja de los pies (px globales).
+## Caja de los pies (px globales).
 func get_rect() -> Rect2:
 	return mover.get_rect() if mover != null else Rect2(position, Vector2.ZERO)
 
 
-## Mundo 2.0: posición de los pies (px).
+## Posición de los pies (px).
 func world_pos() -> Vector2:
 	return mover.world_pos if mover != null else position
 
 
 func is_moving() -> bool:
-	if mover != null:
-		return not _arrived()
-	return _tween != null and _tween.is_running()
+	return mover != null and not _arrived()
 
 
-## Mundo 2.0: duerme (fuera de los chunks activos) o despierta. Conserva estado, puesto y posición.
+## Duerme (fuera de los chunks activos) o despierta. Conserva estado, puesto y posición.
 func set_asleep(value: bool) -> void:
 	asleep = value
 	visible = not value
@@ -129,7 +121,7 @@ func speed() -> float:
 	return float(cfg.get("speed_px", WorldCoords.TILE / maxf(0.01, float(cfg.get("step_time", 0.25)))))
 
 
-## Mundo 2.0: un tick. Si no ha llegado a su punto, anda hacia él con su GridMover; si ha llegado,
+## Un tick. Si no ha llegado a su punto, anda hacia él con su GridMover; si ha llegado,
 ## MonsterSteering decide la siguiente casilla (en world_cell) y empieza a ir hacia su centro.
 ## `player_pos`: pies del jugador (px); `walkable`: casillas libres para él; `is_blocked`: colisión
 ## del terreno (la del GridMover).
@@ -211,28 +203,6 @@ func _sync() -> void:
 	_sprite.position.y = -STEP_BOB * absf(t)
 
 
-# ponytail: borrar en M17 (exploración vieja, por casillas con tween); el Mundo 2.0 usa think_world.
-## Un fotograma: enfriamiento, decisión y, si toca, un paso. `can_detect`: puede ver al jugador
-## (p. ej. su Bosque está cerrado). `walkable`: casillas libres para él.
-func think(delta: float, player: Vector2i, can_detect: bool, walkable: Callable) -> void:
-	cooldown = maxf(0.0, cooldown - delta)
-	engage_delay = maxf(0.0, engage_delay - delta)
-	_wait -= delta
-	if is_moving() or _wait > 0.0:
-		return
-	var d: Dictionary = MonsterSteering.decide(state, cell, post, player, can_detect and cooldown <= 0.0, cfg,
-		home_rect, walkable, _idle_phase, lateral)
-	state = d.state
-	if d.next_phase:
-		_idle_phase += 1
-	var time: float = float(cfg.step_time) if state != MonsterSteering.State.IDLE else float(cfg.idle_step_time)
-	_wait = time
-	if d.step != cell:
-		_step_to(d.step, time)
-	elif state == MonsterSteering.State.IDLE:
-		_look_at(player)
-
-
 ## Quieto, mira hacia el jugador si lo tiene cerca (te mira pasar). Solo con hoja de PNG: el arte
 ## mira a la izquierda y se voltea.
 func _look_at(player: Vector2i) -> void:
@@ -247,21 +217,3 @@ func calm(seconds: float) -> void:
 	if state == MonsterSteering.State.CHASE:
 		state = MonsterSteering.State.RETURN
 
-
-# ponytail: borrar en M17 (tween por casillas).
-func _step_to(target: Vector2i, time: float) -> void:
-	var animated: bool = _sprite.hframes > 1
-	if animated:
-		_sprite.frame = (_sprite.frame + 1) % _sprite.hframes
-		if target.x != cell.x:
-			_sprite.flip_h = target.x > cell.x
-	cell = target
-	_sway_side = -_sway_side
-	_tween = create_tween()
-	_tween.tween_property(self, "position", PlayerWalker.cell_to_position(target), time)
-	_tween.parallel().tween_property(_sprite, "position:y", -STEP_BOB, time * 0.5)
-	_tween.parallel().tween_property(_sprite, "position:y", 0.0, time * 0.5).set_delay(time * 0.5)
-	# El pixel art no se gira (style-guide): el balanceo es solo del placeholder.
-	if not animated:
-		_tween.parallel().tween_property(_sprite, "rotation", SWAY * _sway_side, time * 0.5)
-		_tween.parallel().tween_property(_sprite, "rotation", 0.0, time * 0.5).set_delay(time * 0.5)

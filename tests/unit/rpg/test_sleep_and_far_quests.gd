@@ -6,7 +6,7 @@ extends GutTest
 ## Bosques buenos (no siempre la más corta); peaje 0 en la ruta y en el Bosque que llama; completar
 ## da +25 de relación, fama y Luz; guardado v17 con migración desde la v16.
 
-const EXPLORATION: String = "res://scenes/world/exploration.tscn"
+const EXPLORATION: String = "res://scenes/world/world_exploration.tscn"
 const SAVE_SLOT: int = 93
 const Q: StringName = QuestLogic.PRIMERA_MISION
 
@@ -37,10 +37,11 @@ func after_all() -> void:
 	DirAccess.remove_absolute(SaveManager.slot_path(SAVE_SLOT))
 
 
-func _exploration() -> Node:
-	var expl: Node = load(EXPLORATION).instantiate()
-	add_child_autofree(expl)
-	expl.start()
+## Exploración del Mundo 2.0 con la partida actual (seed 42). Corrutina.
+func _exploration() -> WorldExploration:
+	var expl: WorldExploration = load(EXPLORATION).instantiate()
+	add_child_autoqfree(expl)
+	await expl.start()
 	return expl
 
 
@@ -54,25 +55,24 @@ func _day(elapsed: float = 0.0) -> void:
 	GameState.clock_elapsed = elapsed
 
 
-## Un refugio fuera de una villa en el Bosque natal: [chunk, casilla].
-func _refuge_outside_villa() -> Array:
-	for coord: Vector2i in _map.refuge_chunks():
-		if _map.bosque_at(coord) != _home:
-			continue
-		var chunk: ChunkData = ChunkGenerator.generate(42, coord, _region, _map)
+## Un refugio fuera de una villa en el Bosque natal del mundo de `expl`: su casilla global
+## (Vector2i(-1, -1) si no hay).
+func _refuge_outside_villa(expl: WorldExploration) -> Vector2i:
+	for coord: Vector2i in expl.bosques.chunks_of(expl.home_bosque):
+		var chunk: WorldChunk = expl.world.pregen.get_chunk(coord)
 		if chunk.has_villa:
 			continue
-		for y: int in ChunkData.SIZE:
-			for x: int in ChunkData.SIZE:
-				if chunk.is_refuge(Vector2i(x, y)):
-					return [coord, Vector2i(x, y)]
-	return []
+		for kind: int in [WorldChunk.ObjectKind.REFUGE_TREE, WorldChunk.ObjectKind.CAVE]:
+			for obj: Dictionary in chunk.objects_of(kind):
+				if AdventureRules.is_refuge_world(chunk, obj.cell):
+					return WorldCoords.to_world_cell(coord, obj.cell)
+	return Vector2i(-1, -1)
 
 
 ## Primer día con visión desde el Bosque `from` (0 si no hay en 60 días).
-func _vision_day(from: int) -> int:
+func _vision_day(from: int, map: BosqueMap = _map) -> int:
 	for day: int in range(1, 61):
-		if not FarQuests.vision_for(_map, 42, day, from).is_empty():
+		if not FarQuests.vision_for(map, 42, day, from).is_empty():
 			return day
 	return 0
 
@@ -80,11 +80,11 @@ func _vision_day(from: int) -> int:
 # --- Dormir ----------------------------------------------------------------------------------------
 
 func test_night_sleep_jumps_to_dawn_and_heals_like_a_refuge() -> void:
-	var expl: Node = _exploration()
-	var spot: Array = _refuge_outside_villa()
-	assert_false(spot.is_empty(), "hay un refugio fuera de la villa en el natal")
-	expl._enter_chunk(spot[0], spot[1])
-	assert_eq(expl._player.cell, spot[1] as Vector2i)
+	var expl: WorldExploration = await _exploration()
+	var spot: Vector2i = _refuge_outside_villa(expl)
+	assert_gt(spot.x, -1, "hay un refugio fuera de la villa en el natal")
+	expl._place(spot)
+	assert_eq(expl.player.mover.cell, spot)
 	_night(100.0)
 	GameState.hp = 10
 	var luz: int = GameState.luz
@@ -101,8 +101,9 @@ func test_night_sleep_jumps_to_dawn_and_heals_like_a_refuge() -> void:
 
 
 func test_night_sleep_in_the_villa_heals_fully() -> void:
-	var expl: Node = _exploration()
-	assert_true(AdventureRules.is_villa_rest(expl._chunk, expl._player.cell), "empieza junto al Nujio de la villa")
+	var expl: WorldExploration = await _exploration()
+	var here: WorldChunk = expl.world.pregen.get_chunk(GameState.chunk_coord)
+	assert_true(AdventureRules.is_villa_rest_world(here, GameState.player_cell), "empieza junto al Nujio de la villa")
 	_night()
 	GameState.hp = 3
 	assert_false(expl.sleep_now().is_empty())
@@ -134,9 +135,9 @@ func test_day_sleep_costs_luz_and_is_disabled_without_it() -> void:
 
 
 func test_day_sleep_in_the_scene_has_no_vision() -> void:
-	var expl: Node = _exploration()
+	var expl: WorldExploration = await _exploration()
 	_day(0.0)
-	var day: int = _vision_day(_home)
+	var day: int = _vision_day(expl.home_bosque, expl.bosques)
 	if day > 0:
 		GameState.day = day
 	var slept: Dictionary = expl.sleep_now()
@@ -146,59 +147,65 @@ func test_day_sleep_in_the_scene_has_no_vision() -> void:
 
 
 func test_cannot_sleep_outside_a_refuge_or_villa() -> void:
-	var expl: Node = _exploration()
-	var chunk: ChunkData = expl._chunk
+	var expl: WorldExploration = await _exploration()
+	var coord: Vector2i = GameState.chunk_coord
+	var chunk: WorldChunk = expl.world.pregen.get_chunk(coord)
 	var grass := Vector2i(-1, -1)
 	var plaza := Vector2i(-1, -1)
-	for y: int in ChunkData.SIZE:
-		for x: int in ChunkData.SIZE:
-			var c := Vector2i(x, y)
-			if grass.x < 0 and chunk.get_tile(c) == ChunkData.Tile.GRASS and not AdventureRules.is_villa_rest(chunk, c) \
-					and chunk.is_reachable(c) and not expl._field.occupied(c):
-				grass = c
-			if plaza.x < 0 and chunk.get_tile(c) == ChunkData.Tile.PLAZA:
-				plaza = c
+	for i: int in WorldChunk.CELLS:
+		var c: Vector2i = WorldCoords.index_to_cell(i)
+		if grass.x < 0 and chunk.get_ground(c) == WorldChunk.Ground.GRASS and chunk.object_index_at(c) == WorldChunk.NO_OBJECT \
+				and not AdventureRules.is_villa_rest_world(chunk, c) and chunk.is_reachable(c) \
+				and not expl._field.occupied(WorldCoords.to_world_cell(coord, c)):
+			grass = c
+		if plaza.x < 0 and chunk.get_ground(c) == WorldChunk.Ground.PLAZA and chunk.is_walkable(c):
+			plaza = c
 	assert_true(SleepRules.can_sleep_at(chunk, plaza), "en la plaza de la villa")
 	assert_false(SleepRules.can_sleep_at(chunk, grass), "en la hierba, no")
-	expl._enter_chunk(chunk.coord, grass)
-	assert_eq(expl._player.cell, grass)
+	expl._place(WorldCoords.to_world_cell(coord, grass))
+	assert_eq(GameState.player_cell, grass)
 	_night()
 	assert_eq(expl.sleep_now(), {}, "fuera de refugio o villa no se duerme")
 	assert_eq(GameState.clock_momento, TimeConfig.RIUMNA)
-	var flat := ChunkData.new()
-	flat.tiles.resize(ChunkData.SIZE * ChunkData.SIZE)
-	flat.tiles.fill(ChunkData.Tile.GRASS)
-	flat.set_tile(Vector2i(20, 20), ChunkData.Tile.REFUGE)
+	var flat := WorldChunk.new()
+	flat.add_object(WorldChunk.ObjectKind.REFUGE_TREE, Vector2i(20, 20), Vector2i(2, 2))
+	flat.rebuild_blocked()
 	assert_true(SleepRules.can_sleep_at(flat, Vector2i(20, 20)), "en un refugio")
-	assert_false(SleepRules.can_sleep_at(flat, Vector2i(21, 20)), "al lado, no")
-	assert_eq(Interaction.find(flat, Vector2i(30, 30), Vector2i.UP, {}).kind, Interaction.Kind.NONE)
+	assert_false(SleepRules.can_sleep_at(flat, Vector2i(22, 20)), "al lado, no")
+	var get_flat: Callable = func(c: Vector2i) -> WorldChunk: return flat if c == Vector2i.ZERO else null
+	var at: Vector2 = WorldCoords.world_cell_to_world_pos(Vector2i(30, 30))
+	assert_eq(Interaction.find_world(get_flat, at, Vector2i.UP).kind, Interaction.Kind.NONE)
 	flat.has_villa = true
-	flat.set_tile(Vector2i(30, 30), ChunkData.Tile.PLAZA)
-	assert_eq(Interaction.find(flat, Vector2i(30, 30), Vector2i.UP, {}).kind, Interaction.Kind.REST, "E en la plaza: dormir")
+	flat.set_ground(Vector2i(30, 30), WorldChunk.Ground.PLAZA)
+	assert_eq(Interaction.find_world(get_flat, at, Vector2i.UP).kind, Interaction.Kind.REST, "E en la plaza: dormir")
 
 
 func test_the_ofomni_advances_while_sleeping() -> void:
+	var expl: WorldExploration = await _exploration()
+	var map: BosqueMap = expl.bosques
+	var home: int = expl.home_bosque
 	var q: Dictionary = QuestLogic.new_quest()
-	assert_true(QuestLogic.accept(q, _map, 42, _home))
+	assert_true(QuestLogic.accept(q, map, 42, home))
 	GameState.quests[Q] = q
-	var expl: Node = _exploration()
 	var from: int = int(q.ofomni_bosque)
 	_day(0.0)
 	assert_true(expl._quest.is_ofomni_active())
 	expl.sleep_now()
 	var every: float = float(QuestLogic.data(Q).ofomni.advance_seconds)
 	var loaded: Dictionary = GameState.quests[Q]
-	assert_eq(int(loaded.ofomni_bosque), QuestLogic.next_bosque(_map, 42, from, _home), "480 s: un Bosque más cerca")
+	assert_eq(int(loaded.ofomni_bosque), QuestLogic.next_bosque(map, 42, from, home), "480 s: un Bosque más cerca")
 	assert_almost_eq(float(loaded.ofomni_elapsed), 480.0 - every, 0.05)
 
 
 func test_the_ofomni_reaching_the_villa_while_sleeping_fails_the_mission() -> void:
+	var expl: WorldExploration = await _exploration()
+	var map: BosqueMap = expl.bosques
+	var home: int = expl.home_bosque
 	var q: Dictionary = QuestLogic.new_quest()
-	assert_true(QuestLogic.accept(q, _map, 42, _home))
-	q.ofomni_bosque = _map.neighbours_of(_home)[0]
+	assert_true(QuestLogic.accept(q, map, 42, home))
+	q.ofomni_bosque = map.neighbours_of(home)[0]
 	q.ofomni_elapsed = 300.0
 	GameState.quests[Q] = q
-	var expl: Node = _exploration()
 	_night(0.0)
 	expl.sleep_now()
 	assert_eq(QuestLogic.state_of(GameState.quests[Q]), QuestLogic.FAILED, "llega a la villa mientras duermes")
@@ -238,18 +245,25 @@ func test_vision_is_deterministic_and_creates_the_mission() -> void:
 
 
 func test_night_sleep_in_the_scene_brings_the_vision_once_per_day() -> void:
-	var expl: Node = _exploration()
-	var day: int = _vision_day(_home)
+	var expl: WorldExploration = await _exploration()
+	var home: int = expl.home_bosque
+	# Un Bosque lejano que pide ayuda (en el reparto del Mundo 2.0 puede no haberlo).
+	for id: int in expl.bosques.count():
+		if expl.bosques.distance(home, id) >= FarQuests.min_hops():
+			GameState.bosque_state_overrides[str(id)] = BosqueStates.NECESITA_AYUDA
+			break
+	var day: int = _vision_day(home, expl.bosques)
+	assert_gt(day, 0, "hay visiones")
 	GameState.day = day
 	_night()
 	var slept: Dictionary = expl.sleep_now()
 	assert_false(slept.vision.is_empty(), "visión en Pensamiento")
 	assert_eq(GameState.last_vision_day, day)
 	assert_string_contains(expl._far.vision_text(slept.vision), str(int(slept.vision.hops)))
-	var q: Dictionary = expl._far.accept(slept.vision, _home)
+	var q: Dictionary = expl._far.accept(slept.vision, home)
 	assert_false(q.is_empty())
 	assert_eq(int(q.day), day)
-	assert_eq(expl._far.vision_after_sleep(day, _home), {}, "una visión por día")
+	assert_eq(expl._far.vision_after_sleep(day, home), {}, "una visión por día")
 
 
 func test_at_most_two_far_quests() -> void:
