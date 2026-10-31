@@ -162,6 +162,16 @@ var ofrendas: Array = []
 var ofrenda_index: int = -1
 ## El Adoc pelea sin arma (ATQ base): el combate lo avisa al empezar.
 var unarmed: bool = false
+## Arma equipada del Adoc (&"" = ninguna) y si empieza enfundada (emboscada del enemigo con el arma
+## en la funda: en el táctico, "Desenfundar" es su acción; P4). adoc_atk ya suma el arma si empieza
+## desenfundada (AdventureRules.adoc_combat_stats).
+var weapon_id: StringName = &""
+var weapon_sheathed: bool = false
+## Objetos de la bolsa que se pueden usar en el combate táctico (acción Objeto, P4): uno por unidad,
+## [{ slot, id, origin }]; y las casillas de la bolsa de los que se usaron (una entrada por unidad),
+## que AdventureRules quita de la bolsa al aplicar el resultado.
+var combat_items: Array = []
+var used_items: Array[int] = []
 ## Golpe fuerte (skill): cada cuántos turnos (0 = sin la skill), multiplicador y turnos que faltan
 ## para que vuelva a estar listo (0 = listo).
 var strong_every: int = 0

@@ -50,7 +50,8 @@ const LEGACY_OFOMNI_ID: String = "ofomni"
 const LEGACY_OFOMNI_LABEL: String = "Ofomni"
 const QUEST_OFOMNI_ID: String = "ofomni_descarriado"
 ## Migración a v11 (bolsa y equipo): las partidas anteriores llevan la lanza equipada. En una
-## partida nueva, desde la 0.3, la lanza empieza guardada en la bolsa (Items.start_bag, dueño).
+## partida nueva, desde la 0.5 (P4), la lanza empieza equipada y enfundada, con la máscara de
+## corteza puesta (Items.start_equipped).
 const LEGACY_EQUIPPED: Dictionary = { "main_hand": "lanza_de_adoc", "mask": "", "talisman": "" }
 
 var rng := RandomNumberGenerator.new()
@@ -231,7 +232,8 @@ func new_game(new_seed: int = 0, new_region: StringName = &"valle_del_sara") -> 
 	for item: Dictionary in Items.start_bag():
 		InventoryLogic.add(bag, StringName(str(item.id)), int(item.get("qty", 1)))
 	equipped = InventoryLogic.sanitize_equipped(Items.start_equipped())
-	weapon_drawn = false
+	# Equipo inicial (P4): la lanza equipada, enfundada salvo que los datos digan lo contrario.
+	weapon_drawn = Items.start_weapon_drawn() and str(equipped.get("main_hand", "")) != ""
 	quests = {}
 	villa_damaged = false
 	fama = 0

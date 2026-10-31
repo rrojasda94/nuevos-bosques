@@ -1,18 +1,16 @@
 {
   "bag_size": 12,
+  "$comment_start": "Equipo inicial de una partida nueva (ajustes-playtest-0.5.md 5c, dueño #197): la lanza equipada y enfundada (start_weapon_drawn false), la máscara de corteza puesta y una trenza votiva en la bolsa. Las partidas guardadas no cambian.",
   "start_equipped": {
-    "main_hand": "",
-    "mask": "",
+    "main_hand": "lanza_de_adoc",
+    "mask": "mascara_de_corteza",
     "talisman": ""
   },
+  "start_weapon_drawn": false,
   "start_bag": [
-    { "id": "lanza_de_adoc", "qty": 1 },
-    { "id": "mascara_de_corteza", "qty": 1 },
-    { "id": "talisman_de_semillas", "qty": 1 },
-    { "id": "mascara_de_musgo", "qty": 1 },
-    { "id": "mascara_de_ceniza", "qty": 1 },
-    { "id": "talisman_de_pluma", "qty": 1 }
+    { "id": "trenza_votiva", "qty": 1 }
   ],
+  "$comment_weapons": "Armas en el combate táctico (ajustes-playtest-0.5.md 4b y 4d): atk_bonus; range [mín, máx] en casillas (Manhattan); line: solo en línea ortogonal, sin enemigos ni casillas intransitables en medio (si hay un enemigo en medio, el golpe es para ese); back_bonus: daño extra al golpear por la espalda (suma al de siempre); hit_mod: precisión que suma o resta; sheathed_camo_penalty: camuflaje que resta enfundada. short_name: el nombre corto de la ficha del táctico (\"ATQ 8 (Lanza +2)\"). Fruto: combat_use (sale en la acción Objeto), use_range (0 = el Adoc; 1 = también un aliado adyacente); cura fruit.heal_pct de balance.json. Provisionales: game-designer.",
   "items": [
     {
       "id": "cuenta_de_barro",
@@ -64,7 +62,9 @@
       "kind": "fruit",
       "name": "Fruto del Bosque",
       "description": "Cura un cuarto de tus PV. Tómalo solo con permiso del Bosque (el natal o uno pagado), uno por Momento. Puedes comerlo en cualquier sitio, pero su Bosque nota que te lo llevas.",
-      "stack_max": 5
+      "stack_max": 5,
+      "combat_use": true,
+      "use_range": 1
     },
     {
       "id": "lanza_de_adoc",
@@ -72,8 +72,37 @@
       "name": "Lanza de adoc",
       "description": "La lanza de tu oficio. Con ella en la mano, ningún Bosque te deja pasar en paz.",
       "stack_max": 1,
+      "short_name": "Lanza",
       "atk_bonus": 2,
+      "range": [1, 2],
+      "line": true,
       "sheathed_camo_penalty": 2
+    },
+    {
+      "id": "cuchillo",
+      "kind": "weapon",
+      "name": "Cuchillo",
+      "description": "Hoja corta de adoc. Apenas se nota enfundado y muerde fuerte por la espalda.",
+      "stack_max": 1,
+      "short_name": "Cuchillo",
+      "atk_bonus": 1,
+      "range": [1, 1],
+      "line": true,
+      "back_bonus": 2,
+      "sheathed_camo_penalty": 0
+    },
+    {
+      "id": "honda",
+      "kind": "weapon",
+      "name": "Honda",
+      "description": "Una tira de fibra y una piedra. Golpea de lejos, nunca de cerca.",
+      "stack_max": 1,
+      "short_name": "Honda",
+      "atk_bonus": 1,
+      "range": [2, 3],
+      "line": false,
+      "hit_mod": -10,
+      "sheathed_camo_penalty": 1
     },
     {
       "id": "mascara_de_corteza",

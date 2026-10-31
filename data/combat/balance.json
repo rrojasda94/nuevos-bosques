@@ -191,9 +191,11 @@
     "victory_per_d": 3
   },
   "refuge_loot": {
-    "$comment": "Hallazgos en refugios (ofrendas-v1.md): un refugio de cada one_in guarda una ofrenda del catálogo con ese source (determinista por seed y chunk).",
+    "$comment": "Hallazgos en refugios (ofrendas-v1.md): un refugio de cada one_in guarda una ofrenda del catálogo con ese source (determinista por seed y chunk). Arma (P4, ajustes-playtest-0.5.md 4d): uno de cada weapon_one_in de esos hallazgos guarda además weapon (el Cuchillo), si no lo tienes ya. Provisionales: game-designer.",
     "one_in": 3,
-    "source": "refuge"
+    "source": "refuge",
+    "weapon_one_in": 4,
+    "weapon": "cuchillo"
   },
   "fruit": {
     "$comment": "Frutos del Bosque (bosques-y-relacion.md, sección Fruto). Provisional. heal_pct: % de los PV máximos que cura un fruto (redondeo hacia arriba). Un fruto por Momento y por Bosque, si el Bosque da permiso (natal o peaje pagado); otro del mismo Bosque en el mismo Momento, o cualquiera sin permiso, es robo (efectos en bosque_memory: hostility_per_theft y relation_per_theft).",
@@ -267,7 +269,7 @@
     "night_percent": 50
   },
   "otros_adoc": {
-    "$comment": "Otros adoc como aliados (otros-adoc.md, versión mínima de la 0.3). En one_in de cada N Bosques (nunca el natal; por seed) hay un adoc NPC a punto de pelear contra un grupo de reparep o un Único de enemies, en un chunk del Bosque y a min_hub_distance casillas o más de la plaza. Si el Bosque deja pasar al Adoc en paz (pagado o amistoso), su rival es siempre un grupo de reparep. El aliado tiene los stats de adoc de un nivel entre level_min y level_max (por seed), no muere (a 0 PV se retira) y no hace daño al jugador. Ganar con él: relation_reward con ese Bosque y fama_reward de fama. Afinidad (otros-adoc.md, 0.5): cada adoc tiene su Senda (por seed, de -senda_range a +senda_range); si la diferencia con la tuya es affinity_gap o más, no quiere trabajar contigo (no te ataca). Con la skill rostro_conocido aceptan siempre. Nombres en data/npcs/otros_adoc.json. Provisionales: game-designer.",
+    "$comment": "Otros adoc como aliados (otros-adoc.md, versión mínima de la 0.3). En one_in de cada N Bosques (nunca el natal; por seed) hay un adoc NPC a punto de pelear contra un grupo de reparep o un Único de enemies, en un chunk del Bosque y a min_hub_distance casillas o más de la plaza. Si el Bosque deja pasar al Adoc en paz (pagado o amistoso), su rival es siempre un grupo de reparep. El aliado tiene los stats de adoc de un nivel entre level_min y level_max (por seed), no muere (a 0 PV se retira) y no hace daño al jugador. Ganar con él: relation_reward con ese Bosque y fama_reward de fama, y weapon_reward (la Honda, P4, ajustes-playtest-0.5.md 4d) si no la tienes ya y cabe en la bolsa. Afinidad (otros-adoc.md, 0.5): cada adoc tiene su Senda (por seed, de -senda_range a +senda_range); si la diferencia con la tuya es affinity_gap o más, no quiere trabajar contigo (no te ataca). Con la skill rostro_conocido aceptan siempre. Nombres en data/npcs/otros_adoc.json. Provisionales: game-designer.",
     "one_in": 3,
     "level_min": 1,
     "level_max": 3,
@@ -275,6 +277,7 @@
     "min_hub_distance": 8,
     "relation_reward": 5,
     "fama_reward": 1,
+    "weapon_reward": "honda",
     "senda_range": 80,
     "affinity_gap": 60
   },

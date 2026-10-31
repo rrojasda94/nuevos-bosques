@@ -19,6 +19,11 @@ extends RefCounted
 ## - Especiales (T6): los enemigos llevan su especial (special_every, special_factor, special_area:
 ##   el Latigazo múltiple en área anunciada) y, en un grupo de ataque conjunto (logic.joint_attack,
 ##   los reparep), `joint`. build_battle aplica la apertura (TacticalBattle.Opening).
+## - Arma y objetos (P4): el Adoc lleva su arma (Items.weapon_profile: ATQ, alcance, línea, bono por
+##   la espalda y precisión). Si empieza enfundada (emboscada del enemigo, logic.weapon_sheathed),
+##   pelea con alcance 1 y ATQ base hasta que la desenfunda. Sin arma, alcance 1 y ATQ base. Los
+##   objetos de combate de la bolsa (logic.combat_items, hoy el fruto) pasan con su curación
+##   (fruit.heal_pct) y su alcance (use_range); apply_to_logic devuelve los usados (used_items).
 ## - Apertura (T6): opening_for_engaged y opening_for_confront deciden, desde la exploración, si el
 ##   combate empieza con sorpresa (el Adoc aborda con E a un Único que no le persigue: no le ha
 ##   detectado, por Paso quedo, máscara o porque no mira) o con emboscada del enemigo (le alcanza un
@@ -38,11 +43,19 @@ static func is_enabled(balance_data: Dictionary) -> bool:
 ## `chosen`: índices de los aliados elegidos (TacticalParty); null = todos en su orden, sin elección.
 static func fighters_from_logic(logic: BattleLogic, chosen: Variant = null) -> Array:
 	var roles: Dictionary = (logic.balance.get("tactics", {}) as Dictionary).get("roles", {})
-	var out: Array = [{
+	var adoc: Dictionary = {
 		"id": ADOC_ID, "side": TacticalBattle.SIDE_PLAYER, "agi": logic.adoc_agi,
 		"hp": logic.adoc_hp, "max_hp": logic.adoc_max_hp, "atk": logic.adoc_atk, "def": logic.adoc_def,
 		"leader": true, "strong_every": logic.strong_every, "strong_factor": logic.strong_factor,
-	}]
+	}
+	var weapon: Dictionary = adoc_weapon(logic)
+	if not weapon.is_empty():
+		adoc.weapon = weapon
+		adoc.sheathed = logic.weapon_sheathed
+		# BattleLogic ya sumó el ATQ del arma desenfundada; TacticalBattle lo vuelve a sumar.
+		if not logic.weapon_sheathed:
+			adoc.atk = logic.adoc_atk - int(weapon.atk_bonus)
+	var out: Array = [adoc]
 	var order: Array = range(logic.allies.size())
 	if chosen is Array:
 		var picked: Array[int] = []
@@ -71,6 +84,25 @@ static func fighters_from_logic(logic: BattleLogic, chosen: Variant = null) -> A
 	return out
 
 
+## Perfil del arma del Adoc para el táctico ({} sin arma o si no lo es).
+static func adoc_weapon(logic: BattleLogic) -> Dictionary:
+	if logic.weapon_id == &"":
+		return {}
+	return Items.weapon_profile(logic.weapon_id)
+
+
+## Objetos de combate del BattleLogic en el formato de TacticalBattle.set_items: [{ slot, id,
+## heal_pct, use_range }]. El fruto cura fruit.heal_pct de balance.json.
+static func items_from_logic(logic: BattleLogic) -> Array:
+	var heal: int = int((logic.balance.get("fruit", {}) as Dictionary).get("heal_pct", 25))
+	var out: Array = []
+	for it: Dictionary in logic.combat_items:
+		var id: StringName = StringName(str(it.get("id", "")))
+		out.append({ "slot": int(it.get("slot", -1)), "id": id, "use_range": Items.use_range(id),
+			"heal_pct": heal if id == Items.FRUIT_ID else 0 })
+	return out
+
+
 static func _fighter(c: Dictionary, id: StringName, side: int, roles: Dictionary, accepts: bool) -> Dictionary:
 	var role: StringName = StringName(str(c.get("role", "")))
 	var bonus: Dictionary = roles.get(String(role), {}) if role != &"" else {}
@@ -91,6 +123,7 @@ static func build_battle(logic: BattleLogic, cfg: Dictionary = {}, board: Tactic
 		board = TacticalBoard.from_config(cfg.get("board", {}))
 	var battle := TacticalBattle.new(cfg, board, fighters_from_logic(logic, chosen), int(logic.rng.seed))
 	battle.set_payment(logic.toll, logic.luz, logic.ofrendas)
+	battle.set_items(items_from_logic(logic))
 	battle.apply_opening(opening)
 	return battle
 
@@ -136,6 +169,7 @@ static func apply_to_logic(battle: TacticalBattle, logic: BattleLogic) -> void:
 	logic.result = int(battle.result) as BattleLogic.Result
 	logic.luz = battle.luz
 	logic.ofrenda_index = battle.ofrenda_index
+	logic.used_items = battle.used_items.duplicate()
 	for u: Dictionary in battle.units:
 		# Quien esperaba en el borde (refuerzo que no llegó a entrar) conserva sus PV.
 		var hp: int = int(u.hp) if (u.alive or u.get("waiting", false)) else 0

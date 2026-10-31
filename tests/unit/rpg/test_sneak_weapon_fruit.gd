@@ -13,9 +13,14 @@ const CORTEZA: StringName = &"mascara_de_corteza"
 const SEMILLAS: StringName = &"talisman_de_semillas"
 
 
+const OldStartKit = preload("res://tests/unit/rpg/old_start_kit.gd")
+
+
 func before_each() -> void:
 	WorldClock.set_process(false)
 	GameState.new_game(42)
+	# Equipo de antes de P4 (sin nada equipado y la bolsa de prueba): OldStartKit.
+	OldStartKit.apply()
 	Stealth.running = false
 	for id: int in [HOME, TARGET, OTHER]:
 		GameState.bosque_state_overrides[str(id)] = BosqueStates.SANO

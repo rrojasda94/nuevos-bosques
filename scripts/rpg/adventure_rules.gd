@@ -29,6 +29,8 @@ const SALT_REFUGE_LOOT: int = 29
 const SALT_GROUP: int = 31
 const SALT_LOOT: int = 37
 const SALT_ROLE: int = 41
+## Arma de los refugios (P4).
+const SALT_REFUGE_WEAPON: int = 43
 const ADOC_ID: StringName = &"adoc"
 ## Valor de GameState.open_until para un paso pagado que no caduca (amistad alta).
 const OPEN_PERMANENT: int = -1
@@ -142,6 +144,32 @@ static func drawn_at_start(ambushed: bool = false) -> bool:
 ## ATQ que suma el arma equipada (0 sin arma).
 static func weapon_atk_bonus() -> int:
 	return Items.atk_bonus(weapon())
+
+
+## Objetos de la bolsa que se usan en combate (acción Objeto del táctico, P4; hoy, el fruto): uno
+## por unidad, [{ slot, id, origin }], en el orden de la bolsa.
+static func combat_items() -> Array:
+	var out: Array = []
+	for i: int in GameState.bag.size():
+		var id: StringName = InventoryLogic.id_at(GameState.bag, i)
+		if id == &"" or not Items.is_combat_usable(id):
+			continue
+		for k: int in InventoryLogic.qty_at(GameState.bag, i):
+			out.append({ "slot": i, "id": id, "origin": InventoryLogic.origin_at(GameState.bag, i) })
+	return out
+
+
+## Quita de la bolsa los objetos que se usaron en el combate (logic.used_items) y aplica lo de
+## siempre al fruto comido lejos de su Bosque (FruitRules.consume_in_battle). La curación ya la
+## llevan los PV del combate.
+static func consume_used_items(logic: BattleLogic) -> void:
+	var here: int = FruitRules.current_bosque()
+	for slot: int in logic.used_items:
+		if InventoryLogic.id_at(GameState.bag, slot) == Items.FRUIT_ID:
+			FruitRules.consume_in_battle(slot, here)
+		else:
+			InventoryLogic.remove_at(GameState.bag, slot)
+	logic.used_items = []
 
 
 ## Stats con los que pelea el Adoc ahora: los de su nivel y sus puntos, más el ATQ del arma si está
@@ -790,6 +818,7 @@ static func start_battle(bosque_id: int, d: int, monster_id: StringName = &"bota
 	_prepare(logic, cfg, d)
 	# Emboscada del enemigo con el arma enfundada: pelea con el ATQ base (drawn_at_start).
 	logic.unarmed = not drawn_at_start(ambushed)
+	logic.weapon_sheathed = has_weapon() and not drawn_at_start(ambushed)
 	logic.victory_xp = monster_xp(monster_id, d) * count
 	logic.level_ups = levels_gained(GameState.xp, logic.victory_xp)
 	# Un reparep que huye no da su XP (ia-de-combate.md): niveles sin ella, para anunciarlos bien.
@@ -879,6 +908,7 @@ static func start_quest_battle(quest_id: StringName, d: int, ambushed: bool = fa
 	# Sin Bosque que cobre: no hay peaje que ofrecer. El Ofomni descarriado, además, no acepta pagos.
 	_prepare(logic, monster_config(target), d)
 	logic.unarmed = not drawn_at_start(ambushed)
+	logic.weapon_sheathed = has_weapon() and not drawn_at_start(ambushed)
 	return logic
 
 
@@ -900,6 +930,8 @@ static func _prepare(logic: BattleLogic, cfg: Dictionary, d: int) -> void:
 	logic.fatal = is_fatal(cfg.get("fatal_at", []), GameState.clock_momento)
 	# Sin arma se pelea con el ATQ base (y el combate lo avisa: "Peleas sin arma").
 	logic.unarmed = not has_weapon()
+	logic.weapon_id = weapon()
+	logic.combat_items = combat_items()
 	logic.victory_xp = victory_xp(d)
 	logic.level_ups = levels_gained(GameState.xp, logic.victory_xp)
 	logic.luz_max = luz_max()
@@ -953,6 +985,7 @@ static func called_allies(bosque_id: int, monster_id: StringName, d: int) -> Arr
 
 static func _apply_result(logic: BattleLogic) -> StringName:
 	var b: Dictionary = balance()
+	consume_used_items(logic)
 	match logic.result:
 		BattleLogic.Result.VICTORY:
 			set_hp(logic.adoc_hp)
@@ -1081,12 +1114,40 @@ static func refuge_ofrenda(seed_value: int, coord: Vector2i) -> StringName:
 	return ids[(h / one_in) % ids.size()]
 
 
+## Arma que guarda además el refugio del chunk (P4, ajustes-playtest-0.5.md 4d: el Cuchillo), o
+## &"" si ninguna. Solo en los refugios con ofrenda: uno de cada refuge_loot.weapon_one_in.
+static func refuge_weapon(seed_value: int, coord: Vector2i) -> StringName:
+	var cfg: Dictionary = balance().refuge_loot
+	var id: StringName = StringName(str(cfg.get("weapon", "")))
+	if id == &"" or refuge_ofrenda(seed_value, coord) == &"":
+		return &""
+	var h: int = ChunkGenerator.hash_ints([seed_value, coord.x, coord.y, SALT_REFUGE_LOOT, SALT_REFUGE_WEAPON])
+	return id if h % maxi(1, int(cfg.get("weapon_one_in", 4))) == 0 else &""
+
+
+## El Adoc ya tiene el objeto `id`: en la bolsa o equipado.
+static func owns(id: StringName) -> bool:
+	if InventoryLogic.count(GameState.bag, id) > 0:
+		return true
+	for slot: Variant in GameState.equipped:
+		if StringName(str(GameState.equipped[slot])) == id:
+			return true
+	return false
+
+
+## Da un arma de recompensa (refugio, otros adoc) si no la tiene ya y cabe en la bolsa.
+static func give_weapon(id: StringName) -> bool:
+	if id == &"" or owns(id) or not InventoryLogic.can_add(GameState.bag, id):
+		return false
+	return InventoryLogic.add(GameState.bag, id)
+
+
 static func is_refuge_looted(coord: Vector2i) -> bool:
 	return GameState.looted_refuges.has(coord)
 
 
 ## Recoge el hallazgo del refugio del chunk: lo añade a la bolsa y lo marca, una sola vez por
-## partida. Devuelve { id, luz, taken } o {} si no había nada o ya se recogió. Con la bolsa llena,
+## partida. Devuelve { id, luz, taken, weapon } o {} si no había nada o ya se recogió. Con la bolsa llena,
 ## taken = false: el objeto se queda y el refugio no se marca como saqueado.
 static func loot_refuge(coord: Vector2i) -> Dictionary:
 	var id: StringName = refuge_ofrenda(GameState.seed_value, coord)
@@ -1094,8 +1155,14 @@ static func loot_refuge(coord: Vector2i) -> Dictionary:
 		return {}
 	var item: Dictionary = Ofrendas.make_item(id)
 	item.taken = InventoryLogic.add(GameState.bag, id)
+	item.weapon = &""
 	if item.taken:
 		GameState.looted_refuges.append(coord)
+		# P4: el Cuchillo de algunos refugios, junto a la ofrenda (se avisa aparte, en el HUD).
+		var weapon_id: StringName = refuge_weapon(GameState.seed_value, coord)
+		if give_weapon(weapon_id):
+			item.weapon = weapon_id
+			EventBus.notice_requested.emit(Texts.get_text("refuge_weapon_found") % Items.display_name(weapon_id).to_lower())
 	return item
 
 

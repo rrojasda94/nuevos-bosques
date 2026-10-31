@@ -7,7 +7,8 @@ extends RefCounted
 ## enemigos, con battle.ai_rng; los empates, por casilla y por índice):
 ## { actor, move_to, action, target, facing }.
 ## - move_to: casilla a la que moverse (la suya si no se mueve); siempre dentro de reachable_for.
-## - action: un KIND_* de TacticalBattle (attack, finish, defend, cover, bandage, cheer, leave) o
+## - action: un KIND_* de TacticalBattle (attack, finish, defend, cover, bandage, cheer, leave; draw
+##   si empezó con el arma en la funda, P4) o
 ##   KIND_NONE si solo se mueve. Se comprueba con las mismas reglas que TacticalBattle (can_*), así
 ##   que nunca es ilegal. Se mueve primero y luego actúa.
 ## - facing: orientación al terminar desde move_to: hacia la amenaza más cercana (el perfil táctico
@@ -94,7 +95,10 @@ static func plan(b: TacticalBattle, index: int) -> Dictionary:
 		"target": TacticalBattle.NONE }
 	_reach_cache = {}
 	if not b.is_over() and u.alive and not _foes(b, int(u.side)).is_empty():
-		if int(u.side) == TacticalBattle.SIDE_ENEMY:
+		if bool(u.get("sheathed", false)) and _can_act(b, index):
+			# P4: con el arma en la funda (emboscada), lo primero es desenfundar (sin moverse).
+			out.action = TacticalBattle.KIND_DRAW
+		elif int(u.side) == TacticalBattle.SIDE_ENEMY:
 			_plan_enemy(b, index, out)
 		else:
 			_plan_ally(b, index, out)
@@ -126,6 +130,8 @@ static func apply_action(b: TacticalBattle, p: Dictionary) -> Dictionary:
 			return b.leave(StringName(b.units[int(p.actor)].ai) == BattleLogic.AI_TACTICAL)
 		TacticalBattle.KIND_AREA:
 			return b.area_strike()
+		TacticalBattle.KIND_DRAW:
+			return b.draw_weapon()
 	return {}
 
 
@@ -768,9 +774,11 @@ static func _attack_options(b: TacticalBattle, i: int, targets: Array = [], cell
 				continue
 			var rel: TacticalRules.Relation = TacticalRules.relation(tu.cell, int(tu.facing), c)
 			var height: int = b.board.level_at(c) - b.board.level_at(tu.cell)
-			var hit: int = TacticalRules.hit_chance(TacticalRules.evasion(int(tu.agi), rel, height, b.actions_cfg), b.actions_cfg)
+			# Con la precisión y el bono por la espalda del arma (P4: honda −10, cuchillo +2).
+			var hit: int = TacticalRules.hit_chance(TacticalRules.evasion(int(tu.agi), rel, height, b.actions_cfg)
+				- int(u.get("hit_mod", 0)), b.actions_cfg)
 			var dmg: int = maxi(min_damage, int(u.atk) + int(u.cheer) - int(tu.def)
-				+ TacticalRules.position_bonus(rel, height, b.actions_cfg))
+				+ TacticalRules.position_bonus(rel, height, b.actions_cfg) + b.weapon_back_bonus(i, rel))
 			out.append({ "cell": c, "target": ti, "cost": int(reach[c]), "relation": rel, "hit": hit,
 				"expected": hit * dmg / 100.0 })
 	return out

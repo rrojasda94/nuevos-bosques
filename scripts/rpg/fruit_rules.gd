@@ -191,6 +191,31 @@ static func eat_from_bag(index: int, bosque_id: int) -> Dictionary:
 	return { "healed": GameState.hp - before, "away_from": away_from }
 
 
+## Un fruto de la bolsa (casilla `index`) se comió en combate (acción Objeto del táctico, P4)
+## estando en el Bosque `bosque_id`: sale de la bolsa y, lejos de su Bosque de origen, baja la
+## relación con él como al comerlo fuera de combate. La curación ya va en los PV del combate.
+## `bosque_id` < 0 (sin Bosque conocido): sin cambio de relación. Devuelve el Bosque de origen si
+## se comió lejos de él, o -1.
+static func consume_in_battle(index: int, bosque_id: int) -> int:
+	if not can_eat(index):
+		return -1
+	var away_from: int = -1
+	if bosque_id >= 0 and is_eaten_away(index, bosque_id):
+		away_from = InventoryLogic.origin_at(GameState.bag, index)
+	InventoryLogic.remove_at(GameState.bag, index)
+	if away_from >= 0:
+		AdventureRules.change_relation(away_from,
+			int(AdventureRules.balance().bosque_memory.get("relation_per_fruit_eaten_away", 0)))
+	return away_from
+
+
+## Bosque donde está el Adoc (GameState.chunk_coord en el reparto de la partida), o -1 sin partida.
+static func current_bosque() -> int:
+	if MapLogic.region_plan() == null:
+		return -1
+	return MapLogic.current_bosques().bosque_at(GameState.chunk_coord)
+
+
 ## El Adoc entra en un chunk del Bosque `bosque_id`. Los frutos de otro origen que aún no se habían
 ## sacado bajan la relación con su Bosque (relation_per_fruit_taken_out por fruto) y quedan
 ## marcados (y la Senda baja por cada uno); los de este Bosque se desmarcan (volver a sacarlos penaliza otra vez). No

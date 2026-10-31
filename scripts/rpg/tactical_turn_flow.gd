@@ -14,13 +14,19 @@ extends RefCounted
 ## - ACT: submenú con Atacar, Defender, Vendar / Animar / Cubrir (según el rol), Ofrecer Luz,
 ##   Ofrenda y Huir (solo en una casilla del borde; "Huir (45%)" con TacticalBattle.flee_chance; si
 ##   falla, el turno termina: devuelve { kind: KIND_END, failed: true } y pasa a IDLE).
-## - TARGET: objetivos resaltados; las flechas saltan al objetivo más cercano en esa dirección.
+##   P4: "Desenfundar" (primero) si empezó con el arma en la funda (emboscada; gasta la acción) y
+##   "Objeto" (solo el Adoc, con algún objeto de combate en la bolsa: hoy, el fruto).
+## - TARGET: objetivos resaltados; las flechas saltan al objetivo más cercano en esa dirección. En
+##   Atacar, además, las casillas a las que llega el ataque (range_cells: la lanza a 2, la honda a
+##   2–3).
 ## - OFRENDA: lista de ofrendas que alcanzan el peaje.
+## - ITEM (P4): lista de objetos de combate (agrupados por casilla de la bolsa); elegir uno pasa a
+##   TARGET con el Adoc y los aliados adyacentes.
 ## - FACING: las flechas eligen la orientación; confirmar termina el turno (Esperar si no actuó).
 ## Tras mover o actuar vuelve a MENU, o pasa a FACING si ya hizo las dos cosas. Si el combate acaba,
 ## OVER. IDLE: no es turno del jugador (IA o animación).
 
-enum State { IDLE, MENU, MOVE, ACT, TARGET, OFRENDA, FACING, OVER }
+enum State { IDLE, MENU, MOVE, ACT, TARGET, OFRENDA, FACING, OVER, ITEM }
 
 ## Entradas del menú principal y del submenú Actuar (campo `id`).
 const MAIN_MOVE: StringName = &"move"
@@ -36,6 +42,9 @@ const ACT_COVER: StringName = &"cover"
 const ACT_OFFER_LUZ: StringName = &"offer_luz"
 const ACT_OFRENDA: StringName = &"ofrenda"
 const ACT_FLEE: StringName = &"flee"
+## Desenfundar y Objeto (P4).
+const ACT_DRAW: StringName = &"draw"
+const ACT_ITEM: StringName = &"item"
 const ACT_BACK: StringName = &"back"
 ## Resultados que no son acciones de TacticalBattle (campo `kind`).
 const KIND_MOVE: StringName = &"move"
@@ -51,6 +60,8 @@ var cursor: Vector2i = Vector2i.ZERO
 var highlight: Array[Vector2i] = []
 ## Acción que espera objetivo en TARGET (ACT_ATTACK, ACT_BANDAGE, ACT_CHEER o ACT_COVER).
 var pending: StringName = &""
+## Objeto elegido en ITEM (índice de battle.items) que espera objetivo en TARGET.
+var pending_item: int = -1
 ## Orientación elegida en FACING.
 var facing: TacticalBoard.Facing = TacticalBoard.Facing.EAST
 
@@ -151,6 +162,7 @@ func begin_player_turn() -> void:
 	facing = battle.units[battle.active].facing
 	highlight = []
 	pending = &""
+	pending_item = -1
 
 
 ## Menú principal: [{ id, text, enabled }]. Auto, solo para los aliados (no el `leader`); la orden
@@ -217,11 +229,14 @@ func choose_main(id: StringName) -> void:
 ## defensor, Huir solo en una casilla del borde.
 func act_entries() -> Array[Dictionary]:
 	var me: Dictionary = battle.units[battle.active]
-	var out: Array[Dictionary] = [
-		{ "id": ACT_ATTACK, "text": Texts.get_text("tactical_act_attack"),
-			"enabled": not battle.attack_targets(battle.active).is_empty() },
-		{ "id": ACT_DEFEND, "text": Texts.get_text("tactical_act_defend"), "enabled": battle.can_act() },
-	]
+	var out: Array[Dictionary] = []
+	if battle.can_draw():
+		out.append({ "id": ACT_DRAW, "text": Texts.get_text("tactical_act_draw"), "enabled": true })
+	out.append({ "id": ACT_ATTACK, "text": Texts.get_text("tactical_act_attack"),
+		"enabled": not battle.attack_targets(battle.active).is_empty() })
+	out.append({ "id": ACT_DEFEND, "text": Texts.get_text("tactical_act_defend"), "enabled": battle.can_act() })
+	if bool(me.leader) and not battle.items.is_empty():
+		out.append({ "id": ACT_ITEM, "text": Texts.get_text("tactical_act_item"), "enabled": not item_choices().is_empty() })
 	if me.role == TacticalBattle.ROLE_SUPPORT:
 		out.append({ "id": ACT_BANDAGE, "text": Texts.get_text("tactical_act_bandage"),
 			"enabled": not support_targets(ACT_BANDAGE).is_empty() })
@@ -274,6 +289,11 @@ func choose_act(id: StringName) -> Dictionary:
 			_go_target(id, support_targets(id))
 		ACT_DEFEND:
 			return _after(battle.defend())
+		ACT_DRAW:
+			return _after(battle.draw_weapon())
+		ACT_ITEM:
+			if not item_choices().is_empty():
+				state = State.ITEM
 		ACT_OFFER_LUZ:
 			return _after(battle.offer_luz())
 		ACT_FLEE:
@@ -304,6 +324,67 @@ func choose_ofrenda(index: int) -> Dictionary:
 	if state != State.OFRENDA:
 		return {}
 	return _after(battle.offer_ofrenda(index))
+
+
+## Objetos que se pueden usar ahora, uno por casilla de la bolsa: [{ item (índice en battle.items,
+## el primero sin usar de esa casilla), id, count, text }]. Solo los que tienen a quién darse.
+func item_choices() -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	var by_slot: Dictionary = {}
+	for k: int in battle.usable_items():
+		var it: Dictionary = battle.items[k]
+		var slot: int = int(it.get("slot", -1))
+		if by_slot.has(slot):
+			out[int(by_slot[slot])].count += 1
+			continue
+		if battle.item_targets(k).is_empty():
+			continue
+		by_slot[slot] = out.size()
+		out.append({ "item": k, "id": StringName(str(it.get("id", ""))), "count": 1 })
+	for c: Dictionary in out:
+		c.text = Texts.get_text("tactical_item_option") % [Items.display_name(c.id), int(c.count)]
+	return out
+
+
+## Elige un objeto en ITEM (índice de battle.items): pasa a TARGET con a quién se le puede dar.
+func choose_item(item: int) -> void:
+	if state != State.ITEM:
+		return
+	var cells: Array[Vector2i] = []
+	for i: int in battle.item_targets(item):
+		cells.append(battle.units[i].cell)
+	if cells.is_empty():
+		return
+	pending_item = item
+	_go_target(ACT_ITEM, cells)
+	# El cursor empieza en el propio Adoc.
+	if cells.has(battle.units[battle.active].cell):
+		cursor = battle.units[battle.active].cell
+
+
+## Casillas a las que llega el ataque del activo (en el submenú Actuar y al elegir objetivo de
+## Atacar), para resaltarlas. Vacío en los demás pasos.
+func range_cells() -> Array[Vector2i]:
+	var none: Array[Vector2i] = []
+	if battle.active == TacticalBattle.NONE or battle.active_acted:
+		return none
+	if state == State.ACT or (state == State.TARGET and pending == ACT_ATTACK):
+		return battle.strike_area(battle.active)
+	return none
+
+
+## Línea del ATQ de la ficha del combatiente `index`: "ATQ 8 (Lanza +2)", "ATQ 6 (Lanza en la
+## funda)" o "ATQ 6 (sin arma)" para el Adoc; "ATQ n" para los demás.
+static func atk_line(b: TacticalBattle, index: int) -> String:
+	var w: Dictionary = b.weapon_label(index)
+	match StringName(w.state):
+		&"drawn":
+			return Texts.get_text("tactical_atk_weapon") % [int(w.atk), Items.short_name(w.weapon), int(w.bonus)]
+		&"sheathed":
+			return Texts.get_text("tactical_atk_sheathed") % [int(w.atk), Items.short_name(w.weapon)]
+	if bool(b.units[index].leader):
+		return Texts.get_text("tactical_atk_unarmed") % int(w.atk)
+	return Texts.get_text("tactical_atk_plain") % int(w.atk)
 
 
 ## Flechas en el paso actual: cursor libre (MOVE), salto entre objetivos (TARGET) u orientación
@@ -356,6 +437,8 @@ func confirm() -> Dictionary:
 					out = battle.cheer(target)
 				ACT_COVER:
 					out = battle.cover(target)
+				ACT_ITEM:
+					out = battle.use_item(pending_item, target)
 			return _after(out)
 		State.FACING:
 			var actor: int = battle.active
@@ -380,9 +463,11 @@ func cancel() -> void:
 			state = State.MENU
 			highlight = []
 			cursor = battle.units[battle.active].cell
-		State.TARGET, State.OFRENDA:
-			state = State.ACT
+		State.TARGET, State.OFRENDA, State.ITEM:
+			state = State.ITEM if state == State.TARGET and pending == ACT_ITEM else State.ACT
 			highlight = []
+			pending = &""
+			pending_item = -1
 			cursor = battle.units[battle.active].cell
 		State.FACING:
 			if not battle.active_moved or not battle.active_acted:
@@ -423,6 +508,7 @@ func _after(result: Dictionary) -> Dictionary:
 		return result
 	highlight = []
 	pending = &""
+	pending_item = -1
 	if battle.is_over():
 		state = State.OVER
 	elif battle.active_moved and battle.active_acted:

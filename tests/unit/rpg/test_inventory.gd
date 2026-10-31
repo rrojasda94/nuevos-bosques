@@ -11,8 +11,13 @@ const MASK: StringName = &"mascara_de_corteza"
 const TALISMAN: StringName = &"talisman_de_semillas"
 
 
+const OldStartKit = preload("res://tests/unit/rpg/old_start_kit.gd")
+
+
 func before_each() -> void:
 	GameState.new_game(42)
+	# Equipo de antes de P4 (sin nada equipado y la bolsa de prueba): OldStartKit.
+	OldStartKit.apply()
 	_arm_spear()
 
 
@@ -43,13 +48,13 @@ func test_catalog_has_every_kind() -> void:
 func test_new_game_bag_and_equipment() -> void:
 	GameState.new_game(42)
 	assert_eq(GameState.bag.size(), 12)
-	assert_eq(InventoryLogic.equipped_in(GameState.equipped, &"main_hand"), &"", "la lanza empieza guardada (dueño, 0.3)")
-	assert_eq(InventoryLogic.count(GameState.bag, LANZA), 1, "en la bolsa")
-	assert_eq(InventoryLogic.equipped_in(GameState.equipped, &"mask"), &"")
-	assert_eq(InventoryLogic.count(GameState.bag, MASK), 1, "máscara provisional para probar")
-	assert_eq(InventoryLogic.count(GameState.bag, TALISMAN), 1)
-	assert_eq(InventoryLogic.free_slots(GameState.bag), 6, "la lanza, 3 máscaras y 2 talismanes provisionales para probar")
-	assert_false(AdventureRules.is_armed())
+	# Equipo inicial (P4, ajustes-playtest-0.5.md 5c): lanza enfundada y máscara de corteza puestas.
+	assert_eq(InventoryLogic.equipped_in(GameState.equipped, &"main_hand"), LANZA, "la lanza equipada")
+	assert_eq(InventoryLogic.count(GameState.bag, LANZA), 0)
+	assert_eq(InventoryLogic.equipped_in(GameState.equipped, &"mask"), MASK, "la máscara de corteza puesta")
+	assert_eq(InventoryLogic.count(GameState.bag, &"trenza_votiva"), 1, "una trenza votiva")
+	assert_eq(InventoryLogic.free_slots(GameState.bag), 11)
+	assert_false(AdventureRules.is_armed(), "enfundada")
 
 
 func test_add_stacks_up_to_stack_max() -> void:

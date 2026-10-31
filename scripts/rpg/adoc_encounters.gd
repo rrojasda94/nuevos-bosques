@@ -146,7 +146,7 @@ static func prompt(e: Dictionary) -> String:
 
 
 ## Final del combate de ayuda (ya aplicado por AdventureRules.finish_unico_battle): ganar da
-## relación con el Bosque y fama; en todo caso, el encuentro queda resuelto. Devuelve las líneas
+## relación con el Bosque y fama (y la Honda si no la tienes, P4); en todo caso, el encuentro queda resuelto. Devuelve las líneas
 ## que dice la exploración (agradecimiento y recompensa, o que el adoc se retira).
 static func finish(e: Dictionary, outcome: StringName) -> PackedStringArray:
 	var cfg: Dictionary = config()
@@ -160,6 +160,10 @@ static func finish(e: Dictionary, outcome: StringName) -> PackedStringArray:
 		Senda.record(Senda.ADOC_HELPED)
 		lines.append(Texts.get_text("adoc_encounter_thanks") % str(e.name))
 		lines.append(Texts.get_text("adoc_encounter_reward") % [relation, fama])
+		# P4 (ajustes-playtest-0.5.md 4d): la Honda, una vez, si no la tienes y cabe en la bolsa.
+		var weapon: StringName = StringName(str(cfg.get("weapon_reward", "")))
+		if AdventureRules.give_weapon(weapon):
+			lines.append(Texts.get_text("adoc_encounter_weapon") % [str(e.name), Items.display_name(weapon).to_lower()])
 	elif outcome == &"appeased":
 		resolve(e.id, HELPED)
 	elif outcome != &"game_over":

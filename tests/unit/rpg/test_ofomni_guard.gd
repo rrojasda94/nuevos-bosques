@@ -20,9 +20,14 @@ func before_all() -> void:
 	_target = _map.neighbours_of(_home)[0]
 
 
+const OldStartKit = preload("res://tests/unit/rpg/old_start_kit.gd")
+
+
 func before_each() -> void:
 	WorldClock.set_process(false)
 	GameState.new_game(42)
+	# Equipo de antes de P4 (sin nada equipado y la bolsa de prueba): OldStartKit.
+	OldStartKit.apply()
 
 
 func after_each() -> void:
