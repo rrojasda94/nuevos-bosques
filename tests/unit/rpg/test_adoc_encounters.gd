@@ -3,7 +3,7 @@ extends GutTest
 ## (AdocEncounters, otros-adoc.md); Único aliado en un Bosque que necesita ayuda
 ## (AdventureRules.bosque_allies); guardado v16 con migración; la lanza empieza guardada.
 
-const EXPLORATION: String = "res://scenes/world/exploration.tscn"
+const EXPLORATION: String = "res://scenes/world/world_exploration.tscn"
 
 var _region: Dictionary
 var _map: BosqueMap
@@ -32,9 +32,9 @@ func _force(bosque_id: int, state: String) -> void:
 
 
 ## Primer Bosque (no natal) con un grupo de reparep.
-func _bosque_with_reparep() -> int:
-	for id: int in _map.count():
-		if not BosquePatrols.reparep_group_of(_map, 42, id).is_empty():
+func _bosque_with_reparep(map: BosqueMap = _map) -> int:
+	for id: int in map.count():
+		if not BosquePatrols.reparep_group_of(map, 42, id).is_empty():
 			return id
 	return -1
 
@@ -73,16 +73,19 @@ func test_reparep_out_at_night_or_always_in_dangerous_states() -> void:
 
 
 func test_reparep_on_the_map_is_one_group_and_engages_the_whole_group() -> void:
-	var id: int = _bosque_with_reparep()
+	var expl: WorldExploration = load(EXPLORATION).instantiate()
+	add_child_autoqfree(expl)
+	await expl.start()
+	var map: BosqueMap = expl.bosques
+	var id: int = _bosque_with_reparep(map)
+	assert_gt(id, -1, "la seed 42 tiene un grupo de reparep")
 	_force(id, BosqueStates.MUERTO)
-	var g: Dictionary = BosquePatrols.reparep_group_of(_map, 42, id)
-	GameState.chunk_coord = g.chunk
-	GameState.player_cell = Vector2i(-1, -1)
+	var g: Dictionary = BosquePatrols.reparep_group_of(map, 42, id)
 	GameState.open_until[str(id)] = -1
-	var expl: Node = load(EXPLORATION).instantiate()
-	add_child_autofree(expl)
-	expl.start()
-	var field: MonsterField = expl.get_node("Monsters")
+	expl._place(WorldCoords.to_world_cell(g.chunk, expl.world.pregen.get_chunk(g.chunk).hub))
+	var field: MonsterField = expl.get("_field")
+	field.update_active(g.chunk)
+	field.sync_patrols()
 	var groups: Array = field.with_role(MonsterField.ROLE_PATROL).filter(func(m: OverworldMonster) -> bool: return m.monster_id == &"reparep")
 	assert_eq(groups.size(), 1, "un solo monstruo para todo el grupo")
 	var m: OverworldMonster = groups[0]
@@ -181,26 +184,23 @@ func test_losing_or_fleeing_with_the_adoc_only_resolves() -> void:
 	assert_string_contains(lines[0], "se retira")
 
 
-func test_encounter_in_the_world_and_help_flow() -> void:
-	var e: Dictionary = AdocEncounters.all(_map, 42)[0]
-	GameState.chunk_coord = e.chunk
-	GameState.player_cell = Vector2i(-1, -1)
-	GameState.open_until[str(e.bosque_id)] = -1
-	var expl: Node = load(EXPLORATION).instantiate()
-	add_child_autofree(expl)
-	expl.start()
-	var field: MonsterField = expl.get_node("Monsters")
-	var duels: Array[OverworldMonster] = field.with_role(MonsterField.ROLE_DUEL)
-	assert_eq(duels.size(), 1, "el rival del adoc")
-	assert_false(field.can_detect(duels[0]), "no hace caso al jugador")
-	assert_true(field.occupied(duels[0].cell))
-	assert_eq(expl._npcs.values().count(AdocEncounters.NPC_ID), 1, "el adoc bloquea su casilla")
-	watch_signals(EventBus)
-	expl._on_adoc_encounter_choice(0, expl._encounter)
-	assert_signal_emitted(EventBus, "group_battle_requested")
-	var params: Array = get_signal_parameters(EventBus, "group_battle_requested")
-	assert_eq(params[4], e.id, "con el adoc como aliado")
-	get_tree().paused = false
+## Dónde esperan el adoc y su rival en su chunk del Mundo 2.0 (AdocEncounters.cells). La escena del
+## encuentro (dibujarlos y la ayuda con E) aún no está en la exploración del Mundo 2.0 (pendiente
+## tras M17b); el combate con el adoc como aliado lo prueba test_bosque_in_need_sends_one_unico_ally.
+func test_encounter_cells_in_the_world_chunk() -> void:
+	var plan := RegionPlan.for_region(42, &"valle_del_sara")
+	var e: Dictionary = AdocEncounters.all(plan.bosques, 42)[0]
+	var chunk: WorldChunk = ChunkBuilder.build(plan, e.chunk)
+	var free: Callable = func(c: Vector2i) -> bool: return chunk.is_walkable(c)
+	var at: Array[Vector2i] = AdocEncounters.cells(chunk, 42, str(e.id), free)
+	assert_eq(at.size(), 2, "el adoc y su rival")
+	assert_eq(AdocEncounters.cells(chunk, 42, str(e.id), free), at, "determinista")
+	for c: Vector2i in at:
+		assert_true(WorldChunk.in_bounds(c))
+		assert_true(chunk.is_reachable(c), "se llega andando")
+	assert_gte(MonsterSteering.chebyshev(at[0], chunk.hub), int(AdocEncounters.config().get("min_hub_distance", 8)),
+		"lejos de la plaza")
+	assert_eq(MonsterSteering.chebyshev(at[0], at[1]), 2, "uno junto al otro")
 
 
 func test_bosque_in_need_sends_one_unico_ally_against_reparep() -> void:

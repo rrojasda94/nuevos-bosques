@@ -158,25 +158,6 @@ func test_guarded_bosque_is_farther_from_home() -> void:
 		assert_true(map.distance(home, g) >= map.distance(home, a if g == b else b))
 
 
-func test_post_cell_is_deterministic_reachable_and_near_the_gate() -> void:
-	var region := ChunkGenerator.load_region(&"valle_del_sara")
-	var map := BosqueMap.for_region(42, region)
-	var home: int = AdventureRules.home_bosque(map, region)
-	var depth: int = int(AdventureRules.monster_config(&"botarramas").post_depth)
-	var checked: int = 0
-	for t: Array in _tramos(map).slice(0, 12):
-		for p: Dictionary in BotarramasPosts.posts_near(map, 42, home, t[0]):
-			var chunk: ChunkData = ChunkGenerator.generate(42, p.chunk, region, map)
-			var cell: Vector2i = BotarramasPosts.post_cell(chunk, 42, p.side, depth)
-			var again: ChunkData = ChunkGenerator.generate(42, p.chunk, region, map)
-			assert_eq(BotarramasPosts.post_cell(again, 42, p.side, depth), cell, "determinista")
-			assert_true(chunk.is_reachable(cell), "se llega desde el hub")
-			var gate: Vector2i = ChunkData.border_cell(p.side, ChunkGenerator.gate_index(42, p.chunk, p.side))
-			assert_true(MonsterSteering.chebyshev(cell, gate) <= depth + BotarramasPosts.SEARCH_RADIUS, "junto a la puerta")
-			checked += 1
-	assert_gt(checked, 0)
-
-
 func test_open_bosque_makes_its_botarramas_passive() -> void:
 	GameState.new_game(42)
 	GameState.equipped.main_hand = ""  # con el arma en la mano, ningún Bosque pagado es pasivo (test_stealth)

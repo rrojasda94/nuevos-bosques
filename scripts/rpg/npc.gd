@@ -31,14 +31,6 @@ var world_pos: Vector2 = Vector2.ZERO
 var world_cell: Vector2i = Vector2i.ZERO
 
 
-# ponytail: borrar en M17 (lo sustituye setup_world)
-func setup(id: StringName, at: Vector2i, facing: Vector2i = Vector2i.DOWN) -> void:
-	npc_id = id
-	cell = at
-	position = PlayerWalker.cell_to_position(at)
-	_add_sprite(facing, Vector2.ZERO)
-
-
 ## Mundo 2.0 (ADR 0014 §7): el NPC con los pies en el centro de la casilla global `at`. El nodo
 ## está en los pies (va en el nodo de objetos con orden en Y) y el sprite de 16×16 queda encima.
 ## Se habla con él con Interaction.find_world (npcs: npc_id -> world_pos).
@@ -64,48 +56,6 @@ func _add_sprite(facing: Vector2i, offset: Vector2) -> void:
 	timer.autostart = true
 	timer.timeout.connect(func() -> void: sprite.frame = (sprite.frame + 1) % SHEET_FRAMES)
 	add_child(timer)
-
-
-## Casilla de aparición del Adoc en su villa: justo al sur del Nujio.
-# ponytail: borrar en M17 (lo sustituye la versión _world)
-static func villa_spawn_cell(chunk: ChunkData) -> Vector2i:
-	var rect: Rect2i = chunk.nujio_rect
-	return Vector2i(rect.position.x + rect.size.x / 2, rect.end.y)
-
-
-## Sitio determinista del sfida en la villa: la casilla de PLAZA más cercana a la de aparición
-## + SFIDA_OFFSET (empates por fila y columna) que no sea el hub ni la de aparición, a la que se
-## llegue desde el hub y con sus 8 vecinas transitables, para que bloquearla nunca corte el paso.
-## (-1, -1) si el chunk no tiene villa.
-# ponytail: borrar en M17 (lo sustituye la versión _world)
-static func sfida_cell(chunk: ChunkData) -> Vector2i:
-	if not chunk.has_villa or chunk.nujio_rect.size.x == 0:
-		return Vector2i(-1, -1)
-	var spawn: Vector2i = villa_spawn_cell(chunk)
-	var target: Vector2i = spawn + SFIDA_OFFSET
-	var best := Vector2i(-1, -1)
-	var best_score: int = 1 << 30
-	for y: int in ChunkData.SIZE:
-		for x: int in ChunkData.SIZE:
-			var c := Vector2i(x, y)
-			if chunk.get_tile(c) != ChunkData.Tile.PLAZA or c == chunk.hub or c == spawn:
-				continue
-			var score: int = (absi(c.x - target.x) + absi(c.y - target.y)) * ChunkData.SIZE * ChunkData.SIZE \
-				+ y * ChunkData.SIZE + x
-			if score >= best_score or not chunk.is_reachable(c) or not _is_open_around(chunk, c):
-				continue
-			best = c
-			best_score = score
-	return best
-
-
-# ponytail: borrar en M17 (lo sustituye la versión _world)
-static func _is_open_around(chunk: ChunkData, c: Vector2i) -> bool:
-	for dy: int in range(-1, 2):
-		for dx: int in range(-1, 2):
-			if not chunk.is_walkable(c + Vector2i(dx, dy)):
-				return false
-	return true
 
 
 # --- Mundo 2.0 (WorldChunk) ---------------------------------------------------------------------
@@ -167,5 +117,5 @@ static func make_texture(colors: Dictionary, dir: Vector2i) -> Texture2D:
 	if dir == Vector2i.DOWN:
 		img.set_pixel(6, 5, outline)
 		img.set_pixel(9, 5, outline)
-	PlayerWalker.add_outline(img, outline)
+	PlayerController.add_outline(img, outline)
 	return ImageTexture.create_from_image(img)

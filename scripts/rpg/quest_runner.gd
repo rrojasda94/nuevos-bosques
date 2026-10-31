@@ -17,8 +17,8 @@ var _dialogue: DialogueBox
 var _region_map: Node
 var _bosques: BosqueMap
 var _home: int = -1
-## Chunk de la villa natal: WorldChunk (Mundo 2.0) o ChunkData (exploración vieja, hasta M17b).
-var _villa: Object
+## Chunk de la villa natal.
+var _villa: WorldChunk
 
 
 func setup(dialogue: DialogueBox, region_map: Node) -> void:
@@ -30,7 +30,7 @@ func setup(dialogue: DialogueBox, region_map: Node) -> void:
 
 
 ## Partida nueva o cargada. Sin misión guardada, la ofrece y la brújula apunta al sfida.
-func start(bosques: BosqueMap, home: int, villa: Object) -> void:
+func start(bosques: BosqueMap, home: int, villa: WorldChunk) -> void:
 	_bosques = bosques
 	_home = home
 	_villa = villa
@@ -148,10 +148,8 @@ func _on_quest_battle_resolved(quest_id: StringName, outcome: StringName) -> voi
 
 func _point_to_sfida() -> void:
 	var cell := Vector2i(-1, -1)
-	if _villa is WorldChunk:
+	if _villa != null:
 		cell = Npc.sfida_cell_world(_villa)
-	elif _villa is ChunkData:
-		cell = Npc.sfida_cell(_villa)
 	_set_objective(_bosques.nujio_chunk[_home], Texts.get_text("compass_sfida"), cell)
 
 

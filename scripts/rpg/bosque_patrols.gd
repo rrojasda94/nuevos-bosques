@@ -97,15 +97,9 @@ static func is_out(monster_id: StringName, momento: StringName) -> bool:
 	return not (config().get("night_only", []) as Array).has(String(monster_id)) or momento == TimeConfig.RIUMNA
 
 
-## Casilla del puesto de un Único que ronda (`key`): alcanzable, libre (`can_use`) y a min_hub_distance
-## o más del hub (lejos de la plaza de la villa). Determinista. (-1, -1) si no hay.
-## ponytail: borrar en M17 (ChunkData); el Mundo 2.0 usa post_cell_world.
-static func post_cell(chunk: ChunkData, seed_value: int, key: String, can_use: Callable) -> Vector2i:
-	return _post_cell(ChunkData.SIZE, chunk.hub, chunk.is_reachable, seed_value, key, can_use)
-
-
-## Igual que post_cell, sobre un WorldChunk del Mundo 2.0 (casillas 0..79 del chunk; `can_use`
-## recibe también la casilla del chunk).
+## Casilla del puesto de un Único que ronda (`key`) en su WorldChunk (0..79): alcanzable, libre
+## (`can_use`, que recibe la casilla del chunk) y a min_hub_distance o más del hub (lejos de la plaza
+## de la villa). Determinista. (-1, -1) si no hay.
 static func post_cell_world(chunk: WorldChunk, seed_value: int, key: String, can_use: Callable) -> Vector2i:
 	return _post_cell(WorldChunk.SIZE, chunk.hub, chunk.is_reachable, seed_value, key, can_use)
 

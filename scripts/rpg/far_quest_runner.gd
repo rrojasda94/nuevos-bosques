@@ -10,7 +10,7 @@ extends Node
 var _dialogue: DialogueBox
 var _bosques: BosqueMap
 var _home: int = -1
-## Callable(chunk: Vector2i) -> ChunkData, para comprobar que un incendio arde de verdad.
+## Callable(chunk: Vector2i) -> WorldChunk, para comprobar que un incendio arde de verdad.
 var _chunk_at: Callable = Callable()
 
 

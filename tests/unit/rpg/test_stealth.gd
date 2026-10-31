@@ -7,7 +7,7 @@ extends GutTest
 ## "Peleas sin arma"; máscara que resta DEF y máscara que se rompe; velocidad del talismán y
 ## cazadores del Bosque enojado; pantalla I y HUD; guardado v15 con migración desde la v14.
 
-const EXPLORATION: String = "res://scenes/world/exploration.tscn"
+const EXPLORATION: String = "res://scenes/world/world_exploration.tscn"
 const Crossing = preload("res://scripts/rpg/crossing.gd")
 const Screen = preload("res://scripts/rpg/inventory_screen.gd")
 const Battle = preload("res://scripts/rpg/battle.gd")
@@ -50,12 +50,25 @@ func after_all() -> void:
 	GameState.new_game(42)
 
 
-func _exploration() -> Node:
-	var expl: Node = load(EXPLORATION).instantiate()
-	add_child_autofree(expl)
-	expl.start()
+## Exploración del Mundo 2.0 con la partida actual (seed 42), sin fundido. Corrutina.
+func _exploration() -> WorldExploration:
+	var expl: WorldExploration = load(EXPLORATION).instantiate()
+	add_child_autoqfree(expl)
+	await expl.start()
 	expl._fade.color.a = 0.0
 	return expl
+
+
+## Pone al Adoc en `world_cell` (o en el hub de su chunk si está ocupada) sin fundido.
+func _put(expl: WorldExploration, world_cell: Vector2i) -> void:
+	expl._place(world_cell)
+	expl._fade.color.a = 0.0
+
+
+## Casilla global del hub del primer chunk del Bosque `bosque_id`.
+func _hub_of(expl: WorldExploration, bosque_id: int) -> Vector2i:
+	var coord: Vector2i = expl.bosques.chunks_of(bosque_id)[0]
+	return WorldCoords.to_world_cell(coord, expl.world.pregen.get_chunk(coord).hub)
 
 
 ## Equipa (sin pasar por la bolsa) los objetos dados en sus ranuras.
@@ -68,18 +81,22 @@ func _unarm() -> void:
 	GameState.equipped.main_hand = ""
 
 
-## Un chunk del Bosque natal con frontera con _target, y el lado de esa frontera.
-func _border_with_target() -> Array:
-	for c: Vector2i in _map.chunks_of(_home):
-		for side: Vector2i in ChunkData.SIDES:
-			if _map.bosque_at(c + side) == _target:
-				return [c, side]
-	return []
+## Frontera del Bosque natal con un vecino en el mundo de `expl`: { "target": Bosque vecino,
+## "inside": casilla global del natal en el borde, "outside": la de al lado, ya en el vecino }.
+func _border_with_target(expl: WorldExploration) -> Dictionary:
+	var home: int = expl.home_bosque
+	var target: int = expl.bosques.neighbours_of(home)[0]
+	for c: Vector2i in expl.bosques.chunks_of(home):
+		for side: Vector2i in WorldChunk.SIDES:
+			if expl.plan.bosque_at(c + side) == target:
+				var inside: Vector2i = WorldCoords.to_world_cell(c, WorldChunk.border_cell(side, WorldChunk.SIZE / 2))
+				return { "target": target, "inside": inside, "outside": inside + side }
+	return {}
 
 
-func _accept_mission() -> void:
+func _accept_mission(map: BosqueMap, home: int) -> void:
 	var q: Dictionary = GameState.quests[Q]
-	assert_true(QuestLogic.accept(q, _map, 42, _home))
+	assert_true(QuestLogic.accept(q, map, 42, home))
 	QuestLogic.commit(Q, q, QuestLogic.OFFERED)
 
 
@@ -144,7 +161,6 @@ func test_weapon_in_hand_cancels_camouflage() -> void:
 func test_sneaking_in_unseen_neither_pays_nor_forces_the_bosque() -> void:
 	_unarm()
 	_wear([CORTEZA, SEMILLAS])
-	assert_false(Stealth.can_sneak_into(_target), "ponytail: el mundo viejo ya no se cuela (M17b)")
 	watch_signals(EventBus)
 	assert_eq(AdventureRules.sneak_into(_target), [] as Array[StringName], "nada se rompe")
 	assert_signal_emitted_with_parameters(EventBus, "bosque_sneaked", [_target])
@@ -196,31 +212,29 @@ func test_mask_that_breaks_after_its_uses() -> void:
 # --- Te han visto ----------------------------------------------------------------------------------------
 
 func test_being_seen_up_close_breaks_the_camouflage() -> void:
-	var expl: Node = _exploration()
+	var expl: WorldExploration = await _exploration()
+	var target: int = expl.bosques.neighbours_of(expl.home_bosque)[0]
 	_unarm()
 	_wear([CORTEZA, SEMILLAS])
-	AdventureRules.sneak_into(_target)
-	var coord: Vector2i = _map.chunks_of(_target)[0]
-	expl._enter_chunk(coord, expl._get_chunk(coord).hub)
-	expl._fade.color.a = 0.0
-	var at: Vector2i = expl._player.cell + Vector2i.RIGHT
-	var m: OverworldMonster = expl._field.spawn_hunter(&"botarramas", _target, at, _map.styles[_target])
-	m.cell = at
+	AdventureRules.sneak_into(target)
+	_put(expl, _hub_of(expl, target))
+	var at: Vector2i = expl.player.mover.cell + Vector2i.RIGHT
+	var m: OverworldMonster = expl._field.spawn_hunter(&"botarramas", target, at, expl.bosques.styles[target])
 	watch_signals(EventBus)
 	watch_signals(expl._field)
-	expl._field._process(0.01)
+	expl._field._physics_process(0.01)
 	assert_signal_emitted(expl._field, "spotted", "se le echa encima: le ve")
 	assert_signal_not_emitted(expl._field, "engaged", "tarda un instante en atacar")
 	assert_signal_emitted_with_parameters(EventBus, "notice_requested", [Texts.get_text("stealth_spotted")])
-	assert_signal_emitted_with_parameters(EventBus, "adoc_spotted", [_target])
+	assert_signal_emitted_with_parameters(EventBus, "adoc_spotted", [target])
 	assert_true(Stealth.is_exposed(), "el camuflaje se rompe")
 	assert_eq(Stealth.camouflage(), 0)
-	assert_false(AdventureRules.is_sneaking_unseen(_target), "el Bosque ya sabe que estás dentro")
-	assert_true(BosqueHunt.is_hunting(_target, _home), "y te caza")
+	assert_false(AdventureRules.is_sneaking_unseen(target), "el Bosque ya sabe que estás dentro")
+	assert_true(BosqueHunt.is_hunting(target, expl.home_bosque), "y te caza")
 	assert_eq(m.state, MonsterSteering.State.CHASE, "te persigue")
 	assert_eq(int(m.cfg.vision_radius), int(AdventureRules.monster_config(&"botarramas").vision_radius), "ya ve de lejos")
 	# Pasado el instante, el encuentro.
-	expl._field._process(Stealth.seen_grace() + 0.01)
+	expl._field._physics_process(Stealth.seen_grace() + 0.01)
 	assert_signal_emitted(expl._field, "engaged")
 	# Con el tiempo, el camuflaje vuelve.
 	assert_true(Stealth.tick(float(Stealth.config().exposed_seconds)))
@@ -228,9 +242,10 @@ func test_being_seen_up_close_breaks_the_camouflage() -> void:
 
 
 func test_spotted_only_matters_while_hidden() -> void:
-	var expl: Node = _exploration()
+	var expl: WorldExploration = await _exploration()
 	GameState.equipped.main_hand = String(LANZA)
-	var m: OverworldMonster = expl._field.spawn_hunter(&"botarramas", _target, Vector2i(5, 5), _map.styles[_target])
+	var target: int = expl.bosques.neighbours_of(expl.home_bosque)[0]
+	var m: OverworldMonster = expl._field.spawn_hunter(&"botarramas", target, _hub_of(expl, target), expl.bosques.styles[target])
 	expl._on_monster_spotted(m)
 	assert_false(Stealth.is_exposed(), "sin camuflaje no hay nada que romper")
 
@@ -245,35 +260,38 @@ func test_camouflaged_theft_only_alerts_if_watched() -> void:
 
 
 func test_exploration_hidden_theft_wakes_no_ofomni_but_bare_theft_does() -> void:
-	var expl: Node = _exploration()
-	assert_eq(_map.bosque_at(GameState.chunk_coord), _home)
+	var expl: WorldExploration = await _exploration()
+	var home: int = expl.home_bosque
+	assert_eq(expl.plan.bosque_at(GameState.chunk_coord), home)
 	_unarm()
 	_wear([CORTEZA, SEMILLAS])
 	var coord: Vector2i = GameState.chunk_coord
 	expl._field.remove_roles([MonsterField.ROLE_PATROL, MonsterField.ROLE_GUARDIAN] as Array[StringName])
-	FruitRules.take(coord, Vector2i(1, 1), _home, _home)
-	var r: Dictionary = FruitRules.take(coord, Vector2i(2, 1), _home, _home)
+	FruitRules.take(coord, Vector2i(1, 1), home, home)
+	var r: Dictionary = FruitRules.take(coord, Vector2i(2, 1), home, home)
 	assert_true(bool(r.theft))
 	assert_eq(expl._field.chasers().size(), 0, "nadie lo ha visto: los Ofomni no despiertan")
 	assert_true(expl._theft_unseen)
-	assert_eq(AdventureRules.hostility(_home), 1, "el Bosque echa en falta su fruto igualmente")
+	assert_eq(AdventureRules.hostility(home), 1, "el Bosque echa en falta su fruto igualmente")
 	# Sin camuflaje, a la vista: despiertan.
 	GameState.equipped.mask = ""
 	GameState.equipped.talisman = ""
-	FruitRules.take(coord, Vector2i(3, 1), _home, _home)
+	FruitRules.take(coord, Vector2i(3, 1), home, home)
 	assert_gt(expl._field.chasers().size(), 0, "sin protección: despiertan")
 	assert_false(expl._theft_unseen)
 
 
 func test_exploration_hidden_theft_under_a_watching_unico_wakes_them() -> void:
-	var expl: Node = _exploration()
+	var expl: WorldExploration = await _exploration()
+	var home: int = expl.home_bosque
 	_unarm()
 	_wear([CORTEZA, SEMILLAS])
 	var coord: Vector2i = GameState.chunk_coord
-	expl._field.spawn_hunter(&"botarramas", _home, expl._player.cell + Vector2i.RIGHT, _map.styles[_home])
-	assert_true(expl._field.is_watched(_home, expl._player.cell))
-	FruitRules.take(coord, Vector2i(1, 1), _home, _home)
-	FruitRules.take(coord, Vector2i(2, 1), _home, _home)
+	var cell: Vector2i = expl.player.mover.cell
+	expl._field.spawn_hunter(&"botarramas", home, cell + Vector2i.RIGHT, expl.bosques.styles[home])
+	assert_true(expl._field.is_watched(home, cell))
+	FruitRules.take(coord, Vector2i(1, 1), home, home)
+	FruitRules.take(coord, Vector2i(2, 1), home, home)
 	assert_gt(expl._field.chasers().size(), 0, "un Único lo ha visto")
 	assert_true(Stealth.is_exposed(), "y te han visto")
 
@@ -315,22 +333,22 @@ func test_weapon_does_not_close_free_bosques() -> void:
 
 
 func test_exploration_warns_when_crossing_armed_and_border_menu_opens_even_if_paid() -> void:
-	var expl: Node = _exploration()
-	_accept_mission()
-	AdventureRules.open_bosque(_target)
-	var border: Array = _border_with_target()
-	expl._enter_chunk(border[0], expl._get_chunk(border[0]).hub)
+	var expl: WorldExploration = await _exploration()
+	_accept_mission(expl.bosques, expl.home_bosque)
+	var border: Dictionary = _border_with_target(expl)
+	var target: int = border.target
+	AdventureRules.open_bosque(target)
 	watch_signals(EventBus)
-	expl._on_edge_reached(border[1])
-	assert_eq(GameState.chunk_coord, border[0] + border[1], "pagado: cruza")
+	expl._on_cell_changed(border.outside)
+	assert_eq(GameState.chunk_coord, WorldCoords.world_cell_to_chunk(border.outside), "pagado: cruza")
 	assert_true(_notice_contains(Texts.get_text("bosque_feels_weapon")), "El Bosque siente tu arma.")
 	var crossing: Node = expl.get_node("Crossing")
-	EventBus.bosque_border_reached.emit(_target)
+	EventBus.bosque_border_reached.emit(target)
 	assert_true(crossing._panel.visible, "sus Botarramas te enfrentan aunque hayas pagado")
 	assert_eq(crossing._actions, [Crossing.Option.FIGHT, Crossing.Option.RETREAT] as Array[int])
 	crossing._close(&"retreated")
 	AdventureRules.unequip_slot(&"main_hand")
-	EventBus.bosque_border_reached.emit(_target)
+	EventBus.bosque_border_reached.emit(target)
 	assert_false(crossing._panel.visible, "desarmado y pagado: paso en paz")
 
 
@@ -373,9 +391,9 @@ func test_heavy_mask_lowers_def() -> void:
 # --- Velocidad y Bosque enojado -------------------------------------------------------------------------
 
 func test_travel_talisman_speeds_up_the_step() -> void:
-	assert_almost_eq(Stealth.step_time(PlayerWalker.STEP_TIME), PlayerWalker.STEP_TIME, 0.0001)
+	assert_almost_eq(Stealth.step_time(PlayerController.STEP_TIME), PlayerController.STEP_TIME, 0.0001)
 	_wear([PLUMA])
-	assert_almost_eq(Stealth.step_time(PlayerWalker.STEP_TIME), PlayerWalker.STEP_TIME / 1.3, 0.0001, "un 30% más rápido")
+	assert_almost_eq(Stealth.step_time(PlayerController.STEP_TIME), PlayerController.STEP_TIME / 1.3, 0.0001, "un 30% más rápido")
 	var cfg: Dictionary = Stealth.config()
 	cfg.speed_bonus_max = 0.2
 	assert_almost_eq(Stealth.speed_bonus(), 0.2, 0.0001, "con tope")
@@ -383,16 +401,16 @@ func test_travel_talisman_speeds_up_the_step() -> void:
 
 
 func test_exploration_applies_the_talisman_speed_when_equipped() -> void:
-	var expl: Node = _exploration()
-	assert_almost_eq(expl._player.step_time, PlayerWalker.STEP_TIME, 0.0001)
+	var expl: WorldExploration = await _exploration()
+	assert_almost_eq(expl.player.speed_scale, 1.0, 0.0001)
 	var index: int = -1
 	for i: int in GameState.bag.size():
 		if InventoryLogic.id_at(GameState.bag, i) == PLUMA:
 			index = i
 	assert_true(AdventureRules.equip_from_bag(index))
-	assert_almost_eq(expl._player.step_time, PlayerWalker.STEP_TIME / 1.3, 0.0001)
+	assert_almost_eq(expl.player.speed_scale, 1.3, 0.0001, "un 30% más rápido")
 	AdventureRules.unequip_slot(&"talisman")
-	assert_almost_eq(expl._player.step_time, PlayerWalker.STEP_TIME, 0.0001)
+	assert_almost_eq(expl.player.speed_scale, 1.0, 0.0001)
 
 
 func test_angry_bosque_hunters_take_longer_with_great_camouflage_or_speed() -> void:

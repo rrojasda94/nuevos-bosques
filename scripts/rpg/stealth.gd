@@ -191,12 +191,6 @@ static func border_outcome(watchers: Array, player_cell: Vector2i, camo: int, we
 	return { "kind": CROSS_MENU if chased else CROSS_SNEAK, "index": -1 }
 
 
-## ponytail: borrar en M17b con la exploración vieja (exploration.gd). Sin las posiciones de los
-## vigías no se puede decidir, así que el mundo viejo ya no deja colarse.
-static func can_sneak_into(_bosque_id: int) -> bool:
-	return false
-
-
 ## Camuflaje alto: un Botarramas sin extras (vision_radius base) se queda con hidden_vision o menos.
 static func hides_well() -> bool:
 	var base: int = int(AdventureRules.monster_config(&"botarramas").get("vision_radius", 0))

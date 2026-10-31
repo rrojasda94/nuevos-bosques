@@ -168,12 +168,13 @@ static func finish(e: Dictionary, outcome: StringName) -> PackedStringArray:
 	return lines
 
 
-## Casilla del adoc en su chunk: alcanzable, libre (`can_use`, también la de su rival a la derecha
-## o a la izquierda) y lejos de la plaza. Devuelve [adoc, rival] o [] si no hay sitio.
-static func cells(chunk: ChunkData, seed_value: int, id: String, can_use: Callable) -> Array[Vector2i]:
+## Casilla del adoc en su WorldChunk (0..79): alcanzable, libre (`can_use`, que recibe casillas del
+## chunk; también la de su rival a la derecha o a la izquierda) y lejos de la plaza. Devuelve
+## [adoc, rival] o [] si no hay sitio.
+static func cells(chunk: WorldChunk, seed_value: int, id: String, can_use: Callable) -> Array[Vector2i]:
 	var gap: int = int(config().get("min_hub_distance", 8))
 	var margin: int = 4
-	var span: int = ChunkData.SIZE - 2 * margin
+	var span: int = WorldChunk.SIZE - 2 * margin
 	for t: int in CELL_TRIES:
 		var h: int = ChunkGenerator.hash_ints([seed_value, id.hash(), t, SALT_CELL])
 		var c := Vector2i(margin + h % span, margin + (h / span) % span)

@@ -8,9 +8,12 @@ var _region: Dictionary
 var _map: BosqueMap
 var _home: int
 var _b: Dictionary
+## Plan del Mundo 2.0 de la seed 42 (chunks reales para el descanso y el refugio).
+var _plan: RegionPlan
 
 
 func before_all() -> void:
+	_plan = RegionPlan.for_region(42, &"valle_del_sara")
 	_region = ChunkGenerator.load_region(&"valle_del_sara")
 	_map = BosqueMap.for_region(42, _region)
 	_home = AdventureRules.home_bosque(_map, _region)
@@ -171,37 +174,42 @@ func test_v2_save_loads_with_adventure_defaults() -> void:
 	assert_eq(GameState.open_until, {})
 
 
-func _nujio_chunk_of(with_villa: bool) -> ChunkData:
-	for id in _map.count():
-		if _map.has_villa[id] == with_villa:
-			return ChunkGenerator.generate(42, _map.nujio_chunk[id], _region, _map)
+## Chunk del Nujio de un Bosque con villa o sin ella, del Mundo 2.0 (seed 42).
+func _nujio_chunk_of(with_villa: bool) -> WorldChunk:
+	var map: BosqueMap = _plan.bosques
+	for id in map.count():
+		if map.has_villa[id] != with_villa or map.nujio_size[id] <= 0:
+			continue
+		var chunk: WorldChunk = ChunkBuilder.build(_plan, map.nujio_chunk[id])
+		if chunk.has_villa == with_villa and chunk.nujio_rect.size.x > 0:
+			return chunk
 	return null
 
 
 func test_rest_in_villa_plaza_or_next_to_its_nujio() -> void:
-	var villa: ChunkData = _nujio_chunk_of(true)
+	var villa: WorldChunk = _nujio_chunk_of(true)
 	assert_not_null(villa, "seed 42 tiene al menos una villa")
 	assert_true(villa.has_villa)
 	var rect: Rect2i = villa.nujio_rect
-	assert_true(AdventureRules.is_villa_rest(villa, rect.position + Vector2i(-1, 0)), "junto al Nujio")
-	assert_true(AdventureRules.is_villa_rest(villa, rect.end), "también en diagonal")
-	assert_false(AdventureRules.is_villa_rest(villa, rect.position), "dentro del Nujio no")
+	assert_true(AdventureRules.is_villa_rest_world(villa, rect.position + Vector2i(-1, 0)), "junto al Nujio")
+	assert_true(AdventureRules.is_villa_rest_world(villa, rect.end), "también en diagonal")
+	assert_true(villa.is_blocked(rect.position), "dentro del Nujio no se puede estar")
 	var plaza: Vector2i = Vector2i(-1, -1)
-	for y in ChunkData.SIZE:
-		for x in ChunkData.SIZE:
-			var c := Vector2i(x, y)
-			if villa.get_tile(c) == ChunkData.Tile.PLAZA and not rect.grow(1).has_point(c):
-				plaza = c
+	for i: int in WorldChunk.CELLS:
+		var c: Vector2i = WorldCoords.index_to_cell(i)
+		if villa.get_ground(c) == WorldChunk.Ground.PLAZA and not rect.grow(1).has_point(c):
+			plaza = c
 	assert_ne(plaza, Vector2i(-1, -1))
-	assert_true(AdventureRules.is_villa_rest(villa, plaza), "en la plaza, lejos del Nujio")
-	assert_false(AdventureRules.is_villa_rest(villa, Vector2i(0, 0)), "fuera de la plaza")
+	assert_true(AdventureRules.is_villa_rest_world(villa, plaza), "en la plaza, lejos del Nujio")
+	assert_false(AdventureRules.is_villa_rest_world(villa, Vector2i(0, 0)), "fuera de la plaza")
 
 
 func test_no_rest_next_to_nujio_without_villa() -> void:
-	var wild: ChunkData = _nujio_chunk_of(false)
+	var wild: WorldChunk = _nujio_chunk_of(false)
+	assert_not_null(wild, "seed 42 tiene un Bosque sin villa")
 	assert_false(wild.has_villa)
-	assert_true(AdventureRules.is_next_to_nujio(wild, wild.nujio_rect.position + Vector2i(-1, 0)))
-	assert_false(AdventureRules.is_villa_rest(wild, wild.nujio_rect.position + Vector2i(-1, 0)))
+	assert_true(AdventureRules.is_next_to_nujio_world(wild, wild.nujio_rect.position + Vector2i(-1, 0)))
+	assert_false(AdventureRules.is_villa_rest_world(wild, wild.nujio_rect.position + Vector2i(-1, 0)))
 
 
 func test_rest_heals_fully_and_notifies() -> void:
@@ -213,22 +221,27 @@ func test_rest_heals_fully_and_notifies() -> void:
 
 
 func test_spawn_and_defeat_wake_up_in_home_villa_next_to_nujio() -> void:
-	var expl: Node = load("res://scenes/world/exploration.tscn").instantiate()
-	add_child_autofree(expl)
-	expl.start()
-	var villa_chunk: Vector2i = _map.nujio_chunk[_home]
-	var chunk: ChunkData = ChunkGenerator.generate(42, villa_chunk, _region, _map)
+	WorldClock.set_process(false)
+	var expl: WorldExploration = load("res://scenes/world/world_exploration.tscn").instantiate()
+	add_child_autoqfree(expl)
+	await expl.start()
+	var map: BosqueMap = expl.bosques
+	var home: int = expl.home_bosque
+	var villa_chunk: Vector2i = map.nujio_chunk[home]
+	var chunk: WorldChunk = expl.world.pregen.get_chunk(villa_chunk)
 	assert_true(chunk.has_villa, "el Bosque inicial tiene villa")
 	assert_eq(GameState.chunk_coord, villa_chunk)
-	assert_true(AdventureRules.is_next_to_nujio(chunk, GameState.player_cell), "aparece junto al Nujio")
+	assert_true(AdventureRules.is_next_to_nujio_world(chunk, GameState.player_cell), "aparece junto al Nujio")
 	# Tras una derrota en otro chunk, despierta en el mismo sitio.
-	var other: Vector2i = _map.chunks_of(_home).filter(func(c: Vector2i) -> bool: return c != villa_chunk)[0]
+	var other: Vector2i = map.chunks_of(home).filter(func(c: Vector2i) -> bool: return c != villa_chunk)[0]
 	GameState.chunk_coord = other
-	expl.start()
+	GameState.player_cell = expl.world.pregen.get_chunk(other).hub
+	await expl.start()
 	assert_eq(GameState.chunk_coord, other, "una partida cargada conserva su chunk")
-	EventBus.crossing_resolved.emit(_map.neighbours_of(_home)[0], &"defeated")
+	EventBus.crossing_resolved.emit(map.neighbours_of(home)[0], &"defeated")
 	assert_eq(GameState.chunk_coord, villa_chunk)
-	assert_true(AdventureRules.is_next_to_nujio(chunk, GameState.player_cell))
+	assert_true(AdventureRules.is_next_to_nujio_world(chunk, GameState.player_cell))
+	WorldClock.set_process(true)
 
 
 # --- Riutash (ADR 0012, ficha tiempo-y-riutash.md) ---
@@ -265,14 +278,13 @@ func test_apply_riutash_writes_hp_and_notifies() -> void:
 
 
 func test_riutash_shelter_is_refuge_or_villa_rest() -> void:
-	var villa: ChunkData = _nujio_chunk_of(true)
+	var villa: WorldChunk = _nujio_chunk_of(true)
 	var rect: Rect2i = villa.nujio_rect
-	assert_true(AdventureRules.is_riutash_shelter(villa, rect.position + Vector2i(-1, 0)), "junto al Nujio de la villa")
-	var chunk := ChunkData.new()
-	chunk.tiles.resize(ChunkData.SIZE * ChunkData.SIZE)
-	chunk.tiles.fill(ChunkData.Tile.GRASS)
-	chunk.set_tile(Vector2i(5, 5), ChunkData.Tile.REFUGE)
-	assert_true(AdventureRules.is_riutash_shelter(chunk, Vector2i(5, 5)), "casilla REFUGE")
-	assert_false(AdventureRules.is_riutash_shelter(chunk, Vector2i(5, 6)), "al lado no")
-	assert_false(AdventureRules.is_riutash_shelter(chunk, Vector2i(-1, 0)), "fuera del chunk no")
-	assert_false(AdventureRules.is_riutash_shelter(null, Vector2i(5, 5)), "sin chunk, expuesto")
+	assert_true(AdventureRules.is_riutash_shelter_world(villa, rect.position + Vector2i(-1, 0)), "junto al Nujio de la villa")
+	var chunk := WorldChunk.new()
+	chunk.add_object(WorldChunk.ObjectKind.REFUGE_TREE, Vector2i(5, 5), Vector2i(2, 2))
+	chunk.rebuild_blocked()
+	assert_true(AdventureRules.is_riutash_shelter_world(chunk, Vector2i(5, 5)), "dentro del refugio")
+	assert_false(AdventureRules.is_riutash_shelter_world(chunk, Vector2i(5, 7)), "al lado no")
+	assert_false(AdventureRules.is_riutash_shelter_world(chunk, Vector2i(-1, 0)), "fuera del chunk no")
+	assert_false(AdventureRules.is_riutash_shelter_world(null, Vector2i(5, 5)), "sin chunk, expuesto")

@@ -99,43 +99,6 @@ func test_roads_refuges_and_villas_only_where_explored() -> void:
 			_map.has_villa.count(true) - 1, "todas las villas tienen camino; la natal va aparte")
 
 
-func test_compass_points_home_without_objective() -> void:
-	var home: Vector2i = MapLogic.home_villa(_map)
-	var from: Vector2i = home + Vector2i(0, -3)
-	var result: Dictionary = MapLogic.compass(_map, from, Vector2i(10, 10), Vector2i(-1, -1), Vector2i(-1, -1), "")
-	assert_eq(result.index, 2, "la villa natal queda al sur")
-	assert_eq(result.label, Texts.get_text("compass_villa"))
-	result = MapLogic.compass(_map, home + Vector2i(-2, 2), Vector2i(10, 10), Vector2i(-1, -1), Vector2i(-1, -1), "")
-	assert_eq(result.index, 7, "noreste")
-
-
-func test_compass_says_here_in_home_chunk() -> void:
-	var home: Vector2i = MapLogic.home_villa(_map)
-	var result: Dictionary = MapLogic.compass(_map, home, Vector2i(3, 3), Vector2i(-1, -1), Vector2i(-1, -1), "")
-	assert_eq(result.index, MapLogic.HERE)
-	assert_eq(result.label, Texts.get_text("compass_here"))
-
-
-func test_compass_points_to_objective() -> void:
-	var result: Dictionary = MapLogic.compass(_map, Vector2i(5, 5), Vector2i(1, 1), Vector2i(8, 5), Vector2i(-1, -1), "Ofomni")
-	assert_eq(result.index, 0, "este")
-	assert_eq(result.label, "Ofomni")
-	result = MapLogic.compass(_map, Vector2i(5, 5), Vector2i(1, 1), Vector2i(2, 2), Vector2i(-1, -1), "Ofomni")
-	assert_eq(result.index, 5, "noroeste")
-
-
-func test_compass_inside_objective_chunk_points_to_cell_or_here() -> void:
-	var target := Vector2i(4, 4)
-	var result: Dictionary = MapLogic.compass(_map, target, Vector2i(10, 10), target, Vector2i(10, 30), "Ofomni")
-	assert_eq(result.index, 2, "la casilla queda al sur")
-	assert_eq(result.label, "Ofomni")
-	result = MapLogic.compass(_map, target, Vector2i(10, 30), target, Vector2i(10, 30), "Ofomni")
-	assert_eq(result.index, MapLogic.HERE, "encima del objetivo")
-	assert_eq(result.label, Texts.get_text("compass_here"))
-	result = MapLogic.compass(_map, target, Vector2i(10, 10), target, Vector2i(-1, -1), "Ofomni")
-	assert_eq(result.index, MapLogic.HERE, "casilla desconocida: Aquí en el chunk")
-
-
 func test_arrow_patterns_point_in_eight_directions() -> void:
 	var seen: Array = []
 	for i: int in 8:

@@ -32,7 +32,7 @@ static func posts_near(map: BosqueMap, seed_value: int, home: int, coord: Vector
 	var here: int = map.bosque_at(coord)
 	if here < 0:
 		return out
-	for side: Vector2i in ChunkData.SIDES:
+	for side: Vector2i in WorldChunk.SIDES:
 		var other: int = map.bosque_at(coord + side)
 		if other < 0 or other == here:
 			continue
@@ -45,15 +45,6 @@ static func posts_near(map: BosqueMap, seed_value: int, home: int, coord: Vector
 
 static func post_id(chunk: Vector2i, side: Vector2i) -> String:
 	return "%d,%d,%d,%d" % [chunk.x, chunk.y, side.x, side.y]
-
-
-## Casilla del puesto dentro de su chunk: `depth` casillas hacia dentro desde la puerta del lado
-## `side` (por donde pasa el sendero o el camino). Si no es transitable o no se llega desde el hub,
-## la más cercana que sí (empates por fila y columna).
-## ponytail: borrar en M17 (ChunkData); el Mundo 2.0 usa post_cell_world.
-static func post_cell(chunk: ChunkData, seed_value: int, side: Vector2i, depth: int) -> Vector2i:
-	var gate: Vector2i = ChunkData.border_cell(side, ChunkGenerator.gate_index(seed_value, chunk.coord, side))
-	return _nearest_reachable(gate, gate - side * depth, chunk.is_reachable)
 
 
 # --- Mundo 2.0 (ADR 0014 §7): puestos en las puertas del RegionPlan --------------------------------

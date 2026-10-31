@@ -11,6 +11,9 @@ extends RefCounted
 ##   gasta time_seconds de reloj o luz_cost de Luz y sube la relación con el Bosque (+per_defense,
 ##   AdventureRules.reward_bosque_defense). Los incendios apagados se guardan
 ##   (GameState.extinguished_fires) y no vuelven.
+## Mundo 2.0 (ADR 0014 §7): sobre el WorldChunk de 80×80. Arden los árboles (objetos TREE,
+## TREE_YOUNG y TREE_BIG; los frutales no) y la hierba transitable sin objetos; las casillas son del
+## chunk (0..79).
 ## No dibuja: la exploración pone el fuego animado. Números en data/combat/balance.json
 ## (bosque_states.necesita_ayuda.fire).
 
@@ -36,7 +39,7 @@ static func luz_cost() -> int:
 
 ## Casillas de fuego del chunk tal como lo generó la seed (sin mirar si se apagó). Vacío si el
 ## Bosque no necesita ayuda o el chunk no arde. `always`: el chunk arde seguro (el central).
-static func fire_cells(chunk: ChunkData, seed_value: int, state: String, always: bool = false) -> Array[Vector2i]:
+static func fire_cells(chunk: WorldChunk, seed_value: int, state: String, always: bool = false) -> Array[Vector2i]:
 	var out: Array[Vector2i] = []
 	if state != BosqueStates.NECESITA_AYUDA or chunk == null:
 		return out
@@ -52,10 +55,10 @@ static func fire_cells(chunk: ChunkData, seed_value: int, state: String, always:
 	rng.seed = ChunkGenerator.hash_ints([seed_value, coord.x, coord.y, SALT_FIRE_CELLS])
 	# Origen: un árbol junto a una casilla alcanzable (desde ahí se apaga).
 	var origins: Array[Vector2i] = []
-	for y: int in range(MARGIN, ChunkData.SIZE - MARGIN):
-		for x: int in range(MARGIN, ChunkData.SIZE - MARGIN):
+	for y: int in range(MARGIN, WorldChunk.SIZE - MARGIN):
+		for x: int in range(MARGIN, WorldChunk.SIZE - MARGIN):
 			var c := Vector2i(x, y)
-			if chunk.get_tile(c) == ChunkData.Tile.TREE and _touches_reachable(chunk, c):
+			if _is_tree(chunk, c) and _touches_reachable(chunk, c):
 				origins.append(c)
 	if origins.is_empty():
 		return out
@@ -73,7 +76,7 @@ static func fire_cells(chunk: ChunkData, seed_value: int, state: String, always:
 
 
 ## Fuego desde `start` hasta `wanted` casillas por árboles y hierba, sin cortar pasos.
-static func _grow_fire(chunk: ChunkData, start: Vector2i, wanted: int, before: int,
+static func _grow_fire(chunk: WorldChunk, start: Vector2i, wanted: int, before: int,
 		rng: RandomNumberGenerator) -> Array[Vector2i]:
 	var out: Array[Vector2i] = [start]
 	var blocked: Dictionary = {}
@@ -98,7 +101,7 @@ static func _grow_fire(chunk: ChunkData, start: Vector2i, wanted: int, before: i
 
 
 ## Casillas que arden ahora en el chunk: las de la seed, salvo que ya se apagara.
-static func active_cells(chunk: ChunkData, seed_value: int, state: String, always: bool = false) -> Array[Vector2i]:
+static func active_cells(chunk: WorldChunk, seed_value: int, state: String, always: bool = false) -> Array[Vector2i]:
 	if chunk == null or is_extinguished(chunk.coord):
 		var none: Array[Vector2i] = []
 		return none
@@ -127,29 +130,41 @@ static func extinguish(coord: Vector2i, bosque_id: int, by_luz: bool) -> bool:
 	return true
 
 
-static func _touches_reachable(chunk: ChunkData, c: Vector2i) -> bool:
-	for d: Vector2i in ChunkData.SIDES:
+## Un árbol que arde: los de bosque (no los frutales, los muertos ni los demás objetos).
+static func _is_tree(chunk: WorldChunk, c: Vector2i) -> bool:
+	var kind: int = chunk.object_at(c).get("kind", -1)
+	return kind == WorldChunk.ObjectKind.TREE or kind == WorldChunk.ObjectKind.TREE_YOUNG \
+		or kind == WorldChunk.ObjectKind.TREE_BIG
+
+
+## Hierba que arde: suelo GRASS transitable y sin objeto.
+static func _is_grass(chunk: WorldChunk, c: Vector2i) -> bool:
+	return chunk.get_ground(c) == WorldChunk.Ground.GRASS and chunk.is_walkable(c) \
+		and chunk.object_index_at(c) == WorldChunk.NO_OBJECT
+
+
+static func _touches_reachable(chunk: WorldChunk, c: Vector2i) -> bool:
+	for d: Vector2i in WorldChunk.SIDES:
 		if chunk.is_reachable(c + d):
 			return true
 	return false
 
 
 ## Vecinos que pueden arder: árboles y hierba dentro del margen y que no están ya en `taken`.
-static func _burnable_neighbours(chunk: ChunkData, c: Vector2i, taken: Array[Vector2i]) -> Array[Vector2i]:
+static func _burnable_neighbours(chunk: WorldChunk, c: Vector2i, taken: Array[Vector2i]) -> Array[Vector2i]:
 	var out: Array[Vector2i] = []
-	for d: Vector2i in ChunkData.SIDES:
+	for d: Vector2i in WorldChunk.SIDES:
 		var n: Vector2i = c + d
-		if n.x < MARGIN or n.y < MARGIN or n.x >= ChunkData.SIZE - MARGIN or n.y >= ChunkData.SIZE - MARGIN:
+		if n.x < MARGIN or n.y < MARGIN or n.x >= WorldChunk.SIZE - MARGIN or n.y >= WorldChunk.SIZE - MARGIN:
 			continue
-		var t: int = chunk.get_tile(n)
-		if (t == ChunkData.Tile.TREE or t == ChunkData.Tile.GRASS) and not taken.has(n) and n != chunk.hub:
+		if (_is_tree(chunk, n) or _is_grass(chunk, n)) and not taken.has(n) and n != chunk.hub:
 			out.append(n)
 	return out
 
 
 ## Casillas alcanzables desde el hub sin pisar las de `blocked`.
-static func _reachable_count(chunk: ChunkData, blocked: Dictionary) -> int:
-	var size: int = ChunkData.SIZE
+static func _reachable_count(chunk: WorldChunk, blocked: Dictionary) -> int:
+	var size: int = WorldChunk.SIZE
 	var seen := PackedByteArray()
 	seen.resize(size * size)
 	if not chunk.is_walkable(chunk.hub) or blocked.has(chunk.hub):
@@ -160,7 +175,7 @@ static func _reachable_count(chunk: ChunkData, blocked: Dictionary) -> int:
 	while head < queue.size():
 		var cell: Vector2i = queue[head]
 		head += 1
-		for d: Vector2i in ChunkData.SIDES:
+		for d: Vector2i in WorldChunk.SIDES:
 			var n: Vector2i = cell + d
 			if chunk.is_walkable(n) and not blocked.has(n) and seen[n.y * size + n.x] == 0:
 				seen[n.y * size + n.x] = 1

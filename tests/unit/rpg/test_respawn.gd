@@ -4,7 +4,7 @@ extends GutTest
 ## >= 30, o el natal) y el último Bosque pagado; si no, en la villa natal. Guardado v13
 ## (last_paid_bosque) con migración, y WorldClock.shelter_check suelto al salir la exploración.
 
-const EXPLORATION: String = "res://scenes/world/exploration.tscn"
+const EXPLORATION: String = "res://scenes/world/world_exploration.tscn"
 const SAVE_SLOT: int = 93
 const Q: StringName = &"primera_mision"
 
@@ -50,6 +50,30 @@ func after_all() -> void:
 
 func _nujio(id: int) -> Vector2i:
 	return _map.nujio_chunk[id]
+
+
+## Exploración del Mundo 2.0 con la partida actual (seed 42). Corrutina.
+func _exploration() -> WorldExploration:
+	var expl: WorldExploration = load(EXPLORATION).instantiate()
+	add_child_autoqfree(expl)
+	await expl.start()
+	return expl
+
+
+## Vuelve a arrancar la exploración como una partida cargada en el hub del chunk `coord`.
+func _restart_at(expl: WorldExploration, coord: Vector2i) -> void:
+	GameState.chunk_coord = coord
+	GameState.player_cell = expl.world.pregen.get_chunk(coord).hub
+	await expl.start()
+
+
+## Un Bosque del mundo sin villa y con Nujio (-1 si no hay).
+func _world_wild(expl: WorldExploration) -> int:
+	for id: int in expl.bosques.count():
+		var c: WorldChunk = expl.world.pregen.get_chunk(expl.bosques.nujio_chunk[id])
+		if id != expl.home_bosque and not c.has_villa and c.nujio_rect.size.x > 0:
+			return id
+	return -1
 
 
 func _lose(bosque_id: int) -> StringName:
@@ -172,14 +196,21 @@ func _dist(from_id: int, to_id: int) -> int:
 # --- Casilla y aviso -------------------------------------------------------------------------------
 
 func test_respawn_cell_is_walkable_next_to_the_nujio() -> void:
-	for id: int in [_home, _a, _b, _wild]:
-		if id < 0:
+	var plan := RegionPlan.for_region(42, &"valle_del_sara")
+	var map: BosqueMap = plan.bosques
+	var ids: Array[int] = [plan.bosque_at(plan.home_chunk), 0, map.count() - 1]
+	for id: int in map.count():
+		if not map.has_villa[id] and map.state_of(id) != BosqueStates.MUERTO:
+			ids.append(id)
+			break
+	for id: int in ids:
+		var chunk: WorldChunk = ChunkBuilder.build(plan, map.nujio_chunk[id])
+		if chunk.nujio_rect.size.x == 0:
 			continue
-		var chunk: ChunkData = ChunkGenerator.generate(42, _nujio(id), _region, _map)
-		var cell: Vector2i = AdventureRules.respawn_cell(chunk)
+		var cell: Vector2i = AdventureRules.respawn_cell_world(chunk)
 		assert_true(chunk.is_walkable(cell), "Bosque %d: transitable" % id)
 		assert_true(chunk.is_reachable(cell), "Bosque %d: se sale andando" % id)
-		assert_true(AdventureRules.is_next_to_nujio(chunk, cell), "Bosque %d: junto al Nujio" % id)
+		assert_true(AdventureRules.is_next_to_nujio_world(chunk, cell), "Bosque %d: junto al Nujio" % id)
 
 
 func test_notice_names_the_villa_or_the_bosque() -> void:
@@ -192,34 +223,34 @@ func test_notice_names_the_villa_or_the_bosque() -> void:
 # --- Exploración -----------------------------------------------------------------------------------
 
 func test_exploration_wakes_next_to_the_nearest_ally_and_tells_where() -> void:
-	var target: int = _wild if _wild >= 0 else _a
+	var expl: WorldExploration = await _exploration()
+	var map: BosqueMap = expl.bosques
+	var target: int = _world_wild(expl)
+	assert_gt(target, -1, "la seed 42 tiene un Bosque sin villa con Nujio")
 	AdventureRules.pay_toll(target, 0)
-	GameState.chunk_coord = _nujio(target)
-	var expl: Node = load(EXPLORATION).instantiate()
-	add_child_autofree(expl)
-	expl.start()
-	assert_eq(GameState.chunk_coord, _nujio(target), "partida en un Bosque pagado")
+	await _restart_at(expl, map.nujio_chunk[target])
+	assert_eq(GameState.chunk_coord, map.nujio_chunk[target], "partida en un Bosque pagado")
 	watch_signals(EventBus)
 	EventBus.crossing_resolved.emit(target, &"defeated")
-	assert_eq(GameState.chunk_coord, _nujio(target))
-	var chunk: ChunkData = ChunkGenerator.generate(42, _nujio(target), _region, _map)
-	assert_true(AdventureRules.is_next_to_nujio(chunk, GameState.player_cell))
-	assert_signal_emitted_with_parameters(EventBus, "notice_requested", [AdventureRules.respawn_notice(_map, target)])
+	assert_eq(GameState.chunk_coord, map.nujio_chunk[target])
+	var chunk: WorldChunk = expl.world.pregen.get_chunk(map.nujio_chunk[target])
+	assert_true(AdventureRules.is_next_to_nujio_world(chunk, GameState.player_cell))
+	assert_signal_emitted_with_parameters(EventBus, "notice_requested", [AdventureRules.respawn_notice(map, target)])
 
 
 func test_exploration_quest_defeat_wakes_in_home_villa() -> void:
-	var expl: Node = load(EXPLORATION).instantiate()
-	add_child_autofree(expl)
-	expl.start()
-	var villa_chunk: Vector2i = _nujio(_home)
-	var other: Vector2i = _map.chunks_of(_home).filter(func(c: Vector2i) -> bool: return c != villa_chunk)[0]
-	GameState.chunk_coord = other
-	expl.start()
+	var expl: WorldExploration = await _exploration()
+	var map: BosqueMap = expl.bosques
+	var home: int = expl.home_bosque
+	var villa_chunk: Vector2i = map.nujio_chunk[home]
+	var other: Vector2i = map.chunks_of(home).filter(func(c: Vector2i) -> bool: return c != villa_chunk)[0]
+	await _restart_at(expl, other)
+	assert_eq(GameState.chunk_coord, other)
 	watch_signals(EventBus)
 	EventBus.quest_battle_resolved.emit(Q, &"defeat")
 	assert_eq(GameState.chunk_coord, villa_chunk)
 	assert_signal_emitted_with_parameters(EventBus, "notice_requested",
-		["Despiertas junto al Nujio de %s." % Signpost.villa_name(42, _home)])
+		["Despiertas junto al Nujio de %s." % Signpost.villa_name(42, home)])
 
 
 func test_exploration_releases_shelter_check_on_exit() -> void:
@@ -262,13 +293,13 @@ func test_migration_from_v12_takes_the_latest_open_payment() -> void:
 
 
 func test_waking_in_a_villa_heals_fully() -> void:
-	var expl: Node = load(EXPLORATION).instantiate()
-	add_child_autofree(expl)
-	expl.start()
-	var villa_chunk: Vector2i = _nujio(_home)
-	var other: Vector2i = _map.chunks_of(_home).filter(func(c: Vector2i) -> bool: return c != villa_chunk)[0]
-	GameState.chunk_coord = other
-	expl.start()
+	var expl: WorldExploration = await _exploration()
+	var map: BosqueMap = expl.bosques
+	var home: int = expl.home_bosque
+	var villa_chunk: Vector2i = map.nujio_chunk[home]
+	var other: Vector2i = map.chunks_of(home).filter(func(c: Vector2i) -> bool: return c != villa_chunk)[0]
+	await _restart_at(expl, other)
+	AdventureRules.set_hp(3)
 	EventBus.quest_battle_resolved.emit(Q, &"defeat")
 	assert_eq(GameState.chunk_coord, villa_chunk)
 	assert_eq(GameState.hp, AdventureRules.max_hp(), "despertar en la villa cura del todo")

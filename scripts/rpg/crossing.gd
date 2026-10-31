@@ -21,9 +21,8 @@ extends CanvasLayer
 ## quest_battle_resolved) y la exploración cruza, retrocede o despierta al Adoc junto a un Nujio aliado.
 ## Combate táctico (T1b): el tamaño del tablero y el cupo salen de la proporción transitable de un
 ## recorte de 14 x 10 alrededor del Adoc (TacticalArena). Por orden: `walkable_sampler` si se
-## inyecta (tests); en el Mundo 2.0, WorldQuery.rect si el mundo activo da `world_get_chunk` y
-## `world_player_cell`; si no, el chunk de exploración antiguo, regenerándolo con su seed
-## (ChunkGenerator.generate, ~30 ms, una vez por combate); sin chunk, el bioma. El bioma
+## inyecta (tests); si no, WorldQuery.rect si el mundo activo da `world_get_chunk` y
+## `world_player_cell`; sin mundo, el bioma. El bioma
 ## (desempate) es "bosque" mientras no haya otros biomas. Tablero (T7a): en el Mundo 2.0, el del
 ## relieve real alrededor del Adoc (TacticalRelief.arena_config: recorte, riscos comprimidos, cupo
 ## contado sobre él); si no, llano.
@@ -369,20 +368,7 @@ func encounter_ratio() -> float:
 	if world_get_chunk.is_valid() and world_player_cell.is_valid():
 		var cfg: Dictionary = TacticalArena.arena_cfg(AdventureRules.balance().get("tactical", {}))
 		return TacticalArena.world_ratio(world_get_chunk, world_player_cell.call(), TacticalArena.sample_size(cfg))
-	if GameState.chunk_coord.x < 0 or GameState.chunk_coord.y < 0:
-		return -1.0
-	var region: Dictionary = ChunkGenerator.load_region(GameState.region_id)
-	_ensure_map()
-	var chunk: ChunkData = ChunkGenerator.generate(GameState.seed_value, GameState.chunk_coord, region, _map)
-	return chunk_ratio(chunk, GameState.player_cell)
-
-
-## Proporción transitable del recorte de 14 x 10 (tactical.arena.sample) de un chunk alrededor de
-## `cell` (desplazado para quedar dentro del chunk).
-static func chunk_ratio(chunk: ChunkData, cell: Vector2i) -> float:
-	var cfg: Dictionary = TacticalArena.arena_cfg(AdventureRules.balance().get("tactical", {}))
-	return TacticalArena.sample_ratio(chunk.is_walkable, cell, TacticalArena.sample_size(cfg),
-		Rect2i(0, 0, ChunkData.SIZE, ChunkData.SIZE))
+	return -1.0
 
 
 ## Escena de combate según el interruptor tactical.enabled de balance.json.
