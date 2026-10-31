@@ -1,0 +1,27 @@
+{
+  "$comment": "Sarua de la villa natal (npcs-y-villas.md; trueque mínimo P5, ajustes-playtest-0.5.md 5b). Estructura: rpg-systems-dev. trade: daily_stock = objetos que ofrece y cambia al día (por seed y día, Trade.stock); catalog = [{ id de data/items/items.json, price en Luz u ofrenda }]. Precios provisionales (game-designer, tabla de 5b). placeholder: colores y objeto en la mano del sprite procedural hasta el arte del pixel-artist. Textos (name, greeting) PROVISIONALES, pendientes de narrative-writer.",
+  "id": "sarua_natal",
+  "oficio": "sarua",
+  "name": "Sarua",
+  "description": "Artesano ritual de tu villa. Hace máscaras y talismanes.",
+  "greeting": {
+    "id": "sarua_natal_greeting",
+    "lines": [
+      { "speaker": "Sarua", "text": "Brille tu Luz, adoc. Esto es lo que tengo hoy." }
+    ]
+  },
+  "trade": {
+    "daily_stock": 3,
+    "catalog": [
+      { "id": "talisman_de_semillas", "price": 4 },
+      { "id": "mascara_de_corteza", "price": 4 },
+      { "id": "mascara_de_musgo", "price": 5 },
+      { "id": "mascara_de_ceniza", "price": 6 },
+      { "id": "talisman_de_pluma", "price": 6 }
+    ]
+  },
+  "placeholder": {
+    "colors": { "robe": "265c42", "trim": "e4a672", "hair": "3a4466", "skin": "e8b796" },
+    "prop": "mask"
+  }
+}

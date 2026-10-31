@@ -1,0 +1,24 @@
+{
+  "$comment": "Paruas de la villa natal (npcs-y-villas.md; trueque mínimo P5, ajustes-playtest-0.5.md 5b). Estructura: rpg-systems-dev. trade: daily_stock = objetos que ofrece y cambia al día (por seed y día, Trade.stock); catalog = [{ id de data/items/items.json, price en Luz u ofrenda }]; las armas que el Adoc ya tiene no se ofrecen. Precios provisionales (game-designer, tabla de 5b). placeholder: colores y objeto en la mano del sprite procedural hasta el arte del pixel-artist. Textos (name, greeting) PROVISIONALES, pendientes de narrative-writer.",
+  "id": "paruas_natal",
+  "oficio": "paruas",
+  "name": "Paruas",
+  "description": "Artesano de utensilios de tu villa. Hace armas para los adoc.",
+  "greeting": {
+    "id": "paruas_natal_greeting",
+    "lines": [
+      { "speaker": "Paruas", "text": "Brille tu Luz, adoc. Mira lo que tengo." }
+    ]
+  },
+  "trade": {
+    "daily_stock": 3,
+    "catalog": [
+      { "id": "cuchillo", "price": 5 },
+      { "id": "honda", "price": 6 }
+    ]
+  },
+  "placeholder": {
+    "colors": { "robe": "b86f50", "trim": "c0cbdc", "hair": "181425", "skin": "c28569" },
+    "prop": "tool"
+  }
+}

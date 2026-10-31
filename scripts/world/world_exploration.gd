@@ -52,6 +52,9 @@ var _field: MonsterField
 var _npcs: Dictionary = {}
 var _npc_cells: Dictionary = {}
 var _npc_nodes: Array[Node] = []
+## P5: trueque con el Sarua y el Paruas (TradeDialog, reglas en Trade) y chunk de su villa.
+var _trade: TradeDialog
+var _trade_villa: Vector2i = Vector2i(-1, -1)
 var _last_cell: Vector2i = NO_CHUNK
 var _last_bosque: int = -1
 var _resting: bool = false
@@ -95,6 +98,7 @@ func _ready() -> void:
 	_field.is_hidden = _is_hidden
 	_field.spotted.connect(_on_monster_spotted)
 	_quest.setup(_dialogue, _region_map)
+	_trade = TradeDialog.new(_dialogue)
 	_quest.ofomni_changed.connect(_sync_ofomni)
 	_far.setup(_dialogue)
 	# Combate táctico: el tablero sale del relieve real alrededor del encuentro (WorldQuery.rect).
@@ -358,7 +362,8 @@ func _check_villa_rest(ch: WorldChunk, local: Vector2i) -> void:
 	_resting = resting
 
 
-## NPC: el sfida en la plaza de la villa natal.
+## NPC: el sfida en la plaza de la villa natal y, junto a él, el Sarua y el Paruas (P5,
+## Npc.artisan_cells_world).
 func _place_npcs(villa: WorldChunk) -> void:
 	for n: Node in _npc_nodes:
 		n.queue_free()
@@ -368,13 +373,17 @@ func _place_npcs(villa: WorldChunk) -> void:
 	var at: Vector2i = Npc.sfida_cell_world(villa)
 	if at.x < 0:
 		return
-	var cell: Vector2i = WorldCoords.to_world_cell(villa.coord, at)
-	var npc := Npc.new()
-	npc.setup_world(&"sfida_natal", cell)
-	world.objects.add_child(npc)
-	_npc_nodes.append(npc)
-	_npcs[npc.npc_id] = npc.world_pos
-	_npc_cells[cell] = true
+	_trade_villa = villa.coord
+	var cells: Dictionary = { &"sfida_natal": at }
+	cells.merge(Npc.artisan_cells_world(villa))
+	for id: StringName in cells:
+		var cell: Vector2i = WorldCoords.to_world_cell(villa.coord, cells[id])
+		var npc := Npc.new()
+		npc.setup_world(id, cell)
+		world.objects.add_child(npc)
+		_npc_nodes.append(npc)
+		_npcs[npc.npc_id] = npc.world_pos
+		_npc_cells[cell] = true
 
 
 # --- Interacción (E) ------------------------------------------------------------------------------
@@ -415,7 +424,11 @@ func _interact() -> void:
 	match target.kind:
 		Interaction.Kind.NPC:
 			# Primero las líneas (según el estado de la misión) y luego el aviso, que aplica sus efectos.
-			_dialogue.show_lines(NpcDialogue.lines_for(target.npc_id))
+			# P5: el Sarua y el Paruas abren el trueque (TradeDialog).
+			if Trade.is_trader(target.npc_id):
+				_trade.open(target.npc_id, _trade_villa)
+			else:
+				_dialogue.show_lines(NpcDialogue.lines_for(target.npc_id))
 			EventBus.npc_talked.emit(target.npc_id)
 		Interaction.Kind.SIGN:
 			var line: Dictionary = _sign_line(ch, target.local)

@@ -263,7 +263,7 @@ func test_sicabi_rule_forbids_even_a_sheathed_weapon() -> void:
 # --- Guardado ------------------------------------------------------------------------------------------
 
 func test_save_keeps_the_weapon_state() -> void:
-	assert_eq(GameState.SAVE_VERSION, 21)
+	assert_gte(GameState.SAVE_VERSION, 21)
 	assert_false(GameState.weapon_drawn, "partida nueva: nada en la mano")
 	_spear(true)
 	var data: Dictionary = GameState.to_dict()

@@ -37,8 +37,10 @@ extends Node
 ## ERR_SAVE_OLD_WORLD). Las migraciones de v1 a v19 siguen en from_dict por si una futura versión
 ## del mundo conserva el formato, pero ya no se usan al cargar. v21: arma enfundada o en la mano
 ## (weapon_drawn, ajustes-playtest-0.5.md, 4a); al migrar desde la v20, un arma equipada queda en la
-## mano, como el "armado" de antes (SaveManager.migrate).
-const SAVE_VERSION: int = 21
+## mano, como el "armado" de antes (SaveManager.migrate). v22: trueque en la villa (trade_sold,
+## ajustes-playtest-0.5.md 5b, P5): lo cambiado hoy con cada artesano de cada villa; al migrar,
+## nada cambiado (SaveManager.migrate).
+const SAVE_VERSION: int = 22
 ## Primera versión del guardado con el Mundo 2.0: las anteriores se rechazan.
 const WORLD_2_SAVE_VERSION: int = 20
 ## Versión del mundo (ADR 0014 §7): 2 = Mundo 2.0. Si cambia, las partidas guardadas con otra se
@@ -185,6 +187,9 @@ var fruit_taken: Dictionary = {}
 ## Última party elegida para el combate táctico (TacticalParty): claves de los aliados que entraron
 ## ("adoc:0", "botarramas:0"...). Vacía: ninguna elección todavía.
 var last_party: Array[String] = []
+## Trueque (Trade, P5): lo cambiado con cada artesano de cada villa el día `day`:
+## { "<chunk x,y de la villa>:<id del NPC>": { "day": n, "sold": [ids] } }. Lo de otro día no cuenta.
+var trade_sold: Dictionary = {}
 
 
 func new_game(new_seed: int = 0, new_region: StringName = &"valle_del_sara") -> void:
@@ -246,6 +251,7 @@ func new_game(new_seed: int = 0, new_region: StringName = &"valle_del_sara") -> 
 	far_quests = []
 	last_vision_day = 0
 	last_party = []
+	trade_sold = {}
 
 
 func to_dict() -> Dictionary:
@@ -309,6 +315,7 @@ func to_dict() -> Dictionary:
 		"far_quests": far_quests,
 		"last_vision_day": last_vision_day,
 		"last_party": last_party,
+		"trade_sold": trade_sold,
 	}
 
 
@@ -421,6 +428,8 @@ func from_dict(data: Dictionary) -> void:
 		for key: Variant in saved_party:
 			if not last_party.has(str(key)):
 				last_party.append(str(key))
+	# v21 o anterior: nada cambiado en el trueque (SaveManager.migrate).
+	trade_sold = Trade.sanitize_sold(data.get("trade_sold", {}))
 	item_uses = {}
 	var uses: Variant = data.get("item_uses", {})
 	if uses is Dictionary:
