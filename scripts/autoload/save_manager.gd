@@ -68,7 +68,7 @@ func load_game(slot: int) -> int:
 	# nivel con los stats automáticos nuevos, nada gastado y todos los puntos de stat y de skill de
 	# su nivel por repartir (AdocGrowth.migrate_points); v19: ninguna party elegida (migrate).
 	# v20 (Mundo 2.0): las anteriores ya no llegan aquí (ERR_SAVE_OLD_WORLD). v21: el arma
-	# equipada queda en la mano (migrate).
+	# equipada queda en la mano (migrate). v22: nada cambiado en el trueque (migrate).
 	GameState.from_dict(migrate(data))
 	EventBus.game_loaded.emit(slot)
 	return OK
@@ -77,7 +77,8 @@ func load_game(slot: int) -> int:
 ## Pasa los datos de una partida guardada al formato actual donde from_dict no basta con su valor
 ## por defecto. v19 (combate táctico, T1b): sin last_party, la party elegida empieza vacía. v21 (arma
 ## enfundada, ajustes-playtest-0.5.md, 4a): sin weapon_drawn, un arma equipada queda en la mano,
-## como el "armado" de la v20 (cierra Bosques y anula el camuflaje).
+## como el "armado" de la v20 (cierra Bosques y anula el camuflaje). v22 (trueque, P5): sin
+## trade_sold, nada cambiado con los artesanos.
 static func migrate(data: Dictionary) -> Dictionary:
 	var out: Dictionary = data.duplicate(true)
 	if int(out.get("save_version", 0)) < 19 and not out.has("last_party"):
@@ -85,6 +86,8 @@ static func migrate(data: Dictionary) -> Dictionary:
 	if int(out.get("save_version", 0)) < 21 and not out.has("weapon_drawn"):
 		var eq: Variant = out.get("equipped", {})
 		out["weapon_drawn"] = eq is Dictionary and str(eq.get("main_hand", "")) != ""
+	if int(out.get("save_version", 0)) < 22 and not out.has("trade_sold"):
+		out["trade_sold"] = {}
 	return out
 
 

@@ -3,11 +3,23 @@ extends Node2D
 ## Personaje no jugador en exploración: una casilla que bloquea el paso, un sprite de 16x16 (la
 ## hoja SFIDA_SHEET de 2 fotogramas de reposo o, si falta, el placeholder procedural de
 ## make_texture) y un id de datos (data/npcs/<id>.json). Lo que
-## dice lo decide NpcDialogue. También calcula dónde espera el sfida en la villa natal.
+## dice lo decide NpcDialogue. También calcula dónde espera el sfida en la villa natal y, desde
+## P5 (trueque, ajustes-playtest-0.5.md 5b), dónde esperan el Sarua y el Paruas, junto a él.
+## Los NPC sin hoja de sprite usan el placeholder de make_texture con los colores y el objeto en la
+## mano ("placeholder" de su JSON en data/npcs/).
 
 const TILE_SIZE: int = 16
 ## Casillas al este de la casilla de aparición (al sur del Nujio) donde se busca sitio al sfida.
 const SFIDA_OFFSET: Vector2i = Vector2i(3, 0)
+## P5: casillas (desde la de aparición) donde se busca sitio al Sarua y al Paruas, a los lados del
+## sfida. Se colocan en este orden, después del sfida.
+const ARTISAN_OFFSETS: Dictionary = {
+	&"sarua_natal": Vector2i(6, 0),
+	&"paruas_natal": Vector2i(3, 3),
+}
+## Distancia mínima (Chebyshev) entre dos NPC de la plaza: entre ellos queda al menos una casilla
+## libre para pasar y hablarles.
+const NPC_SPACING: int = 2
 ## Colores de placeholder del sfida (paleta del proyecto): túnica larga violeta con cinta dorada
 ## y pelo gris de anciano.
 const SFIDA_COLORS: Dictionary = {
@@ -46,6 +58,10 @@ func _add_sprite(facing: Vector2i, offset: Vector2) -> void:
 	var sprite := Sprite2D.new()
 	sprite.position = offset
 	add_child(sprite)
+	var placeholder: Dictionary = placeholder_of(npc_id)
+	if not placeholder.is_empty():
+		sprite.texture = make_texture(placeholder.colors, facing, placeholder.prop)
+		return
 	if not ResourceLoader.exists(SFIDA_SHEET):
 		sprite.texture = make_texture(SFIDA_COLORS, facing)
 		return
@@ -70,10 +86,35 @@ static func villa_spawn_cell_world(chunk: WorldChunk) -> Vector2i:
 ## SFIDA_OFFSET (empates por fila y columna) que no sea el hub ni la de aparición, alcanzable desde
 ## el hub y con sus 8 vecinas transitables y sin objetos. (-1, -1) si el chunk no tiene villa.
 static func sfida_cell_world(chunk: WorldChunk) -> Vector2i:
+	return plaza_cell_world(chunk, SFIDA_OFFSET)
+
+
+## P5: casillas del Sarua y del Paruas en la plaza de la villa { id: casilla del chunk }, con las
+## mismas condiciones que la del sfida, cada una lo más cerca posible de la de aparición +
+## ARTISAN_OFFSETS[id] y a NPC_SPACING o más del sfida y del otro artesano. Sin villa o sin sitio,
+## el NPC no sale en el diccionario.
+static func artisan_cells_world(chunk: WorldChunk) -> Dictionary:
+	var out: Dictionary = {}
+	var sfida: Vector2i = sfida_cell_world(chunk)
+	if sfida.x < 0:
+		return out
+	var taken: Array[Vector2i] = [sfida]
+	for id: StringName in ARTISAN_OFFSETS:
+		var at: Vector2i = plaza_cell_world(chunk, ARTISAN_OFFSETS[id], taken)
+		if at.x >= 0:
+			out[id] = at
+			taken.append(at)
+	return out
+
+
+## Casilla de suelo PLAZA más cercana a la de aparición + `offset` (empates por fila y columna) que
+## no sea el hub ni la de aparición, alcanzable desde el hub, con sus 8 vecinas transitables y sin
+## objetos, y a NPC_SPACING o más (Chebyshev) de las casillas `taken`. (-1, -1) si no hay.
+static func plaza_cell_world(chunk: WorldChunk, offset: Vector2i, taken: Array[Vector2i] = []) -> Vector2i:
 	if not chunk.has_villa or chunk.nujio_rect.size.x == 0:
 		return Vector2i(-1, -1)
 	var spawn: Vector2i = villa_spawn_cell_world(chunk)
-	var target: Vector2i = spawn + SFIDA_OFFSET
+	var target: Vector2i = spawn + offset
 	var best := Vector2i(-1, -1)
 	var best_score: int = 1 << 30
 	for y: int in WorldChunk.SIZE:
@@ -83,11 +124,32 @@ static func sfida_cell_world(chunk: WorldChunk) -> Vector2i:
 				continue
 			var score: int = (absi(c.x - target.x) + absi(c.y - target.y)) * WorldChunk.CELLS \
 				+ y * WorldChunk.SIZE + x
-			if score >= best_score or not chunk.is_reachable(c) or not _is_open_around_world(chunk, c):
+			if score >= best_score or not chunk.is_reachable(c) or not _is_open_around_world(chunk, c) 					or _too_close(c, taken):
 				continue
 			best = c
 			best_score = score
 	return best
+
+
+static func _too_close(c: Vector2i, taken: Array[Vector2i]) -> bool:
+	for t: Vector2i in taken:
+		if maxi(absi(c.x - t.x), absi(c.y - t.y)) < NPC_SPACING:
+			return true
+	return false
+
+
+## Colores y objeto en la mano del placeholder de un NPC ("placeholder" en data/npcs/<id>.json):
+## { colors: { robe, trim, hair, skin }, prop }. {} si no tiene (el sfida usa su hoja).
+static func placeholder_of(id: StringName) -> Dictionary:
+	if id == &"" or not FileAccess.file_exists(NpcDialogue.NPC_PATH % id):
+		return {}
+	var raw: Variant = NpcDialogue.data(id).get("placeholder", {})
+	if not raw is Dictionary or not raw.has("colors"):
+		return {}
+	var colors: Dictionary = {}
+	for key: String in SFIDA_COLORS:
+		colors[key] = Color(str(raw.colors.get(key, SFIDA_COLORS[key].to_html(false))))
+	return { "colors": colors, "prop": StringName(str(raw.get("prop", ""))) }
 
 
 static func _is_open_around_world(chunk: WorldChunk, c: Vector2i) -> bool:
@@ -99,8 +161,10 @@ static func _is_open_around_world(chunk: WorldChunk, c: Vector2i) -> bool:
 	return true
 
 
-## Sprite de placeholder 16x16: túnica hasta los pies con cinta, cabeza y pelo.
-static func make_texture(colors: Dictionary, dir: Vector2i) -> Texture2D:
+## Sprite de placeholder 16x16: túnica hasta los pies con cinta, cabeza y pelo. `prop` (P5,
+## placeholder hasta el arte del pixel-artist): &"mask" = una máscara clara en la mano (Sarua) y un
+## pañuelo en la cabeza; &"tool" = un mazo de madera (Paruas) y un delantal en lugar de la cinta.
+static func make_texture(colors: Dictionary, dir: Vector2i, prop: StringName = &"") -> Texture2D:
 	var img := Image.create(TILE_SIZE, TILE_SIZE, false, Image.FORMAT_RGBA8)
 	var skin: Color = colors.skin
 	var hair: Color = colors.hair
@@ -117,5 +181,15 @@ static func make_texture(colors: Dictionary, dir: Vector2i) -> Texture2D:
 	if dir == Vector2i.DOWN:
 		img.set_pixel(6, 5, outline)
 		img.set_pixel(9, 5, outline)
+	match prop:
+		&"mask":
+			img.fill_rect(Rect2i(4, 0, 8, 2), trim)
+			img.fill_rect(Rect2i(11, 8, 4, 4), Color("ead4aa"))
+			img.set_pixel(12, 9, outline)
+			img.set_pixel(14, 9, outline)
+		&"tool":
+			img.fill_rect(Rect2i(5, 10, 6, 5), trim)
+			img.fill_rect(Rect2i(13, 6, 1, 7), Color("733e39"))
+			img.fill_rect(Rect2i(12, 5, 3, 2), Color("8b9bb4"))
 	PlayerController.add_outline(img, outline)
 	return ImageTexture.create_from_image(img)

@@ -30,8 +30,11 @@ func test_npc_blocks_walking_in_exploration() -> void:
 	add_child_autoqfree(expl)
 	await expl.start()
 	var npcs: Dictionary = expl.get("_npcs")
-	assert_eq(npcs.size(), 1, "el sfida está en la villa natal")
+	assert_eq(npcs.size(), 3, "el sfida, el Sarua y el Paruas (P5) están en la villa natal")
 	assert_true(npcs.has(&"sfida_natal"))
+	for id: StringName in [&"sarua_natal", &"paruas_natal"]:
+		assert_true(npcs.has(id), "%s en la plaza" % id)
+		assert_true(expl.player.is_blocked.call(WorldCoords.world_pos_to_world_cell(npcs[id])), "no se pisa al %s" % id)
 	var at: Vector2i = WorldCoords.world_pos_to_world_cell(npcs[&"sfida_natal"])
 	assert_true(expl.player.is_blocked.call(at), "no se puede pisar al sfida")
 	assert_false(expl.player.is_blocked.call(at + Vector2i.LEFT), "la plaza de al lado sí")

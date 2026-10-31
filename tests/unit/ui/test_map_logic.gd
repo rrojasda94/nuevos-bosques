@@ -61,9 +61,9 @@ func test_migration_v4_without_position_has_nothing_explored() -> void:
 	assert_true(GameState.explored_chunks.is_empty(), "(-1, -1): se marcará al entrar en el chunk")
 
 
-func test_save_version_is_21() -> void:
-	assert_eq(GameState.SAVE_VERSION, 21, "v20: Mundo 2.0; v21: arma enfundada (P3)")
-	assert_eq(int(GameState.to_dict()["save_version"]), 21)
+func test_save_version_is_22() -> void:
+	assert_eq(GameState.SAVE_VERSION, 22, "v20: Mundo 2.0; v21: arma enfundada (P3); v22: trueque (P5)")
+	assert_eq(int(GameState.to_dict()["save_version"]), 22)
 
 
 func test_map_reveals_only_explored_chunks() -> void:

@@ -65,6 +65,9 @@ signal bosque_sneaked(bosque_id: int)
 signal adoc_spotted(bosque_id: int)
 ## Un objeto equipado que se rompe (max_uses) se ha deshecho y sale del equipo.
 signal item_broken(item_id: StringName)
+## Trueque en la villa (P5, Trade.buy): el Adoc ha cambiado `item_id` con el NPC `npc_id`, pagando
+## con la ofrenda `ofrenda_id` ("" si solo con Luz) y `luz` de Luz suelta.
+signal item_traded(npc_id: StringName, item_id: StringName, ofrenda_id: String, luz: int)
 ## Combate directo contra un Único que va por dentro de su Bosque (Crossing): un Ofomni que
 ## persigue tras un robo, un cazador que envía el Bosque, uno que ronda, o uno al que el Adoc se
 ## enfrenta a voluntad (E). monster_id: id de datos (balance.json, monsters). offends: el Bosque

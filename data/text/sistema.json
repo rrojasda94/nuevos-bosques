@@ -437,5 +437,19 @@
   "load_done": "Partida cargada.",
   "load_none": "No hay ninguna partida guardada.",
   "load_failed": "No se ha podido cargar la partida.",
-  "sicabi_mouth": "La boca de una sicabi. Aún no se puede entrar."
+  "sicabi_mouth": "La boca de una sicabi. Aún no se puede entrar.",
+  "$provisional_trade_p5": "Textos del trueque con el Sarua y el Paruas (P5, ajustes-playtest-0.5.md 5b): trade_*, provisionales, pendientes de revisión de narrative-writer. El saludo de cada artesano está en su data/npcs/<id>.json.",
+  "trade_luz_line": "Tienes %d de Luz.",
+  "trade_item_option": "%s (%d)",
+  "trade_leave": "Nada",
+  "trade_limit": "Hoy ya no me queda nada para ti. Vuelve después del riutash del amanecer.",
+  "trade_nothing": "Hoy no tengo nada que te sirva.",
+  "trade_pay_prompt": "%s: %d de Luz u ofrenda. ¿Con qué pagas?",
+  "trade_pay_luz": "Luz (%d)",
+  "trade_pay_ofrenda": "%s (%d)",
+  "trade_pay_ofrenda_luz": "%s (%d) + %d Luz",
+  "trade_cancel": "Dejarlo",
+  "trade_no_funds": "No te alcanza: %s cuesta %d de Luz u ofrenda, y tienes %d de Luz.",
+  "trade_bag_full": "No te cabe en la bolsa.",
+  "trade_done": "Recibes: %s."
 }
