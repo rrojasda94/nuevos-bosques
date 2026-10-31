@@ -74,6 +74,17 @@ extends RefCounted
 ##   - Apertura (apply_opening): SURPRISE (emboscada tuya: no te detectaron), tu bando en el tablero
 ##     empieza con CT threshold y los enemigos con menos (juegan después), de espaldas a ti; AMBUSH
 ##     (emboscada del enemigo), al revés. NORMAL: como siempre.
+## - Armas (P4, ajustes-playtest-0.5.md 4b y 4d): un combatiente con `weapon` ({ id, atk_bonus, range,
+##   line, back_bonus, hit_mod }, Items.weapon_profile) suma su ATQ, pega con su alcance y línea, su
+##   back_bonus por la espalda y su hit_mod de precisión (attack_preview ya los lleva). Con
+##   `sheathed` (emboscada del enemigo con el arma enfundada) pelea sin ella (alcance 1, ATQ base)
+##   hasta que la desenfunda: draw_weapon() gasta la acción del turno. weapon_label() da lo que la
+##   ficha enseña ("ATQ 8 (Lanza +2)") y strike_area() las casillas a las que llega su ataque.
+## - Objeto (P4, 5a): set_items da los objetos de la bolsa ([{ slot, id, heal_pct, use_range }], uno
+##   por unidad). El `leader` en su turno usa uno (use_item) sobre sí mismo o un aliado a use_range
+##   casillas o menos: cura heal_pct % de sus PV máx. (redondeo hacia arriba) y gasta la acción. Las
+##   casillas de la bolsa de los usados quedan en used_items (TacticalBridge las devuelve al
+##   BattleLogic).
 ## - RNG propio sembrado con la seed del combate: las tiradas son deterministas. La IA (azar top-2,
 ##   P2) tira con ai_rng, sembrado también con la seed del combate (otra sal): así no mueve las
 ##   tiradas de los golpes.
@@ -108,6 +119,9 @@ const KIND_FLEE: StringName = &"flee"
 const KIND_LEAVE: StringName = &"leave"
 ## Golpe del área anunciada (T6).
 const KIND_AREA: StringName = &"area"
+## Desenfundar y usar un objeto (P4).
+const KIND_DRAW: StringName = &"draw"
+const KIND_ITEM: StringName = &"item"
 ## Claves de texto corto (data/text/sistema.json, las escribe narrative-writer en T4).
 const TEXT_MISS: StringName = &"tactical_miss"
 const TEXT_ATTACK: StringName = &"tactical_attack"
@@ -131,6 +145,8 @@ const TEXT_AREA_WARNING: StringName = &"tactical_area_warning"
 const TEXT_JOINT: StringName = &"tactical_joint"
 const TEXT_SURPRISE: StringName = &"tactical_surprise"
 const TEXT_AMBUSH: StringName = &"tactical_ambush"
+const TEXT_DRAW: StringName = &"tactical_draw"
+const TEXT_ITEM: StringName = &"tactical_item"
 ## Roles (ids de balance.json, tactics.roles; los mismos que BattleLogic).
 const ROLE_ATTACKER: StringName = &"attacker"
 const ROLE_DEFENDER: StringName = &"defender"
@@ -188,6 +204,9 @@ var last_entries: Array[int] = []
 var opening: Opening = Opening.NORMAL
 ## Quién anunció un área al terminar el último turno (NONE si nadie; para la UI).
 var last_announce: int = NONE
+## Objetos de combate de la bolsa del Adoc (set_items) y casillas de la bolsa de los usados (P4).
+var items: Array = []
+var used_items: Array[int] = []
 
 
 func _init(tactical: Dictionary, battle_board: TacticalBoard, fighters: Array, rng_seed: int,
@@ -223,6 +242,7 @@ func _init(tactical: Dictionary, battle_board: TacticalBoard, fighters: Array, r
 		var reach: Array = data.get("attack_range", [1, 1])
 		var range_min: int = maxi(1, int(reach[0])) if reach.size() > 0 else 1
 		var range_max: int = maxi(range_min, int(reach[1])) if reach.size() > 1 else range_min
+		var weapon: Dictionary = data.get("weapon", {})
 		units.append({
 			"hp": clampi(int(data.get("hp", max_hp)), 1, max_hp),
 			"max_hp": max_hp,
@@ -266,7 +286,14 @@ func _init(tactical: Dictionary, battle_board: TacticalBoard, fighters: Array, r
 			"tie": tie_rng.randi(),
 			"alive": not waiting,
 			"waiting": waiting,
+			"weapon": weapon,
+			"sheathed": not weapon.is_empty() and bool(data.get("sheathed", false)),
+			"base_atk": int(data.get("atk", 0)) + _role_num(role, "atk_bonus", 0),
+			"back_extra": 0,
+			"hit_mod": 0,
 		})
+		if not weapon.is_empty() and not units[units.size() - 1].sheathed:
+			_wield(units.size() - 1)
 	_place_units()
 	for u: Dictionary in units:
 		u.home = u.cell
@@ -643,9 +670,14 @@ func attack_preview(attacker: int, target: int) -> Dictionary:
 		"relation": rel,
 		"height": height,
 		"evasion": ev,
-		"hit_chance": TacticalRules.hit_chance(ev, actions_cfg),
-		"bonus": TacticalRules.position_bonus(rel, height, actions_cfg),
+		"hit_chance": TacticalRules.hit_chance(ev - int(a.get("hit_mod", 0)), actions_cfg),
+		"bonus": TacticalRules.position_bonus(rel, height, actions_cfg) + weapon_back_bonus(attacker, rel),
 	}
+
+
+## Daño extra del arma de `attacker` según por dónde golpea (el cuchillo, por la espalda; P4).
+func weapon_back_bonus(attacker: int, rel: TacticalRules.Relation) -> int:
+	return int(units[attacker].get("back_extra", 0)) if rel == TacticalRules.Relation.BACK else 0
 
 
 ## Remate posible: el combatiente en su turno es atacante con usos y el objetivo está por debajo de
@@ -936,6 +968,131 @@ func leave(retreat: bool = false) -> Dictionary:
 	check_end()
 	out.text_key = TEXT_RETREAT if retreat else TEXT_ENEMY_FLEE
 	out.result = result
+	return out
+
+
+# --- Armas y objetos (P4) -----------------------------------------------------------------------
+
+## Pone el arma del combatiente en uso: su ATQ, alcance, línea, bono por la espalda y precisión.
+func _wield(index: int) -> void:
+	var u: Dictionary = units[index]
+	var w: Dictionary = u.weapon
+	var r: Array = w.get("range", [1, 1])
+	u.range_min = maxi(1, int(r[0])) if r.size() > 0 else 1
+	u.range_max = maxi(int(u.range_min), int(r[1])) if r.size() > 1 else int(u.range_min)
+	u.range_line = bool(w.get("line", true))
+	u.atk = int(u.base_atk) + int(w.get("atk_bonus", 0))
+	u.back_extra = int(w.get("back_bonus", 0))
+	u.hit_mod = int(w.get("hit_mod", 0))
+	u.sheathed = false
+
+
+## El combatiente en su turno puede desenfundar (empezó con el arma en la funda: emboscada).
+func can_draw() -> bool:
+	return can_act() and bool(units[active].sheathed)
+
+
+## Desenfundar: el arma pasa a la mano (ATQ, alcance y efectos). Gasta la acción del turno.
+func draw_weapon() -> Dictionary:
+	if not can_draw():
+		return {}
+	active_acted = true
+	_wield(active)
+	var out: Dictionary = _result(KIND_DRAW, active)
+	out.id = StringName(str(units[active].weapon.get("id", "")))
+	out.text_key = TEXT_DRAW
+	return out
+
+
+## Lo que la ficha enseña del ATQ: { atk, base, bonus, weapon (id o &""), state }. state: &"drawn"
+## (con el arma: "ATQ 8 (Lanza +2)"), &"sheathed" (en la funda) o &"none" (sin arma).
+func weapon_label(index: int) -> Dictionary:
+	var u: Dictionary = units[index]
+	var w: Dictionary = u.get("weapon", {})
+	var state: StringName = &"none"
+	if not w.is_empty():
+		state = &"sheathed" if bool(u.sheathed) else &"drawn"
+	return { "atk": int(u.atk), "base": int(u.base_atk), "bonus": int(w.get("atk_bonus", 0)),
+		"weapon": StringName(str(w.get("id", ""))), "state": state }
+
+
+## Casillas a las que llega el ataque de `index` desde su casilla: alcance, línea, desnivel y los
+## enemigos en medio, que tapan lo de detrás. Para resaltarlas en la escena.
+func strike_area(index: int) -> Array[Vector2i]:
+	var out: Array[Vector2i] = []
+	if not _valid(index) or not units[index].alive:
+		return out
+	var u: Dictionary = units[index]
+	var from: Vector2i = u.cell
+	var r: int = int(u.range_max)
+	var blockers: Dictionary = _enemy_cells(int(u.side)) if r > 1 else {}
+	for dy: int in range(-r, r + 1):
+		for dx: int in range(-r, r + 1):
+			var c: Vector2i = from + Vector2i(dx, dy)
+			if not board.in_bounds(c):
+				continue
+			var b: Dictionary = blockers
+			if blockers.has(c):
+				b = blockers.duplicate()
+				b.erase(c)
+			if TacticalRules.can_strike(board, from, c, int(u.jump), int(u.range_min), r, bool(u.range_line), b):
+				out.append(c)
+	return out
+
+
+## Objetos de combate de la bolsa: [{ slot, id, heal_pct, use_range }], uno por unidad.
+func set_items(list: Array) -> void:
+	items = list.duplicate(true)
+
+
+## Índices de `items` que quedan por usar (solo el `leader` en su turno, que lleva la bolsa).
+func usable_items() -> Array[int]:
+	var out: Array[int] = []
+	if not _player_acting() or not bool(units[active].leader):
+		return out
+	for k: int in items.size():
+		if not bool(items[k].get("used", false)):
+			out.append(k)
+	return out
+
+
+## El `leader` en su turno puede usar el objeto `item` sobre `target`: él mismo o un aliado en pie a
+## use_range casillas o menos.
+func can_use_item(item: int, target: int) -> bool:
+	if not usable_items().has(item) or not _valid(target):
+		return false
+	var t: Dictionary = units[target]
+	if not t.alive or int(t.side) != int(units[active].side):
+		return false
+	return TacticalRules.distance(units[active].cell, t.cell) <= int(items[item].get("use_range", 0))
+
+
+## A quiénes se puede dar el objeto `item` ahora (índices de combatiente).
+func item_targets(item: int) -> Array[int]:
+	var out: Array[int] = []
+	for i in units.size():
+		if can_use_item(item, i):
+			out.append(i)
+	return out
+
+
+## Usa el objeto `item` sobre `target`: cura heal_pct % de sus PV máx. (redondeo hacia arriba, sin
+## pasar del máximo) y gasta la acción. Resultado con amount (PV curados), id y slot.
+func use_item(item: int, target: int) -> Dictionary:
+	if not can_use_item(item, target):
+		return {}
+	active_acted = true
+	var it: Dictionary = items[item]
+	it.used = true
+	used_items.append(int(it.get("slot", -1)))
+	var t: Dictionary = units[target]
+	var healed: int = mini(ceili(int(t.max_hp) * int(it.get("heal_pct", 0)) / 100.0), int(t.max_hp) - int(t.hp))
+	t.hp = int(t.hp) + healed
+	var out: Dictionary = _result(KIND_ITEM, target)
+	out.amount = healed
+	out.id = StringName(str(it.get("id", "")))
+	out.slot = int(it.get("slot", -1))
+	out.text_key = TEXT_ITEM
 	return out
 
 

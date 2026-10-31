@@ -8,8 +8,13 @@ const Crossing = preload("res://scripts/rpg/crossing.gd")
 const Screen = preload("res://scripts/rpg/inventory_screen.gd")
 
 
+const OldStartKit = preload("res://tests/unit/rpg/old_start_kit.gd")
+
+
 func before_each() -> void:
 	GameState.new_game(42)
+	# Equipo de antes de P4 (sin nada equipado y la bolsa de prueba): OldStartKit.
+	OldStartKit.apply()
 
 
 func _give(ids: Array) -> void:

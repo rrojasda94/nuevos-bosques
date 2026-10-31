@@ -25,6 +25,11 @@ extends CanvasLayer
 ##   uno de los que seguían dentro. El ataque conjunto de los reparep, con su línea corta.
 ## - Apertura (T6): con sorpresa o emboscada (begin: `surprise`, `ambush`), la línea corta
 ##   "¡Sorpresa!" o "¡Emboscada!" se queda OPENING_TIME antes del primer turno.
+## - Armas y objetos (P4): la ficha del Adoc enseña su ATQ con el arma ("ATQ 8 (Lanza +2)",
+##   TacticalTurnFlow.atk_line); en Actuar y al elegir objetivo de Atacar se resaltan las casillas a
+##   las que llega su ataque (la lanza a 2, la honda a 2–3). Al empezar, "Peleas sin arma." o "Tu
+##   arma sigue en la funda." (emboscada: Desenfundar en Actuar). Objeto: lista de la bolsa, objetivo
+##   y la curación flotando.
 ## Solo toca GameState para guardar la party elegida.
 
 signal finished(logic: BattleLogic)
@@ -57,6 +62,8 @@ const TILE: int = TacticalTurnFlow.TILE_PX
 const COLOR_MOVE := Color(0.0, 0.6, 0.86, 0.45)
 const COLOR_TARGET := Color(0.89, 0.23, 0.27, 0.5)
 const COLOR_SUPPORT := Color(0.39, 0.78, 0.3, 0.5)
+## Casillas a las que llega el ataque del activo (P4).
+const COLOR_RANGE := Color(0.89, 0.23, 0.27, 0.22)
 const COLOR_CURSOR := Color("fee761")
 const COLOR_PLAYER := Color("63c74d")
 const COLOR_ENEMY := Color("e43b44")
@@ -162,18 +169,36 @@ func _start(chosen: Array[int]) -> void:
 	flow = TacticalTurnFlow.new(battle)
 	_build_units()
 	_tiles.queue_redraw()
-	var key: StringName = battle.opening_text_key()
-	if key != &"":
+	var lines: PackedStringArray = opening_lines(battle, logic)
+	if not lines.is_empty():
 		_busy = true
 		_follow = battle.units[0].cell
 		_refresh()
-		_show_action_line(Texts.get_text(String(key)), OPENING_TIME)
-		# Un tween del propio nodo: si la escena se libera antes, no sigue.
+		# Una línea tras otra (la caja de acción es de una línea). Un tween del propio nodo: si la
+		# escena se libera antes, no sigue.
+		_show_action_line(lines[0], OPENING_TIME)
 		var t := create_tween()
 		t.tween_interval(OPENING_TIME)
+		for k: int in range(1, lines.size()):
+			t.tween_callback(_show_action_line.bind(lines[k], OPENING_TIME))
+			t.tween_interval(OPENING_TIME)
 		t.tween_callback(_after_opening)
 		return
 	_next_turn()
+
+
+## Líneas antes del primer turno: la apertura (sorpresa o emboscada) y el aviso del arma ("Peleas
+## sin arma." o, en una emboscada con el arma enfundada, "Tu arma sigue en la funda.").
+static func opening_lines(b: TacticalBattle, battle_logic: BattleLogic) -> PackedStringArray:
+	var out: PackedStringArray = []
+	var key: StringName = b.opening_text_key()
+	if key != &"":
+		out.append(Texts.get_text(String(key)))
+	if battle_logic.weapon_sheathed:
+		out.append(Texts.get_text("tactical_weapon_sheathed"))
+	elif battle_logic.unarmed:
+		out.append(Texts.get_text("battle_unarmed"))
+	return out
 
 
 func _after_opening() -> void:
@@ -244,13 +269,13 @@ func _adoc_rank(k: int) -> int:
 
 ## El Adoc del jugador mirando hacia `dir` (fila de su hoja o el placeholder).
 static func _adoc_texture(dir: Vector2i) -> Texture2D:
-	if not ResourceLoader.exists(PlayerWalker.SHEET_PATH):
-		return PlayerWalker._make_texture(dir)
-	var sheet: Texture2D = load(PlayerWalker.SHEET_PATH)
+	if not ResourceLoader.exists(PlayerController.SHEET_PATH):
+		return PlayerController._make_texture(dir)
+	var sheet: Texture2D = load(PlayerController.SHEET_PATH)
 	var atlas := AtlasTexture.new()
 	atlas.atlas = sheet
-	var size := Vector2(sheet.get_width() / PlayerWalker.SHEET_FRAMES, sheet.get_height() / PlayerWalker.SHEET_ROWS.size())
-	atlas.region = Rect2(Vector2(0, size.y * PlayerWalker.SHEET_ROWS.find(dir)), size)
+	var size := Vector2(sheet.get_width() / PlayerController.SHEET_FRAMES, sheet.get_height() / PlayerController.SHEET_ROWS.size())
+	atlas.region = Rect2(Vector2(0, size.y * PlayerController.SHEET_ROWS.find(dir)), size)
 	return atlas
 
 
@@ -436,7 +461,7 @@ func _show_result(res: Dictionary) -> void:
 		fade.tween_property(gone, "modulate:a", 0.0, 0.4)
 		await fade.finished
 		_place_unit(int(res.target))
-	elif kind == TacticalBattle.KIND_BANDAGE:
+	elif kind == TacticalBattle.KIND_BANDAGE or kind == TacticalBattle.KIND_ITEM:
 		_float_text(int(res.target), "+%d" % int(res.get("amount", 0)), COLOR_HEAL)
 		_update_unit(int(res.target))
 		await get_tree().create_timer(FLOAT_TIME).timeout
@@ -506,7 +531,8 @@ func _unhandled_input(event: InputEvent) -> void:
 ## Entrada en el turno del jugador (también para las capturas y los tests de la escena).
 func handle_input(event: InputEvent) -> void:
 	match flow.state:
-		TacticalTurnFlow.State.MENU, TacticalTurnFlow.State.ACT, TacticalTurnFlow.State.OFRENDA:
+		TacticalTurnFlow.State.MENU, TacticalTurnFlow.State.ACT, TacticalTurnFlow.State.OFRENDA, \
+				TacticalTurnFlow.State.ITEM:
 			var choice: int = _menu_choice(event)
 			if choice == OptionMenu.CANCEL:
 				flow.cancel()
@@ -557,6 +583,12 @@ func _choose(choice: int) -> void:
 				_show_state()
 			else:
 				_play(flow.choose_ofrenda(int(id)))
+		TacticalTurnFlow.State.ITEM:
+			if int(id) < 0:
+				flow.cancel()
+			else:
+				flow.choose_item(int(id))
+			_show_state()
 
 
 # --- Interfaz -----------------------------------------------------------------------------------
@@ -577,6 +609,14 @@ func _show_state(keep_cursor: bool = false) -> void:
 				texts.append(ofrenda_text(item))
 				enabled.append(true)
 				_menu_ids.append(idx)
+			texts.append(Texts.get_text("tactical_back"))
+			enabled.append(true)
+			_menu_ids.append(-1)
+		TacticalTurnFlow.State.ITEM:
+			for c: Dictionary in flow.item_choices():
+				texts.append(str(c.text))
+				enabled.append(true)
+				_menu_ids.append(int(c.item))
 			texts.append(Texts.get_text("tactical_back"))
 			enabled.append(true)
 			_menu_ids.append(-1)
@@ -609,6 +649,8 @@ func _hint_text() -> String:
 			return Texts.get_text("tactical_hint_target")
 		TacticalTurnFlow.State.FACING:
 			return Texts.get_text("tactical_hint_facing")
+		TacticalTurnFlow.State.ITEM:
+			return Texts.get_text("tactical_hint_item")
 		TacticalTurnFlow.State.IDLE:
 			if battle.active != TacticalBattle.NONE:
 				return Texts.get_text("tactical_enemy_turn") % str(_views[battle.active].name)
@@ -643,6 +685,8 @@ func _unit_text(i: int, with_moves: bool = true) -> String:
 	var line: String = Texts.get_text("tactical_unit_hp") % [str(_views[i].name), int(u.hp), int(u.max_hp)]
 	if with_moves:
 		line += "\n" + Texts.get_text("tactical_unit_moves") % [int(u.mov), int(u.jump)]
+		if bool(u.leader):
+			line += "\n" + TacticalTurnFlow.atk_line(battle, i)
 	return line
 
 
@@ -767,6 +811,9 @@ func _draw_tiles() -> void:
 		mark_color = COLOR_TARGET if flow.pending == TacticalTurnFlow.ACT_ATTACK else COLOR_SUPPORT
 	for c: Vector2i in flow.highlight:
 		marks[c] = true
+	var reach: Dictionary = {}
+	for c: Vector2i in flow.range_cells():
+		reach[c] = true
 	var danger: Dictionary = announced_cells()
 	for y in b.height:
 		for x in b.width:
@@ -798,6 +845,8 @@ func _draw_tiles() -> void:
 			_draw_cell_detail(b, c, top, base)
 			if danger.has(c):
 				_tiles.draw_rect(rect, COLOR_DANGER)
+			if reach.has(c) and not marks.has(c):
+				_tiles.draw_rect(rect.grow(-1), COLOR_RANGE)
 			if marks.has(c):
 				_tiles.draw_rect(rect.grow(-1), mark_color)
 				_tiles.draw_rect(rect.grow(-1), mark_color.lightened(0.4), false)

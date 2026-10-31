@@ -12,8 +12,13 @@ const UNPAID: int = 2
 const COORD := Vector2i(6, 13)
 
 
+const OldStartKit = preload("res://tests/unit/rpg/old_start_kit.gd")
+
+
 func before_each() -> void:
 	GameState.new_game(42)
+	# Equipo de antes de P4 (sin nada equipado y la bolsa de prueba): OldStartKit.
+	OldStartKit.apply()
 	_arm_spear()
 	AdventureRules.open_bosque(PAID)
 

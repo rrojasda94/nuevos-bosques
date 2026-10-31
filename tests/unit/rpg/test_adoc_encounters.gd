@@ -16,10 +16,15 @@ func before_all() -> void:
 	_home = AdventureRules.home_bosque(_map, _region)
 
 
+const OldStartKit = preload("res://tests/unit/rpg/old_start_kit.gd")
+
+
 func before_each() -> void:
 	WorldClock.set_process(false)
 	WorldClock.shelter_check = Callable()
 	GameState.new_game(42)
+	# Equipo de antes de P4 (sin nada equipado y la bolsa de prueba): OldStartKit.
+	OldStartKit.apply()
 
 
 func after_each() -> void:
@@ -233,9 +238,10 @@ func test_save_v16_round_trip_and_migration() -> void:
 	assert_eq(GameState.adoc_encounters, {}, "v15: ningún encuentro resuelto")
 
 
-func test_new_game_starts_with_the_spear_in_the_bag() -> void:
-	assert_false(AdventureRules.is_armed(), "la lanza empieza guardada")
-	assert_gt(InventoryLogic.count(GameState.bag, &"lanza_de_adoc"), 0, "en la bolsa")
+func test_new_game_starts_with_the_spear_sheathed() -> void:
+	GameState.new_game(42)
+	assert_false(AdventureRules.is_armed(), "la lanza empieza enfundada (P4)")
+	assert_true(AdventureRules.has_weapon(), "pero equipada")
 	var data: Dictionary = JSON.parse_string(JSON.stringify(GameState.to_dict()))
 	data.save_version = 10
 	data.erase("bag")
